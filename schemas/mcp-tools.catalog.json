@@ -8,6 +8,26 @@
       "status": "stable"
     },
     {
+      "name": "pdf_inspect_pages",
+      "maps_to": "pdf.inspect.pages",
+      "status": "stable"
+    },
+    {
+      "name": "pdf_workflow_plan",
+      "maps_to": "pdf.workflow.plan",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_workflow_run",
+      "maps_to": "pdf.workflow.run",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_workflow_report",
+      "maps_to": "pdf.workflow.report",
+      "status": "beta"
+    },
+    {
       "name": "pdf_merge",
       "maps_to": "pdf.organize.merge",
       "status": "stable"
@@ -33,6 +53,26 @@
       "status": "stable"
     },
     {
+      "name": "pdf_reorder_pages",
+      "maps_to": "pdf.organize.reorder_pages",
+      "status": "stable"
+    },
+    {
+      "name": "pdf_insert_blank_pages",
+      "maps_to": "pdf.organize.insert_blank_pages",
+      "status": "stable"
+    },
+    {
+      "name": "pdf_optimize_compress",
+      "maps_to": "pdf.optimize.compress",
+      "status": "stable"
+    },
+    {
+      "name": "pdf_optimize_repair",
+      "maps_to": "pdf.optimize.repair",
+      "status": "beta"
+    },
+    {
       "name": "pdf_image_to_pdf",
       "maps_to": "pdf.convert.image_to_pdf",
       "status": "stable"
@@ -43,9 +83,24 @@
       "status": "stable"
     },
     {
+      "name": "pdf_extract_images",
+      "maps_to": "pdf.convert.extract_images",
+      "status": "stable"
+    },
+    {
       "name": "pdf_extract_text",
       "maps_to": "pdf.convert.pdf_to_text",
       "status": "stable"
+    },
+    {
+      "name": "pdf_pdf_to_json",
+      "maps_to": "pdf.convert.pdf_to_json",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_pdf_to_markdown",
+      "maps_to": "pdf.convert.pdf_to_markdown",
+      "status": "beta"
     },
     {
       "name": "pdf_create_text",
@@ -88,6 +143,16 @@
       "status": "stable"
     },
     {
+      "name": "pdf_render_check",
+      "maps_to": "pdf.validation.render_check",
+      "status": "stable"
+    },
+    {
+      "name": "pdf_blank_page_check",
+      "maps_to": "pdf.validation.blank_page_check",
+      "status": "stable"
+    },
+    {
       "name": "pdf_ai_parse_lite",
       "maps_to": "pdf.ai.parse.lite",
       "status": "beta"
@@ -100,6 +165,31 @@
     {
       "name": "pdf_ai_rag_query",
       "maps_to": "pdf.ai.rag.query",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_ai_rag_cite_answer",
+      "maps_to": "pdf.ai.rag.cite_answer",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_ai_rag_chat",
+      "maps_to": "pdf.ai.rag.chat",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_ai_rag_highlight_sources",
+      "maps_to": "pdf.ai.rag.highlight_sources",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_ai_rag_export_report",
+      "maps_to": "pdf.ai.rag.export_report",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_ai_rag_search",
+      "maps_to": "pdf.ai.rag.search",
       "status": "beta"
     }
   ]

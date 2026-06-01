@@ -1,5 +1,12 @@
 # 27 — Integrations Guide
 
+## Priority Order
+
+1. Claude Code / Claude Desktop via MCP.
+2. Codex and Cursor through AGENTS.md, CLI, REST, and MCP examples.
+3. KiloCode, OpenCode/OpenClaw-style skill ecosystems, OpenAI Agents, LangChain, LlamaIndex, and workflow automation platforms.
+4. Hosted API integrations after the local agent contract is stable.
+
 ## Claude Desktop / Claude Code
 
 Use MCP stdio config. See `examples/mcp/claude_desktop_config.json`.

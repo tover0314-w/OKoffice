@@ -17,22 +17,43 @@ Expose AgentPDF tools to MCP-compatible clients such as coding agents, desktop a
 ## Initial MCP tools
 
 - `pdf_inspect_document`
+- `pdf_inspect_pages`
+- `pdf_workflow_plan`
+- `pdf_workflow_run`
+- `pdf_workflow_report`
 - `pdf_merge`
 - `pdf_split`
 - `pdf_extract_pages`
 - `pdf_remove_pages`
 - `pdf_rotate_pages`
+- `pdf_reorder_pages`
+- `pdf_insert_blank_pages`
+- `pdf_optimize_compress`
+- `pdf_optimize_repair`
 - `pdf_image_to_pdf`
 - `pdf_watermark`
 - `pdf_add_page_numbers`
 - `pdf_create_text`
 - `pdf_create_markdown`
 - `pdf_render_pages`
+- `pdf_extract_images`
 - `pdf_extract_text`
+- `pdf_pdf_to_json`
+- `pdf_pdf_to_markdown`
 - `pdf_metadata_read`
 - `pdf_metadata_update`
 - `pdf_metadata_remove`
 - `pdf_validate_output`
+- `pdf_render_check`
+- `pdf_blank_page_check`
+- `pdf_ai_parse_lite`
+- `pdf_ai_rag_ingest`
+- `pdf_ai_rag_chat`
+- `pdf_ai_rag_cite_answer`
+- `pdf_ai_rag_export_report`
+- `pdf_ai_rag_highlight_sources`
+- `pdf_ai_rag_query`
+- `pdf_ai_rag_search`
 
 ## Example MCP tool result
 

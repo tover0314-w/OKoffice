@@ -67,8 +67,47 @@ export interface InspectDocumentInput {
   path: string;
 }
 
+export interface InspectPagesInput {
+  inputPath: string;
+  pages?: string;
+  renderCheck?: boolean;
+}
+
+export interface WorkflowPlanInput {
+  goal: string;
+  inputPath?: string;
+}
+
+export interface WorkflowRunInput {
+  workflow: JsonObject;
+  dryRun?: boolean;
+}
+
+export interface WorkflowReportInput {
+  workflowRun: JsonObject;
+  outputPath?: string;
+}
+
 export interface MergePdfInput {
   inputPaths: string[];
+  outputPath: string;
+}
+
+export interface ReorderPagesInput {
+  inputPath: string;
+  order: string;
+  outputPath: string;
+}
+
+export interface InsertBlankPagesInput {
+  inputPath: string;
+  afterPage: number;
+  outputPath: string;
+  count?: number;
+}
+
+export interface OptimizePdfInput {
+  inputPath: string;
   outputPath: string;
 }
 
@@ -111,4 +150,97 @@ export interface CreateMarkdownPdfInput {
 export interface ValidateOutputInput {
   path: string;
   expectedPages?: number;
+}
+
+export interface RenderCheckInput {
+  path: string;
+  pages?: string;
+}
+
+export interface ExtractImagesInput {
+  inputPath: string;
+  pages?: string;
+  outDir?: string;
+}
+
+export interface BlankPageCheckInput {
+  path: string;
+  pages?: string;
+}
+
+export interface ParseLiteInput {
+  inputPath: string;
+  pages?: string;
+}
+
+export interface RagIngestInput {
+  inputPath: string;
+  indexPath: string;
+  pages?: string;
+  maxChars?: number;
+  overlapChars?: number;
+}
+
+export interface RagQueryInput {
+  indexPath: string;
+  query: string;
+  topK?: number;
+}
+
+export interface RagChatInput {
+  inputPath: string;
+  question: string;
+  indexPath?: string;
+  reportOutputPath?: string;
+  highlightOutputPath?: string;
+  pages?: string;
+  topK?: number;
+  maxChars?: number;
+  overlapChars?: number;
+  stylePack?: string;
+  highlightColor?: string;
+}
+
+export interface RagSearchInput {
+  indexPath: string;
+  query: string;
+  topK?: number;
+}
+
+export interface RagCiteAnswerInput {
+  indexPath: string;
+  answer: string;
+  topK?: number;
+}
+
+export interface RagHighlightSourcesInput {
+  indexPath: string;
+  outputPath: string;
+  answer?: string;
+  query?: string;
+  topK?: number;
+  highlightColor?: string;
+}
+
+export interface RagExportReportInput {
+  indexPath: string;
+  outputPath: string;
+  question: string;
+  answer?: string;
+  topK?: number;
+  includeCitations?: boolean;
+  title?: string;
+  stylePack?: string;
+}
+
+export interface PdfToJsonInput {
+  inputPath: string;
+  outputPath: string;
+  pages?: string;
+}
+
+export interface PdfToMarkdownInput {
+  inputPath: string;
+  outputPath: string;
+  pages?: string;
 }

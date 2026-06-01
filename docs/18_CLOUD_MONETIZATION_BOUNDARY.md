@@ -4,6 +4,8 @@
 
 The open-source project should attract users and agents. Hosted cloud services can monetize advanced resource-consuming features.
 
+The intended shape is similar to agent-infra SaaS products: the local core is free and useful, while the hosted service adds API keys, free quotas, paid plans, persistence, concurrency, advanced AI workers, and operational convenience.
+
 ## Always-free open-source tools
 
 Local tools should remain free:
@@ -42,6 +44,7 @@ A hosted free plan may include:
 - Advanced OCR pages.
 - Agentic parse pages.
 - Hosted RAG storage.
+- Hosted template gallery and SEO landing pages for PDF creation workflows.
 - Batch processing.
 - Large files.
 - High concurrency.
@@ -77,3 +80,5 @@ In BYOK mode:
 ## OSS rule
 
 The open-source package must not depend on hosted billing for local deterministic operations.
+
+Cloud features must be additive. If a local tool requires cloud, expose it as a separate `cloud_only` or optional worker tool rather than hiding it behind the same deterministic command.

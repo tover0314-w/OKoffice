@@ -76,6 +76,8 @@ A future docs page should show transparent status:
 Tool                Status     CLI  MCP  API  Tests  Validation
 merge               stable     yes  yes  yes  yes    yes
 split               stable     yes  yes  yes  yes    yes
+compress            stable     yes  yes  yes  yes    yes
+repair              beta       yes  yes  yes  yes    yes
 pdf_to_docx         planned    no   no   no   no     no
 agentic_parse       cloud      no   no   no   no     no
 ```

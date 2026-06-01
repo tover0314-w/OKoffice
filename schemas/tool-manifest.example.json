@@ -23,7 +23,43 @@
         "mcp",
         "rest"
       ],
-      "implemented": false
+      "implemented": true
+    },
+    {
+      "name": "pdf.workflow.plan",
+      "status": "beta",
+      "description": "Plan a local-first agent PDF workflow.",
+      "category": "workflow",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": true
+    },
+    {
+      "name": "pdf.workflow.run",
+      "status": "beta",
+      "description": "Execute a local-first agent PDF workflow manifest and return per-step evidence.",
+      "category": "workflow",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": true
+    },
+    {
+      "name": "pdf.workflow.report",
+      "status": "beta",
+      "description": "Summarize workflow artifacts, warnings, validation, and step evidence.",
+      "category": "workflow",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": true
     },
     {
       "name": "pdf.organize.merge",
@@ -83,7 +119,19 @@
         "mcp",
         "rest"
       ],
-      "implemented": false
+      "implemented": true
+    },
+    {
+      "name": "pdf.organize.insert_blank_pages",
+      "status": "stable",
+      "description": "Insert blank pages.",
+      "category": "organize",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": true
     },
     {
       "name": "pdf.organize.rotate_pages",
@@ -99,7 +147,7 @@
     },
     {
       "name": "pdf.optimize.compress",
-      "status": "beta",
+      "status": "stable",
       "description": "Reduce file size.",
       "category": "optimize",
       "interfaces": [
@@ -107,7 +155,7 @@
         "mcp",
         "rest"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "name": "pdf.optimize.repair",
@@ -119,7 +167,7 @@
         "mcp",
         "rest"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "name": "pdf.convert.image_to_pdf",
@@ -182,6 +230,18 @@
       "implemented": true
     },
     {
+      "name": "pdf.convert.extract_images",
+      "status": "stable",
+      "description": "Extract embedded images.",
+      "category": "convert",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": true
+    },
+    {
       "name": "pdf.convert.pdf_to_text",
       "status": "stable",
       "description": "Extract text.",
@@ -203,7 +263,7 @@
         "mcp",
         "rest"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "name": "pdf.convert.pdf_to_json",
@@ -215,7 +275,7 @@
         "mcp",
         "rest"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "name": "pdf.edit.watermark",
@@ -422,6 +482,30 @@
       "implemented": true
     },
     {
+      "name": "pdf.validation.render_check",
+      "status": "stable",
+      "description": "Ensure pages render.",
+      "category": "validation",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": true
+    },
+    {
+      "name": "pdf.validation.blank_page_check",
+      "status": "stable",
+      "description": "Detect blank pages.",
+      "category": "validation",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": true
+    },
+    {
       "name": "pdf.ai.parse.lite",
       "status": "beta",
       "description": "Local heuristic parser.",
@@ -431,7 +515,7 @@
         "mcp",
         "rest"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "name": "pdf.ai.parse.agentic",
@@ -455,7 +539,7 @@
         "mcp",
         "rest"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "name": "pdf.ai.rag.query",
@@ -467,7 +551,55 @@
         "mcp",
         "rest"
       ],
-      "implemented": false
+      "implemented": true
+    },
+    {
+      "name": "pdf.ai.rag.cite_answer",
+      "status": "beta",
+      "description": "Find page and bbox citations for an answer.",
+      "category": "ai_rag",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": true
+    },
+    {
+      "name": "pdf.ai.rag.chat",
+      "status": "beta",
+      "description": "Ask a local PDF and return answer, citations, report PDF, and highlighted source PDF.",
+      "category": "ai_rag",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": true
+    },
+    {
+      "name": "pdf.ai.rag.highlight_sources",
+      "status": "beta",
+      "description": "Produce highlighted source PDF from local RAG citations.",
+      "category": "ai_rag",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": true
+    },
+    {
+      "name": "pdf.ai.rag.export_report",
+      "status": "beta",
+      "description": "Create a cited Q&A/source PDF report from a local RAG index.",
+      "category": "ai_rag",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": true
     },
     {
       "name": "pdf.ai.extract.schema",

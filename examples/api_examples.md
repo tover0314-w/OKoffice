@@ -31,6 +31,67 @@ curl -X POST http://127.0.0.1:7331/v1/tools/pdf.inspect.document/run \
   -d '{"path": "report.pdf"}'
 ```
 
+## Inspect pages
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.inspect.pages/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "input_path": "report.pdf",
+    "pages": "1-3",
+    "render_check": true
+  }'
+```
+
+## Plan an agent workflow
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.workflow.plan/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "goal": "Chat with this PDF and cite answers",
+    "input_path": "report.pdf"
+  }'
+```
+
+## Run an agent workflow
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.workflow.run/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "workflow": {
+      "steps": [
+        {
+          "step_id": "inspect",
+          "tool": "pdf.inspect.document",
+          "input": {"path": "report.pdf"}
+        }
+      ]
+    }
+  }'
+```
+
+## Report on an agent workflow
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.workflow.report/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "workflow_run": {
+      "run_id": "wfrun_123",
+      "status": "succeeded",
+      "planned_steps": 1,
+      "executed_steps": 1,
+      "failed_steps": 0,
+      "step_results": [
+        {"step_id": "inspect", "tool": "pdf.inspect.document", "status": "succeeded"}
+      ]
+    },
+    "output_path": ".agentpdf-out/workflow-report.md"
+  }'
+```
+
 ## Render
 
 ```bash
@@ -41,6 +102,18 @@ curl -X POST http://127.0.0.1:7331/v1/tools/pdf.convert.pdf_to_images/run \
     "pages": "1",
     "image_format": "png",
     "out_dir": ".agentpdf-out/renders"
+  }'
+```
+
+## Extract embedded images
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.convert.extract_images/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "input_path": "report.pdf",
+    "pages": "all",
+    "out_dir": ".agentpdf-out/extracted-images"
   }'
 ```
 
@@ -63,7 +136,7 @@ curl -X POST http://127.0.0.1:7331/v1/tools/pdf.convert.markdown_to_pdf/run \
   -d '{
     "markdown": "# Agent Report\n\n- Local first\n- Agent ready",
     "output_path": ".agentpdf-out/agent-report.pdf",
-    "style_pack": "plain_report"
+    "style_pack": "business_report_modern"
   }'
 ```
 
@@ -127,6 +200,53 @@ curl -X POST http://127.0.0.1:7331/v1/tools/pdf.organize.rotate_pages/run \
   }'
 ```
 
+## Reorder pages
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.organize.reorder_pages/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "input_path": "report.pdf",
+    "order": "3,1,2",
+    "output_path": "reordered.pdf"
+  }'
+```
+
+## Insert blank pages
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.organize.insert_blank_pages/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "input_path": "reordered.pdf",
+    "after_page": 1,
+    "count": 2,
+    "output_path": "with-blanks.pdf"
+  }'
+```
+
+## Compress PDF
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.optimize.compress/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "input_path": "with-blanks.pdf",
+    "output_path": "with-blanks-compressed.pdf"
+  }'
+```
+
+## Repair / rewrite PDF
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.optimize.repair/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "input_path": "with-blanks-compressed.pdf",
+    "output_path": "with-blanks-repaired.pdf"
+  }'
+```
+
 ## Job and artifact lookup
 
 ```bash
@@ -169,4 +289,132 @@ curl -X POST http://127.0.0.1:7331/v1/tools/pdf.metadata.remove/run \
 curl -X POST http://127.0.0.1:7331/v1/tools/pdf.validation.validate_output/run \
   -H 'Content-Type: application/json' \
   -d '{"path": ".agentpdf-out/scan-numbered.pdf", "expected_pages": 2}'
+```
+
+## Render check
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.validation.render_check/run \
+  -H 'Content-Type: application/json' \
+  -d '{"path": ".agentpdf-out/scan-numbered.pdf", "pages": "1"}'
+```
+
+## Blank page check
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.validation.blank_page_check/run \
+  -H 'Content-Type: application/json' \
+  -d '{"path": "with-blanks.pdf", "pages": "all"}'
+```
+
+## Lite parse
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.ai.parse.lite/run \
+  -H 'Content-Type: application/json' \
+  -d '{"input_path": ".agentpdf-out/scan-numbered.pdf"}'
+```
+
+## Export Document IR JSON
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.convert.pdf_to_json/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "input_path": ".agentpdf-out/scan-numbered.pdf",
+    "output_path": ".agentpdf-out/scan.ir.json"
+  }'
+```
+
+## Export cited Markdown
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.convert.pdf_to_markdown/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "input_path": ".agentpdf-out/scan-numbered.pdf",
+    "output_path": ".agentpdf-out/scan.md"
+  }'
+```
+
+## Local RAG ingest
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.ai.rag.ingest/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "input_path": ".agentpdf-out/scan-numbered.pdf",
+    "index_path": ".agentpdf-out/scan.index.json"
+  }'
+```
+
+## Local RAG query
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.ai.rag.query/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "index_path": ".agentpdf-out/scan.index.json",
+    "query": "What does this PDF say?"
+  }'
+```
+
+## Local RAG one-shot chat
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.ai.rag.chat/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "input_path": ".agentpdf-out/scan.pdf",
+    "question": "Where does the invoice total appear?",
+    "report_output_path": ".agentpdf-out/scan-chat-report.pdf",
+    "highlight_output_path": ".agentpdf-out/scan-chat-highlighted.pdf"
+  }'
+```
+
+## Local RAG search
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.ai.rag.search/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "index_path": ".agentpdf-out/scan.index.json",
+    "query": "invoice total"
+  }'
+```
+
+## Local RAG cite answer
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.ai.rag.cite_answer/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "index_path": ".agentpdf-out/scan.index.json",
+    "answer": "The invoice total appears in the document."
+  }'
+```
+
+## Local RAG highlighted source PDF
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.ai.rag.highlight_sources/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "index_path": ".agentpdf-out/scan.index.json",
+    "answer": "The invoice total appears in the document.",
+    "output_path": ".agentpdf-out/scan-highlighted.pdf"
+  }'
+```
+
+## Local RAG cited answer report PDF
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.ai.rag.export_report/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "index_path": ".agentpdf-out/scan.index.json",
+    "question": "Where does the invoice total appear?",
+    "answer": "The invoice total appears in the document.",
+    "output_path": ".agentpdf-out/scan-rag-report.pdf"
+  }'
 ```

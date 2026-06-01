@@ -10,23 +10,44 @@ from agentpdf.schemas.errors import AgentPDFException
 from agentpdf.schemas.models import AgentPDFError, ToolResult
 from agentpdf.tools.registry import get_tool, load_tool_manifest
 from agentpdf.tools.runner import (
+    run_blank_page_check,
+    run_compress,
     run_create_markdown,
     run_create_text,
+    run_extract_images,
     run_extract_pages,
     run_extract_text,
     run_image_to_pdf,
     run_inspect,
+    run_inspect_pages,
+    run_insert_blank_pages,
     run_metadata_read,
     run_metadata_remove,
     run_metadata_update,
     run_merge,
     run_page_numbers,
+    run_parse_lite,
+    run_pdf_to_markdown,
+    run_pdf_to_json,
+    run_rag_chat,
+    run_rag_cite_answer,
+    run_rag_export_report,
+    run_rag_highlight_sources,
+    run_rag_ingest,
+    run_rag_query,
+    run_rag_search,
     run_remove_pages,
     run_render,
+    run_render_check,
+    run_repair,
+    run_reorder_pages,
     run_rotate_pages,
     run_split,
     run_validate_output,
     run_watermark,
+    run_workflow_plan,
+    run_workflow_report,
+    run_workflow_run,
 )
 
 
@@ -109,6 +130,29 @@ def _record_result(app: FastAPI, result: ToolResult) -> None:
 def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
     if tool_name == "pdf.inspect.document":
         return run_inspect(payload.get("path", ""))
+    if tool_name == "pdf.inspect.pages":
+        return run_inspect_pages(
+            payload.get("input_path", payload.get("path", "")),
+            pages=str(payload.get("pages", "all")),
+            render_check=bool(payload.get("render_check", False)),
+        )
+    if tool_name == "pdf.workflow.plan":
+        return run_workflow_plan(
+            goal=str(payload.get("goal", "")),
+            input_path=payload.get("input_path"),
+        )
+    if tool_name == "pdf.workflow.run":
+        workflow = payload.get("workflow", payload)
+        return run_workflow_run(
+            workflow=workflow if isinstance(workflow, dict) else {},
+            dry_run=bool(payload.get("dry_run", False)),
+        )
+    if tool_name == "pdf.workflow.report":
+        workflow_run = payload.get("workflow_run", payload)
+        return run_workflow_report(
+            workflow_run=workflow_run if isinstance(workflow_run, dict) else {},
+            output_path=payload.get("output_path"),
+        )
     if tool_name == "pdf.organize.merge":
         return run_merge(payload.get("input_paths", []), payload.get("output_path", ""))
     if tool_name == "pdf.organize.split":
@@ -134,6 +178,29 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
             payload.get("input_path", ""),
             pages=str(payload.get("pages", "")),
             degrees=int(payload.get("degrees", 0)),
+            output_path=payload.get("output_path", ""),
+        )
+    if tool_name == "pdf.organize.reorder_pages":
+        return run_reorder_pages(
+            payload.get("input_path", ""),
+            order=str(payload.get("order", "")),
+            output_path=payload.get("output_path", ""),
+        )
+    if tool_name == "pdf.organize.insert_blank_pages":
+        return run_insert_blank_pages(
+            payload.get("input_path", ""),
+            after_page=int(payload.get("after_page", 0)),
+            count=int(payload.get("count", 1)),
+            output_path=payload.get("output_path", ""),
+        )
+    if tool_name == "pdf.optimize.compress":
+        return run_compress(
+            payload.get("input_path", ""),
+            output_path=payload.get("output_path", ""),
+        )
+    if tool_name == "pdf.optimize.repair":
+        return run_repair(
+            payload.get("input_path", ""),
             output_path=payload.get("output_path", ""),
         )
     if tool_name == "pdf.convert.image_to_pdf":
@@ -179,9 +246,27 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
             image_format=str(payload.get("image_format", "png")),
             out_dir=payload.get("out_dir", "renders"),
         )
+    if tool_name == "pdf.convert.extract_images":
+        return run_extract_images(
+            payload.get("input_path", ""),
+            pages=str(payload.get("pages", "all")),
+            out_dir=payload.get("out_dir", "extracted-images"),
+        )
     if tool_name == "pdf.convert.pdf_to_text":
         return run_extract_text(
             payload.get("input_path", ""),
+            pages=str(payload.get("pages", "all")),
+        )
+    if tool_name == "pdf.convert.pdf_to_json":
+        return run_pdf_to_json(
+            payload.get("input_path", ""),
+            output_path=payload.get("output_path", ""),
+            pages=str(payload.get("pages", "all")),
+        )
+    if tool_name == "pdf.convert.pdf_to_markdown":
+        return run_pdf_to_markdown(
+            payload.get("input_path", ""),
+            output_path=payload.get("output_path", ""),
             pages=str(payload.get("pages", "all")),
         )
     if tool_name == "pdf.metadata.read":
@@ -202,6 +287,81 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
         return run_validate_output(
             payload.get("path", ""),
             expected_pages=int(expected_pages) if expected_pages is not None else None,
+        )
+    if tool_name == "pdf.validation.render_check":
+        return run_render_check(
+            payload.get("path", ""),
+            pages=str(payload.get("pages", "all")),
+        )
+    if tool_name == "pdf.validation.blank_page_check":
+        return run_blank_page_check(
+            payload.get("path", ""),
+            pages=str(payload.get("pages", "all")),
+        )
+    if tool_name == "pdf.ai.parse.lite":
+        return run_parse_lite(
+            payload.get("input_path", ""),
+            pages=str(payload.get("pages", "all")),
+        )
+    if tool_name == "pdf.ai.rag.ingest":
+        return run_rag_ingest(
+            payload.get("input_path", ""),
+            index_path=payload.get("index_path", ""),
+            pages=str(payload.get("pages", "all")),
+            max_chars=int(payload.get("max_chars", 1200)),
+            overlap_chars=int(payload.get("overlap_chars", 120)),
+        )
+    if tool_name == "pdf.ai.rag.query":
+        return run_rag_query(
+            payload.get("index_path", ""),
+            query=str(payload.get("query", "")),
+            top_k=int(payload.get("top_k", 5)),
+        )
+    if tool_name == "pdf.ai.rag.chat":
+        return run_rag_chat(
+            payload.get("input_path", ""),
+            question=str(payload.get("question", "")),
+            index_path=payload.get("index_path"),
+            report_output_path=payload.get("report_output_path"),
+            highlight_output_path=payload.get("highlight_output_path"),
+            pages=str(payload.get("pages", "all")),
+            top_k=int(payload.get("top_k", 5)),
+            max_chars=int(payload.get("max_chars", 1200)),
+            overlap_chars=int(payload.get("overlap_chars", 120)),
+            style_pack=str(payload.get("style_pack", "plain_report")),
+            highlight_color=str(payload.get("highlight_color", "fff59d")),
+        )
+    if tool_name == "pdf.ai.rag.search":
+        return run_rag_search(
+            payload.get("index_path", ""),
+            query=str(payload.get("query", "")),
+            top_k=int(payload.get("top_k", 5)),
+        )
+    if tool_name == "pdf.ai.rag.cite_answer":
+        return run_rag_cite_answer(
+            payload.get("index_path", ""),
+            answer=str(payload.get("answer", "")),
+            top_k=int(payload.get("top_k", 5)),
+        )
+    if tool_name == "pdf.ai.rag.highlight_sources":
+        return run_rag_highlight_sources(
+            payload.get("index_path", ""),
+            output_path=payload.get("output_path", ""),
+            answer=payload.get("answer"),
+            query=payload.get("query"),
+            top_k=int(payload.get("top_k", 5)),
+            highlight_color=str(payload.get("highlight_color", "fff59d")),
+        )
+    if tool_name == "pdf.ai.rag.export_report":
+        return run_rag_export_report(
+            payload.get("index_path", ""),
+            output_path=payload.get("output_path", ""),
+            question=str(payload.get("question", "")),
+            answer=payload.get("answer"),
+            top_k=int(payload.get("top_k", 5)),
+            include_citations=bool(payload.get("include_citations", True)),
+            title=payload.get("title"),
+            style_pack=str(payload.get("style_pack", "plain_report")),
         )
 
     try:

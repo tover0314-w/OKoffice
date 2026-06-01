@@ -50,7 +50,15 @@ client.runTool("pdf.convert.text_to_pdf", {
   output_path: "hello.pdf",
 });
 client.inspectDocument({ path: "report.pdf" });
+client.inspectPages({ inputPath: "report.pdf", pages: "1-3", renderCheck: true });
+client.workflowPlan({ goal: "Chat with this PDF", inputPath: "report.pdf" });
+client.workflowRun({ workflow: { input_path: "report.pdf", steps: [] } });
+client.workflowReport({ workflowRun: { run_id: "wfrun_123", step_results: [] } });
 client.merge({ inputPaths: ["a.pdf", "b.pdf"], outputPath: "merged.pdf" });
+client.reorderPages({ inputPath: "merged.pdf", order: "2,1", outputPath: "reordered.pdf" });
+client.insertBlankPages({ inputPath: "reordered.pdf", afterPage: 1, count: 1, outputPath: "with-blank.pdf" });
+client.compress({ inputPath: "with-blank.pdf", outputPath: "with-blank-compressed.pdf" });
+client.repair({ inputPath: "with-blank-compressed.pdf", outputPath: "with-blank-repaired.pdf" });
 client.imageToPdf({ imagePaths: ["cover.png"], outputPath: "cover.pdf" });
 client.watermark({ inputPath: "cover.pdf", text: "DRAFT", outputPath: "cover-draft.pdf" });
 client.addPageNumbers({ inputPath: "cover-draft.pdf", outputPath: "cover-numbered.pdf" });
@@ -58,8 +66,44 @@ client.createTextPdf({ text: "Hello", outputPath: "hello.pdf" });
 client.createMarkdownPdf({
   markdown: "# Report\n\nHello",
   outputPath: "report.pdf",
+  stylePack: "business_report_modern",
 });
 client.validateOutput({ path: "cover-numbered.pdf", expectedPages: 1 });
+client.renderCheck({ path: "cover-numbered.pdf", pages: "1" });
+client.blankPageCheck({ path: "with-blank.pdf", pages: "all" });
+client.extractImages({ inputPath: "cover-numbered.pdf", pages: "all", outDir: "cover-images" });
+client.parseLite({ inputPath: "cover-numbered.pdf" });
+client.pdfToJson({ inputPath: "cover-numbered.pdf", outputPath: "cover-numbered.ir.json" });
+client.pdfToMarkdown({ inputPath: "cover-numbered.pdf", outputPath: "cover-numbered.md" });
+client.ragIngest({
+  inputPath: "cover-numbered.pdf",
+  indexPath: "cover-numbered.index.json",
+});
+client.ragChat({
+  inputPath: "cover-numbered.pdf",
+  question: "What is this PDF about?",
+  reportOutputPath: "cover-chat-report.pdf",
+  highlightOutputPath: "cover-chat-highlighted.pdf",
+});
+client.ragQuery({
+  indexPath: "cover-numbered.index.json",
+  query: "What is this PDF about?",
+});
+client.ragSearch({
+  indexPath: "cover-numbered.index.json",
+  query: "PDF",
+});
+client.ragHighlightSources({
+  indexPath: "cover-numbered.index.json",
+  answer: "The cover is numbered.",
+  outputPath: "cover-highlighted.pdf",
+});
+client.ragExportReport({
+  indexPath: "cover-numbered.index.json",
+  question: "What is this PDF about?",
+  answer: "The cover is numbered.",
+  outputPath: "cover-rag-report.pdf",
+});
 ```
 
 ## SDK principles

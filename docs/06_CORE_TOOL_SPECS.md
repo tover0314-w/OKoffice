@@ -72,6 +72,49 @@ Inspect a PDF and return agent-readable facts.
 - Returns metadata.
 - Does not mutate input.
 
+## `pdf.inspect.pages`
+
+### Purpose
+
+Return per-page facts that agents can use before parsing, OCR, editing, or validation workflows.
+
+### Input
+
+```json
+{
+  "input_path": "report.pdf",
+  "pages": "1-3",
+  "render_check": true
+}
+```
+
+### Output highlights
+
+```json
+{
+  "selected_pages": [1, 2, 3],
+  "pages": [
+    {
+      "page_number": 1,
+      "width": 612,
+      "height": 792,
+      "rotation": 0,
+      "has_text_layer": true,
+      "text_char_count": 842,
+      "image_count": 2,
+      "render": {"status": "passed", "width": 306, "height": 396}
+    }
+  ]
+}
+```
+
+### Acceptance criteria
+
+- Supports the standard page range syntax.
+- Reports page size, rotation, text presence, text character count, and embedded image count.
+- Optionally renders selected pages in memory and attaches render evidence.
+- Does not mutate input.
+
 ## `pdf.organize.merge`
 
 ### Input
@@ -123,6 +166,36 @@ Inspect a PDF and return agent-readable facts.
 - Does not overwrite unless `overwrite=true`.
 - Preserves page order.
 
+## `pdf.optimize.compress`
+
+### Input
+
+```json
+{
+  "input_path": "report.pdf",
+  "output_path": "report-compressed.pdf"
+}
+```
+
+### Open-source baseline
+
+The local implementation rewrites pages through the PDF writer, compresses page content streams when the backend supports it, preserves page count, records original/output byte counts, and validates the generated PDF. It may warn when the source is already compressed or the rewritten output is not smaller.
+
+## `pdf.optimize.repair`
+
+### Input
+
+```json
+{
+  "input_path": "report.pdf",
+  "output_path": "report-repaired.pdf"
+}
+```
+
+### Open-source baseline
+
+The local implementation reads a parseable or mildly recoverable PDF and writes a fresh PDF object structure. This is a safe local rewrite helper, not a promise to recover every corrupted file; richer diagnostics can be added later with optional qpdf-style workers.
+
 ## `pdf.convert.pdf_to_images`
 
 ### Input
@@ -143,6 +216,22 @@ Inspect a PDF and return agent-readable facts.
 - Records dimensions and checksums.
 - Supports controlled DPI.
 - Fails gracefully when renderer dependency is missing.
+
+## `pdf.convert.extract_images`
+
+### Input
+
+```json
+{
+  "input_path": "report.pdf",
+  "pages": "all",
+  "out_dir": "./extracted-images"
+}
+```
+
+### Open-source baseline
+
+The local implementation extracts decoded embedded images from selected PDF pages, writes image artifacts, and returns page number, image index, dimensions, source object name, artifact id, output path, and MIME type. This supports agent workflows that need to hand figures, scans, charts, or photos to OCR/vision workers later.
 
 ## `pdf.convert.image_to_pdf`
 
@@ -228,7 +317,7 @@ The local implementation writes plain text into a validated PDF artifact with st
 
 ### Open-source baseline
 
-The first implementation may support simple Markdown and template-based CSS. Advanced AI style generation is cloud-only.
+The local implementation supports simple Markdown plus deterministic style packs. `style_pack` can be a built-in id such as `plain_report`, `business_report_modern`, `academic_paper_basic`, `resume_modern`, or `invoice_clean`, or a path to a local JSON style pack file. The result usage includes resolved style id, name, source, page settings, colors, and components so agents can audit the selected template. Advanced AI style generation is cloud-only.
 
 ## `pdf.validation.validate_output`
 

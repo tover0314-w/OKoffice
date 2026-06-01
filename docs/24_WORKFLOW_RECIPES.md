@@ -2,6 +2,8 @@
 
 This file describes agent workflows as tool chains.
 
+Agents can use `pdf.workflow.plan` first to turn a natural-language goal into ordered local tool steps, agent roles, validation checks, and cloud-boundary notes. Concrete manifests can then run through `pdf.workflow.run`, which executes supported local tools in order and returns per-step evidence. The run can be closed with `pdf.workflow.report`, which summarizes status, artifacts, warnings, and failed steps for agent handoff.
+
 ## 1. Basic merge and validate
 
 ```text
@@ -25,10 +27,18 @@ pdf.inspect.document -> pdf.organize.extract_pages -> pdf.validation.validate_ou
 ## 3. Research paper RAG
 
 ```text
-pdf.inspect.document -> pdf.ai.parse.lite -> pdf.ai.rag.ingest -> pdf.ai.rag.query
+pdf.inspect.document -> pdf.ai.parse.lite -> pdf.ai.rag.ingest -> pdf.ai.rag.query -> pdf.ai.rag.export_report -> pdf.ai.rag.highlight_sources
 ```
 
-Return answer, cited chunks, page numbers, bboxes when available, and optional source highlights.
+Return answer, cited chunks, page numbers, bboxes, a cited answer report PDF, and a highlighted source PDF.
+
+One-shot local agent shortcut:
+
+```text
+pdf.ai.rag.chat
+```
+
+Use this when an agent wants the whole local chat evidence packet from one PDF and one question.
 
 ## 4. Scanned PDF to searchable PDF
 

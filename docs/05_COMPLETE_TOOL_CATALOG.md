@@ -12,6 +12,14 @@ This is the full public tool map. Some tools can be `planned` or `cloud_only`, b
 
 ## Core families
 
+### `pdf.workflow`
+
+| Tool | Status | Description |
+|---|---:|---|
+| `pdf.workflow.plan` | beta target | Plan a local-first agent workflow with roles, steps, validation, and cloud boundary. |
+| `pdf.workflow.run` | beta target | Execute a local workflow manifest and return per-step evidence. |
+| `pdf.workflow.report` | beta target | Summarize workflow artifacts, warnings, validation, and step evidence. |
+
 ### `pdf.inspect`
 
 | Tool | Status | Description |
@@ -197,11 +205,12 @@ This is the full public tool map. Some tools can be `planned` or `cloud_only`, b
 | Tool | Status | Description |
 |---|---:|---|
 | `pdf.ai.rag.ingest` | beta target | Create local index/chunks. |
+| `pdf.ai.rag.chat` | beta target | One-shot local PDF question answering with citations, report, and highlights. |
 | `pdf.ai.rag.query` | beta target | Ask document questions with citations. |
 | `pdf.ai.rag.search` | beta target | Search chunks/spans. |
 | `pdf.ai.rag.cite_answer` | beta target | Return page/bbox citations. |
-| `pdf.ai.rag.highlight_sources` | planned | Produce highlighted source PDF. |
-| `pdf.ai.rag.export_report` | planned/cloud | Create Q&A/source report PDF. |
+| `pdf.ai.rag.highlight_sources` | beta target | Produce highlighted source PDF from local RAG citations. |
+| `pdf.ai.rag.export_report` | beta target | Create cited Q&A/source PDF report from a local RAG index. |
 
 ### `pdf.ai.extract`
 

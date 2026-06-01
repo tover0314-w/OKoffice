@@ -1,16 +1,36 @@
 import type {
+  BlankPageCheckInput,
   CreateMarkdownPdfInput,
   CreateTextPdfInput,
+  ExtractImagesInput,
   ImageToPdfInput,
+  InsertBlankPagesInput,
   InspectDocumentInput,
+  InspectPagesInput,
   JsonObject,
   MergePdfInput,
+  OptimizePdfInput,
   PageNumbersInput,
+  PdfToMarkdownInput,
+  PdfToJsonInput,
+  ParseLiteInput,
+  RagChatInput,
+  RagCiteAnswerInput,
+  RagExportReportInput,
+  RagHighlightSourcesInput,
+  RagIngestInput,
+  RagQueryInput,
+  RagSearchInput,
+  RenderCheckInput,
+  ReorderPagesInput,
   ToolManifest,
   ToolResult,
   ToolSpec,
   ValidateOutputInput,
   WatermarkInput,
+  WorkflowPlanInput,
+  WorkflowReportInput,
+  WorkflowRunInput,
 } from "./types.js";
 
 export type AgentPDFFetch = (input: string | URL, init?: RequestInit) => Promise<Response>;
@@ -71,9 +91,69 @@ export class AgentPDFClient {
     return this.runTool("pdf.inspect.document", { path: input.path });
   }
 
+  async inspectPages(input: InspectPagesInput): Promise<ToolResult> {
+    return this.runTool("pdf.inspect.pages", {
+      input_path: input.inputPath,
+      ...(input.pages ? { pages: input.pages } : {}),
+      ...(input.renderCheck !== undefined ? { render_check: input.renderCheck } : {}),
+    });
+  }
+
+  async workflowPlan(input: WorkflowPlanInput): Promise<ToolResult> {
+    return this.runTool("pdf.workflow.plan", {
+      goal: input.goal,
+      ...(input.inputPath ? { input_path: input.inputPath } : {}),
+    });
+  }
+
+  async workflowRun(input: WorkflowRunInput): Promise<ToolResult> {
+    return this.runTool("pdf.workflow.run", {
+      workflow: input.workflow,
+      ...(input.dryRun !== undefined ? { dry_run: input.dryRun } : {}),
+    });
+  }
+
+  async workflowReport(input: WorkflowReportInput): Promise<ToolResult> {
+    return this.runTool("pdf.workflow.report", {
+      workflow_run: input.workflowRun,
+      ...(input.outputPath ? { output_path: input.outputPath } : {}),
+    });
+  }
+
   async merge(input: MergePdfInput): Promise<ToolResult> {
     return this.runTool("pdf.organize.merge", {
       input_paths: input.inputPaths,
+      output_path: input.outputPath,
+    });
+  }
+
+  async reorderPages(input: ReorderPagesInput): Promise<ToolResult> {
+    return this.runTool("pdf.organize.reorder_pages", {
+      input_path: input.inputPath,
+      order: input.order,
+      output_path: input.outputPath,
+    });
+  }
+
+  async insertBlankPages(input: InsertBlankPagesInput): Promise<ToolResult> {
+    return this.runTool("pdf.organize.insert_blank_pages", {
+      input_path: input.inputPath,
+      after_page: input.afterPage,
+      output_path: input.outputPath,
+      ...(input.count !== undefined ? { count: input.count } : {}),
+    });
+  }
+
+  async compress(input: OptimizePdfInput): Promise<ToolResult> {
+    return this.runTool("pdf.optimize.compress", {
+      input_path: input.inputPath,
+      output_path: input.outputPath,
+    });
+  }
+
+  async repair(input: OptimizePdfInput): Promise<ToolResult> {
+    return this.runTool("pdf.optimize.repair", {
+      input_path: input.inputPath,
       output_path: input.outputPath,
     });
   }
@@ -128,6 +208,125 @@ export class AgentPDFClient {
     return this.runTool("pdf.validation.validate_output", {
       path: input.path,
       ...(input.expectedPages !== undefined ? { expected_pages: input.expectedPages } : {}),
+    });
+  }
+
+  async renderCheck(input: RenderCheckInput): Promise<ToolResult> {
+    return this.runTool("pdf.validation.render_check", {
+      path: input.path,
+      ...(input.pages ? { pages: input.pages } : {}),
+    });
+  }
+
+  async extractImages(input: ExtractImagesInput): Promise<ToolResult> {
+    return this.runTool("pdf.convert.extract_images", {
+      input_path: input.inputPath,
+      ...(input.pages ? { pages: input.pages } : {}),
+      ...(input.outDir ? { out_dir: input.outDir } : {}),
+    });
+  }
+
+  async blankPageCheck(input: BlankPageCheckInput): Promise<ToolResult> {
+    return this.runTool("pdf.validation.blank_page_check", {
+      path: input.path,
+      ...(input.pages ? { pages: input.pages } : {}),
+    });
+  }
+
+  async parseLite(input: ParseLiteInput): Promise<ToolResult> {
+    return this.runTool("pdf.ai.parse.lite", {
+      input_path: input.inputPath,
+      ...(input.pages ? { pages: input.pages } : {}),
+    });
+  }
+
+  async ragIngest(input: RagIngestInput): Promise<ToolResult> {
+    return this.runTool("pdf.ai.rag.ingest", {
+      input_path: input.inputPath,
+      index_path: input.indexPath,
+      ...(input.pages ? { pages: input.pages } : {}),
+      ...(input.maxChars !== undefined ? { max_chars: input.maxChars } : {}),
+      ...(input.overlapChars !== undefined ? { overlap_chars: input.overlapChars } : {}),
+    });
+  }
+
+  async ragQuery(input: RagQueryInput): Promise<ToolResult> {
+    return this.runTool("pdf.ai.rag.query", {
+      index_path: input.indexPath,
+      query: input.query,
+      ...(input.topK !== undefined ? { top_k: input.topK } : {}),
+    });
+  }
+
+  async ragChat(input: RagChatInput): Promise<ToolResult> {
+    return this.runTool("pdf.ai.rag.chat", {
+      input_path: input.inputPath,
+      question: input.question,
+      ...(input.indexPath ? { index_path: input.indexPath } : {}),
+      ...(input.reportOutputPath ? { report_output_path: input.reportOutputPath } : {}),
+      ...(input.highlightOutputPath ? { highlight_output_path: input.highlightOutputPath } : {}),
+      ...(input.pages ? { pages: input.pages } : {}),
+      ...(input.topK !== undefined ? { top_k: input.topK } : {}),
+      ...(input.maxChars !== undefined ? { max_chars: input.maxChars } : {}),
+      ...(input.overlapChars !== undefined ? { overlap_chars: input.overlapChars } : {}),
+      ...(input.stylePack ? { style_pack: input.stylePack } : {}),
+      ...(input.highlightColor ? { highlight_color: input.highlightColor } : {}),
+    });
+  }
+
+  async ragSearch(input: RagSearchInput): Promise<ToolResult> {
+    return this.runTool("pdf.ai.rag.search", {
+      index_path: input.indexPath,
+      query: input.query,
+      ...(input.topK !== undefined ? { top_k: input.topK } : {}),
+    });
+  }
+
+  async ragCiteAnswer(input: RagCiteAnswerInput): Promise<ToolResult> {
+    return this.runTool("pdf.ai.rag.cite_answer", {
+      index_path: input.indexPath,
+      answer: input.answer,
+      ...(input.topK !== undefined ? { top_k: input.topK } : {}),
+    });
+  }
+
+  async ragHighlightSources(input: RagHighlightSourcesInput): Promise<ToolResult> {
+    return this.runTool("pdf.ai.rag.highlight_sources", {
+      index_path: input.indexPath,
+      output_path: input.outputPath,
+      ...(input.answer ? { answer: input.answer } : {}),
+      ...(input.query ? { query: input.query } : {}),
+      ...(input.topK !== undefined ? { top_k: input.topK } : {}),
+      ...(input.highlightColor ? { highlight_color: input.highlightColor } : {}),
+    });
+  }
+
+  async ragExportReport(input: RagExportReportInput): Promise<ToolResult> {
+    return this.runTool("pdf.ai.rag.export_report", {
+      index_path: input.indexPath,
+      output_path: input.outputPath,
+      question: input.question,
+      ...(input.answer ? { answer: input.answer } : {}),
+      ...(input.topK !== undefined ? { top_k: input.topK } : {}),
+      ...(input.includeCitations !== undefined ? { include_citations: input.includeCitations } : {}),
+      ...(input.title ? { title: input.title } : {}),
+      ...(input.stylePack ? { style_pack: input.stylePack } : {}),
+    });
+  }
+
+  async pdfToJson(input: PdfToJsonInput): Promise<ToolResult> {
+    return this.runTool("pdf.convert.pdf_to_json", {
+      input_path: input.inputPath,
+      output_path: input.outputPath,
+      ...(input.pages ? { pages: input.pages } : {}),
+    });
+  }
+
+  async pdfToMarkdown(input: PdfToMarkdownInput): Promise<ToolResult> {
+    return this.runTool("pdf.convert.pdf_to_markdown", {
+      input_path: input.inputPath,
+      output_path: input.outputPath,
+      ...(input.pages ? { pages: input.pages } : {}),
     });
   }
 

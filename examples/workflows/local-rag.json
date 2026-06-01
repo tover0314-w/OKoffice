@@ -1,0 +1,93 @@
+{
+  "name": "local-rag-cited-answer",
+  "input_path": ".agentpdf-out/numbered.pdf",
+  "artifact_dir": ".agentpdf-out/workflows/local-rag",
+  "bindings": {
+    "<question>": "What does this document say?",
+    "<answer>": "This document is locally indexed."
+  },
+  "steps": [
+    {
+      "step_id": "inspect",
+      "tool": "pdf.inspect.document",
+      "input": {
+        "path": "<input.pdf>"
+      }
+    },
+    {
+      "step_id": "inspect_pages",
+      "tool": "pdf.inspect.pages",
+      "input": {
+        "input_path": "<input.pdf>",
+        "pages": "all",
+        "render_check": true
+      }
+    },
+    {
+      "step_id": "parse",
+      "tool": "pdf.ai.parse.lite",
+      "input": {
+        "input_path": "<input.pdf>"
+      }
+    },
+    {
+      "step_id": "index",
+      "tool": "pdf.ai.rag.ingest",
+      "input": {
+        "input_path": "<input.pdf>",
+        "index_path": "<output.index.json>",
+        "max_chars": 800
+      }
+    },
+    {
+      "step_id": "query",
+      "tool": "pdf.ai.rag.query",
+      "input": {
+        "index_path": "<output.index.json>",
+        "query": "<question>"
+      }
+    },
+    {
+      "step_id": "cite",
+      "tool": "pdf.ai.rag.cite_answer",
+      "input": {
+        "index_path": "<output.index.json>",
+        "answer": "<answer>"
+      }
+    },
+    {
+      "step_id": "export_report",
+      "tool": "pdf.ai.rag.export_report",
+      "input": {
+        "index_path": "<output.index.json>",
+        "question": "<question>",
+        "answer": "<answer>",
+        "output_path": "<rag-report.pdf>"
+      }
+    },
+    {
+      "step_id": "highlight_sources",
+      "tool": "pdf.ai.rag.highlight_sources",
+      "input": {
+        "index_path": "<output.index.json>",
+        "answer": "<answer>",
+        "output_path": "<highlighted.pdf>"
+      }
+    },
+    {
+      "step_id": "validate",
+      "tool": "pdf.validation.validate_output",
+      "input": {
+        "path": "<final.pdf>"
+      }
+    },
+    {
+      "step_id": "render_check",
+      "tool": "pdf.validation.render_check",
+      "input": {
+        "path": "<final.pdf>",
+        "pages": "1"
+      }
+    }
+  ]
+}

@@ -1,9 +1,12 @@
 # 23 — Full Tool Status Matrix
 
-Total tools specified: **161**
+Total tools specified: **164**
 
 | Tool | Category | Status | OSS default |
 |---|---|---:|---:|
+| `pdf.workflow.plan` | workflow | beta | yes |
+| `pdf.workflow.run` | workflow | beta | yes |
+| `pdf.workflow.report` | workflow | beta | yes |
 | `pdf.inspect.document` | inspect | stable | yes |
 | `pdf.inspect.pages` | inspect | stable | yes |
 | `pdf.inspect.permissions` | inspect | beta | yes |
@@ -122,11 +125,12 @@ Total tools specified: **161**
 | `pdf.ai.parse.charts` | ai_parse | planned | yes |
 | `pdf.ai.parse.references` | ai_parse | planned | yes |
 | `pdf.ai.rag.ingest` | ai_rag | beta | yes |
+| `pdf.ai.rag.chat` | ai_rag | beta | yes |
 | `pdf.ai.rag.query` | ai_rag | beta | yes |
 | `pdf.ai.rag.search` | ai_rag | beta | yes |
 | `pdf.ai.rag.cite_answer` | ai_rag | beta | yes |
-| `pdf.ai.rag.highlight_sources` | ai_rag | planned | yes |
-| `pdf.ai.rag.export_report` | ai_rag | planned | yes |
+| `pdf.ai.rag.highlight_sources` | ai_rag | beta | yes |
+| `pdf.ai.rag.export_report` | ai_rag | beta | yes |
 | `pdf.ai.extract.schema` | ai_extract | cloud_only | no |
 | `pdf.ai.extract.invoice` | ai_extract | cloud_only | no |
 | `pdf.ai.extract.contract_terms` | ai_extract | cloud_only | no |

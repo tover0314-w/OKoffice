@@ -14,6 +14,13 @@ Local, free, open-source.
 - Best for clean, digital PDFs.
 - Does not require model tokens.
 
+Current baseline:
+
+- Implemented in local Python core.
+- Emits Document IR in the standard `ToolResult.usage.document_ir` field.
+- Uses page-level bboxes when precise spans are unavailable.
+- Returns warnings for pages without text-layer blocks.
+
 ### `pdf.ai.parse.agentic`
 
 Future cloud or advanced optional mode.
@@ -35,6 +42,12 @@ Turn PDF into searchable chunks with page and bbox citations.
 - Chunk by headings/page/paragraph.
 - Store local JSON index.
 - Support keyword or optional local embedding provider.
+
+Current baseline:
+
+- Implemented with local keyword chunks.
+- Stores `index.json`-compatible JSON when a directory path is provided.
+- Each chunk stores `chunk_id`, `page_number`, `bbox`, text, source block id, and normalized tokens.
 
 ### Input
 
@@ -97,7 +110,171 @@ Answer questions with evidence.
 }
 ```
 
-Open-source baseline may provide extractive answers and cite chunks. Generative answers require configured model provider or cloud.
+Current baseline provides extractive answers and cited chunks. Generative answers require configured model provider or cloud.
+
+## `pdf.ai.rag.search`
+
+### Purpose
+
+Search local indexed chunks and return cited matches without composing an answer.
+
+### Output
+
+```json
+{
+  "matches": [
+    {
+      "chunk_id": "chunk_000001",
+      "page_number": 1,
+      "bbox": [0, 0, 612, 792],
+      "text": "...",
+      "score": 0.75
+    }
+  ]
+}
+```
+
+Current baseline is local keyword search over chunks created by `pdf.ai.rag.ingest`.
+
+## `pdf.ai.rag.chat`
+
+### Purpose
+
+Ask a local PDF in one tool call and return an extractive answer, page/bbox citations, a cited PDF answer report, and a highlighted source PDF.
+
+### Input
+
+```json
+{
+  "input_path": "./paper.pdf",
+  "question": "What does this document say about local deployment?",
+  "index_path": "./paper.index.json",
+  "report_output_path": "./paper-chat-report.pdf",
+  "highlight_output_path": "./paper-chat-highlighted.pdf",
+  "top_k": 5,
+  "style_pack": "business_report_modern"
+}
+```
+
+If output paths are omitted, the local runner creates them under `.agentpdf-out/rag-chat/<job>/`.
+
+### Output
+
+```json
+{
+  "answer": "No cloud key required.",
+  "citation_count": 1,
+  "pages_cited": [1],
+  "report_path": "./paper-chat-report.pdf",
+  "highlighted_path": "./paper-chat-highlighted.pdf"
+}
+```
+
+Current baseline is local and extractive. It chains `ingest`, `query`, `export_report`, and `highlight_sources` while preserving each artifact and step result for agents.
+
+## `pdf.ai.rag.cite_answer`
+
+### Purpose
+
+Map an existing answer back to local page and bbox evidence from an okpdf RAG index.
+
+### Input
+
+```json
+{
+  "index_path": "./.agentpdf/indexes/paper/index.json",
+  "answer": "The document says no cloud key is required.",
+  "top_k": 5
+}
+```
+
+### Output
+
+```json
+{
+  "citation_mode": "page_bbox",
+  "citation_count": 2,
+  "citations": [
+    {
+      "chunk_id": "chunk_000004",
+      "page_number": 1,
+      "bbox": [0, 0, 612, 792],
+      "text": "No cloud key required.",
+      "score": 0.8
+    }
+  ]
+}
+```
+
+Current baseline is local and extractive: it ranks stored chunks against the supplied answer and returns supporting citations. It does not generate or rewrite the answer.
+
+## `pdf.ai.rag.highlight_sources`
+
+### Purpose
+
+Create a highlighted copy of the source PDF from local page/bbox citations.
+
+### Input
+
+```json
+{
+  "index_path": "./.agentpdf/indexes/paper/index.json",
+  "answer": "The document says no cloud key is required.",
+  "output_path": "./paper-highlighted.pdf",
+  "top_k": 5,
+  "highlight_color": "fff59d"
+}
+```
+
+`query` can be supplied instead of `answer` when the caller wants to highlight search matches.
+
+### Output
+
+```json
+{
+  "citation_count": 2,
+  "highlighted_pages": [1],
+  "output_path": "./paper-highlighted.pdf",
+  "citations": []
+}
+```
+
+Current baseline is local and deterministic. It copies the source PDF from the RAG index, adds PDF highlight annotations for matched citation bboxes, writes a new PDF artifact, and validates the generated PDF.
+
+## `pdf.ai.rag.export_report`
+
+### Purpose
+
+Create a cited PDF answer report from a local RAG index.
+
+### Input
+
+```json
+{
+  "index_path": "./.agentpdf/indexes/paper/index.json",
+  "question": "What does the document say about local deployment?",
+  "answer": "The document says no cloud key is required.",
+  "output_path": "./paper-rag-report.pdf",
+  "top_k": 5,
+  "include_citations": true,
+  "style_pack": "plain_report"
+}
+```
+
+If `answer` is omitted, the local query tool produces an extractive answer first.
+
+### Output
+
+```json
+{
+  "output_path": "./paper-rag-report.pdf",
+  "citation_count": 2,
+  "pages_cited": [1],
+  "answer_mode": "provided_answer_with_local_citations"
+}
+```
+
+Current baseline is local and deterministic. It writes a new PDF artifact containing the question, answer, source metadata, citation snippets, page numbers, bboxes, and limitations, then validates the generated PDF.
 
 ## `pdf.ai.create.*`
 

@@ -6,18 +6,39 @@ from PIL import Image
 
 from agentpdf.mcp.server import (
     create_mcp_server,
+    pdf_ai_parse_lite,
+    pdf_ai_rag_cite_answer,
+    pdf_ai_rag_chat,
+    pdf_ai_rag_export_report,
+    pdf_ai_rag_highlight_sources,
+    pdf_ai_rag_ingest,
+    pdf_ai_rag_query,
+    pdf_ai_rag_search,
     pdf_add_page_numbers,
+    pdf_blank_page_check,
     pdf_create_markdown,
     pdf_create_text,
+    pdf_extract_images,
     pdf_extract_text,
     pdf_extract_pages,
     pdf_image_to_pdf,
     pdf_inspect_document,
+    pdf_inspect_pages,
     pdf_merge,
     pdf_metadata_read,
+    pdf_pdf_to_markdown,
+    pdf_pdf_to_json,
+    pdf_insert_blank_pages,
+    pdf_optimize_compress,
+    pdf_optimize_repair,
     pdf_render_pages,
+    pdf_render_check,
+    pdf_reorder_pages,
     pdf_validate_output,
     pdf_watermark,
+    pdf_workflow_plan,
+    pdf_workflow_report,
+    pdf_workflow_run,
 )
 
 
@@ -26,12 +47,18 @@ def test_mcp_server_exposes_local_pdf_tools() -> None:
     tool_names = {tool.name for tool in asyncio.run(server.list_tools())}
 
     assert "pdf_inspect_document" in tool_names
+    assert "pdf_inspect_pages" in tool_names
     assert "pdf_merge" in tool_names
     assert "pdf_split" in tool_names
     assert "pdf_extract_pages" in tool_names
     assert "pdf_remove_pages" in tool_names
     assert "pdf_rotate_pages" in tool_names
+    assert "pdf_reorder_pages" in tool_names
+    assert "pdf_insert_blank_pages" in tool_names
+    assert "pdf_optimize_compress" in tool_names
+    assert "pdf_optimize_repair" in tool_names
     assert "pdf_render_pages" in tool_names
+    assert "pdf_extract_images" in tool_names
     assert "pdf_extract_text" in tool_names
     assert "pdf_metadata_read" in tool_names
     assert "pdf_metadata_update" in tool_names
@@ -42,7 +69,73 @@ def test_mcp_server_exposes_local_pdf_tools() -> None:
     assert "pdf_watermark" in tool_names
     assert "pdf_add_page_numbers" in tool_names
     assert "pdf_validate_output" in tool_names
+    assert "pdf_render_check" in tool_names
+    assert "pdf_blank_page_check" in tool_names
+    assert "pdf_ai_parse_lite" in tool_names
+    assert "pdf_ai_rag_ingest" in tool_names
+    assert "pdf_ai_rag_cite_answer" in tool_names
+    assert "pdf_ai_rag_chat" in tool_names
+    assert "pdf_ai_rag_export_report" in tool_names
+    assert "pdf_ai_rag_highlight_sources" in tool_names
+    assert "pdf_ai_rag_query" in tool_names
+    assert "pdf_ai_rag_search" in tool_names
+    assert "pdf_pdf_to_json" in tool_names
+    assert "pdf_pdf_to_markdown" in tool_names
+    assert "pdf_workflow_plan" in tool_names
+    assert "pdf_workflow_run" in tool_names
+    assert "pdf_workflow_report" in tool_names
     assert "agentpdf_tool_manifest" in tool_names
+
+
+def test_mcp_workflow_plan_returns_agent_steps() -> None:
+    payload = json.loads(
+        pdf_workflow_plan("Chat with this PDF and cite the answer.", input_path="report.pdf")
+    )
+
+    assert payload["tool"] == "pdf.workflow.plan"
+    assert payload["usage"]["workflow"]["steps"][0]["tool"] == "pdf.inspect.document"
+
+
+def test_mcp_workflow_run_returns_step_evidence(text_pdf: Path) -> None:
+    payload = json.loads(
+        pdf_workflow_run(
+            {
+                "steps": [
+                    {
+                        "step_id": "inspect",
+                        "tool": "pdf.inspect.document",
+                        "input": {"path": str(text_pdf)},
+                    }
+                ]
+            }
+        )
+    )
+
+    assert payload["tool"] == "pdf.workflow.run"
+    assert payload["usage"]["workflow_run"]["executed_steps"] == 1
+    assert payload["usage"]["workflow_run"]["step_results"][0]["tool"] == "pdf.inspect.document"
+
+
+def test_mcp_workflow_report_returns_audit_summary(text_pdf: Path) -> None:
+    run_payload = json.loads(
+        pdf_workflow_run(
+            {
+                "steps": [
+                    {
+                        "step_id": "inspect",
+                        "tool": "pdf.inspect.document",
+                        "input": {"path": str(text_pdf)},
+                    }
+                ]
+            }
+        )
+    )
+
+    payload = json.loads(pdf_workflow_report(run_payload))
+
+    assert payload["tool"] == "pdf.workflow.report"
+    assert payload["usage"]["workflow_report"]["executed_steps"] == 1
+    assert "pdf.inspect.document" in payload["usage"]["workflow_report"]["markdown"]
 
 
 def test_mcp_inspect_returns_same_tool_result_contract(simple_pdf: Path) -> None:
@@ -51,6 +144,15 @@ def test_mcp_inspect_returns_same_tool_result_contract(simple_pdf: Path) -> None
     assert payload["status"] == "succeeded"
     assert payload["tool"] == "pdf.inspect.document"
     assert payload["usage"]["page_count"] == 1
+
+
+def test_mcp_inspect_pages_returns_page_facts(text_pdf: Path) -> None:
+    payload = json.loads(pdf_inspect_pages(str(text_pdf), pages="1", render_check=True))
+
+    assert payload["status"] == "succeeded"
+    assert payload["tool"] == "pdf.inspect.pages"
+    assert payload["usage"]["selected_pages"] == [1]
+    assert payload["usage"]["pages"][0]["render"]["status"] == "passed"
 
 
 def test_mcp_merge_returns_artifact(simple_pdf: Path, two_page_pdf: Path, tmp_path: Path) -> None:
@@ -69,6 +171,19 @@ def test_mcp_render_pages_returns_image_artifact(simple_pdf: Path, tmp_path: Pat
     assert payload["artifacts"][0]["mime_type"] == "image/png"
 
 
+def test_mcp_extract_images_returns_artifacts(tmp_path: Path) -> None:
+    image = tmp_path / "source.png"
+    source = tmp_path / "source.pdf"
+    Image.new("RGB", (32, 24), color=(40, 120, 80)).save(image)
+    _write_image_pdf(source, image)
+
+    payload = json.loads(pdf_extract_images(str(source), pages="1", out_dir=str(tmp_path / "images")))
+
+    assert payload["tool"] == "pdf.convert.extract_images"
+    assert payload["usage"]["image_count"] == 1
+    assert payload["artifacts"][0]["mime_type"] == "image/png"
+
+
 def test_mcp_extract_pages_returns_artifact(two_page_pdf: Path, tmp_path: Path) -> None:
     output = tmp_path / "extract.pdf"
 
@@ -76,6 +191,33 @@ def test_mcp_extract_pages_returns_artifact(two_page_pdf: Path, tmp_path: Path) 
 
     assert payload["status"] == "succeeded"
     assert payload["tool"] == "pdf.organize.extract_pages"
+
+
+def test_mcp_reorder_and_insert_blank_pages(two_page_pdf: Path, tmp_path: Path) -> None:
+    reordered = tmp_path / "reordered.pdf"
+    with_blank = tmp_path / "with-blank.pdf"
+
+    reorder = json.loads(pdf_reorder_pages(str(two_page_pdf), order="2,1", output_path=str(reordered)))
+    insert_blank = json.loads(
+        pdf_insert_blank_pages(str(reordered), after_page=1, count=1, output_path=str(with_blank))
+    )
+
+    assert reorder["tool"] == "pdf.organize.reorder_pages"
+    assert insert_blank["tool"] == "pdf.organize.insert_blank_pages"
+    assert insert_blank["artifacts"][0]["page_count"] == 3
+
+
+def test_mcp_optimize_compress_and_repair(two_page_pdf: Path, tmp_path: Path) -> None:
+    compressed = tmp_path / "compressed.pdf"
+    repaired = tmp_path / "repaired.pdf"
+
+    compress = json.loads(pdf_optimize_compress(str(two_page_pdf), output_path=str(compressed)))
+    repair = json.loads(pdf_optimize_repair(str(two_page_pdf), output_path=str(repaired)))
+
+    assert compress["tool"] == "pdf.optimize.compress"
+    assert repair["tool"] == "pdf.optimize.repair"
+    assert compressed.exists()
+    assert repaired.exists()
 
 
 def test_mcp_text_and_metadata_tools(text_pdf: Path, metadata_pdf: Path) -> None:
@@ -111,8 +253,83 @@ def test_mcp_image_watermark_page_numbers_and_validate(tmp_path: Path) -> None:
     watermark = json.loads(pdf_watermark(str(image_pdf), "CONFIDENTIAL", str(watermarked)))
     page_numbers = json.loads(pdf_add_page_numbers(str(watermarked), str(numbered)))
     validate = json.loads(pdf_validate_output(str(numbered), expected_pages=1))
+    render_check = json.loads(pdf_render_check(str(numbered), pages="1"))
+    blank_check = json.loads(pdf_blank_page_check(str(numbered), pages="1"))
 
     assert image_result["tool"] == "pdf.convert.image_to_pdf"
     assert watermark["tool"] == "pdf.edit.watermark"
     assert page_numbers["tool"] == "pdf.edit.page_numbers"
     assert validate["status"] == "succeeded"
+    assert render_check["tool"] == "pdf.validation.render_check"
+    assert blank_check["tool"] == "pdf.validation.blank_page_check"
+
+
+def test_mcp_parse_lite_and_local_rag(tmp_path: Path) -> None:
+    source = tmp_path / "rag.pdf"
+    index = tmp_path / "rag.index.json"
+    ir_json = tmp_path / "rag.ir.json"
+    ir_markdown = tmp_path / "rag.md"
+    pdf_create_markdown("# AgentPDF\n\nLocal RAG gives agents cited document evidence.", str(source))
+
+    parsed = json.loads(pdf_ai_parse_lite(str(source)))
+    exported = json.loads(pdf_pdf_to_json(str(source), str(ir_json)))
+    markdown = json.loads(pdf_pdf_to_markdown(str(source), str(ir_markdown)))
+    ingest = json.loads(pdf_ai_rag_ingest(str(source), str(index), max_chars=80))
+    query = json.loads(pdf_ai_rag_query(str(index), "What gives cited evidence?"))
+    search = json.loads(pdf_ai_rag_search(str(index), "cited evidence"))
+    cite = json.loads(pdf_ai_rag_cite_answer(str(index), "Local RAG gives cited document evidence."))
+    highlighted = tmp_path / "rag-highlighted.pdf"
+    report = tmp_path / "rag-report.pdf"
+    chat_report = tmp_path / "rag-chat-report.pdf"
+    chat_highlighted = tmp_path / "rag-chat-highlighted.pdf"
+    highlight = json.loads(
+        pdf_ai_rag_highlight_sources(
+            str(index),
+            output_path=str(highlighted),
+            answer="Local RAG gives cited document evidence.",
+        )
+    )
+    exported_report = json.loads(
+        pdf_ai_rag_export_report(
+            str(index),
+            output_path=str(report),
+            question="What gives cited evidence?",
+            answer="Local RAG gives cited document evidence.",
+        )
+    )
+    chat = json.loads(
+        pdf_ai_rag_chat(
+            str(source),
+            question="What gives cited evidence?",
+            index_path=str(tmp_path / "rag-chat.index.json"),
+            report_output_path=str(chat_report),
+            highlight_output_path=str(chat_highlighted),
+        )
+    )
+
+    assert parsed["tool"] == "pdf.ai.parse.lite"
+    assert exported["tool"] == "pdf.convert.pdf_to_json"
+    assert markdown["tool"] == "pdf.convert.pdf_to_markdown"
+    assert ingest["tool"] == "pdf.ai.rag.ingest"
+    assert query["tool"] == "pdf.ai.rag.query"
+    assert cite["tool"] == "pdf.ai.rag.cite_answer"
+    assert chat["tool"] == "pdf.ai.rag.chat"
+    assert chat["usage"]["citation_count"] >= 1
+    assert exported_report["tool"] == "pdf.ai.rag.export_report"
+    assert highlight["tool"] == "pdf.ai.rag.highlight_sources"
+    assert highlighted.exists()
+    assert report.exists()
+    assert chat_report.exists()
+    assert chat_highlighted.exists()
+    assert query["usage"]["citations"][0]["page_number"] == 1
+    assert cite["usage"]["citations"][0]["page_number"] == 1
+    assert search["usage"]["matches"][0]["page_number"] == 1
+
+
+def _write_image_pdf(path: Path, image_path: Path) -> None:
+    from reportlab.pdfgen import canvas
+
+    document = canvas.Canvas(str(path), pagesize=(200, 200))
+    document.drawImage(str(image_path), 24, 120, width=32, height=24)
+    document.showPage()
+    document.save()

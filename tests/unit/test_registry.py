@@ -6,13 +6,21 @@ def test_registry_loads_complete_public_manifest() -> None:
 
     assert len(manifest.tools) >= 100
     assert get_tool("pdf.inspect.document").name == "pdf.inspect.document"
+    assert get_tool("pdf.inspect.pages").implemented is True
     assert get_tool("pdf.organize.merge").implemented is True
     assert get_tool("pdf.organize.split").implemented is True
     assert get_tool("pdf.organize.extract_pages").implemented is True
     assert get_tool("pdf.organize.remove_pages").implemented is True
     assert get_tool("pdf.organize.rotate_pages").implemented is True
+    assert get_tool("pdf.organize.reorder_pages").implemented is True
+    assert get_tool("pdf.organize.insert_blank_pages").implemented is True
+    assert get_tool("pdf.optimize.compress").implemented is True
+    assert get_tool("pdf.optimize.repair").implemented is True
     assert get_tool("pdf.convert.pdf_to_images").implemented is True
+    assert get_tool("pdf.convert.extract_images").implemented is True
     assert get_tool("pdf.convert.pdf_to_text").implemented is True
+    assert get_tool("pdf.convert.pdf_to_json").implemented is True
+    assert get_tool("pdf.convert.pdf_to_markdown").implemented is True
     assert get_tool("pdf.convert.image_to_pdf").implemented is True
     assert get_tool("pdf.convert.text_to_pdf").implemented is True
     assert get_tool("pdf.convert.markdown_to_pdf").implemented is True
@@ -22,6 +30,15 @@ def test_registry_loads_complete_public_manifest() -> None:
     assert get_tool("pdf.metadata.update").implemented is True
     assert get_tool("pdf.metadata.remove").implemented is True
     assert get_tool("pdf.validation.validate_output").implemented is True
+    assert get_tool("pdf.validation.render_check").implemented is True
+    assert get_tool("pdf.validation.blank_page_check").implemented is True
+    assert get_tool("pdf.ai.rag.cite_answer").implemented is True
+    assert get_tool("pdf.ai.rag.chat").implemented is True
+    assert get_tool("pdf.ai.rag.export_report").implemented is True
+    assert get_tool("pdf.ai.rag.highlight_sources").implemented is True
+    assert get_tool("pdf.workflow.plan").implemented is True
+    assert get_tool("pdf.workflow.run").implemented is True
+    assert get_tool("pdf.workflow.report").implemented is True
 
 
 def test_registry_keeps_planned_tools_discoverable() -> None:
@@ -34,13 +51,21 @@ def test_registry_keeps_planned_tools_discoverable() -> None:
 def test_implemented_tools_are_known_names() -> None:
     assert IMPLEMENTED_TOOLS == {
         "pdf.inspect.document",
+        "pdf.inspect.pages",
         "pdf.organize.merge",
         "pdf.organize.split",
         "pdf.organize.extract_pages",
         "pdf.organize.remove_pages",
         "pdf.organize.rotate_pages",
+        "pdf.organize.reorder_pages",
+        "pdf.organize.insert_blank_pages",
+        "pdf.optimize.compress",
+        "pdf.optimize.repair",
         "pdf.convert.pdf_to_images",
+        "pdf.convert.extract_images",
         "pdf.convert.pdf_to_text",
+        "pdf.convert.pdf_to_json",
+        "pdf.convert.pdf_to_markdown",
         "pdf.convert.image_to_pdf",
         "pdf.convert.text_to_pdf",
         "pdf.convert.markdown_to_pdf",
@@ -50,4 +75,17 @@ def test_implemented_tools_are_known_names() -> None:
         "pdf.metadata.update",
         "pdf.metadata.remove",
         "pdf.validation.validate_output",
+        "pdf.validation.render_check",
+        "pdf.validation.blank_page_check",
+        "pdf.ai.parse.lite",
+        "pdf.ai.rag.ingest",
+        "pdf.ai.rag.query",
+        "pdf.ai.rag.search",
+        "pdf.ai.rag.cite_answer",
+        "pdf.ai.rag.chat",
+        "pdf.ai.rag.export_report",
+        "pdf.ai.rag.highlight_sources",
+        "pdf.workflow.plan",
+        "pdf.workflow.run",
+        "pdf.workflow.report",
     }

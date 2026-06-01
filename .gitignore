@@ -19,6 +19,7 @@ packages/*/dist/
 
 # Test and lint caches
 .pytest_cache/
+.pytest-tmp/
 .ruff_cache/
 .mypy_cache/
 .coverage

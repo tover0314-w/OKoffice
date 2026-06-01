@@ -46,3 +46,25 @@ def test_smoke_script_creates_local_pdf_artifact(tmp_path: Path) -> None:
     assert payload["status"] == "ok"
     assert payload["artifacts"]["created_pdf"].endswith("hello.pdf")
     assert (tmp_path / "hello.pdf").exists()
+
+
+def test_docker_self_hosted_entrypoint_is_declared() -> None:
+    dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
+    compose = (ROOT / "docker-compose.yml").read_text(encoding="utf-8")
+    dockerignore = (ROOT / ".dockerignore").read_text(encoding="utf-8")
+
+    assert "FROM python:3.12-slim" in dockerfile
+    assert "python -m pip install -e ." in dockerfile
+    assert "USER okpdf" in dockerfile
+    assert 'ENTRYPOINT ["okpdf"]' in dockerfile
+    assert 'CMD ["serve", "--api", "--host", "0.0.0.0", "--port", "7331", "--safe-root", "/workspace"]' in dockerfile
+    assert "EXPOSE 7331" in dockerfile
+
+    assert "7331:7331" in compose
+    assert ".:/workspace" in compose
+    assert "serve --api" in compose
+    assert "0.0.0.0" in compose
+    assert "/healthz" in compose
+
+    for ignored_path in [".git", "node_modules", ".agentpdf-out", ".pytest-tmp", "packages/*/dist"]:
+        assert ignored_path in dockerignore

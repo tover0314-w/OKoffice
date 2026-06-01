@@ -6,24 +6,43 @@ from uuid import uuid4
 from agentpdf.core.pdf import (
     add_page_numbers_pdf,
     add_text_watermark_pdf,
+    compress_pdf,
     create_markdown_pdf,
     create_text_pdf,
+    extract_images_pdf,
     extract_pages_pdf,
     extract_text_pdf,
     image_to_pdf,
     inspect_pdf,
+    inspect_pdf_pages,
+    insert_blank_pages_pdf,
     merge_pdfs,
     read_metadata_pdf,
     remove_pages_pdf,
     remove_metadata_pdf,
+    repair_pdf,
     render_pdf,
+    reorder_pages_pdf,
     rotate_pages_pdf,
     split_pdf,
     update_metadata_pdf,
 )
+from agentpdf.ir.lite import parse_lite_pdf, write_document_ir_json, write_document_ir_markdown
+from agentpdf.rag.local import (
+    chat_pdf,
+    cite_answer,
+    export_report,
+    highlight_sources,
+    ingest_pdf,
+    query_index,
+    search_index,
+)
 from agentpdf.schemas.errors import AgentPDFException
 from agentpdf.schemas.models import AgentPDFError, ToolResult
-from agentpdf.validation.pdf import validate_pdf
+from agentpdf.validation.pdf import blank_page_check_pdf, render_check_pdf, validate_pdf
+from agentpdf.workflows.planner import plan_workflow
+from agentpdf.workflows.reporter import create_workflow_report
+from agentpdf.workflows.runner import run_workflow
 
 
 def run_inspect(path: str | Path) -> ToolResult:
@@ -36,6 +55,46 @@ def run_inspect(path: str | Path) -> ToolResult:
             tool=tool,
             usage=info,
             next_recommended_tools=["pdf.validation.validate_output"],
+        )
+    except AgentPDFException as exc:
+        return _failed(tool, exc.to_error())
+
+
+def run_inspect_pages(
+    input_path: str | Path,
+    pages: str = "all",
+    render_check: bool = False,
+) -> ToolResult:
+    tool = "pdf.inspect.pages"
+    try:
+        info = inspect_pdf_pages(input_path, pages=pages)
+        validation = None
+        status = "succeeded"
+        warnings = list(info.get("warnings", []))
+        if render_check:
+            validation, _usage = render_check_pdf(input_path, pages=pages)
+            render_by_page = {
+                int(check.details.get("page_number", 0)): {
+                    "status": check.status,
+                    **check.details,
+                    **({"message": check.message} if check.message else {}),
+                }
+                for check in validation.checks
+                if check.details and "page_number" in check.details
+            }
+            for page in info["pages"]:
+                page["render"] = render_by_page.get(page["page_number"], {"status": "skipped"})
+            warnings.extend(validation.warnings or [])
+            if validation.status == "failed":
+                status = "failed"
+        return ToolResult(
+            job_id=_job_id(),
+            status=status,
+            tool=tool,
+            validation=validation,
+            warnings=warnings,
+            usage=info,
+            next_recommended_tools=["pdf.ai.parse.lite", "pdf.validation.blank_page_check"],
         )
     except AgentPDFException as exc:
         return _failed(tool, exc.to_error())
@@ -79,6 +138,44 @@ def run_rotate_pages(
         return rotate_pages_pdf(input_path, pages=pages, degrees=degrees, output_path=output_path)
     except AgentPDFException as exc:
         return _failed("pdf.organize.rotate_pages", exc.to_error())
+
+
+def run_reorder_pages(input_path: str | Path, order: str, output_path: str | Path) -> ToolResult:
+    try:
+        return reorder_pages_pdf(input_path, order=order, output_path=output_path)
+    except AgentPDFException as exc:
+        return _failed("pdf.organize.reorder_pages", exc.to_error())
+
+
+def run_insert_blank_pages(
+    input_path: str | Path,
+    after_page: int,
+    count: int,
+    output_path: str | Path,
+) -> ToolResult:
+    try:
+        return insert_blank_pages_pdf(
+            input_path,
+            after_page=after_page,
+            count=count,
+            output_path=output_path,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.organize.insert_blank_pages", exc.to_error())
+
+
+def run_compress(input_path: str | Path, output_path: str | Path) -> ToolResult:
+    try:
+        return compress_pdf(input_path, output_path=output_path)
+    except AgentPDFException as exc:
+        return _failed("pdf.optimize.compress", exc.to_error())
+
+
+def run_repair(input_path: str | Path, output_path: str | Path) -> ToolResult:
+    try:
+        return repair_pdf(input_path, output_path=output_path)
+    except AgentPDFException as exc:
+        return _failed("pdf.optimize.repair", exc.to_error())
 
 
 def run_image_to_pdf(image_paths: list[str | Path], output_path: str | Path) -> ToolResult:
@@ -171,11 +268,48 @@ def run_render(
         return _failed("pdf.convert.pdf_to_images", exc.to_error())
 
 
+def run_extract_images(
+    input_path: str | Path,
+    pages: str = "all",
+    out_dir: str | Path = "extracted-images",
+) -> ToolResult:
+    try:
+        return extract_images_pdf(
+            input_path=input_path,
+            pages=pages,
+            out_dir=out_dir,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.convert.extract_images", exc.to_error())
+
+
 def run_extract_text(input_path: str | Path, pages: str = "all") -> ToolResult:
     try:
         return extract_text_pdf(input_path, pages=pages)
     except AgentPDFException as exc:
         return _failed("pdf.convert.pdf_to_text", exc.to_error())
+
+
+def run_pdf_to_json(
+    input_path: str | Path,
+    output_path: str | Path,
+    pages: str = "all",
+) -> ToolResult:
+    try:
+        return write_document_ir_json(input_path, output_path=output_path, pages=pages)
+    except AgentPDFException as exc:
+        return _failed("pdf.convert.pdf_to_json", exc.to_error())
+
+
+def run_pdf_to_markdown(
+    input_path: str | Path,
+    output_path: str | Path,
+    pages: str = "all",
+) -> ToolResult:
+    try:
+        return write_document_ir_markdown(input_path, output_path=output_path, pages=pages)
+    except AgentPDFException as exc:
+        return _failed("pdf.convert.pdf_to_markdown", exc.to_error())
 
 
 def run_metadata_read(input_path: str | Path) -> ToolResult:
@@ -216,6 +350,181 @@ def run_validate_output(path: str | Path, expected_pages: int | None = None) -> 
         validation=report,
         next_recommended_tools=["pdf.inspect.document"],
     )
+
+
+def run_render_check(path: str | Path, pages: str = "all") -> ToolResult:
+    tool = "pdf.validation.render_check"
+    try:
+        report, usage = render_check_pdf(path, pages=pages)
+    except AgentPDFException as exc:
+        return _failed(tool, exc.to_error())
+    return ToolResult(
+        job_id=_job_id(),
+        status="succeeded" if report.status == "passed" else "failed",
+        tool=tool,
+        validation=report,
+        warnings=report.warnings,
+        usage=usage,
+        next_recommended_tools=["pdf.validation.blank_page_check", "pdf.inspect.document"],
+    )
+
+
+def run_blank_page_check(path: str | Path, pages: str = "all") -> ToolResult:
+    tool = "pdf.validation.blank_page_check"
+    try:
+        report, usage = blank_page_check_pdf(path, pages=pages)
+    except AgentPDFException as exc:
+        return _failed(tool, exc.to_error())
+    blank_pages = usage.get("blank_pages", [])
+    next_tools = ["pdf.organize.remove_pages", "pdf.inspect.document"] if blank_pages else ["pdf.inspect.document"]
+    return ToolResult(
+        job_id=_job_id(),
+        status="failed" if report.status == "failed" else "succeeded",
+        tool=tool,
+        validation=report,
+        warnings=report.warnings,
+        usage=usage,
+        next_recommended_tools=next_tools,
+    )
+
+
+def run_parse_lite(input_path: str | Path, pages: str = "all") -> ToolResult:
+    try:
+        return parse_lite_pdf(input_path, pages=pages)
+    except AgentPDFException as exc:
+        return _failed("pdf.ai.parse.lite", exc.to_error())
+
+
+def run_rag_ingest(
+    input_path: str | Path,
+    index_path: str | Path,
+    pages: str = "all",
+    max_chars: int = 1200,
+    overlap_chars: int = 120,
+) -> ToolResult:
+    try:
+        return ingest_pdf(
+            input_path,
+            index_path=index_path,
+            pages=pages,
+            max_chars=max_chars,
+            overlap_chars=overlap_chars,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.ai.rag.ingest", exc.to_error())
+
+
+def run_rag_query(index_path: str | Path, query: str, top_k: int = 5) -> ToolResult:
+    try:
+        return query_index(index_path, query=query, top_k=top_k)
+    except AgentPDFException as exc:
+        return _failed("pdf.ai.rag.query", exc.to_error())
+
+
+def run_rag_search(index_path: str | Path, query: str, top_k: int = 5) -> ToolResult:
+    try:
+        return search_index(index_path, query=query, top_k=top_k)
+    except AgentPDFException as exc:
+        return _failed("pdf.ai.rag.search", exc.to_error())
+
+
+def run_rag_cite_answer(index_path: str | Path, answer: str, top_k: int = 5) -> ToolResult:
+    try:
+        return cite_answer(index_path, answer=answer, top_k=top_k)
+    except AgentPDFException as exc:
+        return _failed("pdf.ai.rag.cite_answer", exc.to_error())
+
+
+def run_rag_highlight_sources(
+    index_path: str | Path,
+    output_path: str | Path,
+    answer: str | None = None,
+    query: str | None = None,
+    top_k: int = 5,
+    highlight_color: str = "fff59d",
+) -> ToolResult:
+    try:
+        return highlight_sources(
+            index_path,
+            output_path=output_path,
+            answer=answer,
+            query=query,
+            top_k=top_k,
+            highlight_color=highlight_color,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.ai.rag.highlight_sources", exc.to_error())
+
+
+def run_rag_export_report(
+    index_path: str | Path,
+    output_path: str | Path,
+    question: str,
+    answer: str | None = None,
+    top_k: int = 5,
+    include_citations: bool = True,
+    title: str | None = None,
+    style_pack: str = "plain_report",
+) -> ToolResult:
+    try:
+        return export_report(
+            index_path,
+            output_path=output_path,
+            question=question,
+            answer=answer,
+            top_k=top_k,
+            include_citations=include_citations,
+            title=title,
+            style_pack=style_pack,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.ai.rag.export_report", exc.to_error())
+
+
+def run_rag_chat(
+    input_path: str | Path,
+    question: str,
+    index_path: str | Path | None = None,
+    report_output_path: str | Path | None = None,
+    highlight_output_path: str | Path | None = None,
+    pages: str = "all",
+    top_k: int = 5,
+    max_chars: int = 1200,
+    overlap_chars: int = 120,
+    style_pack: str = "plain_report",
+    highlight_color: str = "fff59d",
+) -> ToolResult:
+    try:
+        return chat_pdf(
+            input_path,
+            question=question,
+            index_path=index_path,
+            report_output_path=report_output_path,
+            highlight_output_path=highlight_output_path,
+            pages=pages,
+            top_k=top_k,
+            max_chars=max_chars,
+            overlap_chars=overlap_chars,
+            style_pack=style_pack,
+            highlight_color=highlight_color,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.ai.rag.chat", exc.to_error())
+
+
+def run_workflow_plan(goal: str, input_path: str | None = None) -> ToolResult:
+    return plan_workflow(goal=goal, input_path=input_path)
+
+
+def run_workflow_run(workflow: dict[str, object], dry_run: bool = False) -> ToolResult:
+    return run_workflow(workflow=workflow, dry_run=dry_run)
+
+
+def run_workflow_report(
+    workflow_run: dict[str, object],
+    output_path: str | Path | None = None,
+) -> ToolResult:
+    return create_workflow_report(workflow_run=workflow_run, output_path=output_path)
 
 
 def _failed(tool: str, error: AgentPDFError) -> ToolResult:

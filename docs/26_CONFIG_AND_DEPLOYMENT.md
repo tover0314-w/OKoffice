@@ -55,7 +55,21 @@ okpdf serve --mcp --safe-root .
 ## Docker target
 
 ```bash
-docker run --rm -p 7331:7331 -v "$PWD:/workspace" agentpdf/agentpdf:latest serve --api --safe-root /workspace
+docker build -t okpdf/local:dev .
+docker run --rm -p 7331:7331 -v "$PWD:/workspace" okpdf/local:dev
+curl http://127.0.0.1:7331/healthz
+```
+
+The image defaults to:
+
+```bash
+okpdf serve --api --host 0.0.0.0 --port 7331 --safe-root /workspace
+```
+
+Compose:
+
+```bash
+docker compose up --build
 ```
 
 ## Self-hosting notes
@@ -65,6 +79,7 @@ docker run --rm -p 7331:7331 -v "$PWD:/workspace" agentpdf/agentpdf:latest serve
 - Mount only required directories.
 - Configure artifact retention.
 - Use separate workers for risky OCR/conversion tasks.
+- Keep local deterministic tools free and independent from hosted billing.
 
 ## Future hosted deployment
 

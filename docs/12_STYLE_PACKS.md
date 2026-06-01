@@ -52,18 +52,23 @@ A style pack defines layout, fonts, colors, spacing, components, and document st
 
 ## Open-source style packs
 
-Initial open-source packs:
+Implemented local built-in packs:
 
 - `plain_report`
 - `business_report_modern`
 - `academic_paper_basic`
 - `resume_modern`
-- `resume_classic`
 - `invoice_clean`
+
+Planned gallery packs:
+
+- `resume_classic`
 - `contract_plain`
 - `research_brief`
 - `training_handout`
 - `education_worksheet`
+
+`pdf.convert.markdown_to_pdf` also accepts a local JSON style pack path, which lets users and agents supply custom margins, page size/orientation, typography, colors, and components without waiting for the hosted template gallery.
 
 ## AI generation boundary
 

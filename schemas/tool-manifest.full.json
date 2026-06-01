@@ -1,6 +1,6 @@
 {
   "manifest_version": "0.1-full",
-  "tool_count": 161,
+  "tool_count": 164,
   "tools": [
     {
       "name": "pdf.inspect.document",
@@ -28,7 +28,52 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.workflow.plan",
+      "status": "beta",
+      "description": "Plan a local-first agent PDF workflow.",
+      "category": "workflow",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.workflow.run",
+      "status": "beta",
+      "description": "Execute a local-first agent PDF workflow manifest and return per-step evidence.",
+      "category": "workflow",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.workflow.report",
+      "status": "beta",
+      "description": "Summarize workflow artifacts, warnings, validation, and step evidence.",
+      "category": "workflow",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -133,7 +178,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -178,7 +223,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -253,7 +298,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -283,7 +328,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -395,7 +440,7 @@
     {
       "name": "pdf.convert.markdown_to_pdf",
       "status": "stable",
-      "description": "Render Markdown to PDF.",
+      "description": "Render Markdown to PDF with deterministic local style packs.",
       "category": "convert_to_pdf",
       "interfaces": [
         "cli",
@@ -538,7 +583,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -553,7 +598,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -628,7 +673,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -1558,7 +1603,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -1573,7 +1618,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -1648,7 +1693,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -1767,7 +1812,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -1782,7 +1827,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -1797,7 +1842,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -1812,14 +1857,29 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.ai.rag.chat",
+      "status": "beta",
+      "description": "Ask a local PDF and return answer, citations, report PDF, and highlighted source PDF.",
+      "category": "ai_rag",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
     {
       "name": "pdf.ai.rag.highlight_sources",
-      "status": "planned",
-      "description": "Produce highlighted source PDF.",
+      "status": "beta",
+      "description": "Produce highlighted source PDF from local RAG citations.",
       "category": "ai_rag",
       "interfaces": [
         "cli",
@@ -1827,14 +1887,14 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
     {
       "name": "pdf.ai.rag.export_report",
-      "status": "planned",
-      "description": "Create Q&A/source report PDF.",
+      "status": "beta",
+      "description": "Create a cited Q&A/source PDF report from a local RAG index.",
       "category": "ai_rag",
       "interfaces": [
         "cli",
@@ -1842,7 +1902,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },

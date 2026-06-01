@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+import json
 from io import BytesIO
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
 from pypdf import PdfReader, PdfWriter
-from reportlab.lib.pagesizes import letter
+from reportlab.lib.colors import HexColor
+from reportlab.lib.pagesizes import A4, landscape, letter
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfgen import canvas
@@ -20,6 +22,89 @@ from agentpdf.security.paths import resolve_input_path, resolve_output_path
 from agentpdf.validation.pdf import validate_pdf
 
 SUPPORTED_IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff"}
+BUILTIN_STYLE_PACKS: dict[str, dict[str, Any]] = {
+    "plain_report": {
+        "style_id": "plain_report",
+        "name": "Plain Report",
+        "description": "Readable default report styling for local PDF creation.",
+        "page": {
+            "size": "letter",
+            "orientation": "portrait",
+            "margins": {"top": 54, "right": 54, "bottom": 54, "left": 54},
+        },
+        "typography": {
+            "heading_font": "system-sans",
+            "body_font": "system-sans",
+            "base_size": 10,
+        },
+        "colors": {"primary": "#111827", "accent": "#2563eb", "text": "#111827"},
+        "components": ["section_header", "bullet_list", "table"],
+    },
+    "business_report_modern": {
+        "style_id": "business_report_modern",
+        "name": "Business Report Modern",
+        "description": "Clean board-report style with section hierarchy and muted blue accents.",
+        "page": {
+            "size": "A4",
+            "orientation": "portrait",
+            "margins": {"top": 56, "right": 56, "bottom": 56, "left": 56},
+        },
+        "typography": {
+            "heading_font": "system-sans",
+            "body_font": "system-sans",
+            "base_size": 10,
+        },
+        "colors": {"primary": "#1f3a5f", "accent": "#6b8fb3", "text": "#111827"},
+        "components": ["cover", "toc", "section_header", "metric_card", "table", "callout"],
+    },
+    "academic_paper_basic": {
+        "style_id": "academic_paper_basic",
+        "name": "Academic Paper Basic",
+        "description": "Conservative serif layout for papers and research notes.",
+        "page": {
+            "size": "letter",
+            "orientation": "portrait",
+            "margins": {"top": 60, "right": 60, "bottom": 60, "left": 60},
+        },
+        "typography": {"heading_font": "serif", "body_font": "serif", "base_size": 10},
+        "colors": {"primary": "#111827", "accent": "#374151", "text": "#111827"},
+        "components": ["section_header", "table", "appendix"],
+    },
+    "resume_modern": {
+        "style_id": "resume_modern",
+        "name": "Resume Modern",
+        "description": "Compact resume layout with strong section headers.",
+        "page": {
+            "size": "letter",
+            "orientation": "portrait",
+            "margins": {"top": 42, "right": 48, "bottom": 42, "left": 48},
+        },
+        "typography": {
+            "heading_font": "system-sans",
+            "body_font": "system-sans",
+            "base_size": 9,
+        },
+        "colors": {"primary": "#0f766e", "accent": "#475569", "text": "#0f172a"},
+        "components": ["section_header", "bullet_list"],
+    },
+    "invoice_clean": {
+        "style_id": "invoice_clean",
+        "name": "Invoice Clean",
+        "description": "Simple invoice/report layout with restrained green accents.",
+        "page": {
+            "size": "letter",
+            "orientation": "portrait",
+            "margins": {"top": 48, "right": 54, "bottom": 48, "left": 54},
+        },
+        "typography": {
+            "heading_font": "system-sans",
+            "body_font": "system-sans",
+            "base_size": 10,
+        },
+        "colors": {"primary": "#166534", "accent": "#94a3b8", "text": "#111827"},
+        "components": ["table", "section_header"],
+    },
+}
 
 
 def inspect_pdf(path: str | Path) -> dict[str, Any]:
@@ -63,6 +148,47 @@ def inspect_pdf(path: str | Path) -> dict[str, Any]:
         "page_count": len(reader.pages),
         "metadata": metadata,
         "pages": pages,
+    }
+
+
+def inspect_pdf_pages(path: str | Path, pages: str = "all") -> dict[str, Any]:
+    resolved = resolve_input_path(path)
+    reader = _reader_for_operation(resolved)
+    selected_pages = parse_page_range(pages, total_pages=len(reader.pages))
+    page_results: list[dict[str, Any]] = []
+    warnings: list[str] = []
+
+    for page_index in selected_pages:
+        page = reader.pages[page_index]
+        try:
+            text = page.extract_text() or ""
+            text_error = None
+        except Exception as exc:
+            text = ""
+            text_error = str(exc)
+            warnings.append(f"Text extraction failed on page {page_index + 1}.")
+
+        mediabox = page.mediabox
+        page_payload: dict[str, Any] = {
+            "page_number": page_index + 1,
+            "width": float(mediabox.width),
+            "height": float(mediabox.height),
+            "rotation": int(page.get("/Rotate", 0) or 0),
+            "has_text_layer": bool(text.strip()),
+            "text_char_count": len(text),
+            "image_count": _count_page_images(page),
+        }
+        if text_error:
+            page_payload["text_error"] = text_error
+        page_results.append(page_payload)
+
+    return {
+        "input": str(resolved),
+        "page_count": len(reader.pages),
+        "page_range": pages,
+        "selected_pages": [page + 1 for page in selected_pages],
+        "pages": page_results,
+        "warnings": warnings,
     }
 
 
@@ -191,6 +317,144 @@ def rotate_pages_pdf(
             "degrees": degrees,
         },
         next_recommended_tools=["pdf.inspect.document", "pdf.validation.validate_output"],
+    )
+
+
+def reorder_pages_pdf(input_path: str | Path, order: str, output_path: str | Path) -> ToolResult:
+    tool = "pdf.organize.reorder_pages"
+    resolved = resolve_input_path(input_path)
+    reader = _reader_for_operation(resolved)
+    selected_pages = parse_page_range(order, total_pages=len(reader.pages))
+    expected_pages = set(range(len(reader.pages)))
+    if set(selected_pages) != expected_pages or len(selected_pages) != len(reader.pages):
+        raise AgentPDFException(
+            "invalid_page_range",
+            "Reorder must include every page exactly once.",
+            details={
+                "page_count": len(reader.pages),
+                "selected_pages": [page + 1 for page in selected_pages],
+            },
+        )
+    return _write_pages_by_index(
+        tool=tool,
+        resolved=resolved,
+        reader=reader,
+        selected_pages=selected_pages,
+        output_path=output_path,
+        usage={"input": str(resolved), "order": [page + 1 for page in selected_pages]},
+    )
+
+
+def insert_blank_pages_pdf(
+    input_path: str | Path,
+    after_page: int,
+    count: int,
+    output_path: str | Path,
+) -> ToolResult:
+    tool = "pdf.organize.insert_blank_pages"
+    resolved = resolve_input_path(input_path)
+    reader = _reader_for_operation(resolved)
+    total_pages = len(reader.pages)
+    if after_page < 0 or after_page > total_pages:
+        raise AgentPDFException(
+            "invalid_page_range",
+            f"after_page must be between 0 and {total_pages}.",
+            details={"after_page": after_page, "page_count": total_pages},
+        )
+    if count < 1:
+        raise AgentPDFException(
+            "invalid_page_range",
+            "Blank page count must be at least 1.",
+            details={"count": count},
+        )
+
+    size_page = reader.pages[after_page - 1] if after_page > 0 else reader.pages[0]
+    width = float(size_page.mediabox.width)
+    height = float(size_page.mediabox.height)
+    writer = PdfWriter()
+    if after_page == 0:
+        _add_blank_pages(writer, count=count, width=width, height=height)
+    for index, page in enumerate(reader.pages, start=1):
+        writer.add_page(page)
+        if index == after_page:
+            _add_blank_pages(writer, count=count, width=width, height=height)
+
+    return _write_writer_output(
+        tool=tool,
+        writer=writer,
+        output_path=output_path,
+        expected_pages=total_pages + count,
+        usage={
+            "input": str(resolved),
+            "after_page": after_page,
+            "blank_page_count": count,
+            "page_size": {"width": width, "height": height},
+        },
+    )
+
+
+def compress_pdf(input_path: str | Path, output_path: str | Path) -> ToolResult:
+    tool = "pdf.optimize.compress"
+    resolved = resolve_input_path(input_path)
+    reader = _reader_for_operation(resolved)
+    writer = PdfWriter()
+    compressed_streams = 0
+    for page in reader.pages:
+        writer.add_page(page)
+        writer_page = writer.pages[-1]
+        compress = getattr(writer_page, "compress_content_streams", None)
+        if callable(compress):
+            compress()
+            compressed_streams += 1
+    if reader.metadata:
+        writer.add_metadata(_metadata_to_pdf_dict(_metadata_to_public_dict(reader.metadata)))
+
+    output = resolve_output_path(output_path)
+    with output.open("wb") as handle:
+        writer.write(handle)
+
+    artifact = build_artifact(output, source_tool=tool)
+    validation = validate_pdf(output, expected_pages=len(reader.pages))
+    original_size = resolved.stat().st_size
+    output_size = artifact.size_bytes
+    bytes_saved = original_size - output_size
+    warnings = [] if bytes_saved > 0 else ["Output is not smaller; source may already be compressed."]
+    return ToolResult(
+        job_id=_job_id(),
+        status="succeeded" if validation.status == "passed" else "failed",
+        tool=tool,
+        artifacts=[artifact],
+        validation=validation,
+        warnings=warnings,
+        usage={
+            "input": str(resolved),
+            "original_size_bytes": original_size,
+            "output_size_bytes": output_size,
+            "bytes_saved": bytes_saved,
+            "compression_ratio": output_size / original_size if original_size else None,
+            "compressed_content_streams": compressed_streams,
+        },
+        next_recommended_tools=["pdf.validation.validate_output", "pdf.validation.render_check"],
+    )
+
+
+def repair_pdf(input_path: str | Path, output_path: str | Path) -> ToolResult:
+    tool = "pdf.optimize.repair"
+    resolved = resolve_input_path(input_path)
+    reader = _reader_for_operation(resolved)
+    writer = _writer_from_reader_pages(reader)
+    if reader.metadata:
+        writer.add_metadata(_metadata_to_pdf_dict(_metadata_to_public_dict(reader.metadata)))
+    return _write_writer_output(
+        tool=tool,
+        writer=writer,
+        output_path=output_path,
+        expected_pages=len(reader.pages),
+        usage={
+            "input": str(resolved),
+            "repair_strategy": "pypdf_read_rewrite",
+            "page_count": len(reader.pages),
+        },
     )
 
 
@@ -375,6 +639,11 @@ def _write_selected_pages(
     )
 
 
+def _add_blank_pages(writer: PdfWriter, count: int, width: float, height: float) -> None:
+    for _ in range(count):
+        writer.add_blank_page(width=width, height=height)
+
+
 def _write_pages_by_index(
     tool: str,
     resolved: Path,
@@ -476,6 +745,70 @@ def render_pdf(
             "format": normalized_format,
         },
         next_recommended_tools=["pdf.inspect.document"],
+    )
+
+
+def extract_images_pdf(
+    input_path: str | Path,
+    pages: str = "all",
+    out_dir: str | Path = "extracted-images",
+) -> ToolResult:
+    tool = "pdf.convert.extract_images"
+    resolved = resolve_input_path(input_path)
+    reader = _reader_for_operation(resolved)
+    selected_pages = parse_page_range(pages, total_pages=len(reader.pages))
+    output_dir = Path(out_dir).expanduser().resolve()
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    artifacts = []
+    image_records: list[dict[str, Any]] = []
+    warnings: list[str] = []
+    for page_index in selected_pages:
+        page_number = page_index + 1
+        page_images = list(getattr(reader.pages[page_index], "images", []))
+        if not page_images:
+            warnings.append(f"No embedded images found on page {page_number}.")
+            continue
+        for image_index, image_file in enumerate(page_images, start=1):
+            pil_image = getattr(image_file, "image", None)
+            if pil_image is None:
+                warnings.append(f"Image {image_index} on page {page_number} could not be decoded.")
+                continue
+            suffix = _image_suffix(image_file, pil_image)
+            output = resolve_output_path(
+                output_dir / f"{resolved.stem}-page-{page_number:03d}-image-{image_index:03d}{suffix}"
+            )
+            pil_image.save(output)
+            artifact = build_artifact(output, source_tool=tool)
+            artifacts.append(artifact)
+            image_records.append(
+                {
+                    "page_number": page_number,
+                    "image_index": image_index,
+                    "path": str(output),
+                    "artifact_id": artifact.artifact_id,
+                    "mime_type": artifact.mime_type,
+                    "width": int(pil_image.width),
+                    "height": int(pil_image.height),
+                    "source_name": str(getattr(image_file, "name", "")),
+                }
+            )
+
+    return ToolResult(
+        job_id=_job_id(),
+        status="succeeded",
+        tool=tool,
+        artifacts=artifacts,
+        warnings=warnings,
+        usage={
+            "input": str(resolved),
+            "page_range": pages,
+            "selected_pages": [page + 1 for page in selected_pages],
+            "image_count": len(image_records),
+            "images": image_records,
+            "out_dir": str(output_dir),
+        },
+        next_recommended_tools=["pdf.inspect.pages", "pdf.ai.parse.lite"],
     )
 
 
@@ -590,13 +923,32 @@ def create_markdown_pdf(
 ) -> ToolResult:
     tool = "pdf.convert.markdown_to_pdf"
     output = resolve_output_path(output_path)
+    resolved_style = _resolve_style_pack(style_pack)
     styles = getSampleStyleSheet()
+    _apply_style_pack(styles, resolved_style["pack"])
     story = _markdown_to_story(markdown, styles)
-    _build_pdf_document(output, story, title=title)
+    page_size = _style_page_size(resolved_style["pack"])
+    margins = _style_margins(resolved_style["pack"])
+    _build_pdf_document(
+        output,
+        story,
+        title=title,
+        page_size=page_size,
+        margins=margins,
+    )
     return _result_for_created_pdf(
         tool=tool,
         output=output,
-        usage={"markdown_length": len(markdown), "title": title, "style_pack": style_pack},
+        usage={
+            "markdown_length": len(markdown),
+            "title": title,
+            "style_pack": resolved_style["pack"]["style_id"],
+            "style_pack_name": resolved_style["pack"].get("name"),
+            "style_pack_source": resolved_style["source"],
+            "page": resolved_style["pack"].get("page", {}),
+            "colors": resolved_style["pack"].get("colors", {}),
+            "components": resolved_style["pack"].get("components", []),
+        },
         next_tools=["pdf.inspect.document", "pdf.convert.pdf_to_text"],
     )
 
@@ -647,15 +999,142 @@ def _markdown_to_story(markdown: str, styles: Any) -> list[Any]:
     return story
 
 
-def _build_pdf_document(output: Path, story: list[Any], title: str | None = None) -> None:
+def _resolve_style_pack(style_pack: str) -> dict[str, Any]:
+    if style_pack in BUILTIN_STYLE_PACKS:
+        return {"pack": dict(BUILTIN_STYLE_PACKS[style_pack]), "source": "builtin"}
+
+    candidate = Path(style_pack)
+    if candidate.suffix.lower() == ".json" or candidate.exists():
+        resolved = resolve_input_path(candidate)
+        try:
+            raw = json.loads(resolved.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            raise AgentPDFException(
+                "pdf_parse_failed",
+                f"Unable to parse style pack JSON: {resolved}",
+            ) from exc
+        if not isinstance(raw, dict):
+            raise AgentPDFException("unsafe_input_rejected", "Style pack JSON must be an object.")
+        pack = _normalize_style_pack(raw)
+        return {"pack": pack, "source": str(resolved)}
+
+    available = ", ".join(sorted(BUILTIN_STYLE_PACKS))
+    raise AgentPDFException(
+        "unsafe_input_rejected",
+        f"Unknown style pack: {style_pack}. Available built-ins: {available}.",
+    )
+
+
+def _normalize_style_pack(raw: dict[str, Any]) -> dict[str, Any]:
+    style_id = str(raw.get("style_id") or "").strip()
+    name = str(raw.get("name") or style_id or "").strip()
+    page = raw.get("page")
+    typography = raw.get("typography")
+    if not style_id or not name or not isinstance(page, dict) or not isinstance(typography, dict):
+        raise AgentPDFException(
+            "unsafe_input_rejected",
+            "Style pack must include style_id, name, page, and typography.",
+        )
+    normalized = dict(raw)
+    normalized["style_id"] = style_id
+    normalized["name"] = name
+    normalized["page"] = page
+    normalized["typography"] = typography
+    normalized["colors"] = raw.get("colors") if isinstance(raw.get("colors"), dict) else {}
+    normalized["components"] = raw.get("components") if isinstance(raw.get("components"), list) else []
+    return normalized
+
+
+def _apply_style_pack(styles: Any, pack: dict[str, Any]) -> None:
+    typography = pack.get("typography", {})
+    colors = pack.get("colors", {})
+    body_font = _font_name(str(typography.get("body_font", "system-sans")), bold=False)
+    heading_font = _font_name(str(typography.get("heading_font", "system-sans")), bold=True)
+    base_size = float(typography.get("base_size", 10))
+    text_color = _hex_color(str(colors.get("text", "#111827")))
+    primary_color = _hex_color(str(colors.get("primary", "#111827")))
+    accent_color = _hex_color(str(colors.get("accent", colors.get("primary", "#2563eb"))))
+
+    styles["BodyText"].fontName = body_font
+    styles["BodyText"].fontSize = base_size
+    styles["BodyText"].leading = base_size * 1.45
+    styles["BodyText"].textColor = text_color
+
+    styles["Title"].fontName = heading_font
+    styles["Title"].fontSize = base_size * 2.0
+    styles["Title"].leading = base_size * 2.35
+    styles["Title"].textColor = primary_color
+    styles["Title"].spaceAfter = 12
+
+    styles["Heading2"].fontName = heading_font
+    styles["Heading2"].fontSize = base_size * 1.35
+    styles["Heading2"].leading = base_size * 1.65
+    styles["Heading2"].textColor = primary_color
+
+    styles["Heading3"].fontName = heading_font
+    styles["Heading3"].fontSize = base_size * 1.12
+    styles["Heading3"].leading = base_size * 1.35
+    styles["Heading3"].textColor = accent_color
+
+    styles["Code"].fontName = "Courier"
+    styles["Code"].fontSize = max(base_size * 0.9, 8)
+    styles["Code"].leading = max(base_size * 1.25, 10)
+    styles["Code"].textColor = text_color
+
+
+def _style_page_size(pack: dict[str, Any]) -> tuple[float, float]:
+    page = pack.get("page", {})
+    size_name = str(page.get("size", "letter")).lower()
+    page_size = A4 if size_name == "a4" else letter
+    if str(page.get("orientation", "portrait")).lower() == "landscape":
+        return landscape(page_size)
+    return page_size
+
+
+def _style_margins(pack: dict[str, Any]) -> dict[str, float]:
+    raw = pack.get("page", {}).get("margins", {})
+    if not isinstance(raw, dict):
+        raw = {}
+    return {
+        "top": float(raw.get("top", 54)),
+        "right": float(raw.get("right", 54)),
+        "bottom": float(raw.get("bottom", 54)),
+        "left": float(raw.get("left", 54)),
+    }
+
+
+def _font_name(value: str, bold: bool) -> str:
+    normalized = value.lower()
+    if normalized in {"serif", "system-serif", "times"}:
+        return "Times-Bold" if bold else "Times-Roman"
+    if normalized in {"mono", "monospace", "courier"}:
+        return "Courier-Bold" if bold else "Courier"
+    return "Helvetica-Bold" if bold else "Helvetica"
+
+
+def _hex_color(value: str) -> HexColor:
+    try:
+        return HexColor(value)
+    except ValueError:
+        return HexColor("#111827")
+
+
+def _build_pdf_document(
+    output: Path,
+    story: list[Any],
+    title: str | None = None,
+    page_size: tuple[float, float] = letter,
+    margins: dict[str, float] | None = None,
+) -> None:
+    resolved_margins = margins or {"top": 54, "right": 54, "bottom": 54, "left": 54}
     document = SimpleDocTemplate(
         str(output),
-        pagesize=letter,
+        pagesize=page_size,
         title=title or "okpdf document",
-        leftMargin=54,
-        rightMargin=54,
-        topMargin=54,
-        bottomMargin=54,
+        leftMargin=resolved_margins["left"],
+        rightMargin=resolved_margins["right"],
+        topMargin=resolved_margins["top"],
+        bottomMargin=resolved_margins["bottom"],
     )
     document.build(story)
 
@@ -737,6 +1216,48 @@ def _metadata_to_pdf_dict(metadata: dict[str, Any]) -> dict[str, str]:
         for key, value in metadata.items()
         if value is not None
     }
+
+
+def _image_suffix(image_file: Any, pil_image: Any) -> str:
+    name = str(getattr(image_file, "name", ""))
+    suffix = Path(name).suffix.lower()
+    if suffix in {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff"}:
+        return ".jpg" if suffix == ".jpeg" else suffix
+    image_format = str(getattr(pil_image, "format", "") or "").lower()
+    if image_format in {"jpeg", "jpg"}:
+        return ".jpg"
+    if image_format in {"png", "webp", "bmp", "tif", "tiff"}:
+        return f".{image_format}"
+    return ".png"
+
+
+def _count_page_images(page: Any) -> int:
+    resources = page.get("/Resources") or {}
+    return _count_images_in_resources(resources)
+
+
+def _count_images_in_resources(resources: Any) -> int:
+    try:
+        resolved_resources = resources.get_object() if hasattr(resources, "get_object") else resources
+        xobjects = resolved_resources.get("/XObject", {}) or {}
+        resolved_xobjects = xobjects.get_object() if hasattr(xobjects, "get_object") else xobjects
+    except Exception:
+        return 0
+
+    image_count = 0
+    for raw_object in resolved_xobjects.values():
+        try:
+            xobject = raw_object.get_object() if hasattr(raw_object, "get_object") else raw_object
+            subtype = str(xobject.get("/Subtype", ""))
+            if subtype == "/Image":
+                image_count += 1
+            elif subtype == "/Form":
+                nested_resources = xobject.get("/Resources")
+                if nested_resources:
+                    image_count += _count_images_in_resources(nested_resources)
+        except Exception:
+            continue
+    return image_count
 
 
 def _reader_for_operation(path: Path) -> PdfReader:
