@@ -43,13 +43,13 @@ AGENTPDF_MAX_FILE_SIZE_MB
 ## Local API
 
 ```bash
-agentpdf serve --api --host 127.0.0.1 --port 7331
+okpdf serve --api
 ```
 
 ## Local MCP
 
 ```bash
-agentpdf serve --mcp --safe-root .
+okpdf serve --mcp --safe-root .
 ```
 
 ## Docker target

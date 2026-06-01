@@ -3,7 +3,7 @@
 Start the local API:
 
 ```bash
-agentpdf serve --api
+okpdf serve --api
 ```
 
 ## List tools

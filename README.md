@@ -20,7 +20,7 @@
 
 okpdf is building the open-source foundation for agent-readable PDF operations: inspect, organize, render, extract text, edit metadata, validate outputs, and expose everything through local interfaces that coding agents can call safely.
 
-The Python command-line package is currently named `agentpdf` while the public repository and product brand are `okpdf`. The TypeScript/Node package lives at `packages/agentpdf-node` and is named `@okpdf/agentpdf-node`.
+The public CLI is `okpdf`. The legacy/internal command `agentpdf` still works for compatibility. The TypeScript/Node package lives at `packages/agentpdf-node` and is named `@okpdf/agentpdf-node`.
 
 ## Why Star This
 
@@ -50,31 +50,28 @@ Planned next local tools include lite parse, local RAG, richer validation, Docke
 ```bash
 git clone git@github.com:tover0314-w/okpdf.git
 cd okpdf
-pip install -e .[dev]
-npm install
-npm run build:node
+python scripts/setup_dev.py
 ```
 
 ## Quickstart
 
 ```bash
-python -m agentpdf.cli --help
-agentpdf tools list --json
-agentpdf inspect tests/fixtures/simple.pdf --json
-agentpdf merge tests/fixtures/simple.pdf tests/fixtures/two_pages.pdf -o .agentpdf-out/merged.pdf --json
-agentpdf split tests/fixtures/two_pages.pdf --pages 1 -o .agentpdf-out/page-1.pdf --json
-agentpdf extract-pages tests/fixtures/two_pages.pdf --pages 2 -o .agentpdf-out/page-2.pdf --json
-agentpdf remove-pages tests/fixtures/two_pages.pdf --pages 1 -o .agentpdf-out/without-page-1.pdf --json
-agentpdf rotate-pages tests/fixtures/two_pages.pdf --pages 1 --degrees 90 -o .agentpdf-out/rotated.pdf --json
-agentpdf create text "Hello from okpdf" -o .agentpdf-out/hello.pdf --json
-agentpdf create markdown examples/sample-documents/business_report.md -o .agentpdf-out/business-report.pdf --json
-agentpdf render tests/fixtures/simple.pdf --pages 1 --format png --out-dir .agentpdf-out/renders --json
-agentpdf extract-text tests/fixtures/text.pdf --pages 1 --json
-agentpdf metadata read tests/fixtures/metadata.pdf --json
-agentpdf metadata update tests/fixtures/metadata.pdf --title "Updated" -o .agentpdf-out/metadata-updated.pdf --json
-agentpdf metadata remove tests/fixtures/metadata.pdf -o .agentpdf-out/metadata-clean.pdf --json
-pytest -q
-npm test --workspace @okpdf/agentpdf-node
+python scripts/doctor.py
+python scripts/smoke.py
+okpdf tools list
+okpdf create text "Hello from okpdf" -o .agentpdf-out/hello.pdf --json
+```
+
+That is the happy path: install, check the environment, generate a validated PDF.
+
+Common commands:
+
+```bash
+okpdf inspect tests/fixtures/simple.pdf --json
+okpdf merge tests/fixtures/simple.pdf tests/fixtures/two_pages.pdf -o .agentpdf-out/merged.pdf --json
+okpdf render tests/fixtures/simple.pdf --pages 1 --format png --out-dir .agentpdf-out/renders --json
+okpdf extract-text tests/fixtures/text.pdf --pages 1 --json
+okpdf metadata remove tests/fixtures/metadata.pdf -o .agentpdf-out/metadata-clean.pdf --json
 ```
 
 ## TypeScript / Node.js
@@ -82,7 +79,7 @@ npm test --workspace @okpdf/agentpdf-node
 Run the Python REST server, then call it from TypeScript or Node:
 
 ```bash
-agentpdf serve --api
+okpdf serve --api
 node packages/agentpdf-node/dist/src/cli.js tools
 node packages/agentpdf-node/dist/src/cli.js create-text --text "Hello Node" -o .agentpdf-out/node.pdf
 ```
@@ -108,7 +105,7 @@ console.log(result.artifacts[0]?.path);
 Run a local stdio MCP server:
 
 ```bash
-agentpdf serve --mcp --safe-root .
+okpdf serve --mcp --safe-root .
 ```
 
 Example config:
@@ -117,7 +114,7 @@ Example config:
 {
   "mcpServers": {
     "agentpdf": {
-      "command": "agentpdf",
+      "command": "okpdf",
       "args": ["serve", "--mcp", "--safe-root", "."]
     }
   }
@@ -146,7 +143,7 @@ MCP tools currently exposed:
 Run the local HTTP API:
 
 ```bash
-agentpdf serve --api
+okpdf serve --api
 ```
 
 Useful endpoints:
@@ -249,9 +246,10 @@ okpdf is inspired by mature open-source document processing projects such as pdf
 ## Development
 
 ```bash
-pip install -e .[dev]
+python scripts/setup_dev.py
 pytest -q
-ruff check src tests
+npm test --workspace @okpdf/agentpdf-node
+ruff check src tests scripts
 ```
 
 This workspace currently has no required cloud service for local development.

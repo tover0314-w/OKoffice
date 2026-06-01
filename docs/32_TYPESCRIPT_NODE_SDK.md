@@ -20,7 +20,7 @@ npm test --workspace @okpdf/agentpdf-node
 Run the local API:
 
 ```bash
-agentpdf serve --api
+okpdf serve --api
 ```
 
 Use the Node CLI:

@@ -1,19 +1,27 @@
 # Local Agent Integration
 
-AgentPDF's first implementation priority is local agent-callable PDF tooling. Cloud workers can be added later, but the local CLI, MCP server, and REST API must remain useful without paid services, hosted URLs, or proprietary keys.
+okpdf's first implementation priority is local agent-callable PDF tooling. Cloud workers can be added later, but the local CLI, MCP server, and REST API must remain useful without paid services, hosted URLs, or proprietary keys.
+
+## Fast Setup
+
+```bash
+python scripts/setup_dev.py
+python scripts/doctor.py
+python scripts/smoke.py
+```
 
 ## Local MCP Server
 
 Run AgentPDF as a stdio MCP server:
 
 ```bash
-agentpdf serve --mcp --safe-root .
+okpdf serve --mcp --safe-root .
 ```
 
 For HTTP-compatible MCP clients:
 
 ```bash
-agentpdf serve --mcp --transport streamable-http --safe-root .
+okpdf serve --mcp --transport streamable-http --safe-root .
 ```
 
 ## Claude Desktop / Claude Code Style Config
@@ -22,7 +30,7 @@ agentpdf serve --mcp --transport streamable-http --safe-root .
 {
   "mcpServers": {
     "agentpdf": {
-      "command": "agentpdf",
+      "command": "okpdf",
       "args": ["serve", "--mcp", "--safe-root", "."]
     }
   }
@@ -36,7 +44,7 @@ Use the same stdio MCP command from any agent runtime that supports MCP:
 ```json
 {
   "agentpdf": {
-    "command": "agentpdf",
+    "command": "okpdf",
     "args": ["serve", "--mcp", "--safe-root", "."]
   }
 }
@@ -66,7 +74,7 @@ Each tool returns the same AgentPDF `ToolResult` JSON used by the CLI.
 Run the local HTTP API:
 
 ```bash
-agentpdf serve --api
+okpdf serve --api
 ```
 
 Useful endpoints:
@@ -110,7 +118,7 @@ Node agents should use the TypeScript package in `packages/agentpdf-node` and ca
 ```bash
 npm install
 npm run build:node
-agentpdf serve --api
+okpdf serve --api
 node packages/agentpdf-node/dist/src/cli.js create-text --text "Hello Node" -o node.pdf
 ```
 

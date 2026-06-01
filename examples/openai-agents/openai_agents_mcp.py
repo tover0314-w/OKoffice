@@ -7,7 +7,7 @@ from agents.mcp import MCPServerStdio
 
 async def main():
     async with MCPServerStdio(
-        params={"command": "agentpdf", "args": ["serve", "--mcp", "--safe-root", "."]}
+        params={"command": "okpdf", "args": ["serve", "--mcp", "--safe-root", "."]}
     ) as pdf_mcp:
         agent = Agent(
             name="PDF Operator",

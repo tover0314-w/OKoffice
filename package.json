@@ -6,7 +6,11 @@
   ],
   "scripts": {
     "build:node": "npm --workspace @okpdf/agentpdf-node run build",
+    "doctor": "python scripts/doctor.py",
     "pack:node": "npm --workspace @okpdf/agentpdf-node pack --dry-run",
+    "setup": "python scripts/setup_dev.py",
+    "smoke": "python scripts/smoke.py",
+    "test": "pytest -q && npm --workspace @okpdf/agentpdf-node test",
     "test:node": "npm --workspace @okpdf/agentpdf-node test"
   }
 }
