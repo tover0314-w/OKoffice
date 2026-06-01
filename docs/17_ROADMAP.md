@@ -36,6 +36,7 @@ Interfaces:
 - MCP server.
 - REST server.
 - Python SDK basics.
+- TypeScript/Node REST client and Node CLI.
 
 ## Phase 2 — Full deterministic PDF utility coverage
 
@@ -94,6 +95,7 @@ Not part of the first OSS implementation, but design-compatible:
 - LangChain integration.
 - LlamaIndex integration.
 - Vercel AI SDK examples.
+- TypeScript package publishing.
 - n8n/Zapier/Make examples.
 - Cursor/Claude/OpenAI Agents examples.
 - Template/style marketplace.

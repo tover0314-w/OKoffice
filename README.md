@@ -11,6 +11,8 @@
 <p align="center">
   <a href="https://github.com/tover0314-w/okpdf"><img alt="GitHub repo" src="https://img.shields.io/badge/github-okpdf-0b1220"></a>
   <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-blue">
+  <img alt="TypeScript" src="https://img.shields.io/badge/typescript-sdk-3178c6">
+  <img alt="Node.js" src="https://img.shields.io/badge/node.js-20%2B-339933">
   <img alt="License" src="https://img.shields.io/badge/license-Apache--2.0-green">
   <img alt="Local first" src="https://img.shields.io/badge/local--first-yes-brightgreen">
   <img alt="MCP" src="https://img.shields.io/badge/MCP-ready-purple">
@@ -18,14 +20,14 @@
 
 okpdf is building the open-source foundation for agent-readable PDF operations: inspect, organize, render, extract text, edit metadata, validate outputs, and expose everything through local interfaces that coding agents can call safely.
 
-The command-line package is currently named `agentpdf` while the public repository and product brand are `okpdf`.
+The Python command-line package is currently named `agentpdf` while the public repository and product brand are `okpdf`. The TypeScript/Node package lives at `packages/agentpdf-node` and is named `@okpdf/agentpdf-node`.
 
 ## Why Star This
 
 - Complete public tool map from day one: 160+ planned namespaces are discoverable now.
 - Local-first by default: no hosted URL, paid key, or cloud dependency required.
 - Agent-first outputs: every tool returns structured JSON with artifacts, validation, warnings, and next recommended tools.
-- MCP and REST ready: Claude Code, Claude Desktop, Cursor, Codex-style agents, and local scripts can call the same tool layer.
+- MCP, REST, and TypeScript ready: Claude Code, Claude Desktop, Cursor, Codex-style agents, Node scripts, and web apps can call the same tool layer.
 - Safety-minded PDF workflow: explicit paths, no input mutation, path traversal rejection, metadata removal, and validation for generated PDFs.
 - License-safe core: default dependencies avoid GPL/AGPL.
 
@@ -38,7 +40,8 @@ The command-line package is currently named `agentpdf` while the public reposito
 | Convert | Markdown/Text to PDF, render pages to images, extract text | CLI, MCP, REST |
 | Metadata | read, update, remove | CLI, MCP, REST |
 | Validation | generated PDF validation | CLI, REST-backed tool results |
-| Discovery | complete tool manifest | CLI, MCP, REST |
+| SDK | TypeScript/Node REST client and Node CLI | Node.js |
+| Discovery | complete tool manifest | CLI, MCP, REST, Node.js |
 
 Planned next local tools include lite parse, local RAG, richer validation, Docker, and more deterministic PDF operations.
 
@@ -48,6 +51,8 @@ Planned next local tools include lite parse, local RAG, richer validation, Docke
 git clone git@github.com:tover0314-w/okpdf.git
 cd okpdf
 pip install -e .[dev]
+npm install
+npm run build:node
 ```
 
 ## Quickstart
@@ -69,6 +74,31 @@ agentpdf metadata read tests/fixtures/metadata.pdf --json
 agentpdf metadata update tests/fixtures/metadata.pdf --title "Updated" -o .agentpdf-out/metadata-updated.pdf --json
 agentpdf metadata remove tests/fixtures/metadata.pdf -o .agentpdf-out/metadata-clean.pdf --json
 pytest -q
+npm test --workspace @okpdf/agentpdf-node
+```
+
+## TypeScript / Node.js
+
+Run the Python REST server, then call it from TypeScript or Node:
+
+```bash
+agentpdf serve --api
+node packages/agentpdf-node/dist/src/cli.js tools
+node packages/agentpdf-node/dist/src/cli.js create-text --text "Hello Node" -o .agentpdf-out/node.pdf
+```
+
+SDK usage:
+
+```ts
+import { AgentPDFClient } from "@okpdf/agentpdf-node";
+
+const client = new AgentPDFClient({ baseUrl: "http://127.0.0.1:7331" });
+const result = await client.createMarkdownPdf({
+  markdown: "# Agent Report\n\n- Local first\n- TypeScript ready",
+  outputPath: ".agentpdf-out/report.pdf",
+});
+
+console.log(result.artifacts[0]?.path);
 ```
 
 ## Agent Interfaces
@@ -173,6 +203,8 @@ flowchart LR
   A["Agents / Apps"] --> B["MCP Server"]
   A --> C["CLI"]
   A --> D["REST API"]
+  A --> J["TypeScript / Node SDK"]
+  J --> D
   B --> E["Tool Runner"]
   C --> E
   D --> E

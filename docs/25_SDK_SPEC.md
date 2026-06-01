@@ -28,21 +28,42 @@ client.ask("report.pdf", "What are the risks?")
 client.create_from_markdown("summary.md", style="business_report_modern", output="report.pdf")
 ```
 
-## TypeScript SDK target
+## TypeScript SDK
 
 ```ts
-import { AgentPDF } from "@agentpdf/sdk";
+import { AgentPDFClient } from "@okpdf/agentpdf-node";
 
-const client = AgentPDF.local();
-const result = await client.merge(["a.pdf", "b.pdf"], { output: "merged.pdf" });
+const client = new AgentPDFClient({ baseUrl: "http://127.0.0.1:7331" });
+const result = await client.merge({
+  inputPaths: ["a.pdf", "b.pdf"],
+  outputPath: "merged.pdf",
+});
+```
+
+Convenience methods:
+
+```ts
+client.listTools();
+client.getTool("pdf.organize.merge");
+client.runTool("pdf.convert.text_to_pdf", {
+  text: "Hello",
+  output_path: "hello.pdf",
+});
+client.inspectDocument({ path: "report.pdf" });
+client.merge({ inputPaths: ["a.pdf", "b.pdf"], outputPath: "merged.pdf" });
+client.createTextPdf({ text: "Hello", outputPath: "hello.pdf" });
+client.createMarkdownPdf({
+  markdown: "# Report\n\nHello",
+  outputPath: "report.pdf",
+});
 ```
 
 ## SDK principles
 
 - SDK wraps the same tool registry.
 - No separate hidden behavior.
-- Local and hosted clients share the same method names.
-- Hosted client adds auth, retries, and async polling.
+- Local and hosted clients should share the same method names.
+- Hosted client later adds auth, retries, and async polling.
 - Results use the same ToolResult schema.
 
 ## Client modes
@@ -51,6 +72,7 @@ const result = await client.merge(["a.pdf", "b.pdf"], { output: "merged.pdf" });
 AgentPDF.local()      -> in-process/local CLI-style execution
 AgentPDF.api(url)     -> local/remote REST API
 AgentPDF.cloud(key)   -> future hosted API
+AgentPDFClient(url)   -> TypeScript REST client for Node.js agents and apps
 ```
 
 ## Async jobs

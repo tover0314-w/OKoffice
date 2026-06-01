@@ -103,6 +103,27 @@ curl -X POST http://127.0.0.1:7331/v1/tools/pdf.convert.markdown_to_pdf/run \
   -d '{"markdown": "# Agent Report\n\n- Created locally", "output_path": "agent-report.pdf"}'
 ```
 
+## TypeScript / Node.js Agents
+
+Node agents should use the TypeScript package in `packages/agentpdf-node` and call the REST API instead of reimplementing PDF processing:
+
+```bash
+npm install
+npm run build:node
+agentpdf serve --api
+node packages/agentpdf-node/dist/src/cli.js create-text --text "Hello Node" -o node.pdf
+```
+
+```ts
+import { AgentPDFClient } from "@okpdf/agentpdf-node";
+
+const client = new AgentPDFClient();
+const result = await client.runTool("pdf.convert.markdown_to_pdf", {
+  markdown: "# Agent Report\n\n- Created from Node",
+  output_path: "agent-report.pdf",
+});
+```
+
 ## Open-Source PDF Project Patterns To Borrow
 
 AgentPDF should continue studying projects such as pdf-craft and other mature PDF/OCR/document-processing systems. The patterns to borrow are architectural:

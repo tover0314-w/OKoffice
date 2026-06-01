@@ -43,7 +43,14 @@ Expose REST API and webhook-compatible jobs.
 
 ## Vercel AI SDK
 
-Expose TypeScript SDK and MCP server for agent workflows.
+Use `@okpdf/agentpdf-node` against the local REST API from server-side tools or actions:
+
+```ts
+import { AgentPDFClient } from "@okpdf/agentpdf-node";
+
+const agentpdf = new AgentPDFClient({ baseUrl: process.env.AGENTPDF_BASE_URL });
+const result = await agentpdf.inspectDocument({ path: "report.pdf" });
+```
 
 ## Browser/web app
 

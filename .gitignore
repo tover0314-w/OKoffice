@@ -12,6 +12,11 @@ build/
 dist/
 *.egg-info/
 
+# Node / TypeScript
+node_modules/
+packages/*/dist/
+*.tsbuildinfo
+
 # Test and lint caches
 .pytest_cache/
 .ruff_cache/

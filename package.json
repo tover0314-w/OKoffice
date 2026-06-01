@@ -1,0 +1,12 @@
+{
+  "name": "okpdf-workspace",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build:node": "npm --workspace @okpdf/agentpdf-node run build",
+    "pack:node": "npm --workspace @okpdf/agentpdf-node pack --dry-run",
+    "test:node": "npm --workspace @okpdf/agentpdf-node test"
+  }
+}

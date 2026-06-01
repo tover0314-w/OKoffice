@@ -12,6 +12,14 @@ agentpdf/
   codex/
   docs/
   examples/
+  packages/
+    agentpdf-node/
+      src/
+        client.ts
+        cli.ts
+        index.ts
+        types.ts
+      tests/
   schemas/
   scripts/
   src/
@@ -76,6 +84,7 @@ agentpdf/
     unit/
     integration/
   pyproject.toml
+  package.json
   README.md
   AGENTS.md
 ```
@@ -96,6 +105,10 @@ agentpdf/
 Recommended package import name: `agentpdf`.
 
 Recommended CLI command: `agentpdf`.
+
+Recommended TypeScript package name: `@okpdf/agentpdf-node`.
+
+Recommended Node CLI command: `agentpdf-node`.
 
 Repository name options:
 

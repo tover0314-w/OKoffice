@@ -18,7 +18,7 @@ agentpdf/
   MCP server
   REST API
   CLI
-  SDKs
+  TypeScript/Node SDK
   local RAG demo
 ```
 
@@ -27,7 +27,7 @@ agentpdf/
 ```mermaid
 sequenceDiagram
   participant User as Agent/User
-  participant API as CLI/MCP/API
+  participant API as CLI/MCP/API/Node SDK
   participant Router as Tool Router
   participant Worker as PDF Worker
   participant Store as Artifact Store
@@ -54,6 +54,12 @@ The tool router should:
 - Track artifacts.
 - Return a uniform result object.
 - Provide tool discovery.
+
+## TypeScript / Node SDK
+
+The Node package is a typed REST client, not a second PDF engine. JavaScript agents and web apps call the local REST API and receive the same `ToolResult` JSON as CLI and MCP clients.
+
+This keeps PDF behavior centralized in the Python core while making okpdf natural to use from Node.js, Vercel, LangChain.js, AI SDK tools, and other TypeScript-heavy ecosystems.
 
 ## Artifact store
 
