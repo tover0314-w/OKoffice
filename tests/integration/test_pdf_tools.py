@@ -4,6 +4,8 @@ from pypdf import PdfReader
 
 from agentpdf.artifacts.store import build_artifact
 from agentpdf.core.pdf import (
+    create_markdown_pdf,
+    create_text_pdf,
     extract_pages_pdf,
     extract_text_pdf,
     inspect_pdf,
@@ -153,3 +155,30 @@ def test_remove_metadata_pdf_removes_custom_document_info(metadata_pdf: Path, tm
     cleaned_metadata = read_metadata_pdf(output).usage["metadata"]
     assert "Title" not in cleaned_metadata
     assert "Author" not in cleaned_metadata
+
+
+def test_create_text_pdf_writes_valid_pdf(tmp_path: Path) -> None:
+    output = tmp_path / "text-output.pdf"
+
+    result = create_text_pdf("Hello from okpdf\nLocal PDF creation works.", output)
+
+    assert result.status == "succeeded"
+    assert result.tool == "pdf.convert.text_to_pdf"
+    assert result.artifacts[0].page_count == 1
+    assert result.validation is not None
+    assert result.validation.status == "passed"
+    assert "Hello from okpdf" in extract_text_pdf(output).usage["text"]
+
+
+def test_create_markdown_pdf_writes_headings_and_bullets(tmp_path: Path) -> None:
+    output = tmp_path / "report.pdf"
+    markdown = "# Agent Report\n\n## Summary\n\n- Local first\n- Agent ready\n"
+
+    result = create_markdown_pdf(markdown, output, title="Agent Report")
+
+    assert result.status == "succeeded"
+    assert result.tool == "pdf.convert.markdown_to_pdf"
+    assert result.artifacts[0].page_count == 1
+    extracted = extract_text_pdf(output).usage["text"]
+    assert "Agent Report" in extracted
+    assert "Local first" in extracted

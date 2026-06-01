@@ -187,6 +187,24 @@ def test_api_runs_text_and_metadata_tools(text_pdf: Path, metadata_pdf: Path, tm
     assert remove.json()["tool"] == "pdf.metadata.remove"
 
 
+def test_api_runs_create_text_and_markdown_tools(tmp_path: Path) -> None:
+    client = TestClient(create_app())
+
+    text = client.post(
+        "/v1/tools/pdf.convert.text_to_pdf/run",
+        json={"text": "API text PDF", "output_path": str(tmp_path / "text.pdf")},
+    )
+    markdown = client.post(
+        "/v1/tools/pdf.convert.markdown_to_pdf/run",
+        json={"markdown": "# API Report", "output_path": str(tmp_path / "markdown.pdf")},
+    )
+
+    assert text.status_code == 200
+    assert text.json()["tool"] == "pdf.convert.text_to_pdf"
+    assert markdown.status_code == 200
+    assert markdown.json()["tool"] == "pdf.convert.markdown_to_pdf"
+
+
 def test_api_rejects_unimplemented_tool() -> None:
     client = TestClient(create_app())
 

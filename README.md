@@ -35,12 +35,12 @@ The command-line package is currently named `agentpdf` while the public reposito
 |---|---|---|
 | Inspect | `pdf.inspect.document` | CLI, MCP, REST |
 | Organize | merge, split, extract pages, remove pages, rotate pages | CLI, MCP, REST |
-| Convert | render pages to images, extract text | CLI, MCP, REST |
+| Convert | Markdown/Text to PDF, render pages to images, extract text | CLI, MCP, REST |
 | Metadata | read, update, remove | CLI, MCP, REST |
 | Validation | generated PDF validation | CLI, REST-backed tool results |
 | Discovery | complete tool manifest | CLI, MCP, REST |
 
-Planned next local tools include Markdown/Text to PDF creation, lite parse, local RAG, richer validation, and more deterministic PDF operations.
+Planned next local tools include lite parse, local RAG, richer validation, Docker, and more deterministic PDF operations.
 
 ## Install
 
@@ -61,6 +61,8 @@ agentpdf split tests/fixtures/two_pages.pdf --pages 1 -o .agentpdf-out/page-1.pd
 agentpdf extract-pages tests/fixtures/two_pages.pdf --pages 2 -o .agentpdf-out/page-2.pdf --json
 agentpdf remove-pages tests/fixtures/two_pages.pdf --pages 1 -o .agentpdf-out/without-page-1.pdf --json
 agentpdf rotate-pages tests/fixtures/two_pages.pdf --pages 1 --degrees 90 -o .agentpdf-out/rotated.pdf --json
+agentpdf create text "Hello from okpdf" -o .agentpdf-out/hello.pdf --json
+agentpdf create markdown examples/sample-documents/business_report.md -o .agentpdf-out/business-report.pdf --json
 agentpdf render tests/fixtures/simple.pdf --pages 1 --format png --out-dir .agentpdf-out/renders --json
 agentpdf extract-text tests/fixtures/text.pdf --pages 1 --json
 agentpdf metadata read tests/fixtures/metadata.pdf --json
@@ -101,6 +103,8 @@ MCP tools currently exposed:
 - `pdf_extract_pages`
 - `pdf_remove_pages`
 - `pdf_rotate_pages`
+- `pdf_create_text`
+- `pdf_create_markdown`
 - `pdf_render_pages`
 - `pdf_extract_text`
 - `pdf_metadata_read`
@@ -133,6 +137,14 @@ Example:
 curl -X POST http://127.0.0.1:7331/v1/tools/pdf.inspect.document/run \
   -H 'Content-Type: application/json' \
   -d '{"path": "tests/fixtures/simple.pdf"}'
+```
+
+Create a PDF from Markdown:
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.convert.markdown_to_pdf/run \
+  -H 'Content-Type: application/json' \
+  -d '{"markdown": "# Agent Report\n\n- Local first\n- MCP ready", "output_path": ".agentpdf-out/report.pdf"}'
 ```
 
 ## Tool Result Contract
@@ -195,8 +207,8 @@ okpdf is inspired by mature open-source document processing projects such as pdf
 
 ## Roadmap
 
-- Markdown/Text to PDF creation with style packs.
 - Lite document parse and local RAG demo.
+- More creation inputs and style packs.
 - More deterministic operations: page numbers, watermark, image-to-PDF, metadata page info, forms baseline.
 - Richer validation: blank page checks, render checks, visual diff.
 - Docker and self-hosted examples.

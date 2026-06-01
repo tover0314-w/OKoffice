@@ -5,6 +5,9 @@ from typing import Any
 from uuid import uuid4
 
 from pypdf import PdfReader, PdfWriter
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import ListFlowable, ListItem, Paragraph, SimpleDocTemplate, Spacer
 
 from agentpdf.artifacts.store import build_artifact
 from agentpdf.core.page_ranges import parse_page_range
@@ -393,6 +396,137 @@ def remove_metadata_pdf(input_path: str | Path, output_path: str | Path) -> Tool
         output_path=output_path,
         expected_pages=len(reader.pages),
         usage={"input": str(resolved), "removed_metadata": True},
+    )
+
+
+def create_text_pdf(text: str, output_path: str | Path, title: str | None = None) -> ToolResult:
+    tool = "pdf.convert.text_to_pdf"
+    output = resolve_output_path(output_path)
+    styles = getSampleStyleSheet()
+    story = []
+    if title:
+        story.append(Paragraph(_escape_paragraph(title), styles["Title"]))
+        story.append(Spacer(1, 12))
+    for paragraph in _split_paragraphs(text):
+        story.append(Paragraph(_escape_paragraph(paragraph), styles["BodyText"]))
+        story.append(Spacer(1, 8))
+    _build_pdf_document(output, story, title=title)
+    return _result_for_created_pdf(
+        tool=tool,
+        output=output,
+        usage={"text_length": len(text), "title": title},
+        next_tools=["pdf.inspect.document", "pdf.convert.pdf_to_text"],
+    )
+
+
+def create_markdown_pdf(
+    markdown: str,
+    output_path: str | Path,
+    title: str | None = None,
+    style_pack: str = "plain_report",
+) -> ToolResult:
+    tool = "pdf.convert.markdown_to_pdf"
+    output = resolve_output_path(output_path)
+    styles = getSampleStyleSheet()
+    story = _markdown_to_story(markdown, styles)
+    _build_pdf_document(output, story, title=title)
+    return _result_for_created_pdf(
+        tool=tool,
+        output=output,
+        usage={"markdown_length": len(markdown), "title": title, "style_pack": style_pack},
+        next_tools=["pdf.inspect.document", "pdf.convert.pdf_to_text"],
+    )
+
+
+def _markdown_to_story(markdown: str, styles: Any) -> list[Any]:
+    story: list[Any] = []
+    bullet_items: list[ListItem] = []
+
+    def flush_bullets() -> None:
+        nonlocal bullet_items
+        if bullet_items:
+            story.append(ListFlowable(bullet_items, bulletType="bullet", leftIndent=18))
+            story.append(Spacer(1, 8))
+            bullet_items = []
+
+    for raw_line in markdown.splitlines():
+        line = raw_line.strip()
+        if not line:
+            flush_bullets()
+            continue
+        if line.startswith("# "):
+            flush_bullets()
+            story.append(Paragraph(_escape_paragraph(line[2:].strip()), styles["Title"]))
+            story.append(Spacer(1, 12))
+        elif line.startswith("## "):
+            flush_bullets()
+            story.append(Paragraph(_escape_paragraph(line[3:].strip()), styles["Heading2"]))
+            story.append(Spacer(1, 8))
+        elif line.startswith("### "):
+            flush_bullets()
+            story.append(Paragraph(_escape_paragraph(line[4:].strip()), styles["Heading3"]))
+            story.append(Spacer(1, 6))
+        elif line.startswith(("- ", "* ")):
+            bullet_items.append(
+                ListItem(Paragraph(_escape_paragraph(line[2:].strip()), styles["BodyText"]))
+            )
+        elif line.startswith("|"):
+            flush_bullets()
+            story.append(Paragraph(_escape_paragraph(line), styles["Code"]))
+            story.append(Spacer(1, 4))
+        else:
+            flush_bullets()
+            story.append(Paragraph(_escape_paragraph(line), styles["BodyText"]))
+            story.append(Spacer(1, 8))
+    flush_bullets()
+    if not story:
+        story.append(Paragraph(" ", styles["BodyText"]))
+    return story
+
+
+def _build_pdf_document(output: Path, story: list[Any], title: str | None = None) -> None:
+    document = SimpleDocTemplate(
+        str(output),
+        pagesize=letter,
+        title=title or "okpdf document",
+        leftMargin=54,
+        rightMargin=54,
+        topMargin=54,
+        bottomMargin=54,
+    )
+    document.build(story)
+
+
+def _result_for_created_pdf(
+    tool: str,
+    output: Path,
+    usage: dict[str, Any],
+    next_tools: list[str],
+) -> ToolResult:
+    artifact = build_artifact(output, source_tool=tool)
+    validation = validate_pdf(output, expected_pages=artifact.page_count)
+    return ToolResult(
+        job_id=_job_id(),
+        status="succeeded" if validation.status == "passed" else "failed",
+        tool=tool,
+        artifacts=[artifact],
+        validation=validation,
+        usage=usage,
+        next_recommended_tools=next_tools,
+    )
+
+
+def _split_paragraphs(text: str) -> list[str]:
+    paragraphs = [part.strip() for part in text.split("\n\n") if part.strip()]
+    return paragraphs or [" "]
+
+
+def _escape_paragraph(text: str) -> str:
+    return (
+        text.replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace("\n", "<br/>")
     )
 
 

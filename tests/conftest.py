@@ -6,8 +6,8 @@ from reportlab.pdfgen import canvas
 
 
 @pytest.fixture()
-def fixture_dir() -> Path:
-    root = Path(__file__).parent / "fixtures"
+def fixture_dir(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    root = tmp_path_factory.mktemp("pdf-fixtures")
     root.mkdir(parents=True, exist_ok=True)
     _write_blank_pdf(root / "simple.pdf", pages=1)
     _write_blank_pdf(root / "two_pages.pdf", pages=2)

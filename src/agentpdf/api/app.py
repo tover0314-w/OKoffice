@@ -10,6 +10,8 @@ from agentpdf.schemas.errors import AgentPDFException
 from agentpdf.schemas.models import AgentPDFError, ToolResult
 from agentpdf.tools.registry import get_tool, load_tool_manifest
 from agentpdf.tools.runner import (
+    run_create_markdown,
+    run_create_text,
     run_extract_pages,
     run_extract_text,
     run_inspect,
@@ -129,6 +131,19 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
             pages=str(payload.get("pages", "")),
             degrees=int(payload.get("degrees", 0)),
             output_path=payload.get("output_path", ""),
+        )
+    if tool_name == "pdf.convert.text_to_pdf":
+        return run_create_text(
+            payload.get("text", ""),
+            output_path=payload.get("output_path", ""),
+            title=payload.get("title"),
+        )
+    if tool_name == "pdf.convert.markdown_to_pdf":
+        return run_create_markdown(
+            payload.get("markdown", ""),
+            output_path=payload.get("output_path", ""),
+            title=payload.get("title"),
+            style_pack=str(payload.get("style_pack", "plain_report")),
         )
     if tool_name == "pdf.convert.pdf_to_images":
         return run_render(

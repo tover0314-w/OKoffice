@@ -6,6 +6,8 @@ from mcp.server.fastmcp import FastMCP
 
 from agentpdf.tools.registry import load_tool_manifest
 from agentpdf.tools.runner import (
+    run_create_markdown,
+    run_create_text,
     run_extract_pages,
     run_extract_text,
     run_inspect,
@@ -35,6 +37,8 @@ def create_mcp_server() -> FastMCP:
     server.tool(name="pdf_extract_pages")(pdf_extract_pages)
     server.tool(name="pdf_remove_pages")(pdf_remove_pages)
     server.tool(name="pdf_rotate_pages")(pdf_rotate_pages)
+    server.tool(name="pdf_create_text")(pdf_create_text)
+    server.tool(name="pdf_create_markdown")(pdf_create_markdown)
     server.tool(name="pdf_render_pages")(pdf_render_pages)
     server.tool(name="pdf_extract_text")(pdf_extract_text)
     server.tool(name="pdf_metadata_read")(pdf_metadata_read)
@@ -80,6 +84,26 @@ def pdf_rotate_pages(input_path: str, pages: str, degrees: int, output_path: str
         pages=pages,
         degrees=degrees,
         output_path=output_path,
+    ).model_dump_json()
+
+
+def pdf_create_text(text: str, output_path: str, title: str | None = None) -> str:
+    """Create a local PDF from plain text."""
+    return run_create_text(text, output_path=output_path, title=title).model_dump_json()
+
+
+def pdf_create_markdown(
+    markdown: str,
+    output_path: str,
+    title: str | None = None,
+    style_pack: str = "plain_report",
+) -> str:
+    """Create a local PDF from Markdown content."""
+    return run_create_markdown(
+        markdown,
+        output_path=output_path,
+        title=title,
+        style_pack=style_pack,
     ).model_dump_json()
 
 

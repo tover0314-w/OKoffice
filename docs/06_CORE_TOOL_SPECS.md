@@ -160,17 +160,31 @@ Inspect a PDF and return agent-readable facts.
 }
 ```
 
-## `pdf.create.markdown_to_pdf`
+## `pdf.convert.text_to_pdf`
 
 ### Input
 
 ```json
 {
-  "markdown": "# Report
+  "text": "Hello from okpdf",
+  "output_path": "hello.pdf",
+  "title": "Hello"
+}
+```
 
-Hello",
-  "style_pack": "business_report_modern",
-  "output": {"path": "report.pdf"}
+### Open-source baseline
+
+The local implementation writes plain text into a validated PDF artifact with structured `ToolResult` output.
+
+## `pdf.convert.markdown_to_pdf`
+
+### Input
+
+```json
+{
+  "markdown": "# Report\n\nHello",
+  "style_pack": "plain_report",
+  "output_path": "report.pdf"
 }
 ```
 

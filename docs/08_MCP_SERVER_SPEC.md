@@ -22,9 +22,10 @@ Expose AgentPDF tools to MCP-compatible clients such as coding agents, desktop a
 - `pdf_extract_pages`
 - `pdf_remove_pages`
 - `pdf_rotate_pages`
+- `pdf_create_text`
+- `pdf_create_markdown`
 - `pdf_render_pages`
 - `pdf_extract_text`
-- `pdf_markdown_to_pdf`
 - `pdf_images_to_pdf`
 - `pdf_add_page_numbers`
 - `pdf_watermark`

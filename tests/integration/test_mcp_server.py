@@ -4,6 +4,8 @@ from pathlib import Path
 
 from agentpdf.mcp.server import (
     create_mcp_server,
+    pdf_create_markdown,
+    pdf_create_text,
     pdf_extract_text,
     pdf_extract_pages,
     pdf_inspect_document,
@@ -28,6 +30,8 @@ def test_mcp_server_exposes_local_pdf_tools() -> None:
     assert "pdf_metadata_read" in tool_names
     assert "pdf_metadata_update" in tool_names
     assert "pdf_metadata_remove" in tool_names
+    assert "pdf_create_text" in tool_names
+    assert "pdf_create_markdown" in tool_names
     assert "agentpdf_tool_manifest" in tool_names
 
 
@@ -71,3 +75,16 @@ def test_mcp_text_and_metadata_tools(text_pdf: Path, metadata_pdf: Path) -> None
     assert text["tool"] == "pdf.convert.pdf_to_text"
     assert "AgentPDF local text layer" in text["usage"]["text"]
     assert metadata["usage"]["metadata"]["Title"] == "Original Title"
+
+
+def test_mcp_create_text_and_markdown(tmp_path: Path) -> None:
+    text_output = tmp_path / "text.pdf"
+    markdown_output = tmp_path / "markdown.pdf"
+
+    text = json.loads(pdf_create_text("MCP created text", str(text_output)))
+    markdown = json.loads(pdf_create_markdown("# MCP Report", str(markdown_output)))
+
+    assert text["status"] == "succeeded"
+    assert text["tool"] == "pdf.convert.text_to_pdf"
+    assert markdown["status"] == "succeeded"
+    assert markdown["tool"] == "pdf.convert.markdown_to_pdf"

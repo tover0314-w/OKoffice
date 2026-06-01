@@ -7,6 +7,8 @@ from agentpdf import __version__
 from agentpdf.schemas.models import ToolResult
 from agentpdf.tools.registry import get_tool, load_tool_manifest
 from agentpdf.tools.runner import (
+    run_create_markdown,
+    run_create_text,
     run_extract_pages,
     run_extract_text,
     run_inspect,
@@ -23,8 +25,10 @@ from agentpdf.tools.runner import (
 app = typer.Typer(help="AgentPDF Infra CLI")
 tools_app = typer.Typer(help="Discover AgentPDF tools.")
 metadata_app = typer.Typer(help="Read and write PDF metadata.")
+create_app = typer.Typer(help="Create PDFs from local inputs.")
 app.add_typer(tools_app, name="tools")
 app.add_typer(metadata_app, name="metadata")
+app.add_typer(create_app, name="create")
 
 
 @app.callback()
@@ -134,6 +138,41 @@ def rotate_pages(
     """Rotate selected pages and write a new PDF."""
     _emit_result(
         run_rotate_pages(input_path, pages=pages, degrees=degrees, output_path=output_path),
+        json_output=json_output,
+    )
+
+
+@create_app.command("text")
+def create_text(
+    text: Annotated[str, typer.Argument(help="Text content to write into a new PDF.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output PDF path.")],
+    title: Annotated[str | None, typer.Option("--title", help="Document title.")] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Create a PDF from plain text."""
+    _emit_result(run_create_text(text, output_path=output_path, title=title), json_output=json_output)
+
+
+@create_app.command("markdown")
+def create_markdown(
+    markdown_path: Annotated[Path, typer.Argument(help="Markdown file to convert.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output PDF path.")],
+    title: Annotated[str | None, typer.Option("--title", help="Document title.")] = None,
+    style_pack: Annotated[
+        str,
+        typer.Option("--style-pack", help="Local style pack name."),
+    ] = "plain_report",
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Create a PDF from a local Markdown file."""
+    markdown = markdown_path.read_text(encoding="utf-8")
+    _emit_result(
+        run_create_markdown(
+            markdown,
+            output_path=output_path,
+            title=title,
+            style_pack=style_pack,
+        ),
         json_output=json_output,
     )
 

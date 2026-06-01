@@ -4,6 +4,8 @@ from pathlib import Path
 from uuid import uuid4
 
 from agentpdf.core.pdf import (
+    create_markdown_pdf,
+    create_text_pdf,
     extract_pages_pdf,
     extract_text_pdf,
     inspect_pdf,
@@ -73,6 +75,30 @@ def run_rotate_pages(
         return rotate_pages_pdf(input_path, pages=pages, degrees=degrees, output_path=output_path)
     except AgentPDFException as exc:
         return _failed("pdf.organize.rotate_pages", exc.to_error())
+
+
+def run_create_text(text: str, output_path: str | Path, title: str | None = None) -> ToolResult:
+    try:
+        return create_text_pdf(text, output_path=output_path, title=title)
+    except AgentPDFException as exc:
+        return _failed("pdf.convert.text_to_pdf", exc.to_error())
+
+
+def run_create_markdown(
+    markdown: str,
+    output_path: str | Path,
+    title: str | None = None,
+    style_pack: str = "plain_report",
+) -> ToolResult:
+    try:
+        return create_markdown_pdf(
+            markdown,
+            output_path=output_path,
+            title=title,
+            style_pack=style_pack,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.convert.markdown_to_pdf", exc.to_error())
 
 
 def run_render(

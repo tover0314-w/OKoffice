@@ -163,6 +163,29 @@ def test_text_and_metadata_cli(text_pdf: Path, metadata_pdf: Path, tmp_path: Pat
     assert json.loads(remove.stdout)["tool"] == "pdf.metadata.remove"
 
 
+def test_create_text_and_markdown_cli(tmp_path: Path) -> None:
+    text_output = tmp_path / "text.pdf"
+    markdown_source = tmp_path / "report.md"
+    markdown_output = tmp_path / "report.pdf"
+    markdown_source.write_text("# CLI Report\n\n- Created locally\n", encoding="utf-8")
+
+    text = runner.invoke(
+        app,
+        ["create", "text", "Hello CLI creation", "-o", str(text_output), "--json"],
+    )
+    markdown = runner.invoke(
+        app,
+        ["create", "markdown", str(markdown_source), "-o", str(markdown_output), "--json"],
+    )
+
+    assert text.exit_code == 0
+    assert json.loads(text.stdout)["tool"] == "pdf.convert.text_to_pdf"
+    assert text_output.exists()
+    assert markdown.exit_code == 0
+    assert json.loads(markdown.stdout)["tool"] == "pdf.convert.markdown_to_pdf"
+    assert markdown_output.exists()
+
+
 def test_serve_api_invokes_local_rest_server(monkeypatch) -> None:
     called = {}
 

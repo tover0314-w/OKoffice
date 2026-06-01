@@ -51,6 +51,8 @@ Use the same stdio MCP command from any agent runtime that supports MCP:
 - `pdf_extract_pages`
 - `pdf_remove_pages`
 - `pdf_rotate_pages`
+- `pdf_create_text`
+- `pdf_create_markdown`
 - `pdf_render_pages`
 - `pdf_extract_text`
 - `pdf_metadata_read`
@@ -91,6 +93,14 @@ Example text extraction request:
 curl -X POST http://127.0.0.1:7331/v1/tools/pdf.convert.pdf_to_text/run \
   -H 'Content-Type: application/json' \
   -d '{"input_path": "report.pdf", "pages": "all"}'
+```
+
+Example PDF creation request:
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.convert.markdown_to_pdf/run \
+  -H 'Content-Type: application/json' \
+  -d '{"markdown": "# Agent Report\n\n- Created locally", "output_path": "agent-report.pdf"}'
 ```
 
 ## Open-Source PDF Project Patterns To Borrow

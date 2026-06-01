@@ -10,14 +10,14 @@ Provide a beautiful, scriptable command-line interface.
 agentpdf --help
 agentpdf inspect FILE
 agentpdf merge FILE... -o OUT.pdf
-agentpdf split FILE --pages 1-3,7 --out-dir parts/
-agentpdf extract FILE --pages 1-3 -o out.pdf
+agentpdf split FILE --pages 1-3,7 -o out.pdf
+agentpdf extract-pages FILE --pages 1-3 -o out.pdf
 agentpdf remove-pages FILE --pages 2,4 -o out.pdf
-agentpdf rotate FILE --pages all --degrees 90 -o out.pdf
+agentpdf rotate-pages FILE --pages all --degrees 90 -o out.pdf
 agentpdf render FILE --pages 1-3 --format png --out-dir renders/
-agentpdf text FILE --pages all
-agentpdf markdown FILE -o out.md
-agentpdf create --from input.md --style business_report -o out.pdf
+agentpdf extract-text FILE --pages all
+agentpdf create text "Hello from okpdf" -o out.pdf
+agentpdf create markdown input.md --style-pack plain_report -o out.pdf
 agentpdf watermark FILE --text "Confidential" -o out.pdf
 agentpdf page-numbers FILE -o out.pdf
 agentpdf validate FILE

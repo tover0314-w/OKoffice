@@ -44,6 +44,29 @@ curl -X POST http://127.0.0.1:7331/v1/tools/pdf.convert.pdf_to_images/run \
   }'
 ```
 
+## Create PDF from text
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.convert.text_to_pdf/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "text": "Hello from okpdf",
+    "output_path": ".agentpdf-out/hello.pdf"
+  }'
+```
+
+## Create PDF from Markdown
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.convert.markdown_to_pdf/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "markdown": "# Agent Report\n\n- Local first\n- Agent ready",
+    "output_path": ".agentpdf-out/agent-report.pdf",
+    "style_pack": "plain_report"
+  }'
+```
+
 ## Remove pages
 
 ```bash
