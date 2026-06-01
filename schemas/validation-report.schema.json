@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentpdf.dev/schemas/validation-report.json",
+  "title": "ValidationReport",
+  "type": "object",
+  "required": [
+    "valid",
+    "checks"
+  ],
+  "properties": {
+    "valid": {
+      "type": "boolean"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "passed"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "passed": {
+            "type": "boolean"
+          },
+          "expected": {},
+          "actual": {},
+          "message": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "info",
+              "warning",
+              "error"
+            ]
+          }
+        }
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "render_previews": {
+      "type": "array",
+      "items": {
+        "$ref": "artifact.schema.json"
+      }
+    }
+  },
+  "additionalProperties": false
+}

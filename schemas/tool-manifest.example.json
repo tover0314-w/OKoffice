@@ -1,0 +1,521 @@
+{
+  "manifest_version": "0.1",
+  "tools": [
+    {
+      "name": "pdf.inspect.document",
+      "status": "stable",
+      "description": "Detect document structure, metadata, pages, security, text layer, and recommendations.",
+      "category": "inspect",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": false
+    },
+    {
+      "name": "pdf.inspect.pages",
+      "status": "stable",
+      "description": "Return per-page dimensions, rotation, text availability, and renderability.",
+      "category": "inspect",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": false
+    },
+    {
+      "name": "pdf.organize.merge",
+      "status": "stable",
+      "description": "Merge multiple PDFs.",
+      "category": "organize",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": false
+    },
+    {
+      "name": "pdf.organize.split",
+      "status": "stable",
+      "description": "Split PDF by ranges, every N pages, bookmarks, or single pages.",
+      "category": "organize",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": false
+    },
+    {
+      "name": "pdf.organize.extract_pages",
+      "status": "stable",
+      "description": "Extract selected pages.",
+      "category": "organize",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": false
+    },
+    {
+      "name": "pdf.organize.remove_pages",
+      "status": "stable",
+      "description": "Remove selected pages.",
+      "category": "organize",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": false
+    },
+    {
+      "name": "pdf.organize.reorder_pages",
+      "status": "stable",
+      "description": "Reorder pages.",
+      "category": "organize",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": false
+    },
+    {
+      "name": "pdf.organize.rotate_pages",
+      "status": "stable",
+      "description": "Rotate selected pages.",
+      "category": "organize",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": false
+    },
+    {
+      "name": "pdf.optimize.compress",
+      "status": "beta",
+      "description": "Reduce file size.",
+      "category": "optimize",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": false
+    },
+    {
+      "name": "pdf.optimize.repair",
+      "status": "beta",
+      "description": "Repair malformed PDFs where possible.",
+      "category": "optimize",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": false
+    },
+    {
+      "name": "pdf.convert.image_to_pdf",
+      "status": "stable",
+      "description": "Create PDF from images.",
+      "category": "convert",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": false
+    },
+    {
+      "name": "pdf.convert.markdown_to_pdf",
+      "status": "stable",
+      "description": "Create PDF from Markdown and style pack.",
+      "category": "convert",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": false
+    },
+    {
+      "name": "pdf.convert.html_to_pdf",
+      "status": "beta",
+      "description": "Create PDF from HTML/CSS.",
+      "category": "convert",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": false
+    },
+    {
+      "name": "pdf.convert.pdf_to_images",
+      "status": "stable",
+      "description": "Render PDF pages to images.",
+      "category": "convert",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": false
+    },
+    {
+      "name": "pdf.convert.pdf_to_text",
+      "status": "stable",
+      "description": "Extract text.",
+      "category": "convert",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": false
+    },
+    {
+      "name": "pdf.convert.pdf_to_markdown",
+      "status": "beta",
+      "description": "Export PDF structure as Markdown.",
+      "category": "convert",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": false
+    },
+    {
+      "name": "pdf.convert.pdf_to_json",
+      "status": "beta",
+      "description": "Export Document IR JSON.",
+      "category": "convert",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": false
+    },
+    {
+      "name": "pdf.edit.watermark",
+      "status": "stable",
+      "description": "Add text or image watermark.",
+      "category": "edit",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": false
+    },
+    {
+      "name": "pdf.edit.page_numbers",
+      "status": "stable",
+      "description": "Add page numbers.",
+      "category": "edit",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": false
+    },
+    {
+      "name": "pdf.edit.add_text",
+      "status": "beta",
+      "description": "Add overlay text.",
+      "category": "edit",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": false
+    },
+    {
+      "name": "pdf.edit.add_image",
+      "status": "beta",
+      "description": "Add overlay image.",
+      "category": "edit",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": false
+    },
+    {
+      "name": "pdf.forms.detect_fields",
+      "status": "beta",
+      "description": "Detect form fields.",
+      "category": "forms",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": false
+    },
+    {
+      "name": "pdf.forms.fill",
+      "status": "beta",
+      "description": "Fill form fields.",
+      "category": "forms",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": false
+    },
+    {
+      "name": "pdf.security.protect",
+      "status": "stable",
+      "description": "Encrypt/protect PDF.",
+      "category": "security",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": false
+    },
+    {
+      "name": "pdf.security.unlock_authorized",
+      "status": "stable",
+      "description": "Decrypt with valid password.",
+      "category": "security",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": false
+    },
+    {
+      "name": "pdf.security.redact",
+      "status": "beta",
+      "description": "True redaction.",
+      "category": "security",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": false
+    },
+    {
+      "name": "pdf.security.remove_metadata",
+      "status": "stable",
+      "description": "Remove metadata.",
+      "category": "security",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": false
+    },
+    {
+      "name": "pdf.ocr_scan.ocr",
+      "status": "beta",
+      "description": "Add OCR text layer.",
+      "category": "ocr_scan",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": false
+    },
+    {
+      "name": "pdf.compare.text_diff",
+      "status": "beta",
+      "description": "Compare extracted text.",
+      "category": "compare",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": false
+    },
+    {
+      "name": "pdf.compare.visual_diff",
+      "status": "beta",
+      "description": "Compare rendered pages.",
+      "category": "compare",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": false
+    },
+    {
+      "name": "pdf.metadata.read",
+      "status": "stable",
+      "description": "Read metadata.",
+      "category": "metadata",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": false
+    },
+    {
+      "name": "pdf.metadata.update",
+      "status": "stable",
+      "description": "Update metadata.",
+      "category": "metadata",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": false
+    },
+    {
+      "name": "pdf.validation.validate_output",
+      "status": "stable",
+      "description": "Validate generated PDF.",
+      "category": "validation",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": false
+    },
+    {
+      "name": "pdf.ai.parse.lite",
+      "status": "beta",
+      "description": "Local heuristic parser.",
+      "category": "ai_parse",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": false
+    },
+    {
+      "name": "pdf.ai.parse.agentic",
+      "status": "cloud_only",
+      "description": "AI/VLM-backed parser.",
+      "category": "ai_parse",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": false
+    },
+    {
+      "name": "pdf.ai.rag.ingest",
+      "status": "beta",
+      "description": "Create local PDF index.",
+      "category": "ai_rag",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": false
+    },
+    {
+      "name": "pdf.ai.rag.query",
+      "status": "beta",
+      "description": "Ask PDF with citations.",
+      "category": "ai_rag",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": false
+    },
+    {
+      "name": "pdf.ai.extract.schema",
+      "status": "cloud_only",
+      "description": "Extract structured data by schema.",
+      "category": "ai_extract",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": false
+    },
+    {
+      "name": "pdf.ai.translate.document",
+      "status": "cloud_only",
+      "description": "Translate PDF.",
+      "category": "ai_translate",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": false
+    },
+    {
+      "name": "pdf.ai.create.report",
+      "status": "cloud_only",
+      "description": "Generate report PDF.",
+      "category": "ai_create",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": false
+    },
+    {
+      "name": "pdf.ai.create.resume",
+      "status": "cloud_only",
+      "description": "Generate resume PDF.",
+      "category": "ai_create",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": false
+    },
+    {
+      "name": "pdf.ai.edit.restyle",
+      "status": "cloud_only",
+      "description": "Restyle/regenerate PDF.",
+      "category": "ai_edit",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": false
+    },
+    {
+      "name": "pdf.ai.review.contract_risk_review",
+      "status": "cloud_only",
+      "description": "Review contract risks.",
+      "category": "ai_review",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest"
+      ],
+      "implemented": false
+    }
+  ]
+}

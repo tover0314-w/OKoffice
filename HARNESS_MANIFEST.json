@@ -1,0 +1,21 @@
+{
+  "name": "agentpdf-harness",
+  "created_at": "2026-06-01",
+  "purpose": "Codex-ready development harness for open-source AgentPDF Infra project",
+  "contains": [
+    "docs",
+    "schemas",
+    "codex task cards",
+    "open-source governance",
+    "examples",
+    "scaffold"
+  ],
+  "recommended_start": [
+    "README.md",
+    "AGENTS.md",
+    "docs/00_START_HERE_FOR_CODEX.md"
+  ],
+  "expanded": true,
+  "total_tool_manifest_count": 161,
+  "recommended_codex_prompt": "CODEX_BOOTSTRAP_PROMPT.md"
+}

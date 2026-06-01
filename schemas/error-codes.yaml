@@ -1,0 +1,16 @@
+error_codes:
+  file_not_found: Input file does not exist.
+  unsupported_file_type: File type is not supported by this tool.
+  encrypted_pdf_requires_password: PDF is encrypted and a valid password is required.
+  invalid_password: Provided password could not decrypt the PDF.
+  invalid_page_range: Page range is invalid or exceeds page count.
+  pdf_parse_failed: PDF could not be parsed.
+  pdf_render_failed: Page rendering failed.
+  output_validation_failed: Output artifact failed validation.
+  dependency_missing: Required optional dependency is missing.
+  tool_not_implemented: Tool is specified but not implemented.
+  unsafe_input_rejected: Input was rejected by safety checks.
+  path_traversal_rejected: Path traversal attempt was rejected.
+  overwrite_not_allowed: Output file exists and overwrite was not enabled.
+  quota_required_for_cloud_feature: Feature requires hosted quota or configured model provider.
+  cloud_feature_disabled: Cloud or AI feature is disabled in local configuration.

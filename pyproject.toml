@@ -1,0 +1,45 @@
+[project]
+name = "agentpdf"
+version = "0.1.0"
+description = "Open-source PDF infrastructure for AI agents."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "Apache-2.0"
+authors = [{name = "AgentPDF contributors"}]
+dependencies = [
+  "pydantic>=2",
+  "typer>=0.12",
+  "rich>=13",
+  "pypdf>=4",
+  "pypdfium2>=5",
+  "mcp>=1.27",
+  "fastapi>=0.111",
+  "uvicorn>=0.30",
+  "reportlab>=4",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8",
+  "ruff>=0.5",
+  "mypy>=1.10",
+]
+api = []
+
+[project.scripts]
+agentpdf = "agentpdf.cli.main:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.mypy]
+python_version = "3.11"
+strict = false

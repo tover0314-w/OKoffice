@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentpdf.dev/schemas/style-pack.json",
+  "title": "StylePack",
+  "type": "object",
+  "required": [
+    "style_id",
+    "name",
+    "page",
+    "typography",
+    "components"
+  ],
+  "properties": {
+    "style_id": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "page": {
+      "type": "object",
+      "properties": {
+        "size": {
+          "type": "string"
+        },
+        "orientation": {
+          "type": "string",
+          "enum": [
+            "portrait",
+            "landscape"
+          ]
+        },
+        "margins": {
+          "type": "object"
+        }
+      }
+    },
+    "typography": {
+      "type": "object"
+    },
+    "colors": {
+      "type": "object"
+    },
+    "components": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "metadata": {
+      "type": "object"
+    }
+  },
+  "additionalProperties": true
+}

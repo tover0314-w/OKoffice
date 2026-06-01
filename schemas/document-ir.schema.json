@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentpdf.dev/schemas/document-ir.json",
+  "title": "DocumentIR",
+  "type": "object",
+  "required": [
+    "ir_version",
+    "document_id",
+    "pages"
+  ],
+  "properties": {
+    "ir_version": {
+      "type": "string"
+    },
+    "document_id": {
+      "type": "string"
+    },
+    "source": {
+      "type": "object"
+    },
+    "metadata": {
+      "type": "object"
+    },
+    "pages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "page_number",
+          "width",
+          "height",
+          "blocks"
+        ],
+        "properties": {
+          "page_number": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "width": {
+            "type": "number"
+          },
+          "height": {
+            "type": "number"
+          },
+          "rotation": {
+            "type": "integer"
+          },
+          "coordinate_origin": {
+            "type": "string",
+            "enum": [
+              "top_left",
+              "bottom_left"
+            ]
+          },
+          "blocks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "type"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string"
+                },
+                "text": {
+                  "type": "string"
+                },
+                "bbox": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "minItems": 4,
+                  "maxItems": 4
+                },
+                "confidence": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "source": {
+                  "type": "string"
+                },
+                "children": {
+                  "type": "array"
+                },
+                "metadata": {
+                  "type": "object"
+                }
+              },
+              "additionalProperties": true
+            }
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}

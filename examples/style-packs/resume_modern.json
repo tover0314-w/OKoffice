@@ -1,0 +1,27 @@
+{
+  "style_id": "resume_modern",
+  "name": "Resume Modern",
+  "description": "ATS-friendly resume with clean sections and compact spacing.",
+  "page": {
+    "size": "A4",
+    "orientation": "portrait",
+    "margins": {
+      "top": 42,
+      "right": 42,
+      "bottom": 42,
+      "left": 42
+    }
+  },
+  "typography": {
+    "heading_font": "system-sans",
+    "body_font": "system-sans",
+    "base_size": 9
+  },
+  "components": [
+    "header",
+    "section",
+    "experience_item",
+    "skills",
+    "education"
+  ]
+}

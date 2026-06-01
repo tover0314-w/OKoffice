@@ -1,0 +1,29 @@
+name: Feature request
+description: Suggest a new tool or improvement
+title: "feat: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user/agent problem does this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - CLI
+        - MCP
+        - API
+        - PDF core
+        - AI parse/RAG
+        - Create/edit
+        - Security
+        - Docs

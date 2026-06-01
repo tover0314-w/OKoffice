@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentpdf.dev/schemas/error.json",
+  "title": "ErrorResponse",
+  "type": "object",
+  "required": [
+    "code",
+    "message"
+  ],
+  "properties": {
+    "code": {
+      "type": "string"
+    },
+    "message": {
+      "type": "string"
+    },
+    "details": {
+      "type": "object"
+    },
+    "retry_hint": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

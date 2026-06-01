@@ -1,0 +1,2385 @@
+{
+  "manifest_version": "0.1-full",
+  "tool_count": 161,
+  "tools": [
+    {
+      "name": "pdf.inspect.document",
+      "status": "stable",
+      "description": "Detect page count, page sizes, rotations, encryption, metadata, text layer, forms, annotations, attachments, signatures, scanned pages, outlines.",
+      "category": "inspect",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.inspect.pages",
+      "status": "stable",
+      "description": "Return per-page dimensions, rotation, text availability, image count, object count, and renderability.",
+      "category": "inspect",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.inspect.permissions",
+      "status": "beta",
+      "description": "Inspect encryption and usage permissions.",
+      "category": "inspect",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.inspect.health",
+      "status": "beta",
+      "description": "Detect corruption, missing xref, malformed objects, huge pages, suspicious attachments, embedded JavaScript.",
+      "category": "inspect",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.organize.merge",
+      "status": "stable",
+      "description": "Merge multiple PDFs.",
+      "category": "organize",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.organize.split",
+      "status": "stable",
+      "description": "Split PDF by page ranges, every N pages, bookmarks, single pages, or file-size target.",
+      "category": "organize",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.organize.extract_pages",
+      "status": "stable",
+      "description": "Extract specific pages into a new PDF.",
+      "category": "organize",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.organize.remove_pages",
+      "status": "stable",
+      "description": "Remove selected pages.",
+      "category": "organize",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.organize.reorder_pages",
+      "status": "stable",
+      "description": "Reorder pages.",
+      "category": "organize",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.organize.rotate_pages",
+      "status": "stable",
+      "description": "Rotate pages.",
+      "category": "organize",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.organize.duplicate_pages",
+      "status": "beta",
+      "description": "Duplicate pages.",
+      "category": "organize",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.organize.insert_blank_pages",
+      "status": "beta",
+      "description": "Insert blank pages.",
+      "category": "organize",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.organize.insert_pdf",
+      "status": "beta",
+      "description": "Insert one PDF into another.",
+      "category": "organize",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.organize.n_up",
+      "status": "planned",
+      "description": "Place multiple source pages on one output page.",
+      "category": "organize",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.organize.booklet",
+      "status": "planned",
+      "description": "Create booklet imposition.",
+      "category": "organize",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.organize.flatten_pages",
+      "status": "beta",
+      "description": "Flatten annotations and forms into page content.",
+      "category": "organize",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.optimize.compress",
+      "status": "stable",
+      "description": "Reduce PDF file size.",
+      "category": "optimize",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.optimize.linearize",
+      "status": "beta",
+      "description": "Optimize for fast web view.",
+      "category": "optimize",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.optimize.repair",
+      "status": "beta",
+      "description": "Repair malformed PDF structures where possible.",
+      "category": "optimize",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.optimize.web_optimize",
+      "status": "beta",
+      "description": "Optimize for web delivery.",
+      "category": "optimize",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.optimize.downsample_images",
+      "status": "beta",
+      "description": "Downsample embedded images.",
+      "category": "optimize",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.optimize.remove_unused_objects",
+      "status": "planned",
+      "description": "Remove unreachable or unused objects.",
+      "category": "optimize",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.optimize.subset_fonts",
+      "status": "planned",
+      "description": "Subset fonts when safe.",
+      "category": "optimize",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.optimize.to_pdfa",
+      "status": "planned",
+      "description": "Convert to PDF/A when possible.",
+      "category": "optimize",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.optimize.validate_pdfa",
+      "status": "planned",
+      "description": "Validate PDF/A compliance.",
+      "category": "optimize",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.convert.image_to_pdf",
+      "status": "stable",
+      "description": "Create PDF from images.",
+      "category": "convert_to_pdf",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.convert.markdown_to_pdf",
+      "status": "stable",
+      "description": "Render Markdown to PDF.",
+      "category": "convert_to_pdf",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.convert.html_to_pdf",
+      "status": "beta",
+      "description": "Render HTML/CSS to PDF.",
+      "category": "convert_to_pdf",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.convert.url_to_pdf",
+      "status": "planned",
+      "description": "Render URL to PDF with SSRF-safe fetch.",
+      "category": "convert_to_pdf",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.convert.text_to_pdf",
+      "status": "stable",
+      "description": "Create PDF from plain text.",
+      "category": "convert_to_pdf",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.convert.docx_to_pdf",
+      "status": "planned",
+      "description": "Convert DOCX to PDF.",
+      "category": "convert_to_pdf",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.convert.pptx_to_pdf",
+      "status": "planned",
+      "description": "Convert PPTX to PDF.",
+      "category": "convert_to_pdf",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.convert.xlsx_to_pdf",
+      "status": "planned",
+      "description": "Convert XLSX to PDF.",
+      "category": "convert_to_pdf",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.convert.pdf_to_images",
+      "status": "stable",
+      "description": "Render PDF pages to images.",
+      "category": "convert_from_pdf",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.convert.pdf_to_text",
+      "status": "stable",
+      "description": "Extract text.",
+      "category": "convert_from_pdf",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.convert.pdf_to_markdown",
+      "status": "beta",
+      "description": "Convert PDF structure to Markdown.",
+      "category": "convert_from_pdf",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.convert.pdf_to_json",
+      "status": "beta",
+      "description": "Convert PDF to Document IR JSON.",
+      "category": "convert_from_pdf",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.convert.pdf_to_html",
+      "status": "planned",
+      "description": "Convert PDF to HTML approximation.",
+      "category": "convert_from_pdf",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.convert.pdf_to_docx",
+      "status": "planned",
+      "description": "Convert PDF to DOCX.",
+      "category": "convert_from_pdf",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.convert.pdf_to_pptx",
+      "status": "planned",
+      "description": "Convert PDF to PPTX.",
+      "category": "convert_from_pdf",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.convert.pdf_to_xlsx",
+      "status": "planned",
+      "description": "Extract tables to XLSX.",
+      "category": "convert_from_pdf",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.convert.extract_images",
+      "status": "stable",
+      "description": "Extract embedded images.",
+      "category": "convert_from_pdf",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.convert.extract_fonts",
+      "status": "planned",
+      "description": "Extract or list embedded fonts.",
+      "category": "convert_from_pdf",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.convert.extract_attachments",
+      "status": "beta",
+      "description": "Extract embedded attachments safely.",
+      "category": "convert_from_pdf",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.edit.add_text",
+      "status": "beta",
+      "description": "Add overlay text at coordinates.",
+      "category": "edit",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.edit.add_image",
+      "status": "beta",
+      "description": "Add overlay image at coordinates.",
+      "category": "edit",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.edit.add_shape",
+      "status": "planned",
+      "description": "Add vector shapes.",
+      "category": "edit",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.edit.add_link",
+      "status": "beta",
+      "description": "Add link annotations.",
+      "category": "edit",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.edit.add_annotation",
+      "status": "beta",
+      "description": "Add annotation or comment.",
+      "category": "edit",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.edit.highlight",
+      "status": "beta",
+      "description": "Highlight text spans or coordinates.",
+      "category": "edit",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.edit.underline",
+      "status": "planned",
+      "description": "Underline text spans or coordinates.",
+      "category": "edit",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.edit.strikeout",
+      "status": "planned",
+      "description": "Strike out text spans or coordinates.",
+      "category": "edit",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.edit.freehand_draw",
+      "status": "planned",
+      "description": "Add freehand drawing.",
+      "category": "edit",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.edit.crop",
+      "status": "beta",
+      "description": "Crop pages.",
+      "category": "edit",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.edit.resize_pages",
+      "status": "planned",
+      "description": "Resize pages.",
+      "category": "edit",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.edit.add_margin",
+      "status": "planned",
+      "description": "Add margins.",
+      "category": "edit",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.edit.header_footer",
+      "status": "beta",
+      "description": "Add headers and footers.",
+      "category": "edit",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.edit.page_numbers",
+      "status": "stable",
+      "description": "Add page numbers.",
+      "category": "edit",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.edit.watermark",
+      "status": "stable",
+      "description": "Add text/image watermark.",
+      "category": "edit",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.edit.stamp",
+      "status": "beta",
+      "description": "Add stamp overlays.",
+      "category": "edit",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.edit.overlay",
+      "status": "beta",
+      "description": "Overlay PDF or page content.",
+      "category": "edit",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.edit.underlay",
+      "status": "planned",
+      "description": "Underlay PDF or page content.",
+      "category": "edit",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.edit.flatten_annotations",
+      "status": "beta",
+      "description": "Flatten annotations.",
+      "category": "edit",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.forms.detect_fields",
+      "status": "beta",
+      "description": "Detect AcroForm fields.",
+      "category": "forms",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.forms.fill",
+      "status": "beta",
+      "description": "Fill form fields.",
+      "category": "forms",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.forms.export_data",
+      "status": "beta",
+      "description": "Export form data.",
+      "category": "forms",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.forms.import_data",
+      "status": "planned",
+      "description": "Import form data.",
+      "category": "forms",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.forms.flatten",
+      "status": "beta",
+      "description": "Flatten form fields.",
+      "category": "forms",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.forms.create",
+      "status": "planned",
+      "description": "Create form fields.",
+      "category": "forms",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.forms.validate",
+      "status": "planned",
+      "description": "Validate required fields and formats.",
+      "category": "forms",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.security.protect",
+      "status": "stable",
+      "description": "Encrypt/protect PDF with password.",
+      "category": "security",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.security.unlock_authorized",
+      "status": "stable",
+      "description": "Decrypt with valid password only.",
+      "category": "security",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.security.encrypt",
+      "status": "stable",
+      "description": "Encrypt PDF.",
+      "category": "security",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.security.decrypt_authorized",
+      "status": "stable",
+      "description": "Decrypt authorized PDF.",
+      "category": "security",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.security.permissions",
+      "status": "beta",
+      "description": "Read/update permissions.",
+      "category": "security",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.security.redact",
+      "status": "beta",
+      "description": "True redaction.",
+      "category": "security",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.security.verify_redaction",
+      "status": "beta",
+      "description": "Verify redacted content is removed.",
+      "category": "security",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.security.sign",
+      "status": "planned",
+      "description": "Digitally sign PDF.",
+      "category": "security",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.security.verify_signature",
+      "status": "planned",
+      "description": "Verify digital signatures.",
+      "category": "security",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.security.remove_metadata",
+      "status": "stable",
+      "description": "Remove document metadata.",
+      "category": "security",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.security.sanitize",
+      "status": "beta",
+      "description": "Remove JavaScript, attachments, external actions, and metadata.",
+      "category": "security",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.security.malware_scan",
+      "status": "planned",
+      "description": "Integrate malware scan worker.",
+      "category": "security",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.ocr_scan.ocr",
+      "status": "beta",
+      "description": "Add OCR text layer.",
+      "category": "ocr_scan",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.ocr_scan.searchable_pdf",
+      "status": "beta",
+      "description": "Generate searchable PDF.",
+      "category": "ocr_scan",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.ocr_scan.deskew",
+      "status": "beta",
+      "description": "Deskew scanned pages.",
+      "category": "ocr_scan",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.ocr_scan.despeckle",
+      "status": "planned",
+      "description": "Remove speckles/noise.",
+      "category": "ocr_scan",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.ocr_scan.auto_rotate",
+      "status": "beta",
+      "description": "Detect and rotate pages.",
+      "category": "ocr_scan",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.ocr_scan.remove_existing_ocr",
+      "status": "planned",
+      "description": "Remove existing OCR layer.",
+      "category": "ocr_scan",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.ocr_scan.scan_to_pdf",
+      "status": "planned",
+      "description": "Images/scans to OCR PDF.",
+      "category": "ocr_scan",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.ocr_scan.multilingual_ocr",
+      "status": "planned",
+      "description": "Multi-language OCR.",
+      "category": "ocr_scan",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.compare.text_diff",
+      "status": "beta",
+      "description": "Compare extracted text.",
+      "category": "compare",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.compare.visual_diff",
+      "status": "beta",
+      "description": "Rendered page visual diff.",
+      "category": "compare",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.compare.semantic_diff",
+      "status": "planned",
+      "description": "AI-assisted semantic diff.",
+      "category": "compare",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.compare.version_report",
+      "status": "planned",
+      "description": "Create version comparison report.",
+      "category": "compare",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.metadata.read",
+      "status": "stable",
+      "description": "Read metadata.",
+      "category": "metadata",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.metadata.update",
+      "status": "stable",
+      "description": "Update metadata.",
+      "category": "metadata",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.metadata.remove",
+      "status": "stable",
+      "description": "Remove metadata.",
+      "category": "metadata",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.metadata.read_outline",
+      "status": "beta",
+      "description": "Read bookmarks/outline.",
+      "category": "metadata",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.metadata.update_outline",
+      "status": "planned",
+      "description": "Update bookmarks/outline.",
+      "category": "metadata",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.metadata.read_links",
+      "status": "beta",
+      "description": "Read links.",
+      "category": "metadata",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.metadata.read_attachments",
+      "status": "beta",
+      "description": "Read attachments.",
+      "category": "metadata",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.metadata.page_info",
+      "status": "stable",
+      "description": "Page size/rotation/info.",
+      "category": "metadata",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.validation.validate_output",
+      "status": "stable",
+      "description": "Validate generated PDF.",
+      "category": "validation",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.validation.render_check",
+      "status": "stable",
+      "description": "Ensure pages render.",
+      "category": "validation",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.validation.blank_page_check",
+      "status": "stable",
+      "description": "Detect blank pages.",
+      "category": "validation",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.validation.page_count_check",
+      "status": "stable",
+      "description": "Compare expected page counts.",
+      "category": "validation",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.validation.text_layer_check",
+      "status": "beta",
+      "description": "Check text extraction.",
+      "category": "validation",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.validation.visual_diff",
+      "status": "beta",
+      "description": "Compare before/after render.",
+      "category": "validation",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.validation.redaction_check",
+      "status": "beta",
+      "description": "Verify redaction.",
+      "category": "validation",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.ai.parse.lite",
+      "status": "beta",
+      "description": "Local text-layer and heuristic layout parser.",
+      "category": "ai_parse",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.ai.parse.agentic",
+      "status": "cloud_only",
+      "description": "AI/VLM-backed complex layout parser.",
+      "category": "ai_parse",
+      "interfaces": [
+        "rest",
+        "sdk",
+        "mcp"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": true
+    },
+    {
+      "name": "pdf.ai.parse.layout",
+      "status": "beta",
+      "description": "Reading order, blocks, sections.",
+      "category": "ai_parse",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.ai.parse.tables",
+      "status": "beta",
+      "description": "Table extraction.",
+      "category": "ai_parse",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.ai.parse.figures",
+      "status": "planned",
+      "description": "Figure detection and captions.",
+      "category": "ai_parse",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.ai.parse.formulas",
+      "status": "planned",
+      "description": "Formula extraction.",
+      "category": "ai_parse",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.ai.parse.charts",
+      "status": "planned",
+      "description": "Chart understanding.",
+      "category": "ai_parse",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.ai.parse.references",
+      "status": "planned",
+      "description": "Research references extraction.",
+      "category": "ai_parse",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.ai.rag.ingest",
+      "status": "beta",
+      "description": "Create local index/chunks.",
+      "category": "ai_rag",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.ai.rag.query",
+      "status": "beta",
+      "description": "Ask document questions with citations.",
+      "category": "ai_rag",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.ai.rag.search",
+      "status": "beta",
+      "description": "Search chunks/spans.",
+      "category": "ai_rag",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.ai.rag.cite_answer",
+      "status": "beta",
+      "description": "Return page/bbox citations.",
+      "category": "ai_rag",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.ai.rag.highlight_sources",
+      "status": "planned",
+      "description": "Produce highlighted source PDF.",
+      "category": "ai_rag",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.ai.rag.export_report",
+      "status": "planned",
+      "description": "Create Q&A/source report PDF.",
+      "category": "ai_rag",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.ai.extract.schema",
+      "status": "cloud_only",
+      "description": "Extract structured fields by schema.",
+      "category": "ai_extract",
+      "interfaces": [
+        "rest",
+        "sdk",
+        "mcp"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": true
+    },
+    {
+      "name": "pdf.ai.extract.invoice",
+      "status": "cloud_only",
+      "description": "Invoice extraction.",
+      "category": "ai_extract",
+      "interfaces": [
+        "rest",
+        "sdk",
+        "mcp"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": true
+    },
+    {
+      "name": "pdf.ai.extract.contract_terms",
+      "status": "cloud_only",
+      "description": "Contract terms extraction.",
+      "category": "ai_extract",
+      "interfaces": [
+        "rest",
+        "sdk",
+        "mcp"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": true
+    },
+    {
+      "name": "pdf.ai.extract.resume",
+      "status": "cloud_only",
+      "description": "Resume extraction.",
+      "category": "ai_extract",
+      "interfaces": [
+        "rest",
+        "sdk",
+        "mcp"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": true
+    },
+    {
+      "name": "pdf.ai.extract.financial_tables",
+      "status": "cloud_only",
+      "description": "Financial table extraction.",
+      "category": "ai_extract",
+      "interfaces": [
+        "rest",
+        "sdk",
+        "mcp"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": true
+    },
+    {
+      "name": "pdf.ai.extract.research_claims",
+      "status": "cloud_only",
+      "description": "Research claim extraction.",
+      "category": "ai_extract",
+      "interfaces": [
+        "rest",
+        "sdk",
+        "mcp"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": true
+    },
+    {
+      "name": "pdf.ai.extract.action_items",
+      "status": "cloud_only",
+      "description": "Action item extraction.",
+      "category": "ai_extract",
+      "interfaces": [
+        "rest",
+        "sdk",
+        "mcp"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": true
+    },
+    {
+      "name": "pdf.ai.translate.document",
+      "status": "cloud_only",
+      "description": "Translate PDF.",
+      "category": "ai_translate",
+      "interfaces": [
+        "rest",
+        "sdk",
+        "mcp"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": true
+    },
+    {
+      "name": "pdf.ai.translate.bilingual_pdf",
+      "status": "cloud_only",
+      "description": "Create bilingual PDF.",
+      "category": "ai_translate",
+      "interfaces": [
+        "rest",
+        "sdk",
+        "mcp"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": true
+    },
+    {
+      "name": "pdf.ai.translate.with_glossary",
+      "status": "cloud_only",
+      "description": "Glossary-aware translation.",
+      "category": "ai_translate",
+      "interfaces": [
+        "rest",
+        "sdk",
+        "mcp"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": true
+    },
+    {
+      "name": "pdf.ai.translate.tables",
+      "status": "cloud_only",
+      "description": "Table-aware translation.",
+      "category": "ai_translate",
+      "interfaces": [
+        "rest",
+        "sdk",
+        "mcp"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": true
+    },
+    {
+      "name": "pdf.ai.translate.annotations",
+      "status": "cloud_only",
+      "description": "Translate annotations.",
+      "category": "ai_translate",
+      "interfaces": [
+        "rest",
+        "sdk",
+        "mcp"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": true
+    },
+    {
+      "name": "pdf.ai.create.from_prompt",
+      "status": "cloud_only",
+      "description": "Generate PDF from prompt.",
+      "category": "ai_create",
+      "interfaces": [
+        "rest",
+        "sdk",
+        "mcp"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": true
+    },
+    {
+      "name": "pdf.ai.create.report",
+      "status": "cloud_only",
+      "description": "Create business report.",
+      "category": "ai_create",
+      "interfaces": [
+        "rest",
+        "sdk",
+        "mcp"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": true
+    },
+    {
+      "name": "pdf.ai.create.paper",
+      "status": "cloud_only",
+      "description": "Create academic paper format.",
+      "category": "ai_create",
+      "interfaces": [
+        "rest",
+        "sdk",
+        "mcp"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": true
+    },
+    {
+      "name": "pdf.ai.create.resume",
+      "status": "cloud_only",
+      "description": "Create resume.",
+      "category": "ai_create",
+      "interfaces": [
+        "rest",
+        "sdk",
+        "mcp"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": true
+    },
+    {
+      "name": "pdf.ai.create.invoice",
+      "status": "beta",
+      "description": "Template invoice.",
+      "category": "ai_create",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.ai.create.contract",
+      "status": "cloud_only",
+      "description": "Contract template.",
+      "category": "ai_create",
+      "interfaces": [
+        "rest",
+        "sdk",
+        "mcp"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": true
+    },
+    {
+      "name": "pdf.ai.create.proposal",
+      "status": "cloud_only",
+      "description": "Proposal.",
+      "category": "ai_create",
+      "interfaces": [
+        "rest",
+        "sdk",
+        "mcp"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": true
+    },
+    {
+      "name": "pdf.ai.create.training_material",
+      "status": "cloud_only",
+      "description": "Training/education materials.",
+      "category": "ai_create",
+      "interfaces": [
+        "rest",
+        "sdk",
+        "mcp"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": true
+    },
+    {
+      "name": "pdf.ai.create.worksheet",
+      "status": "cloud_only",
+      "description": "Education worksheet.",
+      "category": "ai_create",
+      "interfaces": [
+        "rest",
+        "sdk",
+        "mcp"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": true
+    },
+    {
+      "name": "pdf.ai.create.research_brief",
+      "status": "cloud_only",
+      "description": "Research brief.",
+      "category": "ai_create",
+      "interfaces": [
+        "rest",
+        "sdk",
+        "mcp"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": true
+    },
+    {
+      "name": "pdf.ai.edit.rewrite_section",
+      "status": "cloud_only",
+      "description": "Rewrite content and regenerate page/document.",
+      "category": "ai_edit",
+      "interfaces": [
+        "rest",
+        "sdk",
+        "mcp"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": true
+    },
+    {
+      "name": "pdf.ai.edit.simplify_language",
+      "status": "cloud_only",
+      "description": "Simplify content.",
+      "category": "ai_edit",
+      "interfaces": [
+        "rest",
+        "sdk",
+        "mcp"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": true
+    },
+    {
+      "name": "pdf.ai.edit.formalize",
+      "status": "cloud_only",
+      "description": "Formal tone conversion.",
+      "category": "ai_edit",
+      "interfaces": [
+        "rest",
+        "sdk",
+        "mcp"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": true
+    },
+    {
+      "name": "pdf.ai.edit.shorten",
+      "status": "cloud_only",
+      "description": "Shorten content.",
+      "category": "ai_edit",
+      "interfaces": [
+        "rest",
+        "sdk",
+        "mcp"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": true
+    },
+    {
+      "name": "pdf.ai.edit.expand",
+      "status": "cloud_only",
+      "description": "Expand content.",
+      "category": "ai_edit",
+      "interfaces": [
+        "rest",
+        "sdk",
+        "mcp"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": true
+    },
+    {
+      "name": "pdf.ai.edit.restyle",
+      "status": "cloud_only",
+      "description": "Change visual style.",
+      "category": "ai_edit",
+      "interfaces": [
+        "rest",
+        "sdk",
+        "mcp"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": true
+    },
+    {
+      "name": "pdf.ai.edit.regenerate_page",
+      "status": "cloud_only",
+      "description": "Regenerate page from IR.",
+      "category": "ai_edit",
+      "interfaces": [
+        "rest",
+        "sdk",
+        "mcp"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": true
+    },
+    {
+      "name": "pdf.ai.edit.convert_style",
+      "status": "cloud_only",
+      "description": "Convert document to style pack.",
+      "category": "ai_edit",
+      "interfaces": [
+        "rest",
+        "sdk",
+        "mcp"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": true
+    },
+    {
+      "name": "pdf.ai.review.proofread",
+      "status": "cloud_only",
+      "description": "Proofread document.",
+      "category": "ai_review",
+      "interfaces": [
+        "rest",
+        "sdk",
+        "mcp"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": true
+    },
+    {
+      "name": "pdf.ai.review.compliance_check",
+      "status": "cloud_only",
+      "description": "Compliance review.",
+      "category": "ai_review",
+      "interfaces": [
+        "rest",
+        "sdk",
+        "mcp"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": true
+    },
+    {
+      "name": "pdf.ai.review.contract_risk_review",
+      "status": "cloud_only",
+      "description": "Contract risk review.",
+      "category": "ai_review",
+      "interfaces": [
+        "rest",
+        "sdk",
+        "mcp"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": true
+    },
+    {
+      "name": "pdf.ai.review.citation_check",
+      "status": "cloud_only",
+      "description": "Citation verification.",
+      "category": "ai_review",
+      "interfaces": [
+        "rest",
+        "sdk",
+        "mcp"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": true
+    },
+    {
+      "name": "pdf.ai.review.consistency_check",
+      "status": "cloud_only",
+      "description": "Check consistency.",
+      "category": "ai_review",
+      "interfaces": [
+        "rest",
+        "sdk",
+        "mcp"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": true
+    },
+    {
+      "name": "pdf.ai.review.sensitive_data_detect",
+      "status": "beta",
+      "description": "Detect sensitive information.",
+      "category": "ai_review",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.ai.review.accessibility_check",
+      "status": "beta",
+      "description": "Accessibility baseline.",
+      "category": "ai_review",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.ai.review.brand_check",
+      "status": "cloud_only",
+      "description": "Brand/style compliance.",
+      "category": "ai_review",
+      "interfaces": [
+        "rest",
+        "sdk",
+        "mcp"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": true
+    }
+  ]
+}

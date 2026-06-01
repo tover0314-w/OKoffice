@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentpdf.dev/schemas/job.json",
+  "title": "Job",
+  "type": "object",
+  "required": [
+    "job_id",
+    "tool",
+    "status",
+    "created_at"
+  ],
+  "properties": {
+    "job_id": {
+      "type": "string"
+    },
+    "tool": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "queued",
+        "running",
+        "succeeded",
+        "failed",
+        "cancelled"
+      ]
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "progress": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "error": {
+      "$ref": "error.schema.json"
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "$ref": "artifact.schema.json"
+      }
+    }
+  },
+  "additionalProperties": false
+}

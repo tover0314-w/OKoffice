@@ -1,0 +1,71 @@
+{
+  "server_name": "agentpdf",
+  "version": "0.1.0",
+  "tools": [
+    {
+      "name": "pdf_inspect_document",
+      "maps_to": "pdf.inspect.document",
+      "status": "stable"
+    },
+    {
+      "name": "pdf_merge",
+      "maps_to": "pdf.organize.merge",
+      "status": "stable"
+    },
+    {
+      "name": "pdf_split",
+      "maps_to": "pdf.organize.split",
+      "status": "stable"
+    },
+    {
+      "name": "pdf_extract_pages",
+      "maps_to": "pdf.organize.extract_pages",
+      "status": "stable"
+    },
+    {
+      "name": "pdf_remove_pages",
+      "maps_to": "pdf.organize.remove_pages",
+      "status": "stable"
+    },
+    {
+      "name": "pdf_rotate_pages",
+      "maps_to": "pdf.organize.rotate_pages",
+      "status": "stable"
+    },
+    {
+      "name": "pdf_render_pages",
+      "maps_to": "pdf.convert.pdf_to_images",
+      "status": "stable"
+    },
+    {
+      "name": "pdf_extract_text",
+      "maps_to": "pdf.convert.pdf_to_text",
+      "status": "stable"
+    },
+    {
+      "name": "pdf_markdown_to_pdf",
+      "maps_to": "pdf.convert.markdown_to_pdf",
+      "status": "stable"
+    },
+    {
+      "name": "pdf_validate_output",
+      "maps_to": "pdf.validation.validate_output",
+      "status": "stable"
+    },
+    {
+      "name": "pdf_ai_parse_lite",
+      "maps_to": "pdf.ai.parse.lite",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_ai_rag_ingest",
+      "maps_to": "pdf.ai.rag.ingest",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_ai_rag_query",
+      "maps_to": "pdf.ai.rag.query",
+      "status": "beta"
+    }
+  ]
+}

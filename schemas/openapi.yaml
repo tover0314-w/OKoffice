@@ -1,0 +1,84 @@
+openapi: 3.1.0
+info:
+  title: AgentPDF Local API
+  version: 0.1.0
+  description: Local and hosted-compatible API for AgentPDF tools.
+paths:
+  /healthz:
+    get:
+      operationId: healthz
+      responses:
+        '200':
+          description: OK
+  /v1/tools:
+    get:
+      operationId: listTools
+      responses:
+        '200':
+          description: Tool manifest
+  /v1/tools/{tool_name}:
+    get:
+      operationId: getTool
+      parameters:
+        - name: tool_name
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Tool details
+  /v1/tools/{tool_name}/run:
+    post:
+      operationId: runTool
+      parameters:
+        - name: tool_name
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Tool result
+  /v1/jobs/{job_id}:
+    get:
+      operationId: getJob
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Job status
+  /v1/artifacts/{artifact_id}:
+    get:
+      operationId: getArtifact
+      parameters:
+        - name: artifact_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Artifact metadata
+  /v1/artifacts/{artifact_id}/download:
+    get:
+      operationId: downloadArtifact
+      parameters:
+        - name: artifact_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Artifact bytes
