@@ -33,6 +33,11 @@
       "status": "stable"
     },
     {
+      "name": "pdf_image_to_pdf",
+      "maps_to": "pdf.convert.image_to_pdf",
+      "status": "stable"
+    },
+    {
       "name": "pdf_render_pages",
       "maps_to": "pdf.convert.pdf_to_images",
       "status": "stable"
@@ -43,8 +48,38 @@
       "status": "stable"
     },
     {
-      "name": "pdf_markdown_to_pdf",
+      "name": "pdf_create_text",
+      "maps_to": "pdf.convert.text_to_pdf",
+      "status": "stable"
+    },
+    {
+      "name": "pdf_create_markdown",
       "maps_to": "pdf.convert.markdown_to_pdf",
+      "status": "stable"
+    },
+    {
+      "name": "pdf_watermark",
+      "maps_to": "pdf.edit.watermark",
+      "status": "stable"
+    },
+    {
+      "name": "pdf_add_page_numbers",
+      "maps_to": "pdf.edit.page_numbers",
+      "status": "stable"
+    },
+    {
+      "name": "pdf_metadata_read",
+      "maps_to": "pdf.metadata.read",
+      "status": "stable"
+    },
+    {
+      "name": "pdf_metadata_update",
+      "maps_to": "pdf.metadata.update",
+      "status": "stable"
+    },
+    {
+      "name": "pdf_metadata_remove",
+      "maps_to": "pdf.metadata.remove",
       "status": "stable"
     },
     {

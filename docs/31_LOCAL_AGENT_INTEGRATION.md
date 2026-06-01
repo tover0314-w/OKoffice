@@ -59,6 +59,9 @@ Use the same stdio MCP command from any agent runtime that supports MCP:
 - `pdf_extract_pages`
 - `pdf_remove_pages`
 - `pdf_rotate_pages`
+- `pdf_image_to_pdf`
+- `pdf_watermark`
+- `pdf_add_page_numbers`
 - `pdf_create_text`
 - `pdf_create_markdown`
 - `pdf_render_pages`
@@ -66,6 +69,7 @@ Use the same stdio MCP command from any agent runtime that supports MCP:
 - `pdf_metadata_read`
 - `pdf_metadata_update`
 - `pdf_metadata_remove`
+- `pdf_validate_output`
 
 Each tool returns the same AgentPDF `ToolResult` JSON used by the CLI.
 

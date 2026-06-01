@@ -16,7 +16,7 @@ npm run build:node
 Start the local API in another terminal:
 
 ```bash
-agentpdf serve --api
+okpdf serve --api
 ```
 
 ## SDK
@@ -31,6 +31,12 @@ const result = await client.createTextPdf({
   outputPath: ".agentpdf-out/node.pdf",
 });
 
+await client.watermark({
+  inputPath: ".agentpdf-out/node.pdf",
+  text: "DRAFT",
+  outputPath: ".agentpdf-out/node-draft.pdf",
+});
+
 console.log(result.status, result.artifacts[0]?.path);
 ```
 
@@ -39,6 +45,10 @@ console.log(result.status, result.artifacts[0]?.path);
 ```bash
 agentpdf-node tools
 agentpdf-node run pdf.inspect.document --payload '{"path":"report.pdf"}'
+agentpdf-node image-to-pdf cover.png -o cover.pdf
+agentpdf-node watermark cover.pdf --text DRAFT -o cover-draft.pdf
+agentpdf-node page-numbers cover-draft.pdf -o cover-numbered.pdf
+agentpdf-node validate cover-numbered.pdf --expected-pages 1
 agentpdf-node create-text --text "Hello Node" -o node.pdf
 agentpdf-node create-markdown --markdown-file report.md -o report.pdf
 ```
@@ -47,5 +57,6 @@ agentpdf-node create-markdown --markdown-file report.md -o report.pdf
 
 - REST-first client for local and future hosted API compatibility.
 - Typed `ToolResult`, `Artifact`, `ValidationReport`, `ToolManifest`, and tool inputs.
+- Convenience wrappers for inspect, merge, image-to-PDF, watermark, page numbers, text/Markdown creation, and validation.
 - Failed PDF tools still return structured failed `ToolResult` bodies instead of being hidden behind generic exceptions.
 - HTTP or non-AgentPDF failures throw `AgentPDFHttpError`.

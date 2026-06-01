@@ -37,13 +37,14 @@ The public CLI is `okpdf`. The legacy/internal command `agentpdf` still works fo
 |---|---|---|
 | Inspect | `pdf.inspect.document` | CLI, MCP, REST |
 | Organize | merge, split, extract pages, remove pages, rotate pages | CLI, MCP, REST |
-| Convert | Markdown/Text to PDF, render pages to images, extract text | CLI, MCP, REST |
+| Convert | image/Markdown/Text to PDF, render pages to images, extract text | CLI, MCP, REST |
+| Edit | text watermark, page numbers | CLI, MCP, REST |
 | Metadata | read, update, remove | CLI, MCP, REST |
-| Validation | generated PDF validation | CLI, REST-backed tool results |
-| SDK | TypeScript/Node REST client and Node CLI | Node.js |
+| Validation | generated PDF validation | CLI, MCP, REST |
+| SDK | TypeScript/Node REST client and Node CLI wrappers | Node.js |
 | Discovery | complete tool manifest | CLI, MCP, REST, Node.js |
 
-Planned next local tools include lite parse, local RAG, richer validation, Docker, and more deterministic PDF operations.
+Planned next local tools include lite parse, local RAG, richer validation, Docker, optimization, forms, and redaction verification.
 
 ## Install
 
@@ -69,9 +70,13 @@ Common commands:
 ```bash
 okpdf inspect tests/fixtures/simple.pdf --json
 okpdf merge tests/fixtures/simple.pdf tests/fixtures/two_pages.pdf -o .agentpdf-out/merged.pdf --json
+okpdf image-to-pdf cover.png -o .agentpdf-out/cover.pdf --json
+okpdf watermark .agentpdf-out/cover.pdf --text "CONFIDENTIAL" -o .agentpdf-out/watermarked.pdf --json
+okpdf page-numbers .agentpdf-out/watermarked.pdf --template "Page {page} of {total}" -o .agentpdf-out/numbered.pdf --json
 okpdf render tests/fixtures/simple.pdf --pages 1 --format png --out-dir .agentpdf-out/renders --json
 okpdf extract-text tests/fixtures/text.pdf --pages 1 --json
 okpdf metadata remove tests/fixtures/metadata.pdf -o .agentpdf-out/metadata-clean.pdf --json
+okpdf validate .agentpdf-out/numbered.pdf --expected-pages 1 --json
 ```
 
 ## TypeScript / Node.js
@@ -93,6 +98,12 @@ const client = new AgentPDFClient({ baseUrl: "http://127.0.0.1:7331" });
 const result = await client.createMarkdownPdf({
   markdown: "# Agent Report\n\n- Local first\n- TypeScript ready",
   outputPath: ".agentpdf-out/report.pdf",
+});
+
+await client.watermark({
+  inputPath: ".agentpdf-out/report.pdf",
+  text: "DRAFT",
+  outputPath: ".agentpdf-out/report-draft.pdf",
 });
 
 console.log(result.artifacts[0]?.path);
@@ -130,6 +141,9 @@ MCP tools currently exposed:
 - `pdf_extract_pages`
 - `pdf_remove_pages`
 - `pdf_rotate_pages`
+- `pdf_image_to_pdf`
+- `pdf_watermark`
+- `pdf_add_page_numbers`
 - `pdf_create_text`
 - `pdf_create_markdown`
 - `pdf_render_pages`
@@ -137,6 +151,7 @@ MCP tools currently exposed:
 - `pdf_metadata_read`
 - `pdf_metadata_update`
 - `pdf_metadata_remove`
+- `pdf_validate_output`
 
 ### REST
 
@@ -238,7 +253,7 @@ okpdf is inspired by mature open-source document processing projects such as pdf
 
 - Lite document parse and local RAG demo.
 - More creation inputs and style packs.
-- More deterministic operations: page numbers, watermark, image-to-PDF, metadata page info, forms baseline.
+- More deterministic operations: compression, cropping, forms baseline, metadata page info, and safe redaction helpers.
 - Richer validation: blank page checks, render checks, visual diff.
 - Docker and self-hosted examples.
 - Cloud worker boundary for advanced OCR, agentic parse, and hosted batch jobs.

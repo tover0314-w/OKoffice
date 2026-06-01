@@ -55,6 +55,64 @@ export async function runCli(
       }
       return emitResult(await client.inspectDocument({ path }), stdout);
     }
+    if (command === "image-to-pdf") {
+      const outputPath = takeRequiredOption(args, ["--output", "-o"]);
+      const imagePaths = [...args];
+      if (imagePaths.length === 0) {
+        throw new UsageError("Missing image path for image-to-pdf.");
+      }
+      return emitResult(await client.imageToPdf({ imagePaths, outputPath }), stdout);
+    }
+    if (command === "watermark") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing PDF path for watermark.");
+      }
+      const text = takeRequiredOption(args, ["--text"]);
+      const outputPath = takeRequiredOption(args, ["--output", "-o"]);
+      return emitResult(
+        await client.watermark({
+          inputPath,
+          text,
+          outputPath,
+          pages: takeOption(args, ["--pages"]),
+          fontSize: takeIntegerOption(args, ["--font-size"]),
+          opacity: takeNumberOption(args, ["--opacity"]),
+          angle: takeIntegerOption(args, ["--angle"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "page-numbers") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing PDF path for page-numbers.");
+      }
+      const outputPath = takeRequiredOption(args, ["--output", "-o"]);
+      return emitResult(
+        await client.addPageNumbers({
+          inputPath,
+          outputPath,
+          pages: takeOption(args, ["--pages"]),
+          template: takeOption(args, ["--template"]),
+          fontSize: takeIntegerOption(args, ["--font-size"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "validate") {
+      const path = args.shift();
+      if (!path) {
+        throw new UsageError("Missing PDF path for validate.");
+      }
+      return emitResult(
+        await client.validateOutput({
+          path,
+          expectedPages: takeIntegerOption(args, ["--expected-pages"]),
+        }),
+        stdout,
+      );
+    }
     if (command === "create-text") {
       const text = takeRequiredOption(args, ["--text"]);
       const outputPath = takeRequiredOption(args, ["--output", "-o"]);
@@ -105,6 +163,30 @@ function takeOption(args: string[], names: string[]): string | undefined {
   return value;
 }
 
+function takeIntegerOption(args: string[], names: string[]): number | undefined {
+  const raw = takeOption(args, names);
+  if (raw === undefined) {
+    return undefined;
+  }
+  const value = Number(raw);
+  if (!Number.isInteger(value)) {
+    throw new UsageError(`Option must be an integer: ${names[0]}`);
+  }
+  return value;
+}
+
+function takeNumberOption(args: string[], names: string[]): number | undefined {
+  const raw = takeOption(args, names);
+  if (raw === undefined) {
+    return undefined;
+  }
+  const value = Number(raw);
+  if (!Number.isFinite(value)) {
+    throw new UsageError(`Option must be a number: ${names[0]}`);
+  }
+  return value;
+}
+
 function parsePayload(raw: string): JsonObject {
   const parsed = JSON.parse(raw) as unknown;
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
@@ -133,6 +215,10 @@ function helpText(): string {
     "  agentpdf-node tools [--base-url URL]",
     "  agentpdf-node run TOOL --payload '{...}' [--base-url URL]",
     "  agentpdf-node inspect PATH [--base-url URL]",
+    "  agentpdf-node image-to-pdf IMAGE... -o OUT.pdf",
+    "  agentpdf-node watermark FILE --text TEXT -o OUT.pdf",
+    "  agentpdf-node page-numbers FILE -o OUT.pdf",
+    "  agentpdf-node validate FILE [--expected-pages N]",
     "  agentpdf-node create-text --text TEXT -o OUT.pdf [--title TITLE]",
     "  agentpdf-node create-markdown --markdown '# Title' -o OUT.pdf",
     "  agentpdf-node create-markdown --markdown-file input.md -o OUT.pdf",

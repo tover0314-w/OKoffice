@@ -10,15 +10,19 @@ from agentpdf.tools.runner import (
     run_create_text,
     run_extract_pages,
     run_extract_text,
+    run_image_to_pdf,
     run_inspect,
     run_metadata_read,
     run_metadata_remove,
     run_metadata_update,
     run_merge,
+    run_page_numbers,
     run_remove_pages,
     run_render,
     run_rotate_pages,
     run_split,
+    run_validate_output,
+    run_watermark,
 )
 
 
@@ -37,6 +41,9 @@ def create_mcp_server() -> FastMCP:
     server.tool(name="pdf_extract_pages")(pdf_extract_pages)
     server.tool(name="pdf_remove_pages")(pdf_remove_pages)
     server.tool(name="pdf_rotate_pages")(pdf_rotate_pages)
+    server.tool(name="pdf_image_to_pdf")(pdf_image_to_pdf)
+    server.tool(name="pdf_watermark")(pdf_watermark)
+    server.tool(name="pdf_add_page_numbers")(pdf_add_page_numbers)
     server.tool(name="pdf_create_text")(pdf_create_text)
     server.tool(name="pdf_create_markdown")(pdf_create_markdown)
     server.tool(name="pdf_render_pages")(pdf_render_pages)
@@ -44,6 +51,7 @@ def create_mcp_server() -> FastMCP:
     server.tool(name="pdf_metadata_read")(pdf_metadata_read)
     server.tool(name="pdf_metadata_update")(pdf_metadata_update)
     server.tool(name="pdf_metadata_remove")(pdf_metadata_remove)
+    server.tool(name="pdf_validate_output")(pdf_validate_output)
     return server
 
 
@@ -84,6 +92,49 @@ def pdf_rotate_pages(input_path: str, pages: str, degrees: int, output_path: str
         pages=pages,
         degrees=degrees,
         output_path=output_path,
+    ).model_dump_json()
+
+
+def pdf_image_to_pdf(image_paths: list[str], output_path: str) -> str:
+    """Create a local PDF from image files."""
+    return run_image_to_pdf(image_paths, output_path=output_path).model_dump_json()
+
+
+def pdf_watermark(
+    input_path: str,
+    text: str,
+    output_path: str,
+    pages: str = "all",
+    font_size: int = 48,
+    opacity: float = 0.18,
+    angle: int = 45,
+) -> str:
+    """Add a text watermark overlay to a local PDF."""
+    return run_watermark(
+        input_path,
+        text=text,
+        output_path=output_path,
+        pages=pages,
+        font_size=font_size,
+        opacity=opacity,
+        angle=angle,
+    ).model_dump_json()
+
+
+def pdf_add_page_numbers(
+    input_path: str,
+    output_path: str,
+    pages: str = "all",
+    template: str = "{page}",
+    font_size: int = 10,
+) -> str:
+    """Add page number overlays to a local PDF."""
+    return run_page_numbers(
+        input_path,
+        output_path=output_path,
+        pages=pages,
+        template=template,
+        font_size=font_size,
     ).model_dump_json()
 
 
@@ -140,6 +191,11 @@ def pdf_metadata_update(input_path: str, metadata: dict[str, object], output_pat
 def pdf_metadata_remove(input_path: str, output_path: str) -> str:
     """Remove local PDF metadata and write a new PDF."""
     return run_metadata_remove(input_path, output_path=output_path).model_dump_json()
+
+
+def pdf_validate_output(path: str, expected_pages: int | None = None) -> str:
+    """Validate generated local PDF output."""
+    return run_validate_output(path, expected_pages=expected_pages).model_dump_json()
 
 
 def run_mcp_server(transport: Literal["stdio", "sse", "streamable-http"] = "stdio") -> None:

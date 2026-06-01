@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from PIL import Image
 from fastapi.testclient import TestClient
 
 from agentpdf.api.app import create_app
@@ -203,6 +204,40 @@ def test_api_runs_create_text_and_markdown_tools(tmp_path: Path) -> None:
     assert text.json()["tool"] == "pdf.convert.text_to_pdf"
     assert markdown.status_code == 200
     assert markdown.json()["tool"] == "pdf.convert.markdown_to_pdf"
+
+
+def test_api_runs_image_watermark_page_numbers_and_validate(tmp_path: Path) -> None:
+    client = TestClient(create_app())
+    image = tmp_path / "cover.png"
+    image_pdf = tmp_path / "cover.pdf"
+    watermarked = tmp_path / "watermarked.pdf"
+    numbered = tmp_path / "numbered.pdf"
+    Image.new("RGB", (160, 90), color=(80, 40, 120)).save(image)
+
+    image_result = client.post(
+        "/v1/tools/pdf.convert.image_to_pdf/run",
+        json={"image_paths": [str(image)], "output_path": str(image_pdf)},
+    )
+    watermark = client.post(
+        "/v1/tools/pdf.edit.watermark/run",
+        json={"input_path": str(image_pdf), "text": "CONFIDENTIAL", "output_path": str(watermarked)},
+    )
+    page_numbers = client.post(
+        "/v1/tools/pdf.edit.page_numbers/run",
+        json={"input_path": str(watermarked), "output_path": str(numbered)},
+    )
+    validate = client.post(
+        "/v1/tools/pdf.validation.validate_output/run",
+        json={"path": str(numbered), "expected_pages": 1},
+    )
+
+    assert image_result.status_code == 200
+    assert image_result.json()["tool"] == "pdf.convert.image_to_pdf"
+    assert watermark.status_code == 200
+    assert watermark.json()["tool"] == "pdf.edit.watermark"
+    assert page_numbers.status_code == 200
+    assert page_numbers.json()["tool"] == "pdf.edit.page_numbers"
+    assert validate.status_code == 200
 
 
 def test_api_rejects_unimplemented_tool() -> None:

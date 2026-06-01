@@ -1,13 +1,17 @@
 from pathlib import Path
 
 from pypdf import PdfReader
+from PIL import Image
 
 from agentpdf.artifacts.store import build_artifact
 from agentpdf.core.pdf import (
+    add_page_numbers_pdf,
+    add_text_watermark_pdf,
     create_markdown_pdf,
     create_text_pdf,
     extract_pages_pdf,
     extract_text_pdf,
+    image_to_pdf,
     inspect_pdf,
     merge_pdfs,
     read_metadata_pdf,
@@ -182,3 +186,43 @@ def test_create_markdown_pdf_writes_headings_and_bullets(tmp_path: Path) -> None
     extracted = extract_text_pdf(output).usage["text"]
     assert "Agent Report" in extracted
     assert "Local first" in extracted
+
+
+def test_image_to_pdf_creates_valid_pdf_from_local_images(tmp_path: Path) -> None:
+    image = tmp_path / "cover.png"
+    output = tmp_path / "cover.pdf"
+    Image.new("RGB", (320, 180), color=(18, 52, 86)).save(image)
+
+    result = image_to_pdf([image], output)
+
+    assert result.status == "succeeded"
+    assert result.tool == "pdf.convert.image_to_pdf"
+    assert result.artifacts[0].page_count == 1
+    assert result.validation is not None
+    assert result.validation.status == "passed"
+
+
+def test_add_text_watermark_writes_validated_overlay(tmp_path: Path) -> None:
+    source = tmp_path / "source.pdf"
+    output = tmp_path / "watermarked.pdf"
+    create_text_pdf("Watermark source", source)
+
+    result = add_text_watermark_pdf(source, text="CONFIDENTIAL", output_path=output)
+
+    assert result.status == "succeeded"
+    assert result.tool == "pdf.edit.watermark"
+    assert result.artifacts[0].page_count == 1
+    assert "CONFIDENTIAL" in extract_text_pdf(output).usage["text"]
+
+
+def test_add_page_numbers_writes_page_labels(tmp_path: Path) -> None:
+    source = tmp_path / "source.pdf"
+    output = tmp_path / "numbered.pdf"
+    create_markdown_pdf("# Page One\n\n" + ("Body\n\n" * 90), source)
+
+    result = add_page_numbers_pdf(source, output_path=output, template="Page {page} of {total}")
+
+    assert result.status == "succeeded"
+    assert result.tool == "pdf.edit.page_numbers"
+    extracted = extract_text_pdf(output).usage["text"]
+    assert "Page 1 of" in extracted

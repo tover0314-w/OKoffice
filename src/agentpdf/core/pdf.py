@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from io import BytesIO
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -7,6 +8,8 @@ from uuid import uuid4
 from pypdf import PdfReader, PdfWriter
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.utils import ImageReader
+from reportlab.pdfgen import canvas
 from reportlab.platypus import ListFlowable, ListItem, Paragraph, SimpleDocTemplate, Spacer
 
 from agentpdf.artifacts.store import build_artifact
@@ -15,6 +18,8 @@ from agentpdf.schemas.errors import AgentPDFException
 from agentpdf.schemas.models import ToolResult, ValidationCheck, ValidationReport
 from agentpdf.security.paths import resolve_input_path, resolve_output_path
 from agentpdf.validation.pdf import validate_pdf
+
+SUPPORTED_IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff"}
 
 
 def inspect_pdf(path: str | Path) -> dict[str, Any]:
@@ -187,6 +192,164 @@ def rotate_pages_pdf(
         },
         next_recommended_tools=["pdf.inspect.document", "pdf.validation.validate_output"],
     )
+
+
+def image_to_pdf(image_paths: list[str | Path], output_path: str | Path) -> ToolResult:
+    tool = "pdf.convert.image_to_pdf"
+    if not image_paths:
+        raise AgentPDFException("file_not_found", "At least one input image is required.")
+
+    try:
+        from PIL import Image
+    except ImportError as exc:  # pragma: no cover - reportlab depends on Pillow in normal installs
+        raise AgentPDFException("dependency_missing", "Image to PDF requires Pillow.") from exc
+
+    resolved_images = []
+    for image_path in image_paths:
+        resolved = resolve_input_path(image_path)
+        if resolved.suffix.lower() not in SUPPORTED_IMAGE_SUFFIXES:
+            raise AgentPDFException(
+                "unsupported_file_type",
+                f"Unsupported image format: {resolved.suffix}",
+                details={"supported_suffixes": sorted(SUPPORTED_IMAGE_SUFFIXES)},
+            )
+        resolved_images.append(resolved)
+
+    output = resolve_output_path(output_path)
+    document = canvas.Canvas(str(output))
+    for image_path in resolved_images:
+        with Image.open(image_path) as raw_image:
+            image = raw_image.convert("RGB")
+            width, height = image.size
+            document.setPageSize((width, height))
+            document.drawImage(ImageReader(image), 0, 0, width=width, height=height)
+            document.showPage()
+    document.save()
+
+    return _result_for_created_pdf(
+        tool=tool,
+        output=output,
+        usage={"input_images": [str(path) for path in resolved_images], "image_count": len(resolved_images)},
+        next_tools=["pdf.inspect.document", "pdf.validation.validate_output"],
+    )
+
+
+def add_text_watermark_pdf(
+    input_path: str | Path,
+    text: str,
+    output_path: str | Path,
+    pages: str = "all",
+    font_size: int = 48,
+    opacity: float = 0.18,
+    angle: int = 45,
+) -> ToolResult:
+    tool = "pdf.edit.watermark"
+    resolved = resolve_input_path(input_path)
+    reader = _reader_for_operation(resolved)
+    selected_pages = set(parse_page_range(pages, total_pages=len(reader.pages)))
+    writer = PdfWriter(clone_from=resolved)
+
+    for index, page in enumerate(writer.pages):
+        if index in selected_pages:
+            width = float(page.mediabox.width)
+            height = float(page.mediabox.height)
+            overlay = _watermark_overlay_page(
+                text=text,
+                width=width,
+                height=height,
+                font_size=font_size,
+                opacity=opacity,
+                angle=angle,
+            )
+            page.merge_page(overlay)
+
+    return _write_writer_output(
+        tool=tool,
+        writer=writer,
+        output_path=output_path,
+        expected_pages=len(reader.pages),
+        usage={
+            "input": str(resolved),
+            "text": text,
+            "pages": [page + 1 for page in sorted(selected_pages)],
+            "font_size": font_size,
+            "opacity": opacity,
+            "angle": angle,
+        },
+    )
+
+
+def add_page_numbers_pdf(
+    input_path: str | Path,
+    output_path: str | Path,
+    pages: str = "all",
+    template: str = "{page}",
+    font_size: int = 10,
+) -> ToolResult:
+    tool = "pdf.edit.page_numbers"
+    resolved = resolve_input_path(input_path)
+    reader = _reader_for_operation(resolved)
+    selected_pages = set(parse_page_range(pages, total_pages=len(reader.pages)))
+    total = len(reader.pages)
+    writer = PdfWriter(clone_from=resolved)
+
+    for index, page in enumerate(writer.pages):
+        if index in selected_pages:
+            width = float(page.mediabox.width)
+            height = float(page.mediabox.height)
+            label = template.format(page=index + 1, total=total)
+            page.merge_page(_page_number_overlay_page(label, width, height, font_size=font_size))
+
+    return _write_writer_output(
+        tool=tool,
+        writer=writer,
+        output_path=output_path,
+        expected_pages=total,
+        usage={
+            "input": str(resolved),
+            "pages": [page + 1 for page in sorted(selected_pages)],
+            "template": template,
+            "font_size": font_size,
+        },
+    )
+
+
+def _watermark_overlay_page(
+    text: str,
+    width: float,
+    height: float,
+    font_size: int,
+    opacity: float,
+    angle: int,
+) -> Any:
+    buffer = BytesIO()
+    overlay = canvas.Canvas(buffer, pagesize=(width, height))
+    overlay.saveState()
+    if hasattr(overlay, "setFillAlpha"):
+        overlay.setFillAlpha(max(0.0, min(opacity, 1.0)))
+    overlay.setFillColorRGB(0.35, 0.35, 0.35)
+    overlay.setFont("Helvetica-Bold", font_size)
+    overlay.translate(width / 2, height / 2)
+    overlay.rotate(angle)
+    overlay.drawCentredString(0, 0, text)
+    overlay.restoreState()
+    overlay.showPage()
+    overlay.save()
+    buffer.seek(0)
+    return PdfReader(buffer).pages[0]
+
+
+def _page_number_overlay_page(label: str, width: float, height: float, font_size: int) -> Any:
+    buffer = BytesIO()
+    overlay = canvas.Canvas(buffer, pagesize=(width, height))
+    overlay.setFillColorRGB(0.15, 0.15, 0.15)
+    overlay.setFont("Helvetica", font_size)
+    label_width = overlay.stringWidth(label, "Helvetica", font_size)
+    overlay.drawString((width - label_width) / 2, 24, label)
+    overlay.showPage()
+    overlay.save()
+    buffer.seek(0)
+    return PdfReader(buffer).pages[0]
 
 
 def _write_selected_pages(

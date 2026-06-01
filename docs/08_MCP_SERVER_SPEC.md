@@ -22,17 +22,17 @@ Expose AgentPDF tools to MCP-compatible clients such as coding agents, desktop a
 - `pdf_extract_pages`
 - `pdf_remove_pages`
 - `pdf_rotate_pages`
+- `pdf_image_to_pdf`
+- `pdf_watermark`
+- `pdf_add_page_numbers`
 - `pdf_create_text`
 - `pdf_create_markdown`
 - `pdf_render_pages`
 - `pdf_extract_text`
-- `pdf_images_to_pdf`
-- `pdf_add_page_numbers`
-- `pdf_watermark`
+- `pdf_metadata_read`
+- `pdf_metadata_update`
+- `pdf_metadata_remove`
 - `pdf_validate_output`
-- `pdf_ai_parse_lite`
-- `pdf_ai_rag_ingest`
-- `pdf_ai_rag_query`
 
 ## Example MCP tool result
 

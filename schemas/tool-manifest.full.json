@@ -13,7 +13,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -73,7 +73,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -88,7 +88,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -103,7 +103,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -118,7 +118,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -148,7 +148,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -388,7 +388,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -403,7 +403,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -448,7 +448,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -508,7 +508,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -523,7 +523,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -868,7 +868,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -883,7 +883,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -1423,7 +1423,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -1438,7 +1438,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -1453,7 +1453,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -1543,7 +1543,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },

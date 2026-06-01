@@ -14,15 +14,19 @@ from agentpdf.tools.runner import (
     run_create_text,
     run_extract_pages,
     run_extract_text,
+    run_image_to_pdf,
     run_inspect,
     run_metadata_read,
     run_metadata_remove,
     run_metadata_update,
     run_merge,
+    run_page_numbers,
     run_remove_pages,
     run_render,
     run_rotate_pages,
     run_split,
+    run_validate_output,
+    run_watermark,
 )
 
 
@@ -132,6 +136,29 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
             degrees=int(payload.get("degrees", 0)),
             output_path=payload.get("output_path", ""),
         )
+    if tool_name == "pdf.convert.image_to_pdf":
+        return run_image_to_pdf(
+            payload.get("image_paths", []),
+            output_path=payload.get("output_path", ""),
+        )
+    if tool_name == "pdf.edit.watermark":
+        return run_watermark(
+            payload.get("input_path", ""),
+            text=str(payload.get("text", "")),
+            output_path=payload.get("output_path", ""),
+            pages=str(payload.get("pages", "all")),
+            font_size=int(payload.get("font_size", 48)),
+            opacity=float(payload.get("opacity", 0.18)),
+            angle=int(payload.get("angle", 45)),
+        )
+    if tool_name == "pdf.edit.page_numbers":
+        return run_page_numbers(
+            payload.get("input_path", ""),
+            output_path=payload.get("output_path", ""),
+            pages=str(payload.get("pages", "all")),
+            template=str(payload.get("template", "{page}")),
+            font_size=int(payload.get("font_size", 10)),
+        )
     if tool_name == "pdf.convert.text_to_pdf":
         return run_create_text(
             payload.get("text", ""),
@@ -171,16 +198,10 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
             output_path=payload.get("output_path", ""),
         )
     if tool_name == "pdf.validation.validate_output":
-        from agentpdf.validation.pdf import validate_pdf
-
-        path = payload.get("path", "")
         expected_pages = payload.get("expected_pages")
-        report = validate_pdf(path, expected_pages=expected_pages)
-        return ToolResult(
-            job_id="job_validate_output",
-            status="succeeded" if report.status == "passed" else "failed",
-            tool="pdf.validation.validate_output",
-            validation=report,
+        return run_validate_output(
+            payload.get("path", ""),
+            expected_pages=int(expected_pages) if expected_pages is not None else None,
         )
 
     try:

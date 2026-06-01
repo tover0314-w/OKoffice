@@ -144,7 +144,7 @@ Inspect a PDF and return agent-readable facts.
 - Supports controlled DPI.
 - Fails gracefully when renderer dependency is missing.
 
-## `pdf.convert.images_to_pdf`
+## `pdf.convert.image_to_pdf`
 
 ### Input
 
@@ -159,6 +159,44 @@ Inspect a PDF and return agent-readable facts.
   "fit": "contain"
 }
 ```
+
+### Open-source baseline
+
+The local implementation accepts one or more image paths, creates one PDF page per image, returns a `ToolResult`, and validates the generated PDF.
+
+## `pdf.edit.watermark`
+
+### Input
+
+```json
+{
+  "input_path": "report.pdf",
+  "text": "CONFIDENTIAL",
+  "pages": "all",
+  "output_path": "report-watermarked.pdf"
+}
+```
+
+### Open-source baseline
+
+The local implementation adds a text overlay to selected pages, writes a new PDF, and validates the output. It does not claim secure redaction.
+
+## `pdf.edit.page_numbers`
+
+### Input
+
+```json
+{
+  "input_path": "report.pdf",
+  "template": "Page {page} of {total}",
+  "pages": "all",
+  "output_path": "report-numbered.pdf"
+}
+```
+
+### Open-source baseline
+
+The local implementation adds bottom-centered page labels to selected pages and validates the generated PDF.
 
 ## `pdf.convert.text_to_pdf`
 

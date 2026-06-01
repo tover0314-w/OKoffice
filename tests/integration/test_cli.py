@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 
+from PIL import Image
 from typer.testing import CliRunner
 
 from agentpdf.cli.main import app
@@ -184,6 +185,34 @@ def test_create_text_and_markdown_cli(tmp_path: Path) -> None:
     assert markdown.exit_code == 0
     assert json.loads(markdown.stdout)["tool"] == "pdf.convert.markdown_to_pdf"
     assert markdown_output.exists()
+
+
+def test_image_watermark_page_numbers_and_validate_cli(tmp_path: Path) -> None:
+    image = tmp_path / "cover.png"
+    image_pdf = tmp_path / "cover.pdf"
+    watermarked = tmp_path / "watermarked.pdf"
+    numbered = tmp_path / "numbered.pdf"
+    Image.new("RGB", (160, 90), color=(40, 80, 120)).save(image)
+
+    image_result = runner.invoke(app, ["image-to-pdf", str(image), "-o", str(image_pdf), "--json"])
+    watermark_result = runner.invoke(
+        app,
+        ["watermark", str(image_pdf), "--text", "CONFIDENTIAL", "-o", str(watermarked), "--json"],
+    )
+    page_numbers_result = runner.invoke(
+        app,
+        ["page-numbers", str(watermarked), "-o", str(numbered), "--json"],
+    )
+    validate_result = runner.invoke(app, ["validate", str(numbered), "--json"])
+
+    assert image_result.exit_code == 0
+    assert json.loads(image_result.stdout)["tool"] == "pdf.convert.image_to_pdf"
+    assert watermark_result.exit_code == 0
+    assert json.loads(watermark_result.stdout)["tool"] == "pdf.edit.watermark"
+    assert page_numbers_result.exit_code == 0
+    assert json.loads(page_numbers_result.stdout)["tool"] == "pdf.edit.page_numbers"
+    assert validate_result.exit_code == 0
+    assert json.loads(validate_result.stdout)["tool"] == "pdf.validation.validate_output"
 
 
 def test_serve_api_invokes_local_rest_server(monkeypatch) -> None:

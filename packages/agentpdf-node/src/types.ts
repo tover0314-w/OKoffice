@@ -72,6 +72,29 @@ export interface MergePdfInput {
   outputPath: string;
 }
 
+export interface ImageToPdfInput {
+  imagePaths: string[];
+  outputPath: string;
+}
+
+export interface WatermarkInput {
+  inputPath: string;
+  text: string;
+  outputPath: string;
+  pages?: string;
+  fontSize?: number;
+  opacity?: number;
+  angle?: number;
+}
+
+export interface PageNumbersInput {
+  inputPath: string;
+  outputPath: string;
+  pages?: string;
+  template?: string;
+  fontSize?: number;
+}
+
 export interface CreateTextPdfInput {
   text: string;
   outputPath: string;
@@ -83,4 +106,9 @@ export interface CreateMarkdownPdfInput {
   outputPath: string;
   title?: string;
   stylePack?: string;
+}
+
+export interface ValidateOutputInput {
+  path: string;
+  expectedPages?: number;
 }

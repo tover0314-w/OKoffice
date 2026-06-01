@@ -47,8 +47,11 @@ The first code release does **not** need to fully implement every planned PDF to
 - `pdf.metadata.read`
 - `pdf.metadata.update`
 - `pdf.convert.pdf_to_images`
-- `pdf.convert.images_to_pdf`
-- `pdf.create.markdown_to_pdf` or `pdf.create.html_to_pdf`
+- `pdf.convert.image_to_pdf`
+- `pdf.convert.markdown_to_pdf`
+- `pdf.convert.text_to_pdf`
+- `pdf.edit.watermark`
+- `pdf.edit.page_numbers`
 - `pdf.validation.validate_output`
 
 ### Milestone C — Agent interfaces

@@ -51,11 +51,15 @@ client.runTool("pdf.convert.text_to_pdf", {
 });
 client.inspectDocument({ path: "report.pdf" });
 client.merge({ inputPaths: ["a.pdf", "b.pdf"], outputPath: "merged.pdf" });
+client.imageToPdf({ imagePaths: ["cover.png"], outputPath: "cover.pdf" });
+client.watermark({ inputPath: "cover.pdf", text: "DRAFT", outputPath: "cover-draft.pdf" });
+client.addPageNumbers({ inputPath: "cover-draft.pdf", outputPath: "cover-numbered.pdf" });
 client.createTextPdf({ text: "Hello", outputPath: "hello.pdf" });
 client.createMarkdownPdf({
   markdown: "# Report\n\nHello",
   outputPath: "report.pdf",
 });
+client.validateOutput({ path: "cover-numbered.pdf", expectedPages: 1 });
 ```
 
 ## SDK principles

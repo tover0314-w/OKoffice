@@ -13,8 +13,11 @@ def test_registry_loads_complete_public_manifest() -> None:
     assert get_tool("pdf.organize.rotate_pages").implemented is True
     assert get_tool("pdf.convert.pdf_to_images").implemented is True
     assert get_tool("pdf.convert.pdf_to_text").implemented is True
+    assert get_tool("pdf.convert.image_to_pdf").implemented is True
     assert get_tool("pdf.convert.text_to_pdf").implemented is True
     assert get_tool("pdf.convert.markdown_to_pdf").implemented is True
+    assert get_tool("pdf.edit.watermark").implemented is True
+    assert get_tool("pdf.edit.page_numbers").implemented is True
     assert get_tool("pdf.metadata.read").implemented is True
     assert get_tool("pdf.metadata.update").implemented is True
     assert get_tool("pdf.metadata.remove").implemented is True
@@ -38,8 +41,11 @@ def test_implemented_tools_are_known_names() -> None:
         "pdf.organize.rotate_pages",
         "pdf.convert.pdf_to_images",
         "pdf.convert.pdf_to_text",
+        "pdf.convert.image_to_pdf",
         "pdf.convert.text_to_pdf",
         "pdf.convert.markdown_to_pdf",
+        "pdf.edit.watermark",
+        "pdf.edit.page_numbers",
         "pdf.metadata.read",
         "pdf.metadata.update",
         "pdf.metadata.remove",

@@ -1,12 +1,16 @@
 import type {
   CreateMarkdownPdfInput,
   CreateTextPdfInput,
+  ImageToPdfInput,
   InspectDocumentInput,
   JsonObject,
   MergePdfInput,
+  PageNumbersInput,
   ToolManifest,
   ToolResult,
   ToolSpec,
+  ValidateOutputInput,
+  WatermarkInput,
 } from "./types.js";
 
 export type AgentPDFFetch = (input: string | URL, init?: RequestInit) => Promise<Response>;
@@ -74,6 +78,35 @@ export class AgentPDFClient {
     });
   }
 
+  async imageToPdf(input: ImageToPdfInput): Promise<ToolResult> {
+    return this.runTool("pdf.convert.image_to_pdf", {
+      image_paths: input.imagePaths,
+      output_path: input.outputPath,
+    });
+  }
+
+  async watermark(input: WatermarkInput): Promise<ToolResult> {
+    return this.runTool("pdf.edit.watermark", {
+      input_path: input.inputPath,
+      text: input.text,
+      output_path: input.outputPath,
+      ...(input.pages ? { pages: input.pages } : {}),
+      ...(input.fontSize !== undefined ? { font_size: input.fontSize } : {}),
+      ...(input.opacity !== undefined ? { opacity: input.opacity } : {}),
+      ...(input.angle !== undefined ? { angle: input.angle } : {}),
+    });
+  }
+
+  async addPageNumbers(input: PageNumbersInput): Promise<ToolResult> {
+    return this.runTool("pdf.edit.page_numbers", {
+      input_path: input.inputPath,
+      output_path: input.outputPath,
+      ...(input.pages ? { pages: input.pages } : {}),
+      ...(input.template ? { template: input.template } : {}),
+      ...(input.fontSize !== undefined ? { font_size: input.fontSize } : {}),
+    });
+  }
+
   async createTextPdf(input: CreateTextPdfInput): Promise<ToolResult> {
     return this.runTool("pdf.convert.text_to_pdf", {
       text: input.text,
@@ -88,6 +121,13 @@ export class AgentPDFClient {
       output_path: input.outputPath,
       ...(input.title ? { title: input.title } : {}),
       ...(input.stylePack ? { style_pack: input.stylePack } : {}),
+    });
+  }
+
+  async validateOutput(input: ValidateOutputInput): Promise<ToolResult> {
+    return this.runTool("pdf.validation.validate_output", {
+      path: input.path,
+      ...(input.expectedPages !== undefined ? { expected_pages: input.expectedPages } : {}),
     });
   }
 

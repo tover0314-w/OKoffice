@@ -29,6 +29,8 @@ Use the Node CLI:
 node packages/agentpdf-node/dist/src/cli.js tools
 node packages/agentpdf-node/dist/src/cli.js create-text --text "Hello Node" -o .agentpdf-out/node.pdf
 node packages/agentpdf-node/dist/src/cli.js create-markdown --markdown-file examples/sample-documents/business_report.md -o .agentpdf-out/node-report.pdf
+node packages/agentpdf-node/dist/src/cli.js watermark .agentpdf-out/node-report.pdf --text DRAFT -o .agentpdf-out/node-report-draft.pdf
+node packages/agentpdf-node/dist/src/cli.js validate .agentpdf-out/node-report-draft.pdf
 ```
 
 ## SDK Example
@@ -43,9 +45,14 @@ const created = await client.createMarkdownPdf({
   markdown: "# Agent Report\n\n- Local-first\n- Node-ready",
   outputPath: ".agentpdf-out/report.pdf",
 });
+const numbered = await client.addPageNumbers({
+  inputPath: ".agentpdf-out/report.pdf",
+  outputPath: ".agentpdf-out/report-numbered.pdf",
+});
 
 console.log(tools.tools.length);
 console.log(created.validation?.status);
+console.log(numbered.tool);
 ```
 
 ## Current Surface
@@ -55,7 +62,11 @@ console.log(created.validation?.status);
 - `runTool(name, payload)`
 - `inspectDocument({ path })`
 - `merge({ inputPaths, outputPath })`
+- `imageToPdf({ imagePaths, outputPath })`
+- `watermark({ inputPath, text, outputPath, pages, fontSize, opacity, angle })`
+- `addPageNumbers({ inputPath, outputPath, pages, template, fontSize })`
 - `createTextPdf({ text, outputPath, title })`
 - `createMarkdownPdf({ markdown, outputPath, title, stylePack })`
+- `validateOutput({ path, expectedPages })`
 
 The generic `runTool()` method can call any implemented REST tool without waiting for a convenience wrapper.

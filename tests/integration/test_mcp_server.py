@@ -2,16 +2,22 @@ import json
 import asyncio
 from pathlib import Path
 
+from PIL import Image
+
 from agentpdf.mcp.server import (
     create_mcp_server,
+    pdf_add_page_numbers,
     pdf_create_markdown,
     pdf_create_text,
     pdf_extract_text,
     pdf_extract_pages,
+    pdf_image_to_pdf,
     pdf_inspect_document,
     pdf_merge,
     pdf_metadata_read,
     pdf_render_pages,
+    pdf_validate_output,
+    pdf_watermark,
 )
 
 
@@ -32,6 +38,10 @@ def test_mcp_server_exposes_local_pdf_tools() -> None:
     assert "pdf_metadata_remove" in tool_names
     assert "pdf_create_text" in tool_names
     assert "pdf_create_markdown" in tool_names
+    assert "pdf_image_to_pdf" in tool_names
+    assert "pdf_watermark" in tool_names
+    assert "pdf_add_page_numbers" in tool_names
+    assert "pdf_validate_output" in tool_names
     assert "agentpdf_tool_manifest" in tool_names
 
 
@@ -88,3 +98,21 @@ def test_mcp_create_text_and_markdown(tmp_path: Path) -> None:
     assert text["tool"] == "pdf.convert.text_to_pdf"
     assert markdown["status"] == "succeeded"
     assert markdown["tool"] == "pdf.convert.markdown_to_pdf"
+
+
+def test_mcp_image_watermark_page_numbers_and_validate(tmp_path: Path) -> None:
+    image = tmp_path / "cover.png"
+    image_pdf = tmp_path / "cover.pdf"
+    watermarked = tmp_path / "watermarked.pdf"
+    numbered = tmp_path / "numbered.pdf"
+    Image.new("RGB", (120, 80), color=(120, 40, 80)).save(image)
+
+    image_result = json.loads(pdf_image_to_pdf([str(image)], str(image_pdf)))
+    watermark = json.loads(pdf_watermark(str(image_pdf), "CONFIDENTIAL", str(watermarked)))
+    page_numbers = json.loads(pdf_add_page_numbers(str(watermarked), str(numbered)))
+    validate = json.loads(pdf_validate_output(str(numbered), expected_pages=1))
+
+    assert image_result["tool"] == "pdf.convert.image_to_pdf"
+    assert watermark["tool"] == "pdf.edit.watermark"
+    assert page_numbers["tool"] == "pdf.edit.page_numbers"
+    assert validate["status"] == "succeeded"

@@ -7,4 +7,9 @@ const result = await client.createTextPdf({
   outputPath: ".agentpdf-out/node-script.pdf",
 });
 
-console.log(JSON.stringify(result, null, 2));
+const numbered = await client.addPageNumbers({
+  inputPath: ".agentpdf-out/node-script.pdf",
+  outputPath: ".agentpdf-out/node-script-numbered.pdf",
+});
+
+console.log(JSON.stringify({ created: result, numbered }, null, 2));

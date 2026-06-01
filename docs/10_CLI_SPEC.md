@@ -14,6 +14,7 @@ okpdf split FILE --pages 1-3,7 -o out.pdf
 okpdf extract-pages FILE --pages 1-3 -o out.pdf
 okpdf remove-pages FILE --pages 2,4 -o out.pdf
 okpdf rotate-pages FILE --pages all --degrees 90 -o out.pdf
+okpdf image-to-pdf IMAGE... -o out.pdf
 okpdf render FILE --pages 1-3 --format png --out-dir renders/
 okpdf extract-text FILE --pages all
 okpdf create text "Hello from okpdf" -o out.pdf

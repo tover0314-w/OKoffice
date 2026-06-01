@@ -76,6 +76,56 @@ test("AgentPDFClient runs text-to-PDF with the expected payload", async () => {
   assert.equal(result.tool, "pdf.convert.text_to_pdf");
 });
 
+test("AgentPDFClient exposes high-frequency PDF utility wrappers", async () => {
+  const calls: Array<{ url: string; body: unknown }> = [];
+  const client = new AgentPDFClient({
+    baseUrl: "http://agentpdf.test",
+    fetch: async (input, init) => {
+      calls.push({ url: String(input), body: JSON.parse(String(init?.body)) });
+      return jsonResponse({
+        job_id: "job_util",
+        status: "succeeded",
+        tool: calls.at(-1)?.url.split("/v1/tools/")[1]?.split("/run")[0] ?? "unknown",
+        artifacts: [],
+        validation: null,
+        warnings: [],
+        usage: {},
+        next_recommended_tools: [],
+        error: null,
+      });
+    },
+  });
+
+  await client.imageToPdf({ imagePaths: ["cover.png"], outputPath: "cover.pdf" });
+  await client.watermark({ inputPath: "cover.pdf", text: "CONFIDENTIAL", outputPath: "wm.pdf" });
+  await client.addPageNumbers({ inputPath: "wm.pdf", outputPath: "numbered.pdf" });
+  await client.validateOutput({ path: "numbered.pdf", expectedPages: 1 });
+
+  assert.deepEqual(calls.map((call) => call.url), [
+    "http://agentpdf.test/v1/tools/pdf.convert.image_to_pdf/run",
+    "http://agentpdf.test/v1/tools/pdf.edit.watermark/run",
+    "http://agentpdf.test/v1/tools/pdf.edit.page_numbers/run",
+    "http://agentpdf.test/v1/tools/pdf.validation.validate_output/run",
+  ]);
+  assert.deepEqual(calls[0]?.body, {
+    image_paths: ["cover.png"],
+    output_path: "cover.pdf",
+  });
+  assert.deepEqual(calls[1]?.body, {
+    input_path: "cover.pdf",
+    text: "CONFIDENTIAL",
+    output_path: "wm.pdf",
+  });
+  assert.deepEqual(calls[2]?.body, {
+    input_path: "wm.pdf",
+    output_path: "numbered.pdf",
+  });
+  assert.deepEqual(calls[3]?.body, {
+    path: "numbered.pdf",
+    expected_pages: 1,
+  });
+});
+
 test("AgentPDFClient returns failed ToolResult bodies instead of hiding them", async () => {
   const failed: ToolResult = {
     job_id: "job_failed",

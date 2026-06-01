@@ -11,15 +11,19 @@ from agentpdf.tools.runner import (
     run_create_text,
     run_extract_pages,
     run_extract_text,
+    run_image_to_pdf,
     run_inspect,
     run_metadata_read,
     run_metadata_remove,
     run_metadata_update,
     run_merge,
+    run_page_numbers,
     run_remove_pages,
     run_render,
     run_rotate_pages,
     run_split,
+    run_validate_output,
+    run_watermark,
 )
 
 app = typer.Typer(help="AgentPDF Infra CLI")
@@ -142,6 +146,67 @@ def rotate_pages(
     )
 
 
+@app.command("image-to-pdf")
+def image_to_pdf(
+    image_paths: Annotated[list[Path], typer.Argument(help="Input image files.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output PDF path.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Create a PDF from one or more local images."""
+    _emit_result(run_image_to_pdf(image_paths, output_path=output_path), json_output=json_output)
+
+
+@app.command()
+def watermark(
+    input_path: Annotated[Path, typer.Argument(help="Input PDF file.")],
+    text: Annotated[str, typer.Option("--text", help="Watermark text.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output PDF path.")],
+    pages: Annotated[str, typer.Option("--pages", help="Page range such as all or 1-3.")] = "all",
+    font_size: Annotated[int, typer.Option("--font-size", help="Watermark font size.")] = 48,
+    opacity: Annotated[float, typer.Option("--opacity", help="Watermark opacity from 0 to 1.")] = 0.18,
+    angle: Annotated[int, typer.Option("--angle", help="Watermark rotation angle.")] = 45,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Add a text watermark overlay to a PDF."""
+    _emit_result(
+        run_watermark(
+            input_path,
+            text=text,
+            output_path=output_path,
+            pages=pages,
+            font_size=font_size,
+            opacity=opacity,
+            angle=angle,
+        ),
+        json_output=json_output,
+    )
+
+
+@app.command("page-numbers")
+def page_numbers(
+    input_path: Annotated[Path, typer.Argument(help="Input PDF file.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output PDF path.")],
+    pages: Annotated[str, typer.Option("--pages", help="Page range such as all or 1-3.")] = "all",
+    template: Annotated[
+        str,
+        typer.Option("--template", help="Template using {page} and {total}."),
+    ] = "{page}",
+    font_size: Annotated[int, typer.Option("--font-size", help="Page number font size.")] = 10,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Add page number overlays to a PDF."""
+    _emit_result(
+        run_page_numbers(
+            input_path,
+            output_path=output_path,
+            pages=pages,
+            template=template,
+            font_size=font_size,
+        ),
+        json_output=json_output,
+    )
+
+
 @create_app.command("text")
 def create_text(
     text: Annotated[str, typer.Argument(help="Text content to write into a new PDF.")],
@@ -248,6 +313,22 @@ def metadata_remove(
 ) -> None:
     """Remove PDF metadata and write a new PDF."""
     _emit_result(run_metadata_remove(input_path, output_path=output_path), json_output=json_output)
+
+
+@app.command()
+def validate(
+    path: Annotated[Path, typer.Argument(help="PDF file to validate.")],
+    expected_pages: Annotated[
+        int | None,
+        typer.Option("--expected-pages", help="Expected page count."),
+    ] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Validate generated PDF output."""
+    _emit_result(
+        run_validate_output(path, expected_pages=expected_pages),
+        json_output=json_output,
+    )
 
 
 def _emit_result(result: ToolResult, json_output: bool) -> None:

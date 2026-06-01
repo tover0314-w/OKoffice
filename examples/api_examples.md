@@ -67,6 +67,41 @@ curl -X POST http://127.0.0.1:7331/v1/tools/pdf.convert.markdown_to_pdf/run \
   }'
 ```
 
+## Create PDF from images
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.convert.image_to_pdf/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "image_paths": ["cover.png", "page-2.jpg"],
+    "output_path": ".agentpdf-out/scan.pdf"
+  }'
+```
+
+## Add watermark
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.edit.watermark/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "input_path": ".agentpdf-out/scan.pdf",
+    "text": "CONFIDENTIAL",
+    "output_path": ".agentpdf-out/scan-watermarked.pdf"
+  }'
+```
+
+## Add page numbers
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.edit.page_numbers/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "input_path": ".agentpdf-out/scan-watermarked.pdf",
+    "template": "Page {page} of {total}",
+    "output_path": ".agentpdf-out/scan-numbered.pdf"
+  }'
+```
+
 ## Remove pages
 
 ```bash
@@ -126,4 +161,12 @@ curl -X POST http://127.0.0.1:7331/v1/tools/pdf.metadata.update/run \
 curl -X POST http://127.0.0.1:7331/v1/tools/pdf.metadata.remove/run \
   -H 'Content-Type: application/json' \
   -d '{"input_path": "report.pdf", "output_path": "report-clean.pdf"}'
+```
+
+## Validate output
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.validation.validate_output/run \
+  -H 'Content-Type: application/json' \
+  -d '{"path": ".agentpdf-out/scan-numbered.pdf", "expected_pages": 2}'
 ```
