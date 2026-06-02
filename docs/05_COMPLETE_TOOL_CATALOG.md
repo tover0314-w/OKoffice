@@ -162,6 +162,7 @@ Inspect artifact lineage and manifests.
 | `pdf.optimize.compress` | stable target | Compress images/streams and reduce file size. |
 | `pdf.optimize.linearize` | beta target | Optimize for fast web view. |
 | `pdf.optimize.repair` | beta target | Repair xref and malformed objects when possible. |
+| `pdf.optimize.web_optimize` | beta target | Rewrite output for web-friendly viewing when safe. |
 | `pdf.optimize.downsample_images` | beta target | Downsample embedded images. |
 | `pdf.optimize.remove_unused_objects` | planned | Remove unreachable objects. |
 | `pdf.optimize.subset_fonts` | planned | Subset embedded fonts when safe. |
@@ -209,6 +210,7 @@ Inspect artifact lineage and manifests.
 | `pdf.edit.highlight` | beta target | Highlight text spans or coordinates. |
 | `pdf.edit.underline` | planned | Underline text spans or coordinates. |
 | `pdf.edit.strikeout` | planned | Strikeout text spans or coordinates. |
+| `pdf.edit.freehand_draw` | planned | Add freehand drawing paths. |
 | `pdf.edit.crop` | beta target | Crop pages. |
 | `pdf.edit.resize_pages` | planned | Resize pages. |
 | `pdf.edit.add_margin` | planned | Add margins. |
@@ -236,14 +238,16 @@ Inspect artifact lineage and manifests.
 
 | Tool | Status | Description |
 |---|---:|---|
-| `pdf.security.protect` | stable target | Encrypt/protect PDF with password. |
-| `pdf.security.unlock_authorized` | stable target | Decrypt with valid password only. |
+| `pdf.security.protect` | planned | Encrypt/protect PDF with password. |
+| `pdf.security.unlock_authorized` | planned | Decrypt with valid password only. |
+| `pdf.security.encrypt` | planned | Encrypt PDF. |
+| `pdf.security.decrypt_authorized` | planned | Decrypt authorized PDF with a valid password only. |
 | `pdf.security.permissions` | beta target | Read/update permissions. |
 | `pdf.security.redact` | beta target | True redaction, not visual cover-up. |
 | `pdf.security.verify_redaction` | beta target | Verify text/images are removed. |
 | `pdf.security.sign` | planned | Digital signing. |
 | `pdf.security.verify_signature` | planned | Verify signatures. |
-| `pdf.security.remove_metadata` | stable target | Remove document metadata. |
+| `pdf.security.remove_metadata` | planned | Remove document metadata through the security namespace. Use stable `pdf.metadata.remove` today. |
 | `pdf.security.sanitize` | beta target | Remove JS, attachments, external actions, metadata. |
 | `pdf.security.malware_scan` | planned/cloud | Integrate scanning worker. |
 
@@ -280,7 +284,7 @@ Inspect artifact lineage and manifests.
 | `pdf.metadata.update_outline` | planned | Update bookmarks/outline. |
 | `pdf.metadata.read_links` | beta target | Read links. |
 | `pdf.metadata.read_attachments` | beta target | Read attachments. |
-| `pdf.metadata.page_info` | stable target | Page size/rotation/info. |
+| `pdf.metadata.page_info` | planned | Page size/rotation/info. Use stable `pdf.inspect.pages` today. |
 
 ### `pdf.validation`
 
@@ -289,7 +293,7 @@ Inspect artifact lineage and manifests.
 | `pdf.validation.validate_output` | stable target | Validate generated PDF. |
 | `pdf.validation.render_check` | stable target | Ensure pages render. |
 | `pdf.validation.blank_page_check` | stable target | Detect blank or near-blank pages. |
-| `pdf.validation.page_count_check` | stable target | Compare expected page counts. |
+| `pdf.validation.page_count_check` | planned | Compare expected page counts. Use stable `pdf.validation.validate_output` today. |
 | `pdf.validation.text_layer_check` | beta target | Check text extraction. |
 | `pdf.validation.visual_diff` | beta target | Compare before/after render. |
 | `pdf.validation.redaction_check` | beta target | Verify redaction. |

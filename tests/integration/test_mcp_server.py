@@ -98,6 +98,17 @@ def test_mcp_server_exposes_local_pdf_tools() -> None:
     assert "agentpdf_tool_manifest" in tool_names
 
 
+def test_static_mcp_catalog_matches_server_tools() -> None:
+    server = create_mcp_server()
+    server_tool_names = {tool.name for tool in asyncio.run(server.list_tools())}
+    catalog_path = Path(__file__).resolve().parents[2] / "schemas" / "mcp-tools.catalog.json"
+    catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
+    catalog_tool_names = {tool["name"] for tool in catalog["tools"]}
+
+    assert sorted(server_tool_names - catalog_tool_names) == []
+    assert sorted(catalog_tool_names - server_tool_names) == []
+
+
 def test_mcp_workflow_plan_returns_agent_steps() -> None:
     payload = json.loads(
         pdf_workflow_plan("Chat with this PDF and cite the answer.", input_path="report.pdf")

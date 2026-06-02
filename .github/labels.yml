@@ -1,0 +1,54 @@
+- name: bug
+  color: d73a4a
+  description: Something is broken or behaving unexpectedly.
+- name: enhancement
+  color: a2eeef
+  description: New feature, improvement, or tool surface request.
+- name: documentation
+  color: 0075ca
+  description: README, docs, examples, or contributor guidance.
+- name: security
+  color: b60205
+  description: Security-sensitive PDF, dependency, path, or redaction work.
+- name: area:cli
+  color: 5319e7
+  description: Command-line interface behavior or examples.
+- name: area:mcp
+  color: 5319e7
+  description: MCP server tools, schemas, and agent integrations.
+- name: area:api
+  color: 5319e7
+  description: Local REST API behavior or OpenAPI contracts.
+- name: area:sdk
+  color: 5319e7
+  description: TypeScript/Node client and package work.
+- name: area:pdf-core
+  color: 0e8a16
+  description: Deterministic PDF operations and file handling.
+- name: area:validation
+  color: 0e8a16
+  description: Output validation, render checks, blank-page checks, and reports.
+- name: area:ai
+  color: fbca04
+  description: Lite parse, local RAG, create-agent, or cloud-boundary AI work.
+- name: area:docs
+  color: 0075ca
+  description: Public docs, examples, status matrices, and launch polish.
+- name: area:security
+  color: b60205
+  description: Path safety, metadata removal, redaction, permissions, or sandboxing.
+- name: status:planned
+  color: cfd3d7
+  description: Reserved namespace or roadmap item that is not locally implemented yet.
+- name: status:beta
+  color: fef2c0
+  description: Implemented but still stabilizing before a stable contract.
+- name: status:cloud-boundary
+  color: d4c5f9
+  description: Requires hosted, model, OCR, or optional worker capabilities outside OSS core.
+- name: good first issue
+  color: 7057ff
+  description: Scoped issue suitable for a new contributor.
+- name: help wanted
+  color: 008672
+  description: Maintainers welcome external implementation or review help.

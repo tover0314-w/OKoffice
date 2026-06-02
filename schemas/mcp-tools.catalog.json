@@ -3,6 +3,11 @@
   "version": "0.1.0",
   "tools": [
     {
+      "name": "agentpdf_tool_manifest",
+      "maps_to": "agentpdf.tool_manifest",
+      "status": "stable"
+    },
+    {
       "name": "agent_setup_claude_code",
       "maps_to": "agent.setup.claude_code",
       "status": "beta"

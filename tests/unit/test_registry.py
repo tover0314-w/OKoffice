@@ -1,4 +1,11 @@
+import json
+import re
+from pathlib import Path
+
 from agentpdf.tools.registry import IMPLEMENTED_TOOLS, get_tool, load_tool_manifest
+
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 def test_registry_loads_complete_public_manifest() -> None:
@@ -56,6 +63,35 @@ def test_registry_loads_complete_public_manifest() -> None:
     assert get_tool("pdf.patch.preview").implemented is True
     assert get_tool("pdf.patch.apply").implemented is True
     assert get_tool("pdf.patch.verify").implemented is True
+
+
+def test_status_matrix_tools_are_discoverable_in_full_manifest() -> None:
+    matrix_path = REPO_ROOT / "docs" / "23_FULL_TOOL_STATUS_MATRIX.md"
+    matrix_text = matrix_path.read_text(encoding="utf-8")
+    total_match = re.search(r"Total tools specified: \*\*(\d+)\*\*", matrix_text)
+    matrix_tools = set()
+    for line in matrix_text.splitlines():
+        match = re.match(r"\| `([^`]+)` \|", line)
+        if match:
+            matrix_tools.add(match.group(1))
+
+    manifest_tools = {tool.name for tool in load_tool_manifest().tools}
+    manifest_path = REPO_ROOT / "schemas" / "tool-manifest.full.json"
+    manifest_json = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    assert total_match is not None
+    assert int(total_match.group(1)) == len(matrix_tools)
+    assert manifest_json["tool_count"] == len(manifest_tools)
+    assert sorted(matrix_tools - manifest_tools) == []
+    assert sorted(manifest_tools - matrix_tools) == []
+
+
+def test_stable_tools_are_implemented() -> None:
+    stable_unimplemented = [
+        tool.name for tool in load_tool_manifest().tools if tool.status == "stable" and not tool.implemented
+    ]
+
+    assert stable_unimplemented == []
 
 
 def test_registry_keeps_planned_tools_discoverable() -> None:

@@ -5,6 +5,7 @@ from PIL import Image
 from typer.testing import CliRunner
 
 from agentpdf.cli.main import app
+from agentpdf.tools.registry import load_tool_manifest
 
 
 runner = CliRunner()
@@ -15,7 +16,7 @@ def test_tools_list_json_includes_complete_manifest() -> None:
 
     assert result.exit_code == 0
     payload = json.loads(result.stdout)
-    assert len(payload["tools"]) >= 100
+    assert len(payload["tools"]) == len(load_tool_manifest().tools)
     assert any(tool["name"] == "pdf.organize.merge" for tool in payload["tools"])
 
 

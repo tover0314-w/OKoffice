@@ -24,7 +24,7 @@ The public CLI is `okpdf`. The legacy/internal command `agentpdf` still works fo
 
 ## Why Star This
 
-- Complete public tool map from day one: 160+ planned namespaces are discoverable now.
+- Complete public tool map from day one: 224 public tool names are discoverable now.
 - Local-first by default: no hosted URL, paid key, or cloud dependency required.
 - Agent-first outputs: every tool returns structured JSON with artifacts, validation, warnings, and next recommended tools.
 - Bigger than RAG: the product direction covers context packets, target PDF profiles, source graphs, composition IR, PDF patch transactions, evidence coverage, and multimodal context-to-PDF workflows.
@@ -434,6 +434,13 @@ ruff check src tests scripts
 ```
 
 This workspace currently has no required cloud service for local development.
+
+## Troubleshooting
+
+- `pytest -q` should use pytest's runtime temp directory. If a local `.pytest-tmp` folder is locked by another Windows process, it is safe to close that process or delete the folder after confirming no test run is active.
+- If render-related commands fail, run `python scripts/doctor.py` first and confirm `pypdfium2` is installed in the active Python environment.
+- If Node SDK tests fail before reaching the API client tests, run `npm install` at the repository root and then `npm --workspace @okpdf/agentpdf-node test`.
+- If the REST API port is busy, start it on another port with `okpdf serve --api --port 7332`.
 
 ## Reference Projects
 

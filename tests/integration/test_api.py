@@ -4,6 +4,7 @@ from PIL import Image
 from fastapi.testclient import TestClient
 
 from agentpdf.api.app import create_app
+from agentpdf.tools.registry import load_tool_manifest
 
 
 def test_api_healthz() -> None:
@@ -22,7 +23,7 @@ def test_api_lists_complete_tool_manifest() -> None:
 
     assert response.status_code == 200
     payload = response.json()
-    assert len(payload["tools"]) >= 100
+    assert len(payload["tools"]) == len(load_tool_manifest().tools)
     assert any(tool["name"] == "pdf.inspect.document" for tool in payload["tools"])
 
 

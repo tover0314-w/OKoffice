@@ -28,6 +28,7 @@ okpdf blank-page-check .agentpdf-out/numbered.pdf --pages all --json
 
 ## 当前已经可用
 
+- 完整公开工具地图：224 个公开工具名现在都可以通过 CLI / REST / MCP manifest 发现；未实现或云端能力会明确标注状态，不会伪装成本地已实现。
 - 本地 CLI：`okpdf`
 - 本地 MCP server：`okpdf serve --mcp`
 - 本地 REST API：`okpdf serve --api`
@@ -86,8 +87,8 @@ console.log(result.status);
 
 ## 下一步方向
 
-- Docker / self-hosted 一键启动。
-- 更完整的 PDF 工具覆盖：压缩、裁剪、表单、安全、diff、redaction verification。
+- Docker / self-hosted 示例继续打磨，并补充更多部署截图。
+- 更完整的 PDF 工具覆盖：裁剪、表单、安全、diff、redaction verification。
 - 更强输出验证：空白页检测、渲染检查、视觉 diff。
 - 更强 Document IR：段落、表格、bbox、Markdown/JSON export。
 - Context packet、target PDF profile、source graph、composition IR、artifact lineage、patch manifest。

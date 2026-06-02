@@ -23,12 +23,15 @@
 - `area:cli`
 - `area:mcp`
 - `area:api`
+- `area:sdk`
 - `area:pdf-core`
+- `area:validation`
 - `area:ai`
 - `area:docs`
 - `area:security`
 - `status:planned`
 - `status:beta`
+- `status:cloud-boundary`
 - `good first issue`
 - `help wanted`
 

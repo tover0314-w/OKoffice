@@ -2,48 +2,48 @@
 
 ## Repository
 
-- [ ] README polished.
-- [ ] README.zh-CN polished.
-- [ ] LICENSE present.
-- [ ] SECURITY.md present.
-- [ ] CONTRIBUTING.md present.
-- [ ] CODE_OF_CONDUCT.md present.
-- [ ] GOVERNANCE.md present.
-- [ ] Dependency policy present.
-- [ ] Issue templates present.
-- [ ] PR template present.
-- [ ] CI workflow present.
+- [x] README polished.
+- [x] README.zh-CN polished.
+- [x] LICENSE present.
+- [x] SECURITY.md present.
+- [x] CONTRIBUTING.md present.
+- [x] CODE_OF_CONDUCT.md present.
+- [x] GOVERNANCE.md present.
+- [x] Dependency policy present.
+- [x] Issue templates present.
+- [x] PR template present.
+- [x] CI workflow present.
 
 ## Product
 
-- [ ] Tool catalog published.
-- [ ] Status matrix published.
-- [ ] CLI works.
-- [ ] MCP server works.
-- [ ] REST server works.
-- [ ] Core tools pass tests.
-- [ ] Validation reports implemented.
-- [ ] Artifact manifests implemented.
+- [x] Tool catalog published.
+- [x] Status matrix published.
+- [x] CLI works.
+- [x] MCP server works.
+- [x] REST server works.
+- [x] Core tools pass tests.
+- [x] Validation reports implemented.
+- [x] Artifact manifests implemented.
 
 ## Docs
 
-- [ ] Quickstart under 5 minutes.
-- [ ] Examples for CLI/MCP/API.
-- [ ] Troubleshooting.
-- [ ] Security notes.
-- [ ] License notes.
-- [ ] Cloud boundary explained.
+- [x] Quickstart under 5 minutes.
+- [x] Examples for CLI/MCP/API.
+- [x] Troubleshooting.
+- [x] Security notes.
+- [x] License notes.
+- [x] Cloud boundary explained.
 
 ## Community
 
-- [ ] Maintainer guide.
-- [ ] Roadmap.
-- [ ] Contribution labels.
-- [ ] Release process.
+- [x] Maintainer guide.
+- [x] Roadmap.
+- [x] Contribution labels.
+- [x] Release process.
 
 ## Polish
 
-- [ ] Badges.
-- [ ] Screenshots/GIF placeholders.
-- [ ] Logo/wordmark optional.
-- [ ] Example generated PDFs.
+- [x] Badges.
+- [x] Screenshots/GIF placeholders.
+- [x] Logo/wordmark optional.
+- [x] Example generated PDFs.

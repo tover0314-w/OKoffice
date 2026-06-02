@@ -1,6 +1,6 @@
 {
   "manifest_version": "0.1-full",
-  "tool_count": 181,
+  "tool_count": 224,
   "tools": [
     {
       "name": "agent.setup.claude_code",
@@ -18,10 +18,85 @@
       "requires_model": false
     },
     {
-      "name": "pdf.inspect.document",
-      "status": "stable",
-      "description": "Detect page count, page sizes, rotations, encryption, metadata, text layer, forms, annotations, attachments, signatures, scanned pages, outlines.",
-      "category": "inspect",
+      "name": "agent.setup.codex",
+      "status": "planned",
+      "description": "Generate Codex MCP/workspace integration config.",
+      "category": "agent",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "agent.setup.kilo_code",
+      "status": "planned",
+      "description": "Generate Kilo Code integration config.",
+      "category": "agent",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "agent.setup.openclaw",
+      "status": "planned",
+      "description": "Generate OpenClaw integration config.",
+      "category": "agent",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.context.ingest",
+      "status": "beta",
+      "description": "Register PDFs, images, audio/video, text, Markdown, HTML, code, CSV/JSON, links, or data files as context items.",
+      "category": "context",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.context.packet",
+      "status": "beta",
+      "description": "Build a reusable context packet from multiple local files, links, prompts, checksums, and warnings.",
+      "category": "context",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.context.build_packet",
+      "status": "beta",
+      "description": "Build a local Context Packet with source graph metadata.",
+      "category": "context",
       "interfaces": [
         "cli",
         "mcp",
@@ -33,10 +108,611 @@
       "requires_model": false
     },
     {
-      "name": "pdf.inspect.pages",
-      "status": "stable",
-      "description": "Return per-page dimensions, rotation, text availability, image count, object count, and renderability.",
-      "category": "inspect",
+      "name": "pdf.context.classify",
+      "status": "beta",
+      "description": "Classify context items by type, role, safety, and likely target uses.",
+      "category": "context",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.context.image_analyze",
+      "status": "cloud_only",
+      "description": "OCR/caption/image-region analysis for images and screenshots.",
+      "category": "context",
+      "interfaces": [
+        "rest",
+        "sdk",
+        "mcp"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": true
+    },
+    {
+      "name": "pdf.context.video_transcribe",
+      "status": "cloud_only",
+      "description": "Transcribe video and create timestamped transcript context/source nodes.",
+      "category": "context",
+      "interfaces": [
+        "rest",
+        "sdk",
+        "mcp"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": true
+    },
+    {
+      "name": "pdf.context.video_keyframes",
+      "status": "cloud_only",
+      "description": "Extract keyframes and frame source refs from video.",
+      "category": "context",
+      "interfaces": [
+        "rest",
+        "sdk",
+        "mcp"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": true
+    },
+    {
+      "name": "pdf.context.audio_transcribe",
+      "status": "cloud_only",
+      "description": "Transcribe audio into timestamped context/source nodes.",
+      "category": "context",
+      "interfaces": [
+        "rest",
+        "sdk",
+        "mcp"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": true
+    },
+    {
+      "name": "pdf.context.web_capture",
+      "status": "cloud_only",
+      "description": "Capture web links/pages with source refs and SSRF-safe fetching.",
+      "category": "context",
+      "interfaces": [
+        "rest",
+        "sdk",
+        "mcp"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": true
+    },
+    {
+      "name": "pdf.context.code_snapshot",
+      "status": "beta",
+      "description": "Create context and source refs for files, line ranges, dependencies, and repository metadata.",
+      "category": "context",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.context.data_profile",
+      "status": "beta",
+      "description": "Profile CSV/JSON/spreadsheet/database-like data for report generation.",
+      "category": "context",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.target.profiles",
+      "status": "beta",
+      "description": "List built-in target PDF profiles with layout slots and accepted block types.",
+      "category": "target",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.target.validate_profile",
+      "status": "beta",
+      "description": "Validate a built-in or custom target PDF profile for agent composition.",
+      "category": "target",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.target.select_profile",
+      "status": "planned",
+      "description": "Select a target PDF profile such as learning, resume, paper, deck, report, packet, or audit.",
+      "category": "target",
+      "interfaces": [
+        "rest",
+        "sdk",
+        "mcp"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.evidence.map_sources",
+      "status": "beta",
+      "description": "Attach source refs to generated blocks or extracted claims.",
+      "category": "evidence",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.evidence.cite_claims",
+      "status": "beta",
+      "description": "Return citations for claims using page/bbox/timestamp/file/row refs.",
+      "category": "evidence",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.evidence.coverage_report",
+      "status": "beta",
+      "description": "Create an evidence coverage report from a composition artifact.",
+      "category": "evidence",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.evidence.highlight_sources",
+      "status": "beta",
+      "description": "Produce highlighted source artifacts from evidence refs.",
+      "category": "evidence",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.evidence.context_packet_report",
+      "status": "planned",
+      "description": "Create a PDF appendix summarizing context items, sources, refs, checksums, and limitations.",
+      "category": "evidence",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.evidence.verify_citations",
+      "status": "cloud_only",
+      "description": "Verify that generated claims are supported by cited sources.",
+      "category": "evidence",
+      "interfaces": [
+        "rest",
+        "sdk",
+        "mcp"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": true
+    },
+    {
+      "name": "pdf.compose.plan",
+      "status": "beta",
+      "description": "Plan a context-to-target-PDF artifact with sections, blocks, source refs, validation, and style constraints.",
+      "category": "compose",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.compose.from_context",
+      "status": "beta",
+      "description": "Compose a validated target PDF from a Context Packet and target profile.",
+      "category": "compose",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.compose.render_ir",
+      "status": "beta",
+      "description": "Render composition IR into a validated PDF artifact.",
+      "category": "compose",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.compose.add_code_block",
+      "status": "beta",
+      "description": "Add formatted code blocks with optional file/line source refs.",
+      "category": "compose",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.compose.add_figure",
+      "status": "beta",
+      "description": "Add image/figure blocks with captions and source refs.",
+      "category": "compose",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.compose.add_table",
+      "status": "beta",
+      "description": "Add tables from structured data with source refs.",
+      "category": "compose",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.compose.add_appendix",
+      "status": "beta",
+      "description": "Build appendix sections from context packets, citations, or artifacts.",
+      "category": "compose",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.compose.compile_packet",
+      "status": "cloud_only",
+      "description": "Compile multi-source evidence packets with source maps and validation.",
+      "category": "compose",
+      "interfaces": [
+        "rest",
+        "sdk",
+        "mcp"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": true
+    },
+    {
+      "name": "pdf.patch.plan",
+      "status": "beta",
+      "description": "Create a structured append-only patch manifest for Markdown, code, table, image, slide, source-map, and template-layer evidence.",
+      "category": "patch",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.patch.preview",
+      "status": "beta",
+      "description": "Preview patch effects and validation requirements.",
+      "category": "patch",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.patch.apply",
+      "status": "beta",
+      "description": "Apply a patch transaction and write a new PDF artifact.",
+      "category": "patch",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.patch.verify",
+      "status": "beta",
+      "description": "Verify a patched PDF against a patch manifest.",
+      "category": "patch",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.patch.rollback_manifest",
+      "status": "beta",
+      "description": "Produce rollback metadata and input artifact refs.",
+      "category": "patch",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.patch.regenerate_section",
+      "status": "cloud_only",
+      "description": "Regenerate a section or page from IR with source refs and validation.",
+      "category": "patch",
+      "interfaces": [
+        "rest",
+        "sdk",
+        "mcp"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": true
+    },
+    {
+      "name": "pdf.present.create_deck",
+      "status": "cloud_only",
+      "description": "Create a slide-like PDF deck from a context packet, target PDF profile, or composition IR.",
+      "category": "present",
+      "interfaces": [
+        "rest",
+        "sdk",
+        "mcp"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": true
+    },
+    {
+      "name": "pdf.present.report_to_deck",
+      "status": "cloud_only",
+      "description": "Convert a report into concise presentation pages.",
+      "category": "present",
+      "interfaces": [
+        "rest",
+        "sdk",
+        "mcp"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": true
+    },
+    {
+      "name": "pdf.present.video_to_deck",
+      "status": "cloud_only",
+      "description": "Turn video transcript/keyframes into a presentation PDF.",
+      "category": "present",
+      "interfaces": [
+        "rest",
+        "sdk",
+        "mcp"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": true
+    },
+    {
+      "name": "pdf.present.paper_to_deck",
+      "status": "cloud_only",
+      "description": "Turn a paper into a cited research presentation PDF.",
+      "category": "present",
+      "interfaces": [
+        "rest",
+        "sdk",
+        "mcp"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": true
+    },
+    {
+      "name": "pdf.present.speaker_notes",
+      "status": "cloud_only",
+      "description": "Generate speaker notes tied to slide pages and sources.",
+      "category": "present",
+      "interfaces": [
+        "rest",
+        "sdk",
+        "mcp"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": true
+    },
+    {
+      "name": "pdf.present.handout",
+      "status": "beta",
+      "description": "Render a deck-like PDF into a printable handout/appendix format.",
+      "category": "present",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.artifacts.manifest",
+      "status": "beta",
+      "description": "Return artifact metadata, checksums, source refs, validation links, and retention hints.",
+      "category": "artifacts",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.artifacts.graph",
+      "status": "beta",
+      "description": "Return parent/child artifact lineage for a workflow or output.",
+      "category": "artifacts",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.artifacts.source_map",
+      "status": "beta",
+      "description": "Return generated PDF block/page refs mapped back to sources.",
+      "category": "artifacts",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.artifacts.export_bundle",
+      "status": "beta",
+      "description": "Export local PDFs, manifests, source maps, validation reports, and patch evidence as a portable audit bundle.",
+      "category": "artifacts",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.artifacts.verify_bundle",
+      "status": "beta",
+      "description": "Verify a portable audit bundle manifest, ZIP entries, and SHA-256 checksums before downstream agent use.",
+      "category": "artifacts",
       "interfaces": [
         "cli",
         "mcp",
@@ -93,10 +769,10 @@
       "requires_model": false
     },
     {
-      "name": "pdf.context.build_packet",
-      "status": "beta",
-      "description": "Build a local Context Packet with source graph metadata.",
-      "category": "context",
+      "name": "pdf.inspect.document",
+      "status": "stable",
+      "description": "Detect page count, page sizes, rotations, encryption, metadata, text layer, forms, annotations, attachments, signatures, scanned pages, outlines.",
+      "category": "inspect",
       "interfaces": [
         "cli",
         "mcp",
@@ -108,145 +784,10 @@
       "requires_model": false
     },
     {
-      "name": "pdf.compose.from_context",
-      "status": "beta",
-      "description": "Compose a validated target PDF from a Context Packet and target profile.",
-      "category": "compose",
-      "interfaces": [
-        "cli",
-        "mcp",
-        "rest",
-        "sdk"
-      ],
-      "implemented": true,
-      "oss_default": true,
-      "requires_model": false
-    },
-    {
-      "name": "pdf.target.profiles",
-      "status": "beta",
-      "description": "List built-in target PDF profiles with layout slots and accepted block types.",
-      "category": "target",
-      "interfaces": [
-        "cli",
-        "mcp",
-        "rest",
-        "sdk"
-      ],
-      "implemented": true,
-      "oss_default": true,
-      "requires_model": false
-    },
-    {
-      "name": "pdf.target.validate_profile",
-      "status": "beta",
-      "description": "Validate a built-in or custom target PDF profile for agent composition.",
-      "category": "target",
-      "interfaces": [
-        "cli",
-        "mcp",
-        "rest",
-        "sdk"
-      ],
-      "implemented": true,
-      "oss_default": true,
-      "requires_model": false
-    },
-    {
-      "name": "pdf.evidence.coverage_report",
-      "status": "beta",
-      "description": "Create an evidence coverage report from a composition artifact.",
-      "category": "evidence",
-      "interfaces": [
-        "cli",
-        "mcp",
-        "rest",
-        "sdk"
-      ],
-      "implemented": true,
-      "oss_default": true,
-      "requires_model": false
-    },
-    {
-      "name": "pdf.artifacts.export_bundle",
-      "status": "beta",
-      "description": "Export local PDFs, manifests, source maps, validation reports, and patch evidence as a portable audit bundle.",
-      "category": "artifacts",
-      "interfaces": [
-        "cli",
-        "mcp",
-        "rest",
-        "sdk"
-      ],
-      "implemented": true,
-      "oss_default": true,
-      "requires_model": false
-    },
-    {
-      "name": "pdf.artifacts.verify_bundle",
-      "status": "beta",
-      "description": "Verify a portable audit bundle manifest, ZIP entries, and SHA-256 checksums before downstream agent use.",
-      "category": "artifacts",
-      "interfaces": [
-        "cli",
-        "mcp",
-        "rest",
-        "sdk"
-      ],
-      "implemented": true,
-      "oss_default": true,
-      "requires_model": false
-    },
-    {
-      "name": "pdf.patch.plan",
-      "status": "beta",
-      "description": "Create a structured append-only patch manifest for Markdown, code, table, image, slide, source-map, and template-layer evidence.",
-      "category": "patch",
-      "interfaces": [
-        "cli",
-        "mcp",
-        "rest",
-        "sdk"
-      ],
-      "implemented": true,
-      "oss_default": true,
-      "requires_model": false
-    },
-    {
-      "name": "pdf.patch.preview",
-      "status": "beta",
-      "description": "Preview patch effects and validation requirements.",
-      "category": "patch",
-      "interfaces": [
-        "cli",
-        "mcp",
-        "rest",
-        "sdk"
-      ],
-      "implemented": true,
-      "oss_default": true,
-      "requires_model": false
-    },
-    {
-      "name": "pdf.patch.apply",
-      "status": "beta",
-      "description": "Apply a patch transaction and write a new PDF artifact.",
-      "category": "patch",
-      "interfaces": [
-        "cli",
-        "mcp",
-        "rest",
-        "sdk"
-      ],
-      "implemented": true,
-      "oss_default": true,
-      "requires_model": false
-    },
-    {
-      "name": "pdf.patch.verify",
-      "status": "beta",
-      "description": "Verify a patched PDF against a patch manifest.",
-      "category": "patch",
+      "name": "pdf.inspect.pages",
+      "status": "stable",
+      "description": "Return per-page dimensions, rotation, text availability, image count, object count, and renderability.",
+      "category": "inspect",
       "interfaces": [
         "cli",
         "mcp",
@@ -1279,7 +1820,7 @@
     },
     {
       "name": "pdf.security.protect",
-      "status": "stable",
+      "status": "planned",
       "description": "Encrypt/protect PDF with password.",
       "category": "security",
       "interfaces": [
@@ -1294,7 +1835,7 @@
     },
     {
       "name": "pdf.security.unlock_authorized",
-      "status": "stable",
+      "status": "planned",
       "description": "Decrypt with valid password only.",
       "category": "security",
       "interfaces": [
@@ -1309,7 +1850,7 @@
     },
     {
       "name": "pdf.security.encrypt",
-      "status": "stable",
+      "status": "planned",
       "description": "Encrypt PDF.",
       "category": "security",
       "interfaces": [
@@ -1324,7 +1865,7 @@
     },
     {
       "name": "pdf.security.decrypt_authorized",
-      "status": "stable",
+      "status": "planned",
       "description": "Decrypt authorized PDF.",
       "category": "security",
       "interfaces": [
@@ -1414,7 +1955,7 @@
     },
     {
       "name": "pdf.security.remove_metadata",
-      "status": "stable",
+      "status": "planned",
       "description": "Remove document metadata.",
       "category": "security",
       "interfaces": [
@@ -1744,7 +2285,7 @@
     },
     {
       "name": "pdf.metadata.page_info",
-      "status": "stable",
+      "status": "planned",
       "description": "Page size/rotation/info.",
       "category": "metadata",
       "interfaces": [
@@ -1804,7 +2345,7 @@
     },
     {
       "name": "pdf.validation.page_count_check",
-      "status": "stable",
+      "status": "planned",
       "description": "Compare expected page counts.",
       "category": "validation",
       "interfaces": [
@@ -1997,6 +2538,21 @@
       "requires_model": false
     },
     {
+      "name": "pdf.ai.rag.chat",
+      "status": "beta",
+      "description": "Ask a local PDF and return answer, citations, report PDF, and highlighted source PDF.",
+      "category": "ai_rag",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
       "name": "pdf.ai.rag.query",
       "status": "beta",
       "description": "Ask document questions with citations.",
@@ -2030,21 +2586,6 @@
       "name": "pdf.ai.rag.cite_answer",
       "status": "beta",
       "description": "Return page/bbox citations.",
-      "category": "ai_rag",
-      "interfaces": [
-        "cli",
-        "mcp",
-        "rest",
-        "sdk"
-      ],
-      "implemented": true,
-      "oss_default": true,
-      "requires_model": false
-    },
-    {
-      "name": "pdf.ai.rag.chat",
-      "status": "beta",
-      "description": "Ask a local PDF and return answer, citations, report PDF, and highlighted source PDF.",
       "category": "ai_rag",
       "interfaces": [
         "cli",
@@ -2502,6 +3043,48 @@
       "requires_model": true
     },
     {
+      "name": "pdf.ai.create.source_report",
+      "status": "cloud_only",
+      "description": "Generate a source-backed report from multimodal inputs.",
+      "category": "ai_create",
+      "interfaces": [
+        "rest",
+        "sdk",
+        "mcp"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": true
+    },
+    {
+      "name": "pdf.ai.create.presentation_pdf",
+      "status": "cloud_only",
+      "description": "Generate a slide-like PDF presentation with citations and speaker notes.",
+      "category": "ai_create",
+      "interfaces": [
+        "rest",
+        "sdk",
+        "mcp"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": true
+    },
+    {
+      "name": "pdf.ai.create.evidence_packet",
+      "status": "cloud_only",
+      "description": "Generate a review packet with sources, claims, and verification reports.",
+      "category": "ai_create",
+      "interfaces": [
+        "rest",
+        "sdk",
+        "mcp"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": true
+    },
+    {
       "name": "pdf.ai.edit.rewrite_section",
       "status": "cloud_only",
       "description": "Rewrite content and regenerate page/document.",
@@ -2729,4 +3312,3 @@
     }
   ]
 }
-

@@ -37,7 +37,7 @@ build-backend = "hatchling.build"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
-addopts = "--basetemp=.pytest-tmp -p no:cacheprovider"
+addopts = "-p no:cacheprovider"
 filterwarnings = [
   "ignore:Using `httpx` with `starlette.testclient` is deprecated.*",
 ]

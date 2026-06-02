@@ -1,10 +1,13 @@
 # 23 — Full Tool Status Matrix
 
-Total tools specified: **218**
+Total tools specified: **224**
 
 | Tool | Category | Status | OSS default |
 |---|---|---:|---:|
 | `agent.setup.claude_code` | agent | beta | yes |
+| `agent.setup.codex` | agent | planned | yes |
+| `agent.setup.kilo_code` | agent | planned | yes |
+| `agent.setup.openclaw` | agent | planned | yes |
 | `pdf.context.ingest` | context | beta | yes |
 | `pdf.context.packet` | context | beta | yes |
 | `pdf.context.build_packet` | context | beta | yes |
@@ -123,16 +126,16 @@ Total tools specified: **218**
 | `pdf.forms.flatten` | forms | beta | yes |
 | `pdf.forms.create` | forms | planned | yes |
 | `pdf.forms.validate` | forms | planned | yes |
-| `pdf.security.protect` | security | stable | yes |
-| `pdf.security.unlock_authorized` | security | stable | yes |
-| `pdf.security.encrypt` | security | stable | yes |
-| `pdf.security.decrypt_authorized` | security | stable | yes |
+| `pdf.security.protect` | security | planned | yes |
+| `pdf.security.unlock_authorized` | security | planned | yes |
+| `pdf.security.encrypt` | security | planned | yes |
+| `pdf.security.decrypt_authorized` | security | planned | yes |
 | `pdf.security.permissions` | security | beta | yes |
 | `pdf.security.redact` | security | beta | yes |
 | `pdf.security.verify_redaction` | security | beta | yes |
 | `pdf.security.sign` | security | planned | yes |
 | `pdf.security.verify_signature` | security | planned | yes |
-| `pdf.security.remove_metadata` | security | stable | yes |
+| `pdf.security.remove_metadata` | security | planned | yes |
 | `pdf.security.sanitize` | security | beta | yes |
 | `pdf.security.malware_scan` | security | planned | yes |
 | `pdf.ocr_scan.ocr` | ocr_scan | beta | yes |
@@ -154,11 +157,11 @@ Total tools specified: **218**
 | `pdf.metadata.update_outline` | metadata | planned | yes |
 | `pdf.metadata.read_links` | metadata | beta | yes |
 | `pdf.metadata.read_attachments` | metadata | beta | yes |
-| `pdf.metadata.page_info` | metadata | stable | yes |
+| `pdf.metadata.page_info` | metadata | planned | yes |
 | `pdf.validation.validate_output` | validation | stable | yes |
 | `pdf.validation.render_check` | validation | stable | yes |
 | `pdf.validation.blank_page_check` | validation | stable | yes |
-| `pdf.validation.page_count_check` | validation | stable | yes |
+| `pdf.validation.page_count_check` | validation | planned | yes |
 | `pdf.validation.text_layer_check` | validation | beta | yes |
 | `pdf.validation.visual_diff` | validation | beta | yes |
 | `pdf.validation.redaction_check` | validation | beta | yes |
@@ -194,6 +197,8 @@ Total tools specified: **218**
 | `pdf.ai.create.templates` | ai_create | beta | yes |
 | `pdf.ai.create.template_packs` | ai_create | beta | yes |
 | `pdf.ai.create.validate_template_pack` | ai_create | beta | yes |
+| `pdf.ai.create.plan_template_pack` | ai_create | beta | yes |
+| `pdf.ai.create.agent` | ai_create | beta | yes |
 | `pdf.ai.create.from_template_pack` | ai_create | beta | yes |
 | `pdf.ai.create.report` | ai_create | cloud_only | no |
 | `pdf.ai.create.paper` | ai_create | cloud_only | no |
