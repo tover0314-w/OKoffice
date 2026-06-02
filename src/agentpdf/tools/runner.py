@@ -3,6 +3,27 @@ from __future__ import annotations
 from pathlib import Path
 from uuid import uuid4
 
+from agentpdf.agents.claude_code import setup_claude_code
+from agentpdf.artifacts.bundle import export_artifact_bundle, verify_artifact_bundle
+from agentpdf.compose.context import compose_from_context, list_target_profiles, validate_target_profile
+from agentpdf.context.packet import build_context_packet
+from agentpdf.creation.agent import (
+    create_pdf_from_prompt,
+    create_pdf_from_template_pack,
+    create_pdf_with_agent,
+    create_template_preview,
+    list_create_templates,
+    list_template_packs,
+    plan_template_pack_creation,
+    validate_template_pack,
+)
+from agentpdf.evidence.coverage import create_coverage_report
+from agentpdf.patch.transaction import (
+    apply_patch_transaction,
+    plan_patch_transaction,
+    preview_patch_transaction,
+    verify_patch_transaction,
+)
 from agentpdf.core.pdf import (
     add_page_numbers_pdf,
     add_text_watermark_pdf,
@@ -249,6 +270,315 @@ def run_create_markdown(
         )
     except AgentPDFException as exc:
         return _failed("pdf.convert.markdown_to_pdf", exc.to_error())
+
+
+def run_create_from_prompt(
+    prompt: str,
+    output_path: str | Path,
+    template: str | None = None,
+    style_pack: str | None = None,
+    data: dict[str, object] | None = None,
+    title: str | None = None,
+    colors: dict[str, str] | None = None,
+) -> ToolResult:
+    try:
+        return create_pdf_from_prompt(
+            prompt,
+            output_path=output_path,
+            template=template,
+            style_pack=style_pack,
+            data=data,
+            title=title,
+            colors=colors,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.ai.create.from_prompt", exc.to_error())
+
+
+def run_create_templates() -> ToolResult:
+    return list_create_templates()
+
+
+def run_create_template_preview(
+    template: str,
+    output_path: str | Path,
+    style_pack: str | None = None,
+    data: dict[str, object] | None = None,
+    colors: dict[str, str] | None = None,
+) -> ToolResult:
+    try:
+        return create_template_preview(
+            template,
+            output_path=output_path,
+            style_pack=style_pack,
+            data=data,
+            colors=colors,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.ai.create.template_preview", exc.to_error())
+
+
+def run_create_template_packs(output_path: str | Path | None = None) -> ToolResult:
+    try:
+        return list_template_packs(output_path=output_path)
+    except AgentPDFException as exc:
+        return _failed("pdf.ai.create.template_packs", exc.to_error())
+
+
+def run_validate_template_pack(
+    template_pack: dict[str, object] | str | Path,
+    output_path: str | Path | None = None,
+) -> ToolResult:
+    try:
+        return validate_template_pack(template_pack=template_pack, output_path=output_path)
+    except AgentPDFException as exc:
+        return _failed("pdf.ai.create.validate_template_pack", exc.to_error())
+
+
+def run_plan_template_pack_creation(
+    template_pack: dict[str, object] | str | Path,
+    target_profile: dict[str, object] | str | None = None,
+    context_packet: dict[str, object] | str | Path | None = None,
+    context_packet_path: str | Path | None = None,
+    planned_output_path: str | Path | None = None,
+    output_path: str | Path | None = None,
+    preferred_template_id: str | None = None,
+    preferred_color_scheme: str | None = None,
+) -> ToolResult:
+    try:
+        return plan_template_pack_creation(
+            template_pack=template_pack,
+            target_profile=target_profile,
+            context_packet=context_packet,
+            context_packet_path=context_packet_path,
+            planned_output_path=planned_output_path,
+            output_path=output_path,
+            preferred_template_id=preferred_template_id,
+            preferred_color_scheme=preferred_color_scheme,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.ai.create.plan_template_pack", exc.to_error())
+
+
+def run_create_agent(
+    template_pack: dict[str, object] | str | Path,
+    target_profile: dict[str, object] | str | None,
+    context_packet: dict[str, object] | str | Path | None = None,
+    context_packet_path: str | Path | None = None,
+    output_path: str | Path = ".agentpdf-out/create-agent.pdf",
+    plan_output_path: str | Path | None = None,
+    coverage_output_path: str | Path | None = None,
+    preferred_template_id: str | None = None,
+    preferred_color_scheme: str | None = None,
+    title: str | None = None,
+    prompt: str | None = None,
+    style_pack: str | None = None,
+) -> ToolResult:
+    try:
+        return create_pdf_with_agent(
+            template_pack=template_pack,
+            target_profile=target_profile,
+            context_packet=context_packet,
+            context_packet_path=context_packet_path,
+            output_path=output_path,
+            plan_output_path=plan_output_path,
+            coverage_output_path=coverage_output_path,
+            preferred_template_id=preferred_template_id,
+            preferred_color_scheme=preferred_color_scheme,
+            title=title,
+            prompt=prompt,
+            style_pack=style_pack,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.ai.create.agent", exc.to_error())
+
+
+def run_create_from_template_pack(
+    template_pack: dict[str, object] | str | Path,
+    template_id: str,
+    output_path: str | Path,
+    color_scheme: str | None = None,
+    data: dict[str, object] | None = None,
+    context_packet: dict[str, object] | str | Path | None = None,
+    context_packet_path: str | Path | None = None,
+    title: str | None = None,
+    prompt: str | None = None,
+    style_pack: str | None = None,
+) -> ToolResult:
+    try:
+        return create_pdf_from_template_pack(
+            template_pack=template_pack,
+            template_id=template_id,
+            output_path=output_path,
+            color_scheme=color_scheme,
+            data=data,
+            context_packet=context_packet,
+            context_packet_path=context_packet_path,
+            title=title,
+            prompt=prompt,
+            style_pack=style_pack,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.ai.create.from_template_pack", exc.to_error())
+
+
+def run_build_context_packet(
+    context_items: list[dict[str, object]],
+    output_path: str | Path,
+    title: str | None = None,
+    intent: str | None = None,
+) -> ToolResult:
+    try:
+        return build_context_packet(
+            context_items,
+            output_path=output_path,
+            title=title,
+            intent=intent,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.context.build_packet", exc.to_error())
+
+
+def run_compose_from_context(
+    context_packet: dict[str, object] | str | Path,
+    target_profile: dict[str, object] | str,
+    output_path: str | Path,
+    style_pack: str | None = None,
+    title: str | None = None,
+) -> ToolResult:
+    try:
+        return compose_from_context(
+            context_packet,
+            target_profile=target_profile,
+            output_path=output_path,
+            style_pack=style_pack,
+            title=title,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.compose.from_context", exc.to_error())
+
+
+def run_target_profiles(output_path: str | Path | None = None) -> ToolResult:
+    try:
+        return list_target_profiles(output_path=output_path)
+    except AgentPDFException as exc:
+        return _failed("pdf.target.profiles", exc.to_error())
+
+
+def run_validate_target_profile(
+    target_profile: dict[str, object] | str,
+    output_path: str | Path | None = None,
+) -> ToolResult:
+    try:
+        return validate_target_profile(target_profile, output_path=output_path)
+    except AgentPDFException as exc:
+        return _failed("pdf.target.validate_profile", exc.to_error())
+
+
+def run_agent_setup_claude_code(
+    output_path: str | Path | None = None,
+    safe_root: str = "${CLAUDE_PROJECT_DIR:-.}",
+    command: str = "okpdf",
+    args_prefix: list[str] | None = None,
+    server_name: str = "agentpdf",
+    scope: str = "project",
+) -> ToolResult:
+    try:
+        return setup_claude_code(
+            output_path=output_path,
+            safe_root=safe_root,
+            command=command,
+            args_prefix=args_prefix,
+            server_name=server_name,
+            scope=scope,  # type: ignore[arg-type]
+        )
+    except AgentPDFException as exc:
+        return _failed("agent.setup.claude_code", exc.to_error())
+
+
+def run_evidence_coverage_report(
+    composition: dict[str, object] | str | Path,
+    output_path: str | Path | None = None,
+) -> ToolResult:
+    try:
+        return create_coverage_report(composition, output_path=output_path)
+    except AgentPDFException as exc:
+        return _failed("pdf.evidence.coverage_report", exc.to_error())
+
+
+def run_artifacts_export_bundle(
+    artifact_paths: list[str | Path],
+    output_path: str | Path,
+    title: str | None = None,
+    metadata: dict[str, object] | None = None,
+) -> ToolResult:
+    try:
+        return export_artifact_bundle(
+            artifact_paths=artifact_paths,
+            output_path=output_path,
+            title=title,
+            metadata=metadata,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.artifacts.export_bundle", exc.to_error())
+
+
+def run_artifacts_verify_bundle(bundle_path: str | Path) -> ToolResult:
+    try:
+        return verify_artifact_bundle(bundle_path=bundle_path)
+    except AgentPDFException as exc:
+        return _failed("pdf.artifacts.verify_bundle", exc.to_error())
+
+
+def run_patch_plan(
+    input_path: str | Path,
+    operations: list[dict[str, object]],
+    output_path: str | Path,
+    composition_path: str | Path | None = None,
+    layer_manifest_path: str | Path | None = None,
+    reason: str | None = None,
+) -> ToolResult:
+    try:
+        return plan_patch_transaction(
+            input_path=input_path,
+            operations=operations,
+            output_path=output_path,
+            composition_path=composition_path,
+            layer_manifest_path=layer_manifest_path,
+            reason=reason,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.patch.plan", exc.to_error())
+
+
+def run_patch_preview(
+    patch_manifest: dict[str, object] | str | Path,
+    output_path: str | Path | None = None,
+) -> ToolResult:
+    try:
+        return preview_patch_transaction(patch_manifest, output_path=output_path)
+    except AgentPDFException as exc:
+        return _failed("pdf.patch.preview", exc.to_error())
+
+
+def run_patch_apply(
+    patch_manifest: dict[str, object] | str | Path,
+    output_path: str | Path,
+) -> ToolResult:
+    try:
+        return apply_patch_transaction(patch_manifest, output_path=output_path)
+    except AgentPDFException as exc:
+        return _failed("pdf.patch.apply", exc.to_error())
+
+
+def run_patch_verify(
+    patch_manifest: dict[str, object] | str | Path,
+    patched_path: str | Path,
+) -> ToolResult:
+    try:
+        return verify_patch_transaction(patch_manifest, patched_path=patched_path)
+    except AgentPDFException as exc:
+        return _failed("pdf.patch.verify", exc.to_error())
 
 
 def run_render(

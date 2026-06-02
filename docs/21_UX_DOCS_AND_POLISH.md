@@ -5,6 +5,7 @@
 - Clear.
 - Technical but not intimidating.
 - Agent-first.
+- Evidence-first.
 - Trustworthy.
 - Beautiful by default.
 - Honest about limitations.
@@ -20,6 +21,8 @@ The public README should show:
 - MCP example.
 - Tool family grid.
 - Open-source vs cloud boundary.
+- A clear "bigger than RAG" explanation.
+- Links to context packet, target PDF profile, source graph, composition IR, patch, and workflow docs.
 - Roadmap status.
 
 ## Docs style
@@ -30,6 +33,7 @@ Use:
 - Concrete examples.
 - JSON snippets.
 - Before/after artifacts.
+- Source map and artifact lineage examples.
 - Mermaid diagrams.
 - Status labels.
 - Warnings for hard PDF tasks.
@@ -73,6 +77,11 @@ Create examples for:
 
 - Merge/split workflow.
 - Research paper RAG.
+- Multi-source business report.
+- Video to presentation PDF.
+- Image evidence packet.
+- Code repository to audit PDF.
+- PDF patch transaction.
 - Business report generation.
 - Resume generation.
 - Contract redaction.

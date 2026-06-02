@@ -1,18 +1,19 @@
-# 17 — Roadmap
+# 17 - Roadmap
 
-## Phase 0 — Harness and design
+## Phase 0 - Harness and design
 
-Status: this ZIP.
+Status: this repository.
 
 Deliverables:
 
 - Product specification.
+- Agent-native multimodal PDF PRD.
 - Tool catalog.
 - Schemas.
 - Codex instructions.
 - Open-source standards.
 
-## Phase 1 — Open-source core foundation
+## Phase 1 - Open-source core foundation
 
 Goal: useful local PDF toolkit for agents.
 
@@ -53,7 +54,7 @@ Current validation baseline:
 - `pdf.workflow.run` executes supported local workflow manifests and returns per-step evidence.
 - `pdf.workflow.report` summarizes workflow runs and can write Markdown audit reports.
 
-## Phase 2 — Full deterministic PDF utility coverage
+## Phase 2 - Full deterministic PDF utility coverage
 
 Add:
 
@@ -67,7 +68,7 @@ Add:
 - Attachments.
 - Compare/diff.
 
-## Phase 3 — Lite document intelligence
+## Phase 3 - Lite document intelligence and evidence
 
 Add:
 
@@ -75,7 +76,7 @@ Add:
 - Lite parse.
 - Tables baseline.
 - Markdown/JSON export.
-- Local RAG demo.
+- Local RAG/evidence demo.
 - Citation support.
 - Style packs.
 
@@ -95,20 +96,44 @@ Next improvements:
 
 - Better paragraph/table segmentation.
 - IR-to-Markdown/JSON export commands.
+- Evidence coverage reports.
+- Source map artifacts.
 - Optional OCR/parser worker contracts inspired by OCRmyPDF, Docling, and Marker.
 
-## Phase 4 — AI and cloud boundary
+## Phase 4 - Agent-native context, target, composition, and patch layer
+
+Add local-first schemas, manifests, recipes, and deterministic subsets:
+
+- Context packet model for PDFs, images, video, audio, documents, web links, code, CSV/JSON, and manually supplied prompts/review notes.
+- Target PDF profile model for learning PDFs, resumes, academic papers, deck-like PDFs, reports, packets, audits, worksheets, and formal documents.
+- Source graph for provenance and evidence refs derived from context packets.
+- Artifact graph and source map reports.
+- Composition IR for reports, evidence packets, appendices, and slide-like PDFs.
+- Rich rendering blocks: figures, code blocks, callouts, citations, appendices, speaker notes, and slide pages.
+- Patch transaction manifests for insert, replace, overlay, regenerate, verify, and rollback workflows.
+- `pdf.context.*`, `pdf.target.*`, `pdf.evidence.*`, `pdf.compose.*`, `pdf.patch.*`, `pdf.present.*`, and `pdf.artifacts.*` namespace readiness.
+- Workflow recipes for video-to-deck, image evidence packet, code audit report, multi-source business report, and verified PDF edit.
+
+This phase should prove the product is more than RAG or basic PDF manipulation.
+
+## Phase 5 - AI and multimodal workers
 
 Add optional capabilities:
 
 - BYOK model providers.
 - Agentic parse.
 - Advanced OCR.
+- Image understanding.
+- Video transcription and keyframe extraction.
+- Audio transcription.
+- Chart/table/formula understanding.
 - AI summarize/extract/review.
 - AI create/edit/translate.
 - Hosted index API shape.
+- Source-backed composition planning.
+- Citation and source coverage verification.
 
-## Phase 5 — Hosted service
+## Phase 6 - Hosted service
 
 Not part of the first OSS implementation, but design-compatible:
 
@@ -116,12 +141,14 @@ Not part of the first OSS implementation, but design-compatible:
 - Credits.
 - Team keys.
 - Persistent artifacts.
+- Hosted context packet, source graph, and artifact graph.
 - Batch jobs.
 - Webhooks.
 - Usage analytics.
+- High-concurrency rendering and multimodal processing.
 - Enterprise controls.
 
-## Phase 6 — Ecosystem
+## Phase 7 - Ecosystem
 
 - LangChain integration.
 - LlamaIndex integration.
@@ -130,3 +157,5 @@ Not part of the first OSS implementation, but design-compatible:
 - n8n/Zapier/Make examples.
 - Cursor/Claude/OpenAI Agents examples.
 - Template/style marketplace.
+- Brand kit marketplace.
+- Agent workflow templates.

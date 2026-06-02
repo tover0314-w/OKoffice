@@ -2,6 +2,62 @@
 
 The open-source project should expose AI-oriented tool namespaces while making local/free and cloud/paid boundaries clear.
 
+AI tools are not the product by themselves. They support the larger agent-native loop:
+
+```text
+understand context -> choose target PDF profile -> compose/operate on PDF artifacts -> verify evidence -> report results
+```
+
+RAG is one evidence technique, not the main product surface. The broader goal is context-backed target PDF creation, patching, review, and verification.
+
+## Agent-native AI layers
+
+### Context understanding
+
+Future AI workers may normalize video, audio, image, scanned, web links/pages, documents, code, and data context into source graph nodes.
+
+Examples:
+
+- Video transcript segments and keyframes.
+- Image OCR regions and captions.
+- Chart/table/formula interpretations.
+- Code file and line-range summaries.
+- Spreadsheet/table profiles.
+
+Every derived node should include provenance, confidence, warnings, and source locators such as page/bbox, timestamp, file/line, row/range, or URL fragment.
+
+### Target and composition assistance
+
+AI may help select target PDF profiles and plan learning PDFs, resumes, papers, reports, packets, handouts, and slide-like PDFs from context packets. The output should be target profile + composition IR + source refs, not only prose.
+
+Allowed outputs:
+
+- Proposed document outline.
+- Block list with source refs.
+- Slide rhythm and speaker notes.
+- Figure/table/code block placement.
+- Appendix plan.
+- Validation requirements.
+
+### Patch assistance
+
+AI may help plan edits to existing PDFs, but execution should use explicit patch transactions where possible.
+
+Allowed outputs:
+
+- Patch manifest.
+- Target block/page/bbox refs.
+- Template layer refs from `.layers.json`: `layer_id`, `block_id`, `target_slot`, estimated anchors, and edit policies.
+- Replacement blocks.
+- Source refs for inserted or rewritten content.
+- Required validation checks.
+
+Do not claim arbitrary lossless in-place body text editing. The current local patch baseline is append-only; when regeneration or precise layout-preserving replacement is required, return that fact explicitly.
+
+### Verification assistance
+
+AI may help detect unsupported claims, inconsistent numbers, weak citations, risky redactions, accessibility issues, and semantic changes. These checks should complement deterministic validation, not replace it.
+
 ## Two-tier parse model
 
 ### `pdf.ai.parse.lite`
@@ -278,26 +334,180 @@ Current baseline is local and deterministic. It writes a new PDF artifact contai
 
 ## `pdf.ai.create.*`
 
-PDF creation should support two modes.
+PDF creation supports a local deterministic create-agent baseline first. Hosted model generation remains a later layer.
 
-### Template mode
+### `pdf.ai.create.from_prompt`
 
-Open-source, deterministic:
+Local, open-source, deterministic:
 
-- Markdown/HTML + style pack.
-- Resume templates.
-- Invoice templates.
-- Report templates.
-- Academic paper template.
+- Inputs: `prompt`, `output_path`, optional `template`, optional `style_pack`, optional JSON `data`, optional `title`.
+- Built-in templates: `one_pager`, `business_report`, `research_brief`, `proposal`, `worksheet`, `resume`, `invoice`.
+- Built-in style packs include `paper_ink`, `business_report_modern`, `resume_modern`, and `invoice_clean`.
+- Color overrides accept `primary`, `accent`, and `text` hex values, for example `--color primary=#4f46e5`.
+- The tool selects a template from the prompt when no template is supplied, renders Markdown, creates a PDF, validates the PDF, and returns the generated Markdown plus an agent plan.
+- `invoice`, `resume`, `worksheet`, and `proposal` have structured renderers for common JSON fields. The output includes `template_renderer` so agents can tell whether a specialized renderer or the generic sections renderer was used.
 
-### AI mode
+### `pdf.ai.create.templates`
+
+Local template discovery for agents. It returns template ids, names, default sections, default style packs, field contracts, layout slots, sample data, preview tool ids, style pack metadata, supported color keys, and `cloud_required: false`.
+
+### `pdf.ai.create.template_packs`
+
+Local template pack discovery for agents. A template pack groups reusable templates, required/optional fields, layout slots, supported agent block types, target profiles, color schemes, sample data, and license metadata. This is the OSS boundary for future hosted template galleries.
+
+The starter pack includes local templates for technical audits, research briefs, evidence packets, resumes, invoices, proposals, worksheets, and media review decks. These are deterministic OSS templates; future hosted galleries can add more templates without changing the local tool contract.
+
+### `pdf.ai.create.validate_template_pack`
+
+Validates a local template pack before use. The validation report includes pack id, template count, field contracts, layout slots, supported block types, color scheme ids, warnings, errors, and whether each template is agent-ready.
+
+### `pdf.ai.create.plan_template_pack`
+
+Plans a local create call from a template pack, optional Target PDF Profile, and optional Context Packet. It scores candidate templates by target-profile match and context block-type coverage, selects a color scheme, and returns a `create_payload` that can be passed directly to `pdf.ai.create.from_template_pack`. The optional output artifact validates against `schemas/template-pack-plan.schema.json`.
+
+### `pdf.ai.create.agent`
+
+Runs the local deterministic create agent in one call: template-pack planning, PDF creation, render-check, blank-page check, and evidence coverage report. The result includes `usage.create_agent_run`, which records the ordered tool chain, selected template, selected color scheme, output PDF, composition artifact, template layer manifest artifact, plan artifact, coverage artifact, nested ToolResult evidence, `slot_routing_plan`, `template_layer_manifest`, and `evidence_coverage`. The run object validates against `schemas/create-agent-run.schema.json`.
+
+### `pdf.ai.create.from_template_pack`
+
+Creates a validated PDF from a template pack entry. The agent selects `template_id` and optional `color_scheme`; okpdf resolves the base local template, applies sample or supplied `data`, renders the PDF, validates it, and returns the nested create result. Supplied `data.blocks` can include `section`, `code`, `table`, `image`, `slide`, and `citation` blocks with `target_slot` and `source_refs`; these render into the PDF and are recorded in the sibling composition source map. Agents can also pass `context_packet_path` or `context_packet` to auto-map packet items into template blocks: text/document/PDF items become sections, code becomes code blocks, inline tables become tables, images become embedded image blocks, web links become citations, and media context becomes slide blocks. The result includes `slot_routing_plan`, an agent-readable placement report with route ids, target slots, source refs, template block-type checks, target profile block compatibility, candidate target-profile slots, slot-known facts, and routing reasons. It also writes a sibling `.layers.json` artifact validating against `schemas/template-layer-manifest.schema.json`; each layer maps a rendered block to its slot, source refs, source kinds, estimated normalized-page anchor, and edit policy for future patch/edit agents. Image blocks validate the local image path and record dimensions and MIME type as block evidence; citation blocks can map URL refs as `web_link` source evidence.
+
+### `pdf.ai.create.template_preview`
+
+Local template preview for agents. It uses the template catalog's sample data unless custom `data` is supplied, creates a real PDF through the local create agent, validates the result, and returns the nested `create_result` evidence. This is the local equivalent of trying a template before committing to a production artifact.
+
+CLI example:
+
+```bash
+okpdf create templates --json
+```
+
+CLI example:
+
+```bash
+okpdf create template-packs -o .agentpdf-out/template-packs.json --json
+okpdf create validate-template-pack examples/template-packs/local-agent-starter.json \
+  -o .agentpdf-out/template-pack.validation.json \
+  --json
+okpdf create plan-template-pack examples/template-packs/local-agent-starter.json \
+  --target-profile technical_audit \
+  --context-packet .agentpdf-out/context.packet.json \
+  --planned-output .agentpdf-out/board-audit.pdf \
+  -o .agentpdf-out/board-audit.plan.json \
+  --json
+okpdf create agent examples/template-packs/local-agent-starter.json \
+  --target-profile technical_audit \
+  --context-packet .agentpdf-out/context.packet.json \
+  -o .agentpdf-out/board-audit.pdf \
+  --plan-output .agentpdf-out/board-audit.plan.json \
+  --coverage-output .agentpdf-out/board-audit.coverage.json \
+  --json
+okpdf create from-template-pack examples/template-packs/local-agent-starter.json \
+  --template board_audit \
+  --color-scheme executive_blue \
+  --data examples/create-data/agent-block-audit.json \
+  -o .agentpdf-out/board-audit.pdf \
+  --json
+```
+
+CLI example:
+
+```bash
+okpdf create preview invoice \
+  -o .agentpdf-out/invoice-preview.pdf \
+  --json
+```
+
+CLI example:
+
+```bash
+okpdf create from-prompt "Create a research brief about local PDF agents." \
+  -o .agentpdf-out/research-brief.pdf \
+  --template research_brief \
+  --style-pack paper_ink \
+  --color primary=#4f46e5 \
+  --color accent=#f59e0b \
+  --json
+```
+
+REST example:
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.ai.create.from_prompt/run \
+  -H 'Content-Type: application/json' \
+  -d '{"prompt":"Create a proposal about local PDF template agents.","output_path":"proposal.pdf","template":"proposal","style_pack":"business_report_modern"}'
+```
+
+Preview REST example:
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.ai.create.template_preview/run \
+  -H 'Content-Type: application/json' \
+  -d '{"template":"invoice","output_path":"invoice-preview.pdf"}'
+```
+
+Structured invoice CLI example:
+
+```bash
+okpdf create from-prompt "Create an invoice for okpdf local template work." \
+  -o .agentpdf-out/invoice.pdf \
+  --template invoice \
+  --data examples/create-data/invoice.json \
+  --json
+```
+
+Expected output includes:
+
+```json
+{
+  "tool": "pdf.ai.create.from_prompt",
+  "status": "succeeded",
+  "usage": {
+    "template_id": "research_brief",
+    "template_renderer": "generic",
+    "style_pack": "paper_ink",
+    "agent_plan": {"cloud_required": false}
+  },
+  "validation": {"status": "passed"}
+}
+```
+
+Preview output includes:
+
+```json
+{
+  "tool": "pdf.ai.create.template_preview",
+  "status": "succeeded",
+  "usage": {
+    "template_id": "invoice",
+    "data_source": "template_sample_data",
+    "create_result": {"tool": "pdf.ai.create.from_prompt"}
+  },
+  "validation": {"status": "passed"}
+}
+```
+
+Limitations:
+
+- This is not a hidden cloud LLM call.
+- It does not claim arbitrary design generation.
+- It creates polished, template-backed PDFs from local deterministic rules and optional structured data.
+
+### Future AI Mode
 
 Cloud/BYOK/optional:
 
 - Prompt-to-PDF.
-- Source PDFs to summary report.
+- Context packets to learning PDFs, resumes, papers, summary reports, evidence packets, training handouts, and presentation PDFs.
+- Video/audio/image/document/code/link/data context to PDF artifacts.
 - Brand/style transformation.
 - Model-generated content.
+- Composition IR planning with source refs.
+- Target PDF profile selection.
+- Speaker notes and appendix generation.
+
+The generated artifact must still pass through rendering, validation, and evidence coverage checks.
 
 ## `pdf.ai.edit.*`
 

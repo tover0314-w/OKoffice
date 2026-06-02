@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://okpdf.local/schemas/agent-integration.schema.json",
+  "title": "AgentPDF Agent Integration",
+  "type": "object",
+  "required": ["agent", "mcp_config"],
+  "properties": {
+    "agent": {
+      "type": "string",
+      "enum": ["claude-code"]
+    },
+    "scope": {
+      "type": "string",
+      "enum": ["project", "local", "user"]
+    },
+    "server_name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "safe_root": {
+      "type": "string",
+      "minLength": 1
+    },
+    "config_path": {
+      "type": "string"
+    },
+    "mcp_config": {
+      "type": "object",
+      "required": ["mcpServers"],
+      "properties": {
+        "mcpServers": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "required": ["type", "command", "args"],
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": ["stdio"]
+              },
+              "command": {
+                "type": "string",
+                "minLength": 1
+              },
+              "args": {
+                "type": "array",
+                "items": {"type": "string"}
+              }
+            },
+            "additionalProperties": true
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "recommended_mcp_tools": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "install_commands": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "starter_prompt": {
+      "type": "string"
+    },
+    "local_boundaries": {
+      "type": "object"
+    }
+  },
+  "additionalProperties": true
+}

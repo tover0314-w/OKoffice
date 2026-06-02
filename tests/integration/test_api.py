@@ -355,6 +355,70 @@ def test_api_runs_create_text_and_markdown_tools(tmp_path: Path) -> None:
     assert markdown.json()["tool"] == "pdf.convert.markdown_to_pdf"
 
 
+def test_api_runs_create_from_prompt_tool(tmp_path: Path) -> None:
+    client = TestClient(create_app())
+    output = tmp_path / "api-brief.pdf"
+
+    response = client.post(
+        "/v1/tools/pdf.ai.create.from_prompt/run",
+        json={
+            "prompt": "Create a proposal about local PDF template agents.",
+            "output_path": str(output),
+            "template": "proposal",
+            "style_pack": "business_report_modern",
+            "colors": {"primary": "#4f46e5", "accent": "#f59e0b"},
+            "data": {
+                "client": "Agent teams",
+                "sections": [
+                    {
+                        "heading": "Local templates",
+                        "body": "Agents can create PDFs locally before any cloud service exists.",
+                    }
+                ],
+            },
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["tool"] == "pdf.ai.create.from_prompt"
+    assert payload["usage"]["template_id"] == "proposal"
+    assert payload["usage"]["style_pack"] == "business_report_modern"
+    assert payload["usage"]["colors"]["primary"] == "#4f46e5"
+    assert output.exists()
+
+
+def test_api_runs_create_templates_tool() -> None:
+    client = TestClient(create_app())
+
+    response = client.post("/v1/tools/pdf.ai.create.templates/run", json={})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["tool"] == "pdf.ai.create.templates"
+    assert "proposal" in payload["usage"]["templates"]
+    assert "paper_ink" in payload["usage"]["style_packs"]
+    assert payload["usage"]["templates"]["invoice"]["preview_tool"] == "pdf.ai.create.template_preview"
+
+
+def test_api_runs_create_template_preview_tool(tmp_path: Path) -> None:
+    client = TestClient(create_app())
+    output = tmp_path / "preview.pdf"
+
+    response = client.post(
+        "/v1/tools/pdf.ai.create.template_preview/run",
+        json={"template": "invoice", "output_path": str(output)},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["tool"] == "pdf.ai.create.template_preview"
+    assert payload["usage"]["template_id"] == "invoice"
+    assert payload["usage"]["data_source"] == "template_sample_data"
+    assert payload["validation"]["status"] == "passed"
+    assert output.exists()
+
+
 def test_api_runs_image_watermark_page_numbers_and_validate(tmp_path: Path) -> None:
     client = TestClient(create_app())
     image = tmp_path / "cover.png"

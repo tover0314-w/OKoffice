@@ -10,6 +10,115 @@ This is the full public tool map. Some tools can be `planned` or `cloud_only`, b
 - Keep deterministic tools separate from AI tools.
 - Return uniform `ToolResult` for every operation.
 
+## Agent-native families
+
+These namespaces make the larger product shape explicit. Early local releases may implement only schema validation, manifest generation, deterministic subsets, or examples, but the names should be stable from day one.
+
+### `agent.setup`
+
+Generate local runtime configs for agent ecosystems that call okpdf through MCP or REST.
+
+| Tool | Status | Description |
+|---|---:|---|
+| `agent.setup.claude_code` | beta | Generate a Claude Code project-level MCP config for local okpdf tools. |
+| `agent.setup.codex` | planned | Generate Codex MCP/workspace integration config. |
+| `agent.setup.kilo_code` | planned | Generate Kilo Code integration config. |
+| `agent.setup.openclaw` | planned | Generate OpenClaw integration config. |
+
+### `pdf.context`
+
+Normalize heterogeneous context and create context packets.
+
+| Tool | Status | Description |
+|---|---:|---|
+| `pdf.context.ingest` | beta target | Register PDFs, images, audio/video, text, Markdown, HTML, code, CSV/JSON, links, or data files as context items. |
+| `pdf.context.packet` | beta target | Build a reusable context packet from multiple local files, links, prompts, checksums, and warnings. |
+| `pdf.context.build_packet` | beta target | Build a local Context Packet JSON with source graph metadata from text, files, and links. |
+| `pdf.context.classify` | beta target | Classify context items by type, role, safety, and likely target uses. |
+| `pdf.context.image_analyze` | planned/cloud | OCR/caption/image-region analysis for images and screenshots. |
+| `pdf.context.video_transcribe` | planned/cloud | Transcribe video and create timestamped transcript context/source nodes. |
+| `pdf.context.video_keyframes` | planned/cloud | Extract keyframes and frame source refs from video. |
+| `pdf.context.audio_transcribe` | planned/cloud | Transcribe audio into timestamped context/source nodes. |
+| `pdf.context.web_capture` | planned/cloud | Capture web links/pages with source refs and SSRF-safe fetching. |
+| `pdf.context.code_snapshot` | beta target | Create context and source refs for files, line ranges, dependencies, and repository metadata. |
+| `pdf.context.data_profile` | beta target | Profile CSV/JSON/spreadsheet/database-like data for report generation. |
+
+### `pdf.target`
+
+Choose and validate the intended PDF output type before composition.
+
+| Tool | Status | Description |
+|---|---:|---|
+| `pdf.target.profiles` | beta | List built-in target PDF profiles, layout slots, accepted block types, and accepted context types. |
+| `pdf.target.validate_profile` | beta | Validate required structure, style pack, layout mode, slots, and checks for a custom target profile. |
+| `pdf.target.select_profile` | planned | Select a target PDF profile such as learning, resume, paper, deck, report, packet, or audit. |
+
+### `pdf.evidence`
+
+Map generated content and answers back to source material. RAG is one implementation path; evidence is the broader product layer.
+
+| Tool | Status | Description |
+|---|---:|---|
+| `pdf.evidence.map_sources` | beta target | Attach source refs to generated blocks or extracted claims. |
+| `pdf.evidence.cite_claims` | beta target | Return citations for claims using page/bbox/timestamp/file/row refs. |
+| `pdf.evidence.coverage_report` | beta target | Report which claims, blocks, tables, and figures have source evidence. |
+| `pdf.evidence.highlight_sources` | beta target | Produce highlighted source artifacts from evidence refs. |
+| `pdf.evidence.context_packet_report` | planned | Create a PDF appendix summarizing context items, sources, refs, checksums, and limitations. |
+| `pdf.evidence.verify_citations` | planned/cloud | Verify that generated claims are supported by cited sources. |
+
+### `pdf.compose`
+
+Create new PDF artifacts from context packets, target PDF profiles, composition IR, templates, and style packs.
+
+| Tool | Status | Description |
+|---|---:|---|
+| `pdf.compose.plan` | beta target | Plan a context-to-target-PDF artifact with sections, blocks, source refs, validation, and style constraints. |
+| `pdf.compose.from_context` | beta target | Compose a validated target PDF from a Context Packet and target profile with source map and evidence coverage. |
+| `pdf.compose.render_ir` | beta target | Render composition IR into a validated PDF artifact. |
+| `pdf.compose.add_code_block` | beta target | Add formatted code blocks with optional file/line source refs. |
+| `pdf.compose.add_figure` | beta target | Add image/figure blocks with captions and source refs. |
+| `pdf.compose.add_table` | beta target | Add tables from structured data with source refs. |
+| `pdf.compose.add_appendix` | beta target | Build appendix sections from context packets, citations, or artifacts. |
+| `pdf.compose.compile_packet` | planned/cloud | Compile multi-source evidence packets with source maps and validation. |
+
+### `pdf.patch`
+
+Represent agent edits as explicit patch transactions instead of opaque in-place mutations.
+
+| Tool | Status | Description |
+|---|---:|---|
+| `pdf.patch.plan` | beta target | Create a structured append-only patch manifest for Markdown, code, table, image, and slide evidence. |
+| `pdf.patch.preview` | beta target | Preview patch effects and validation requirements without mutating the input. |
+| `pdf.patch.apply` | beta target | Apply a patch transaction and write a new PDF artifact. |
+| `pdf.patch.verify` | beta target | Verify a patched PDF against the patch manifest. |
+| `pdf.patch.rollback_manifest` | beta target | Produce rollback metadata and input artifact refs. |
+| `pdf.patch.regenerate_section` | planned/cloud | Regenerate a section or page from IR with source refs and validation. |
+
+### `pdf.present`
+
+Generate slide-like PDF artifacts for reports, briefings, teaching, sales, and research.
+
+| Tool | Status | Description |
+|---|---:|---|
+| `pdf.present.create_deck` | beta/cloud | Create a slide-like PDF deck from a context packet, target PDF profile, or composition IR. |
+| `pdf.present.report_to_deck` | planned/cloud | Convert a report into concise presentation pages. |
+| `pdf.present.video_to_deck` | planned/cloud | Turn video transcript/keyframes into a presentation PDF. |
+| `pdf.present.paper_to_deck` | planned/cloud | Turn a paper into a cited research presentation PDF. |
+| `pdf.present.speaker_notes` | planned/cloud | Generate speaker notes tied to slide pages and sources. |
+| `pdf.present.handout` | beta target | Render a deck-like PDF into a printable handout/appendix format. |
+
+### `pdf.artifacts`
+
+Inspect artifact lineage and manifests.
+
+| Tool | Status | Description |
+|---|---:|---|
+| `pdf.artifacts.manifest` | beta target | Return artifact metadata, checksums, source refs, validation links, and retention hints. |
+| `pdf.artifacts.graph` | beta target | Return parent/child artifact lineage for a workflow or output. |
+| `pdf.artifacts.source_map` | beta target | Return generated PDF block/page refs mapped back to sources. |
+| `pdf.artifacts.export_bundle` | beta/local | Export PDF, manifests, validations, source maps, and reports as a portable audit ZIP with checksums. |
+| `pdf.artifacts.verify_bundle` | beta/local | Verify a portable audit ZIP manifest, entries, and SHA-256 checksums before downstream agent use. |
+
 ## Core families
 
 ### `pdf.workflow`
@@ -202,6 +311,8 @@ This is the full public tool map. Some tools can be `planned` or `cloud_only`, b
 
 ### `pdf.ai.rag`
 
+RAG tools are useful evidence helpers, but the broader product layer is `pdf.evidence`.
+
 | Tool | Status | Description |
 |---|---:|---|
 | `pdf.ai.rag.ingest` | beta target | Create local index/chunks. |
@@ -238,16 +349,26 @@ This is the full public tool map. Some tools can be `planned` or `cloud_only`, b
 
 | Tool | Status | Description |
 |---|---:|---|
-| `pdf.ai.create.from_prompt` | cloud_only | Generate PDF from prompt. |
-| `pdf.ai.create.report` | beta/cloud | Create business report. |
+| `pdf.ai.create.from_prompt` | beta target | Local prompt-to-template PDF creation with validation. |
+| `pdf.ai.create.template_preview` | beta target | Generate and validate a local preview PDF for a creation template. |
+| `pdf.ai.create.templates` | beta target | List local creation templates, style packs, and color keys. |
+| `pdf.ai.create.template_packs` | beta target | List reusable local template packs with templates, fields, target profiles, supported block types, and color schemes. |
+| `pdf.ai.create.validate_template_pack` | beta target | Validate a local template pack contract, including layout slots and supported agent blocks. |
+| `pdf.ai.create.plan_template_pack` | beta target | Recommend a local template-pack create payload from a target profile and Context Packet. |
+| `pdf.ai.create.agent` | beta target | Run the local create agent: plan a template, create the PDF, render-check, blank-check, and write coverage evidence. |
+| `pdf.ai.create.from_template_pack` | beta target | Create and validate a PDF from a local template pack entry, color scheme, optional slot-targeted `data.blocks`, or a Context Packet auto-mapped into blocks with a slot routing plan. |
+| `pdf.ai.create.report` | beta/cloud | Dedicated report creation endpoint; local report templates are available through `pdf.ai.create.from_prompt`. |
 | `pdf.ai.create.paper` | planned/cloud | Create academic paper format. |
-| `pdf.ai.create.resume` | beta/cloud | Create resume. |
-| `pdf.ai.create.invoice` | beta target | Template invoice. |
+| `pdf.ai.create.resume` | beta/cloud | Dedicated resume endpoint; local structured resume templates are available through `pdf.ai.create.from_prompt`. |
+| `pdf.ai.create.invoice` | beta target | Dedicated invoice endpoint; local structured invoice templates are available through `pdf.ai.create.from_prompt`. |
 | `pdf.ai.create.contract` | planned/cloud | Contract template. |
-| `pdf.ai.create.proposal` | planned/cloud | Proposal. |
+| `pdf.ai.create.proposal` | planned/cloud | Dedicated proposal endpoint; local proposal templates are available through `pdf.ai.create.from_prompt`. |
 | `pdf.ai.create.training_material` | planned/cloud | Training/education materials. |
-| `pdf.ai.create.worksheet` | planned/cloud | Education worksheet. |
-| `pdf.ai.create.research_brief` | planned/cloud | Research brief. |
+| `pdf.ai.create.worksheet` | planned/cloud | Dedicated worksheet endpoint; local worksheet templates are available through `pdf.ai.create.from_prompt`. |
+| `pdf.ai.create.research_brief` | planned/cloud | Dedicated research brief endpoint; local research brief templates are available through `pdf.ai.create.from_prompt`. |
+| `pdf.ai.create.source_report` | planned/cloud | Generate a source-backed report from multimodal inputs. |
+| `pdf.ai.create.presentation_pdf` | planned/cloud | Generate a slide-like PDF presentation with citations and speaker notes. |
+| `pdf.ai.create.evidence_packet` | planned/cloud | Generate a review packet with sources, claims, and verification reports. |
 
 ### `pdf.ai.edit`
 

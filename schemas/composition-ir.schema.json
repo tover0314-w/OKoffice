@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://okpdf.dev/schemas/composition-ir.schema.json",
+  "title": "AgentPDF Composition IR",
+  "type": "object",
+  "required": ["composition_version", "composition_id", "context_packet_id", "target_profile_id", "blocks"],
+  "properties": {
+    "composition_version": {"type": "string"},
+    "composition_id": {"type": "string", "pattern": "^cmp_"},
+    "context_packet_id": {"type": "string", "pattern": "^ctxpkt_"},
+    "target_profile_id": {"type": "string"},
+    "blocks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["block_id", "type", "source_refs"],
+        "properties": {
+          "block_id": {"type": "string"},
+          "type": {
+            "type": "string",
+            "enum": [
+              "section",
+              "slide",
+              "code",
+              "table",
+              "image",
+              "data",
+              "pdf_reference",
+              "audio_reference",
+              "video_reference",
+              "media_reference",
+              "citation"
+            ]
+          },
+          "title": {"type": "string"},
+          "source_refs": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          "target_slot": {"type": "string"},
+          "render_hints": {"type": "object"},
+          "data": {"type": "object"}
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "source_tool": {"type": "string"},
+        "pack_id": {"type": "string"},
+        "template_id": {"type": "string"},
+        "base_template": {"type": "string"},
+        "color_scheme": {"type": ["string", "null"]},
+        "output_path": {"type": "string"},
+        "slot_routing_plan_id": {"type": "string", "pattern": "^route_"},
+        "template_layer_manifest_id": {"type": "string", "pattern": "^layers_"}
+      }
+    }
+  }
+}

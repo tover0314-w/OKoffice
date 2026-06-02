@@ -317,7 +317,7 @@ The local implementation writes plain text into a validated PDF artifact with st
 
 ### Open-source baseline
 
-The local implementation supports simple Markdown plus deterministic style packs. `style_pack` can be a built-in id such as `plain_report`, `business_report_modern`, `academic_paper_basic`, `resume_modern`, or `invoice_clean`, or a path to a local JSON style pack file. The result usage includes resolved style id, name, source, page settings, colors, and components so agents can audit the selected template. Advanced AI style generation is cloud-only.
+The local implementation supports simple Markdown plus deterministic style packs. `style_pack` can be a built-in id such as `plain_report`, `business_report_modern`, `academic_paper_basic`, `resume_modern`, `invoice_clean`, or `paper_ink`, or a path to a local JSON style pack file. The result usage includes resolved style id, name, source, page settings, colors, and components so agents can audit the selected template. Advanced AI style generation is cloud-only.
 
 ## `pdf.validation.validate_output`
 

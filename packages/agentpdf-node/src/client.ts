@@ -1,7 +1,16 @@
 import type {
   BlankPageCheckInput,
+  BuildContextPacketInput,
+  ComposeFromContextInput,
+  CreateAgentInput,
   CreateMarkdownPdfInput,
+  CreateFromPromptInput,
+  CreateFromTemplatePackInput,
+  CreateTemplatePreviewInput,
+  CreateTemplatePacksInput,
   CreateTextPdfInput,
+  EvidenceCoverageReportInput,
+  ExportBundleInput,
   ExtractImagesInput,
   ImageToPdfInput,
   InsertBlankPagesInput,
@@ -11,6 +20,11 @@ import type {
   MergePdfInput,
   OptimizePdfInput,
   PageNumbersInput,
+  PlanTemplatePackInput,
+  PatchApplyInput,
+  PatchPlanInput,
+  PatchPreviewInput,
+  PatchVerifyInput,
   PdfToMarkdownInput,
   PdfToJsonInput,
   ParseLiteInput,
@@ -23,10 +37,15 @@ import type {
   RagSearchInput,
   RenderCheckInput,
   ReorderPagesInput,
+  SetupClaudeCodeInput,
+  TargetProfilesInput,
   ToolManifest,
   ToolResult,
   ToolSpec,
   ValidateOutputInput,
+  ValidateTemplatePackInput,
+  ValidateTargetProfileInput,
+  VerifyBundleInput,
   WatermarkInput,
   WorkflowPlanInput,
   WorkflowReportInput,
@@ -91,6 +110,17 @@ export class AgentPDFClient {
     return this.runTool("pdf.inspect.document", { path: input.path });
   }
 
+  async setupClaudeCode(input: SetupClaudeCodeInput = {}): Promise<ToolResult> {
+    return this.runTool("agent.setup.claude_code", {
+      ...(input.outputPath ? { output_path: input.outputPath } : {}),
+      ...(input.safeRoot ? { safe_root: input.safeRoot } : {}),
+      ...(input.command ? { command: input.command } : {}),
+      ...(input.argsPrefix && input.argsPrefix.length > 0 ? { args_prefix: input.argsPrefix } : {}),
+      ...(input.serverName ? { server_name: input.serverName } : {}),
+      ...(input.scope ? { scope: input.scope } : {}),
+    });
+  }
+
   async inspectPages(input: InspectPagesInput): Promise<ToolResult> {
     return this.runTool("pdf.inspect.pages", {
       input_path: input.inputPath,
@@ -117,6 +147,99 @@ export class AgentPDFClient {
     return this.runTool("pdf.workflow.report", {
       workflow_run: input.workflowRun,
       ...(input.outputPath ? { output_path: input.outputPath } : {}),
+    });
+  }
+
+  async buildContextPacket(input: BuildContextPacketInput): Promise<ToolResult> {
+    return this.runTool("pdf.context.build_packet", {
+      context_items: input.contextItems,
+      output_path: input.outputPath,
+      ...(input.title ? { title: input.title } : {}),
+      ...(input.intent ? { intent: input.intent } : {}),
+    });
+  }
+
+  async composeFromContext(input: ComposeFromContextInput): Promise<ToolResult> {
+    return this.runTool("pdf.compose.from_context", {
+      ...(input.contextPacket ? { context_packet: input.contextPacket } : {}),
+      ...(input.contextPacketPath ? { context_packet_path: input.contextPacketPath } : {}),
+      ...(input.targetProfile ? { target_profile: input.targetProfile } : {}),
+      ...(input.profile ? { profile: input.profile } : {}),
+      output_path: input.outputPath,
+      ...(input.stylePack ? { style_pack: input.stylePack } : {}),
+      ...(input.title ? { title: input.title } : {}),
+    });
+  }
+
+  async targetProfiles(input: TargetProfilesInput = {}): Promise<ToolResult> {
+    return this.runTool("pdf.target.profiles", {
+      ...(input.outputPath ? { output_path: input.outputPath } : {}),
+    });
+  }
+
+  async validateTargetProfile(input: ValidateTargetProfileInput = {}): Promise<ToolResult> {
+    return this.runTool("pdf.target.validate_profile", {
+      ...(input.targetProfile ? { target_profile: input.targetProfile } : {}),
+      ...(input.profile ? { profile: input.profile } : {}),
+      ...(input.outputPath ? { output_path: input.outputPath } : {}),
+    });
+  }
+
+  async evidenceCoverageReport(input: EvidenceCoverageReportInput): Promise<ToolResult> {
+    return this.runTool("pdf.evidence.coverage_report", {
+      ...(input.composition ? { composition: input.composition } : {}),
+      ...(input.compositionPath ? { composition_path: input.compositionPath } : {}),
+      ...(input.outputPath ? { output_path: input.outputPath } : {}),
+    });
+  }
+
+  async exportBundle(input: ExportBundleInput): Promise<ToolResult> {
+    return this.runTool("pdf.artifacts.export_bundle", {
+      artifact_paths: input.artifactPaths,
+      output_path: input.outputPath,
+      ...(input.title ? { title: input.title } : {}),
+      ...(input.metadata ? { metadata: input.metadata } : {}),
+    });
+  }
+
+  async verifyBundle(input: VerifyBundleInput): Promise<ToolResult> {
+    return this.runTool("pdf.artifacts.verify_bundle", {
+      bundle_path: input.bundlePath,
+    });
+  }
+
+  async patchPlan(input: PatchPlanInput): Promise<ToolResult> {
+    return this.runTool("pdf.patch.plan", {
+      input_path: input.inputPath,
+      operations: input.operations,
+      output_path: input.outputPath,
+      ...(input.compositionPath ? { composition_path: input.compositionPath } : {}),
+      ...(input.layerManifestPath ? { layer_manifest_path: input.layerManifestPath } : {}),
+      ...(input.reason ? { reason: input.reason } : {}),
+    });
+  }
+
+  async patchPreview(input: PatchPreviewInput): Promise<ToolResult> {
+    return this.runTool("pdf.patch.preview", {
+      ...(input.patchManifest ? { patch_manifest: input.patchManifest } : {}),
+      ...(input.patchManifestPath ? { patch_manifest_path: input.patchManifestPath } : {}),
+      ...(input.outputPath ? { output_path: input.outputPath } : {}),
+    });
+  }
+
+  async patchApply(input: PatchApplyInput): Promise<ToolResult> {
+    return this.runTool("pdf.patch.apply", {
+      ...(input.patchManifest ? { patch_manifest: input.patchManifest } : {}),
+      ...(input.patchManifestPath ? { patch_manifest_path: input.patchManifestPath } : {}),
+      output_path: input.outputPath,
+    });
+  }
+
+  async patchVerify(input: PatchVerifyInput): Promise<ToolResult> {
+    return this.runTool("pdf.patch.verify", {
+      ...(input.patchManifest ? { patch_manifest: input.patchManifest } : {}),
+      ...(input.patchManifestPath ? { patch_manifest_path: input.patchManifestPath } : {}),
+      patched_path: input.patchedPath,
     });
   }
 
@@ -201,6 +324,96 @@ export class AgentPDFClient {
       output_path: input.outputPath,
       ...(input.title ? { title: input.title } : {}),
       ...(input.stylePack ? { style_pack: input.stylePack } : {}),
+    });
+  }
+
+  async createFromPrompt(input: CreateFromPromptInput): Promise<ToolResult> {
+    return this.runTool("pdf.ai.create.from_prompt", {
+      prompt: input.prompt,
+      output_path: input.outputPath,
+      ...(input.template ? { template: input.template } : {}),
+      ...(input.stylePack ? { style_pack: input.stylePack } : {}),
+      ...(input.colors ? { colors: input.colors } : {}),
+      ...(input.data ? { data: input.data } : {}),
+      ...(input.title ? { title: input.title } : {}),
+    });
+  }
+
+  async createTemplates(): Promise<ToolResult> {
+    return this.runTool("pdf.ai.create.templates", {});
+  }
+
+  async createTemplatePacks(input: CreateTemplatePacksInput = {}): Promise<ToolResult> {
+    return this.runTool("pdf.ai.create.template_packs", {
+      ...(input.outputPath ? { output_path: input.outputPath } : {}),
+    });
+  }
+
+  async validateTemplatePack(input: ValidateTemplatePackInput): Promise<ToolResult> {
+    return this.runTool("pdf.ai.create.validate_template_pack", {
+      ...(input.templatePack ? { template_pack: input.templatePack } : {}),
+      ...(input.templatePackPath ? { template_pack_path: input.templatePackPath } : {}),
+      ...(input.outputPath ? { output_path: input.outputPath } : {}),
+    });
+  }
+
+  async planTemplatePack(input: PlanTemplatePackInput): Promise<ToolResult> {
+    return this.runTool("pdf.ai.create.plan_template_pack", {
+      ...(input.templatePack ? { template_pack: input.templatePack } : {}),
+      ...(input.templatePackPath ? { template_pack_path: input.templatePackPath } : {}),
+      ...(input.targetProfile ? { target_profile: input.targetProfile } : {}),
+      ...(input.profile ? { profile: input.profile } : {}),
+      ...(input.contextPacket ? { context_packet: input.contextPacket } : {}),
+      ...(input.contextPacketPath ? { context_packet_path: input.contextPacketPath } : {}),
+      ...(input.plannedOutputPath ? { planned_output_path: input.plannedOutputPath } : {}),
+      ...(input.outputPath ? { output_path: input.outputPath } : {}),
+      ...(input.preferredTemplateId ? { preferred_template_id: input.preferredTemplateId } : {}),
+      ...(input.preferredColorScheme ? { preferred_color_scheme: input.preferredColorScheme } : {}),
+    });
+  }
+
+  async createAgent(input: CreateAgentInput): Promise<ToolResult> {
+    return this.runTool("pdf.ai.create.agent", {
+      ...(input.templatePack ? { template_pack: input.templatePack } : {}),
+      ...(input.templatePackPath ? { template_pack_path: input.templatePackPath } : {}),
+      ...(input.targetProfile ? { target_profile: input.targetProfile } : {}),
+      ...(input.profile ? { profile: input.profile } : {}),
+      ...(input.contextPacket ? { context_packet: input.contextPacket } : {}),
+      ...(input.contextPacketPath ? { context_packet_path: input.contextPacketPath } : {}),
+      output_path: input.outputPath,
+      ...(input.planOutputPath ? { plan_output_path: input.planOutputPath } : {}),
+      ...(input.coverageOutputPath ? { coverage_output_path: input.coverageOutputPath } : {}),
+      ...(input.preferredTemplateId ? { preferred_template_id: input.preferredTemplateId } : {}),
+      ...(input.preferredColorScheme ? { preferred_color_scheme: input.preferredColorScheme } : {}),
+      ...(input.title ? { title: input.title } : {}),
+      ...(input.prompt ? { prompt: input.prompt } : {}),
+      ...(input.stylePack ? { style_pack: input.stylePack } : {}),
+    });
+  }
+
+  async createFromTemplatePack(input: CreateFromTemplatePackInput): Promise<ToolResult> {
+    return this.runTool("pdf.ai.create.from_template_pack", {
+      ...(input.templatePack ? { template_pack: input.templatePack } : {}),
+      ...(input.templatePackPath ? { template_pack_path: input.templatePackPath } : {}),
+      template_id: input.templateId,
+      output_path: input.outputPath,
+      ...(input.colorScheme ? { color_scheme: input.colorScheme } : {}),
+      ...(input.data ? { data: input.data } : {}),
+      ...(input.contextPacket ? { context_packet: input.contextPacket } : {}),
+      ...(input.contextPacketPath ? { context_packet_path: input.contextPacketPath } : {}),
+      ...(input.title ? { title: input.title } : {}),
+      ...(input.prompt ? { prompt: input.prompt } : {}),
+      ...(input.stylePack ? { style_pack: input.stylePack } : {}),
+    });
+  }
+
+  async createTemplatePreview(input: CreateTemplatePreviewInput): Promise<ToolResult> {
+    return this.runTool("pdf.ai.create.template_preview", {
+      template: input.template,
+      output_path: input.outputPath,
+      ...(input.stylePack ? { style_pack: input.stylePack } : {}),
+      ...(input.colors ? { colors: input.colors } : {}),
+      ...(input.data ? { data: input.data } : {}),
     });
   }
 

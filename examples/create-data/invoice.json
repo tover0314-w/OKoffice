@@ -1,0 +1,19 @@
+{
+  "title": "Invoice INV-1001",
+  "invoice_number": "INV-1001",
+  "client": "AgentPDF Labs",
+  "due_date": "2026-06-30",
+  "items": [
+    {
+      "description": "Template implementation",
+      "quantity": 2,
+      "unit_price": 500
+    },
+    {
+      "description": "Validation workflow",
+      "quantity": 1,
+      "unit_price": 350
+    }
+  ],
+  "payment_notes": "Pay by bank transfer."
+}

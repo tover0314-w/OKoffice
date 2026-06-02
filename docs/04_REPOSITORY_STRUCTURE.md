@@ -33,6 +33,7 @@ agentpdf/
         __init__.py
         store.py
         models.py
+        graph.py
       cli/
         __init__.py
         main.py
@@ -51,6 +52,21 @@ agentpdf/
         __init__.py
         models.py
         lite_parse.py
+        composition.py
+      context/
+        __init__.py
+        ingest.py
+        packet.py
+      target/
+        __init__.py
+        profiles.py
+      sources/
+        __init__.py
+        graph.py
+      evidence/
+        __init__.py
+        citations.py
+        coverage.py
       mcp/
         __init__.py
         server.py
@@ -59,6 +75,10 @@ agentpdf/
         __init__.py
         chunking.py
         retrieval.py
+      patch/
+        __init__.py
+        manifest.py
+        apply.py
       schemas/
         __init__.py
         common.py
@@ -75,6 +95,12 @@ agentpdf/
         __init__.py
         pdf_validation.py
         visual_diff.py
+        source_coverage.py
+      workflows/
+        __init__.py
+        planner.py
+        runner.py
+        report.py
       workers/
         __init__.py
         base.py
@@ -97,6 +123,11 @@ agentpdf/
 - `src/agentpdf/schemas/tool_result.py`
 - `src/agentpdf/artifacts/models.py`
 - `src/agentpdf/validation/pdf_validation.py`
+- `src/agentpdf/context/packet.py`
+- `src/agentpdf/target/profiles.py`
+- `src/agentpdf/sources/graph.py`
+- `src/agentpdf/ir/composition.py`
+- `src/agentpdf/patch/manifest.py`
 - `tests/unit/test_tool_registry.py`
 - `tests/integration/test_cli_inspect.py`
 

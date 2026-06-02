@@ -1,0 +1,294 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://okpdf.dev/schemas/context-packet.schema.json",
+  "title": "AgentPDF Context Packet",
+  "type": "object",
+  "required": ["context_packet_version", "context_packet_id", "items", "source_graph"],
+  "properties": {
+    "context_packet_version": {"type": "string"},
+    "context_packet_id": {"type": "string", "pattern": "^ctxpkt_"},
+    "title": {"type": "string"},
+    "intent": {"type": "string"},
+    "items": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/context_item"}
+    },
+    "source_graph": {"$ref": "#/$defs/source_graph"}
+  },
+  "$defs": {
+    "context_item": {
+      "type": "object",
+      "required": ["context_item_id", "type", "role", "source_ref"],
+      "properties": {
+        "context_item_id": {"type": "string", "pattern": "^ctx_"},
+        "type": {
+          "type": "string",
+          "enum": ["text", "pdf", "image", "code", "data", "document", "audio", "video", "media", "web_link", "file"]
+        },
+        "role": {"type": "string"},
+        "label": {"type": "string"},
+        "source_ref": {"type": "string"},
+        "uri": {"type": "string"},
+        "metadata": {"type": "object"},
+        "content": {
+          "type": "object",
+          "properties": {
+            "text": {"type": "string"},
+            "code": {"$ref": "#/$defs/code_ref"},
+            "table": {"$ref": "#/$defs/table_preview"},
+            "image": {"$ref": "#/$defs/image_ref"},
+            "pdf": {"$ref": "#/$defs/pdf_ref"},
+            "citation": {"$ref": "#/$defs/citation_ref"},
+            "media": {"$ref": "#/$defs/media_ref"},
+            "transcript": {"$ref": "#/$defs/transcript_ref"},
+            "chapters": {"$ref": "#/$defs/timed_markers"},
+            "keyframes": {"$ref": "#/$defs/timed_markers"}
+          },
+          "additionalProperties": true
+        }
+      }
+    },
+    "code_ref": {
+      "type": "object",
+      "required": ["text", "code_evidence"],
+      "additionalProperties": true,
+      "properties": {
+        "text": {"type": "string"},
+        "code_evidence": {"$ref": "#/$defs/code_evidence"}
+      }
+    },
+    "code_evidence": {
+      "type": "object",
+      "required": ["language", "line_count", "char_count", "code_hash", "symbol_count", "symbols"],
+      "additionalProperties": true,
+      "properties": {
+        "language": {"type": "string"},
+        "line_count": {"type": "integer", "minimum": 0},
+        "char_count": {"type": "integer", "minimum": 0},
+        "code_hash": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "symbol_count": {"type": "integer", "minimum": 0},
+        "analysis_method": {"type": "string"},
+        "symbols": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "kind", "line"],
+            "additionalProperties": true,
+            "properties": {
+              "name": {"type": "string"},
+              "kind": {"type": "string"},
+              "line": {"type": "integer", "minimum": 1}
+            }
+          }
+        }
+      }
+    },
+    "table_preview": {
+      "type": "object",
+      "required": ["columns", "rows"],
+      "properties": {
+        "columns": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "rows": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {"type": "string"}
+          }
+        },
+        "preview_row_count": {"type": "integer"},
+        "table_evidence": {"$ref": "#/$defs/table_evidence"}
+      }
+    },
+    "table_evidence": {
+      "type": "object",
+      "required": ["row_count", "column_count", "preview_row_count", "column_types", "table_hash"],
+      "additionalProperties": true,
+      "properties": {
+        "row_count": {"type": "integer", "minimum": 0},
+        "column_count": {"type": "integer", "minimum": 0},
+        "preview_row_count": {"type": "integer", "minimum": 0},
+        "column_types": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "enum": ["empty", "boolean", "number", "string"]
+          }
+        },
+        "table_hash": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "analysis_method": {"type": "string"}
+      }
+    },
+    "image_ref": {
+      "type": "object",
+      "required": ["path", "filename"],
+      "properties": {
+        "path": {"type": "string"},
+        "filename": {"type": "string"},
+        "width": {"type": "integer"},
+        "height": {"type": "integer"},
+        "mode": {"type": "string"},
+        "visual_evidence": {"$ref": "#/$defs/image_visual_evidence"}
+      }
+    },
+    "image_visual_evidence": {
+      "type": "object",
+      "required": ["width", "height", "non_white_ratio", "is_blank", "perceptual_hash"],
+      "additionalProperties": true,
+      "properties": {
+        "width": {"type": "integer"},
+        "height": {"type": "integer"},
+        "aspect_ratio": {"type": ["number", "null"]},
+        "mode": {"type": "string"},
+        "average_color_rgb": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": {"type": "integer", "minimum": 0, "maximum": 255}
+        },
+        "non_white_ratio": {"type": "number", "minimum": 0, "maximum": 1},
+        "is_blank": {"type": "boolean"},
+        "perceptual_hash": {"type": "string", "pattern": "^[a-f0-9]{16}$"},
+        "analysis_method": {"type": "string"}
+      }
+    },
+    "pdf_ref": {
+      "type": "object",
+      "required": ["path", "page_count"],
+      "additionalProperties": true,
+      "properties": {
+        "path": {"type": "string"},
+        "page_count": {"type": "integer", "minimum": 0},
+        "pdf_evidence": {"$ref": "#/$defs/pdf_text_evidence"}
+      }
+    },
+    "pdf_text_evidence": {
+      "type": "object",
+      "required": ["page_count", "extracted_page_count", "text_char_count", "has_text_layer", "pages"],
+      "additionalProperties": true,
+      "properties": {
+        "page_count": {"type": "integer", "minimum": 0},
+        "extracted_page_count": {"type": "integer", "minimum": 0},
+        "text_char_count": {"type": "integer", "minimum": 0},
+        "has_text_layer": {"type": "boolean"},
+        "analysis_method": {"type": "string"},
+        "pages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["page_number", "bbox", "char_count", "text_preview"],
+            "additionalProperties": true,
+            "properties": {
+              "page_number": {"type": "integer", "minimum": 1},
+              "bbox": {
+                "type": "array",
+                "minItems": 4,
+                "maxItems": 4,
+                "items": {"type": "number"}
+              },
+              "width": {"type": "number"},
+              "height": {"type": "number"},
+              "char_count": {"type": "integer", "minimum": 0},
+              "text_preview": {"type": "string"}
+            }
+          }
+        }
+      }
+    },
+    "citation_ref": {
+      "type": "object",
+      "required": ["url", "citation_evidence"],
+      "additionalProperties": true,
+      "properties": {
+        "url": {"type": "string"},
+        "citation_evidence": {"$ref": "#/$defs/citation_evidence"}
+      }
+    },
+    "citation_evidence": {
+      "type": "object",
+      "required": ["normalized_url", "scheme", "domain", "fetch_status"],
+      "additionalProperties": true,
+      "properties": {
+        "url": {"type": "string"},
+        "normalized_url": {"type": "string"},
+        "scheme": {"type": "string"},
+        "domain": {"type": "string"},
+        "path": {"type": "string"},
+        "query": {"type": "string"},
+        "fragment": {"type": "string"},
+        "title": {"type": "string"},
+        "snippet": {"type": "string"},
+        "author": {"type": "string"},
+        "published_at": {"type": "string"},
+        "accessed_at": {"type": "string"},
+        "source_type": {"type": "string"},
+        "fetch_status": {"type": "string", "enum": ["not_fetched", "provided", "fetched", "failed"]},
+        "analysis_method": {"type": "string"}
+      }
+    },
+    "media_ref": {
+      "type": "object",
+      "required": ["path", "filename", "kind"],
+      "properties": {
+        "path": {"type": "string"},
+        "filename": {"type": "string"},
+        "kind": {"type": "string", "enum": ["audio", "video", "media"]},
+        "mime_type": {"type": "string"}
+      }
+    },
+    "transcript_ref": {
+      "type": "object",
+      "required": ["text"],
+      "properties": {
+        "text": {"type": "string"},
+        "char_count": {"type": "integer"},
+        "source": {"type": "string"}
+      }
+    },
+    "timed_markers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "marker_id": {"type": "string"},
+          "start_seconds": {"type": "number"},
+          "end_seconds": {"type": "number"},
+          "timestamp_seconds": {"type": "number"},
+          "title": {"type": "string"},
+          "label": {"type": "string"},
+          "text": {"type": "string"},
+          "path": {"type": "string"}
+        }
+      }
+    },
+    "source_graph": {
+      "type": "object",
+      "required": ["source_graph_version", "source_graph_id", "nodes", "edges"],
+      "properties": {
+        "source_graph_version": {"type": "string"},
+        "source_graph_id": {"type": "string", "pattern": "^srcgraph_"},
+        "nodes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["node_id", "context_item_id", "source_ref", "type"],
+            "properties": {
+              "node_id": {"type": "string"},
+              "context_item_id": {"type": "string"},
+              "source_ref": {"type": "string"},
+              "type": {"type": "string"},
+              "role": {"type": "string"},
+              "label": {"type": "string"},
+              "uri": {"type": ["string", "null"]},
+              "evidence": {"type": "object"}
+            }
+          }
+        },
+        "edges": {"type": "array"}
+      }
+    }
+  }
+}

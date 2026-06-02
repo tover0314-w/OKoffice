@@ -28,56 +28,6 @@ def test_tools_show_json_returns_one_tool() -> None:
     assert payload["implemented"] is True
 
 
-def test_agents_config_cli_generates_claude_mcp_config(tmp_path: Path) -> None:
-    output = tmp_path / "claude_desktop_config.json"
-
-    result = runner.invoke(
-        app,
-        [
-            "agents",
-            "config",
-            "--client",
-            "claude-desktop",
-            "--command",
-            "okpdf",
-            "--safe-root",
-            ".",
-            "--output",
-            str(output),
-            "--json",
-        ],
-    )
-
-    assert result.exit_code == 0
-    payload = json.loads(result.stdout)
-    assert payload["tool"] == "agent.config.generate"
-    assert payload["status"] == "succeeded"
-    assert payload["usage"]["client"] == "claude-desktop"
-    assert payload["usage"]["config"]["mcpServers"]["agentpdf"]["command"] == "okpdf"
-    assert payload["usage"]["config"]["mcpServers"]["agentpdf"]["args"] == [
-        "serve",
-        "--mcp",
-        "--safe-root",
-        ".",
-    ]
-    assert payload["artifacts"][0]["path"] == str(output)
-    assert output.exists()
-
-
-def test_agents_doctor_cli_reports_agent_readiness() -> None:
-    result = runner.invoke(app, ["agents", "doctor", "--json"])
-
-    assert result.exit_code == 0
-    payload = json.loads(result.stdout)
-    assert payload["tool"] == "agent.local.doctor"
-    assert payload["usage"]["checks"]["python"]["ok"] is True
-    assert payload["usage"]["checks"]["agentpdf_import"]["ok"] is True
-    assert payload["usage"]["checks"]["mcp_dependency"]["ok"] is True
-    assert payload["usage"]["checks"]["mcp_config_examples"]["ok"] is True
-    assert payload["usage"]["tools"]["implemented_count"] >= 30
-    assert "agents config" in " ".join(payload["next_recommended_tools"])
-
-
 def test_workflow_plan_cli_returns_agent_steps() -> None:
     result = runner.invoke(
         app,
@@ -446,6 +396,92 @@ def test_create_text_and_markdown_cli(tmp_path: Path) -> None:
     assert markdown.exit_code == 0
     assert json.loads(markdown.stdout)["tool"] == "pdf.convert.markdown_to_pdf"
     assert markdown_output.exists()
+
+
+def test_create_from_prompt_cli_uses_template_and_style_pack(tmp_path: Path) -> None:
+    output = tmp_path / "agent-brief.pdf"
+    data = tmp_path / "brief-data.json"
+    data.write_text(
+        json.dumps(
+            {
+                "audience": "local agents",
+                "sections": [
+                    {
+                        "heading": "Template Engine",
+                        "body": "The local create agent turns prompts into validated PDFs.",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "create",
+            "from-prompt",
+            "Create a research brief for okpdf template creation.",
+            "-o",
+            str(output),
+            "--template",
+            "research_brief",
+            "--style-pack",
+            "paper_ink",
+            "--data",
+            str(data),
+            "--color",
+            "primary=#4f46e5",
+            "--color",
+            "accent=#f59e0b",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["tool"] == "pdf.ai.create.from_prompt"
+    assert payload["usage"]["template_id"] == "research_brief"
+    assert payload["usage"]["style_pack"] == "paper_ink"
+    assert payload["usage"]["colors"]["primary"] == "#4f46e5"
+    assert payload["usage"]["colors"]["accent"] == "#f59e0b"
+    assert "Template Engine" in payload["usage"]["generated_markdown"]
+    assert output.exists()
+
+
+def test_create_templates_cli_lists_catalog() -> None:
+    result = runner.invoke(app, ["create", "templates", "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["tool"] == "pdf.ai.create.templates"
+    assert "research_brief" in payload["usage"]["templates"]
+    assert "paper_ink" in payload["usage"]["style_packs"]
+    assert payload["usage"]["templates"]["invoice"]["preview_tool"] == "pdf.ai.create.template_preview"
+
+
+def test_create_template_preview_cli_generates_valid_pdf(tmp_path: Path) -> None:
+    output = tmp_path / "invoice-preview.pdf"
+
+    result = runner.invoke(
+        app,
+        [
+            "create",
+            "preview",
+            "invoice",
+            "-o",
+            str(output),
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["tool"] == "pdf.ai.create.template_preview"
+    assert payload["usage"]["template_id"] == "invoice"
+    assert payload["usage"]["data_source"] == "template_sample_data"
+    assert payload["validation"]["status"] == "passed"
+    assert output.exists()
 
 
 def test_image_watermark_page_numbers_and_validate_cli(tmp_path: Path) -> None:

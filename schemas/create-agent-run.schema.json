@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://okpdf.dev/schemas/create-agent-run.schema.json",
+  "title": "AgentPDF Create Agent Run",
+  "type": "object",
+  "required": [
+    "create_agent_run_version",
+    "create_agent_run_id",
+    "status",
+    "selected_template_id",
+    "selected_color_scheme",
+    "selected_style_pack",
+    "step_order",
+    "output_pdf_path",
+    "composition_path",
+    "template_layer_manifest_path",
+    "plan_path",
+    "coverage_path",
+    "plan",
+    "create_result",
+    "render_check",
+    "blank_page_check",
+    "coverage_report",
+    "slot_routing_plan",
+    "template_layer_manifest",
+    "evidence_coverage",
+    "validation_summary"
+  ],
+  "properties": {
+    "create_agent_run_version": {"type": "string"},
+    "create_agent_run_id": {"type": "string", "pattern": "^createagent_"},
+    "status": {"type": "string", "enum": ["succeeded", "failed"]},
+    "target_profile": {"type": ["string", "null"]},
+    "context_packet_id": {"type": ["string", "null"]},
+    "selected_template_id": {"type": "string"},
+    "selected_color_scheme": {"type": ["string", "null"]},
+    "selected_style_pack": {"type": "string"},
+    "step_order": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "output_pdf_path": {"type": "string"},
+    "composition_path": {"type": "string"},
+    "template_layer_manifest_path": {"type": "string"},
+    "plan_path": {"type": "string"},
+    "coverage_path": {"type": "string"},
+    "plan": {"type": "object"},
+    "create_result": {"type": "object"},
+    "render_check": {
+      "type": "object",
+      "required": ["validation", "usage"],
+      "properties": {
+        "validation": {"type": "object"},
+        "usage": {"type": "object"}
+      }
+    },
+    "blank_page_check": {
+      "type": "object",
+      "required": ["validation", "usage"],
+      "properties": {
+        "validation": {"type": "object"},
+        "usage": {"type": "object"}
+      }
+    },
+    "coverage_report": {"type": "object"},
+    "slot_routing_plan": {"type": "object"},
+    "template_layer_manifest": {"type": "object"},
+    "evidence_coverage": {"type": "object"},
+    "validation_summary": {
+      "type": "object",
+      "required": ["create_pdf", "render_check", "blank_page_check", "coverage_ratio"],
+      "properties": {
+        "create_pdf": {"type": "string"},
+        "render_check": {"type": "string"},
+        "blank_page_check": {"type": "string"},
+        "coverage_ratio": {"type": "number"}
+      }
+    }
+  }
+}

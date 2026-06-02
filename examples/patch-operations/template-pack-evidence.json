@@ -1,0 +1,6 @@
+{
+  "op": "append_markdown",
+  "title": "Template Pack Evidence Note",
+  "markdown": "## Template Pack Evidence Note\n\nThis appendix cites the local template-pack source data used to create the board audit PDF.",
+  "source_refs": ["tpl://local_agent_starter/board_audit/sample_data"]
+}

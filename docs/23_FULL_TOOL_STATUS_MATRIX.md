@@ -1,9 +1,55 @@
 # 23 — Full Tool Status Matrix
 
-Total tools specified: **164**
+Total tools specified: **218**
 
 | Tool | Category | Status | OSS default |
 |---|---|---:|---:|
+| `agent.setup.claude_code` | agent | beta | yes |
+| `pdf.context.ingest` | context | beta | yes |
+| `pdf.context.packet` | context | beta | yes |
+| `pdf.context.build_packet` | context | beta | yes |
+| `pdf.context.classify` | context | beta | yes |
+| `pdf.context.image_analyze` | context | planned/cloud | no |
+| `pdf.context.video_transcribe` | context | planned/cloud | no |
+| `pdf.context.video_keyframes` | context | planned/cloud | no |
+| `pdf.context.audio_transcribe` | context | planned/cloud | no |
+| `pdf.context.web_capture` | context | planned/cloud | no |
+| `pdf.context.code_snapshot` | context | beta | yes |
+| `pdf.context.data_profile` | context | beta | yes |
+| `pdf.target.profiles` | target | beta | yes |
+| `pdf.target.validate_profile` | target | beta | yes |
+| `pdf.target.select_profile` | target | planned | no |
+| `pdf.evidence.map_sources` | evidence | beta | yes |
+| `pdf.evidence.cite_claims` | evidence | beta | yes |
+| `pdf.evidence.coverage_report` | evidence | beta | yes |
+| `pdf.evidence.highlight_sources` | evidence | beta | yes |
+| `pdf.evidence.context_packet_report` | evidence | planned | yes |
+| `pdf.evidence.verify_citations` | evidence | planned/cloud | no |
+| `pdf.compose.plan` | compose | beta | yes |
+| `pdf.compose.from_context` | compose | beta | yes |
+| `pdf.compose.render_ir` | compose | beta | yes |
+| `pdf.compose.add_code_block` | compose | beta | yes |
+| `pdf.compose.add_figure` | compose | beta | yes |
+| `pdf.compose.add_table` | compose | beta | yes |
+| `pdf.compose.add_appendix` | compose | beta | yes |
+| `pdf.compose.compile_packet` | compose | planned/cloud | no |
+| `pdf.patch.plan` | patch | beta | yes |
+| `pdf.patch.preview` | patch | beta | yes |
+| `pdf.patch.apply` | patch | beta | yes |
+| `pdf.patch.verify` | patch | beta | yes |
+| `pdf.patch.rollback_manifest` | patch | beta | yes |
+| `pdf.patch.regenerate_section` | patch | planned/cloud | no |
+| `pdf.present.create_deck` | present | beta/cloud | no |
+| `pdf.present.report_to_deck` | present | planned/cloud | no |
+| `pdf.present.video_to_deck` | present | planned/cloud | no |
+| `pdf.present.paper_to_deck` | present | planned/cloud | no |
+| `pdf.present.speaker_notes` | present | planned/cloud | no |
+| `pdf.present.handout` | present | beta | yes |
+| `pdf.artifacts.manifest` | artifacts | beta | yes |
+| `pdf.artifacts.graph` | artifacts | beta | yes |
+| `pdf.artifacts.source_map` | artifacts | beta | yes |
+| `pdf.artifacts.export_bundle` | artifacts | beta/local | yes |
+| `pdf.artifacts.verify_bundle` | artifacts | beta/local | yes |
 | `pdf.workflow.plan` | workflow | beta | yes |
 | `pdf.workflow.run` | workflow | beta | yes |
 | `pdf.workflow.report` | workflow | beta | yes |
@@ -143,7 +189,12 @@ Total tools specified: **164**
 | `pdf.ai.translate.with_glossary` | ai_translate | cloud_only | no |
 | `pdf.ai.translate.tables` | ai_translate | cloud_only | no |
 | `pdf.ai.translate.annotations` | ai_translate | cloud_only | no |
-| `pdf.ai.create.from_prompt` | ai_create | cloud_only | no |
+| `pdf.ai.create.from_prompt` | ai_create | beta | yes |
+| `pdf.ai.create.template_preview` | ai_create | beta | yes |
+| `pdf.ai.create.templates` | ai_create | beta | yes |
+| `pdf.ai.create.template_packs` | ai_create | beta | yes |
+| `pdf.ai.create.validate_template_pack` | ai_create | beta | yes |
+| `pdf.ai.create.from_template_pack` | ai_create | beta | yes |
 | `pdf.ai.create.report` | ai_create | cloud_only | no |
 | `pdf.ai.create.paper` | ai_create | cloud_only | no |
 | `pdf.ai.create.resume` | ai_create | cloud_only | no |
@@ -153,6 +204,9 @@ Total tools specified: **164**
 | `pdf.ai.create.training_material` | ai_create | cloud_only | no |
 | `pdf.ai.create.worksheet` | ai_create | cloud_only | no |
 | `pdf.ai.create.research_brief` | ai_create | cloud_only | no |
+| `pdf.ai.create.source_report` | ai_create | cloud_only | no |
+| `pdf.ai.create.presentation_pdf` | ai_create | cloud_only | no |
+| `pdf.ai.create.evidence_packet` | ai_create | cloud_only | no |
 | `pdf.ai.edit.rewrite_section` | ai_edit | cloud_only | no |
 | `pdf.ai.edit.simplify_language` | ai_edit | cloud_only | no |
 | `pdf.ai.edit.formalize` | ai_edit | cloud_only | no |

@@ -1,0 +1,295 @@
+{
+  "pack_id": "local_agent_starter",
+  "name": "Local Agent Starter",
+  "version": "0.1.0",
+  "description": "Local-first templates for agent-generated reports, packets, and worksheets.",
+  "license": "Apache-2.0",
+  "cloud_required": false,
+  "templates": [
+    {
+      "template_id": "board_audit",
+      "name": "Board Audit Packet",
+      "description": "A leadership-ready audit packet for code, metrics, evidence, and recommendations.",
+      "base_template": "business_report",
+      "target_profile": "technical_audit",
+      "default_style_pack": "business_report_modern",
+      "fields": {
+        "required": ["title", "sections"],
+        "optional": ["audience", "checklist", "risks"]
+      },
+      "layout_slots": ["cover", "executive_summary", "findings", "evidence", "recommendations"],
+      "supported_block_types": ["section", "code", "table", "image", "slide", "citation"],
+      "color_schemes": {
+        "executive_blue": {
+          "primary": "#1f3a5f",
+          "accent": "#f59e0b",
+          "text": "#111827"
+        },
+        "ink_review": {
+          "primary": "#111827",
+          "accent": "#0f766e",
+          "text": "#111827"
+        }
+      },
+      "sample_data": {
+        "title": "AgentPDF Board Audit",
+        "audience": "engineering leadership",
+        "sections": [
+          {
+            "heading": "Executive Summary",
+            "body": "AgentPDF turns heterogeneous context into validated PDF artifacts."
+          },
+          {
+            "heading": "Evidence",
+            "body": "Every block can be traced through source refs, validation, and patch manifests."
+          }
+        ],
+        "checklist": ["Run render-check", "Inspect evidence coverage", "Archive source map"]
+      }
+    },
+    {
+      "template_id": "research_brief_packet",
+      "name": "Research Brief Packet",
+      "description": "A cited research brief with findings, implications, and source notes.",
+      "base_template": "research_brief",
+      "target_profile": "research_brief",
+      "default_style_pack": "paper_ink",
+      "fields": {
+        "required": ["title", "sections"],
+        "optional": ["audience", "checklist", "citations"]
+      },
+      "layout_slots": ["cover", "research_question", "findings", "implications", "sources"],
+      "supported_block_types": ["section", "table", "image", "code", "citation"],
+      "color_schemes": {
+        "paper_blue": {
+          "primary": "#1d4ed8",
+          "accent": "#0f766e",
+          "text": "#111827"
+        },
+        "citation_teal": {
+          "primary": "#0f766e",
+          "accent": "#9333ea",
+          "text": "#111827"
+        }
+      },
+      "sample_data": {
+        "title": "Local Agent Research Brief",
+        "audience": "agent infrastructure teams",
+        "sections": [
+          {
+            "heading": "Research Question",
+            "body": "How should local agents turn heterogeneous context into cited PDFs?"
+          },
+          {
+            "heading": "Findings",
+            "body": "Target profiles, template packs, and evidence coverage make outputs auditable."
+          }
+        ],
+        "checklist": ["Review citations", "Run render-check", "Attach source map"]
+      }
+    },
+    {
+      "template_id": "evidence_packet",
+      "name": "Evidence Packet",
+      "description": "A source-backed packet for exhibits, claims, and validation evidence.",
+      "base_template": "business_report",
+      "target_profile": "evidence_packet_pdf",
+      "default_style_pack": "business_report_modern",
+      "fields": {
+        "required": ["title", "sections"],
+        "optional": ["audience", "checklist", "source_notes"]
+      },
+      "layout_slots": ["cover", "evidence_summary", "source_items", "source_map"],
+      "supported_block_types": ["section", "code", "table", "image", "slide", "citation"],
+      "color_schemes": {
+        "evidence_slate": {
+          "primary": "#334155",
+          "accent": "#dc2626",
+          "text": "#111827"
+        }
+      },
+      "sample_data": {
+        "title": "Local Evidence Packet",
+        "audience": "reviewers",
+        "sections": [
+          {
+            "heading": "Evidence Summary",
+            "body": "Every included block keeps source refs and validation evidence."
+          },
+          {
+            "heading": "Source Map",
+            "body": "Use the composition artifact to audit each claim and inserted asset."
+          }
+        ],
+        "checklist": ["Confirm source refs", "Run coverage report", "Export audit bundle"]
+      }
+    },
+    {
+      "template_id": "agent_resume",
+      "name": "Agent Resume",
+      "description": "An ATS-friendly resume template with source-backed profile evidence.",
+      "base_template": "resume",
+      "target_profile": "resume_pdf",
+      "default_style_pack": "resume_modern",
+      "fields": {
+        "required": ["name"],
+        "optional": ["headline", "contact", "summary", "skills", "experience"]
+      },
+      "layout_slots": ["header", "contact", "summary", "skills", "experience"],
+      "supported_block_types": ["section", "table", "citation"],
+      "color_schemes": {
+        "resume_ink": {
+          "primary": "#111827",
+          "accent": "#2563eb",
+          "text": "#111827"
+        },
+        "resume_indigo": {
+          "primary": "#3730a3",
+          "accent": "#0f766e",
+          "text": "#111827"
+        }
+      },
+      "sample_data": {
+        "name": "Alex Agent",
+        "headline": "Agent Infrastructure Engineer",
+        "contact": {"email": "alex@example.com", "location": "Remote"},
+        "summary": "Builds local-first document agents with auditable PDF workflows.",
+        "skills": ["PDF tooling", "MCP", "TypeScript", "Python"],
+        "experience": [
+          {
+            "role": "Lead Engineer",
+            "company": "OkPDF",
+            "period": "2024-2026",
+            "bullets": ["Built template-driven PDF creation with validation evidence."]
+          }
+        ]
+      }
+    },
+    {
+      "template_id": "client_invoice",
+      "name": "Client Invoice",
+      "description": "A clean local invoice template with line items, totals, and payment notes.",
+      "base_template": "invoice",
+      "target_profile": "invoice_pdf",
+      "default_style_pack": "invoice_clean",
+      "fields": {
+        "required": ["items"],
+        "optional": ["invoice_number", "client", "bill_to", "due_date", "payment_notes", "total"]
+      },
+      "layout_slots": ["header", "billing", "line_items", "totals", "notes"],
+      "supported_block_types": ["section", "table", "citation"],
+      "color_schemes": {
+        "invoice_gold": {
+          "primary": "#92400e",
+          "accent": "#2563eb",
+          "text": "#111827"
+        }
+      },
+      "sample_data": {
+        "title": "Invoice INV-1001",
+        "invoice_number": "INV-1001",
+        "client": "AgentPDF Labs",
+        "due_date": "2026-06-30",
+        "items": [
+          {"description": "Template implementation", "quantity": 2, "unit_price": 500},
+          {"description": "Validation workflow", "quantity": 1, "unit_price": 350}
+        ],
+        "payment_notes": "Pay by bank transfer."
+      }
+    },
+    {
+      "template_id": "project_proposal",
+      "name": "Project Proposal",
+      "description": "A scoped proposal with problem, approach, deliverables, and timeline.",
+      "base_template": "proposal",
+      "target_profile": "proposal_pdf",
+      "default_style_pack": "business_report_modern",
+      "fields": {
+        "required": ["problem", "approach"],
+        "optional": ["client", "deliverables", "timeline", "title"]
+      },
+      "layout_slots": ["header", "client", "problem", "approach", "deliverables", "timeline"],
+      "supported_block_types": ["section", "table", "image", "citation"],
+      "color_schemes": {
+        "proposal_violet": {
+          "primary": "#6d28d9",
+          "accent": "#0f766e",
+          "text": "#111827"
+        }
+      },
+      "sample_data": {
+        "title": "Local PDF Agent Proposal",
+        "client": "Agent teams",
+        "problem": "Teams need reliable PDF creation tools that run before cloud services exist.",
+        "approach": "Use local templates, style packs, structured JSON, and validation evidence.",
+        "deliverables": ["Template catalog", "Preview PDF", "CLI/MCP/REST access"],
+        "timeline": "Two local-first implementation passes."
+      }
+    },
+    {
+      "template_id": "lesson_worksheet",
+      "name": "Lesson Worksheet",
+      "description": "A classroom or training worksheet with prompts and validation checklist.",
+      "base_template": "worksheet",
+      "target_profile": "training_handout",
+      "default_style_pack": "paper_ink",
+      "fields": {
+        "required": ["title", "learning_goal"],
+        "optional": ["questions", "checklist"]
+      },
+      "layout_slots": ["title", "learning_goal", "practice", "checklist"],
+      "supported_block_types": ["section", "table", "citation"],
+      "color_schemes": {
+        "classroom_green": {
+          "primary": "#166534",
+          "accent": "#2563eb",
+          "text": "#111827"
+        }
+      },
+      "sample_data": {
+        "title": "PDF Validation Worksheet",
+        "learning_goal": "Practice validating generated PDFs before sharing them with an agent.",
+        "questions": [
+          "Which command proves the PDF can render?",
+          "Which artifact records source evidence?"
+        ],
+        "checklist": ["Create the PDF", "Run render-check", "Review extracted text"]
+      }
+    },
+    {
+      "template_id": "media_review_deck",
+      "name": "Media Review Deck",
+      "description": "A slide-like review PDF for transcripts, keyframes, and source decisions.",
+      "base_template": "one_pager",
+      "target_profile": "slide_deck",
+      "default_style_pack": "business_report_modern",
+      "fields": {
+        "required": ["title", "sections"],
+        "optional": ["audience", "checklist"]
+      },
+      "layout_slots": ["title", "context", "media_evidence", "decisions"],
+      "supported_block_types": ["section", "image", "slide", "citation"],
+      "color_schemes": {
+        "studio_coral": {
+          "primary": "#7c2d12",
+          "accent": "#0f766e",
+          "text": "#111827"
+        }
+      },
+      "sample_data": {
+        "title": "Media Review Deck",
+        "audience": "agent operators",
+        "sections": [
+          {
+            "heading": "Context",
+            "body": "Summarize transcript, chapter, and keyframe evidence."
+          },
+          {
+            "heading": "Decisions",
+            "body": "Capture next actions and validation requirements."
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://okpdf.dev/schemas/evidence-coverage-report.schema.json",
+  "title": "AgentPDF Evidence Coverage Report",
+  "type": "object",
+  "required": ["coverage_report_version", "composition_id", "coverage", "block_evidence", "uncovered_blocks", "source_refs"],
+  "additionalProperties": true,
+  "properties": {
+    "coverage_report_version": {
+      "type": "string"
+    },
+    "composition_id": {
+      "type": "string"
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "block_evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["block_id", "kind", "source_refs", "covered"],
+        "additionalProperties": true,
+        "properties": {
+          "block_id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "source_refs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "covered": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "uncovered_blocks": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "source_refs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

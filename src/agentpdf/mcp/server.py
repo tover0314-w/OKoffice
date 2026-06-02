@@ -6,10 +6,24 @@ from mcp.server.fastmcp import FastMCP
 
 from agentpdf.tools.registry import load_tool_manifest
 from agentpdf.tools.runner import (
+    run_agent_setup_claude_code,
+    run_artifacts_export_bundle,
+    run_artifacts_verify_bundle,
     run_blank_page_check,
+    run_build_context_packet,
+    run_compose_from_context,
     run_compress,
     run_create_markdown,
     run_create_text,
+    run_create_agent,
+    run_create_from_prompt,
+    run_create_from_template_pack,
+    run_plan_template_pack_creation,
+    run_create_template_preview,
+    run_create_template_packs,
+    run_create_templates,
+    run_validate_template_pack,
+    run_evidence_coverage_report,
     run_extract_images,
     run_extract_pages,
     run_extract_text,
@@ -22,6 +36,10 @@ from agentpdf.tools.runner import (
     run_metadata_update,
     run_merge,
     run_page_numbers,
+    run_patch_apply,
+    run_patch_plan,
+    run_patch_preview,
+    run_patch_verify,
     run_parse_lite,
     run_pdf_to_markdown,
     run_pdf_to_json,
@@ -39,7 +57,9 @@ from agentpdf.tools.runner import (
     run_reorder_pages,
     run_rotate_pages,
     run_split,
+    run_target_profiles,
     run_validate_output,
+    run_validate_target_profile,
     run_watermark,
     run_workflow_plan,
     run_workflow_report,
@@ -56,6 +76,7 @@ def create_mcp_server() -> FastMCP:
         ),
     )
     server.tool(name="agentpdf_tool_manifest")(agentpdf_tool_manifest)
+    server.tool(name="agent_setup_claude_code")(agent_setup_claude_code)
     server.tool(name="pdf_inspect_document")(pdf_inspect_document)
     server.tool(name="pdf_inspect_pages")(pdf_inspect_pages)
     server.tool(name="pdf_workflow_plan")(pdf_workflow_plan)
@@ -75,6 +96,25 @@ def create_mcp_server() -> FastMCP:
     server.tool(name="pdf_add_page_numbers")(pdf_add_page_numbers)
     server.tool(name="pdf_create_text")(pdf_create_text)
     server.tool(name="pdf_create_markdown")(pdf_create_markdown)
+    server.tool(name="pdf_ai_create_from_prompt")(pdf_ai_create_from_prompt)
+    server.tool(name="pdf_ai_create_template_preview")(pdf_ai_create_template_preview)
+    server.tool(name="pdf_ai_create_templates")(pdf_ai_create_templates)
+    server.tool(name="pdf_ai_create_template_packs")(pdf_ai_create_template_packs)
+    server.tool(name="pdf_ai_create_validate_template_pack")(pdf_ai_create_validate_template_pack)
+    server.tool(name="pdf_ai_create_plan_template_pack")(pdf_ai_create_plan_template_pack)
+    server.tool(name="pdf_ai_create_agent")(pdf_ai_create_agent)
+    server.tool(name="pdf_ai_create_from_template_pack")(pdf_ai_create_from_template_pack)
+    server.tool(name="pdf_context_build_packet")(pdf_context_build_packet)
+    server.tool(name="pdf_compose_from_context")(pdf_compose_from_context)
+    server.tool(name="pdf_target_profiles")(pdf_target_profiles)
+    server.tool(name="pdf_target_validate_profile")(pdf_target_validate_profile)
+    server.tool(name="pdf_evidence_coverage_report")(pdf_evidence_coverage_report)
+    server.tool(name="pdf_artifacts_export_bundle")(pdf_artifacts_export_bundle)
+    server.tool(name="pdf_artifacts_verify_bundle")(pdf_artifacts_verify_bundle)
+    server.tool(name="pdf_patch_plan")(pdf_patch_plan)
+    server.tool(name="pdf_patch_preview")(pdf_patch_preview)
+    server.tool(name="pdf_patch_apply")(pdf_patch_apply)
+    server.tool(name="pdf_patch_verify")(pdf_patch_verify)
     server.tool(name="pdf_render_pages")(pdf_render_pages)
     server.tool(name="pdf_extract_images")(pdf_extract_images)
     server.tool(name="pdf_extract_text")(pdf_extract_text)
@@ -100,6 +140,25 @@ def create_mcp_server() -> FastMCP:
 def agentpdf_tool_manifest() -> str:
     """Return the complete AgentPDF tool manifest with implementation statuses."""
     return load_tool_manifest().model_dump_json()
+
+
+def agent_setup_claude_code(
+    output_path: str | None = None,
+    safe_root: str = "${CLAUDE_PROJECT_DIR:-.}",
+    command: str = "okpdf",
+    args_prefix: list[str] | None = None,
+    server_name: str = "agentpdf",
+    scope: Literal["project", "local", "user"] = "project",
+) -> str:
+    """Generate a Claude Code MCP config for local AgentPDF tools."""
+    return run_agent_setup_claude_code(
+        output_path=output_path,
+        safe_root=safe_root,
+        command=command,
+        args_prefix=args_prefix,
+        server_name=server_name,
+        scope=scope,
+    ).model_dump_json()
 
 
 def pdf_inspect_document(path: str) -> str:
@@ -252,6 +311,253 @@ def pdf_create_markdown(
         title=title,
         style_pack=style_pack,
     ).model_dump_json()
+
+
+def pdf_ai_create_from_prompt(
+    prompt: str,
+    output_path: str,
+    template: str | None = None,
+    style_pack: str | None = None,
+    data: dict[str, object] | None = None,
+    title: str | None = None,
+    colors: dict[str, str] | None = None,
+) -> str:
+    """Create a validated local PDF from a prompt, template, and optional JSON data."""
+    return run_create_from_prompt(
+        prompt,
+        output_path=output_path,
+        template=template,
+        style_pack=style_pack,
+        data=data,
+        title=title,
+        colors=colors,
+    ).model_dump_json()
+
+
+def pdf_ai_create_templates() -> str:
+    """List local PDF creation templates, style packs, and color keys."""
+    return run_create_templates().model_dump_json()
+
+
+def pdf_ai_create_template_packs(output_path: str | None = None) -> str:
+    """List local template packs for agent-created PDFs."""
+    return run_create_template_packs(output_path=output_path).model_dump_json()
+
+
+def pdf_ai_create_validate_template_pack(
+    template_pack: dict[str, object] | str,
+    output_path: str | None = None,
+) -> str:
+    """Validate a local template pack contract."""
+    return run_validate_template_pack(
+        template_pack=template_pack,
+        output_path=output_path,
+    ).model_dump_json()
+
+
+def pdf_ai_create_plan_template_pack(
+    template_pack: dict[str, object] | str,
+    target_profile: dict[str, object] | str | None = None,
+    context_packet: dict[str, object] | str | None = None,
+    context_packet_path: str | None = None,
+    planned_output_path: str | None = None,
+    output_path: str | None = None,
+    preferred_template_id: str | None = None,
+    preferred_color_scheme: str | None = None,
+) -> str:
+    """Plan a local template-pack PDF creation call from target and context evidence."""
+    return run_plan_template_pack_creation(
+        template_pack=template_pack,
+        target_profile=target_profile,
+        context_packet=context_packet,
+        context_packet_path=context_packet_path,
+        planned_output_path=planned_output_path,
+        output_path=output_path,
+        preferred_template_id=preferred_template_id,
+        preferred_color_scheme=preferred_color_scheme,
+    ).model_dump_json()
+
+
+def pdf_ai_create_agent(
+    template_pack: dict[str, object] | str,
+    target_profile: dict[str, object] | str | None,
+    context_packet: dict[str, object] | str | None = None,
+    context_packet_path: str | None = None,
+    output_path: str = ".agentpdf-out/create-agent.pdf",
+    plan_output_path: str | None = None,
+    coverage_output_path: str | None = None,
+    preferred_template_id: str | None = None,
+    preferred_color_scheme: str | None = None,
+    title: str | None = None,
+    prompt: str | None = None,
+    style_pack: str | None = None,
+) -> str:
+    """Run the local create agent: plan, create, render-check, blank-check, and coverage."""
+    return run_create_agent(
+        template_pack=template_pack,
+        target_profile=target_profile,
+        context_packet=context_packet,
+        context_packet_path=context_packet_path,
+        output_path=output_path,
+        plan_output_path=plan_output_path,
+        coverage_output_path=coverage_output_path,
+        preferred_template_id=preferred_template_id,
+        preferred_color_scheme=preferred_color_scheme,
+        title=title,
+        prompt=prompt,
+        style_pack=style_pack,
+    ).model_dump_json()
+
+
+def pdf_ai_create_from_template_pack(
+    template_pack: dict[str, object] | str,
+    template_id: str,
+    output_path: str,
+    color_scheme: str | None = None,
+    data: dict[str, object] | None = None,
+    context_packet: dict[str, object] | str | None = None,
+    context_packet_path: str | None = None,
+    title: str | None = None,
+    prompt: str | None = None,
+    style_pack: str | None = None,
+) -> str:
+    """Create a validated local PDF from a template pack."""
+    return run_create_from_template_pack(
+        template_pack=template_pack,
+        template_id=template_id,
+        output_path=output_path,
+        color_scheme=color_scheme,
+        data=data,
+        context_packet=context_packet,
+        context_packet_path=context_packet_path,
+        title=title,
+        prompt=prompt,
+        style_pack=style_pack,
+    ).model_dump_json()
+
+
+def pdf_ai_create_template_preview(
+    template: str,
+    output_path: str,
+    style_pack: str | None = None,
+    data: dict[str, object] | None = None,
+    colors: dict[str, str] | None = None,
+) -> str:
+    """Generate and validate a local preview PDF for a creation template."""
+    return run_create_template_preview(
+        template,
+        output_path=output_path,
+        style_pack=style_pack,
+        data=data,
+        colors=colors,
+    ).model_dump_json()
+
+
+def pdf_context_build_packet(
+    context_items: list[dict[str, object]],
+    output_path: str,
+    title: str | None = None,
+    intent: str | None = None,
+) -> str:
+    """Build a local Context Packet with source graph metadata."""
+    return run_build_context_packet(
+        context_items,
+        output_path=output_path,
+        title=title,
+        intent=intent,
+    ).model_dump_json()
+
+
+def pdf_compose_from_context(
+    context_packet: dict[str, object] | str,
+    output_path: str,
+    target_profile: dict[str, object] | str = "research_brief",
+    style_pack: str | None = None,
+    title: str | None = None,
+) -> str:
+    """Compose a validated target PDF from a Context Packet and target profile."""
+    return run_compose_from_context(
+        context_packet,
+        target_profile=target_profile,
+        output_path=output_path,
+        style_pack=style_pack,
+        title=title,
+    ).model_dump_json()
+
+
+def pdf_target_profiles(output_path: str | None = None) -> str:
+    """List built-in target PDF profiles with layout slots and accepted block types."""
+    return run_target_profiles(output_path=output_path).model_dump_json()
+
+
+def pdf_target_validate_profile(
+    target_profile: dict[str, object] | str = "research_brief",
+    output_path: str | None = None,
+) -> str:
+    """Validate a built-in or custom target PDF profile."""
+    return run_validate_target_profile(target_profile=target_profile, output_path=output_path).model_dump_json()
+
+
+def pdf_evidence_coverage_report(
+    composition: dict[str, object] | str,
+    output_path: str | None = None,
+) -> str:
+    """Create an evidence coverage report from a composition artifact."""
+    return run_evidence_coverage_report(composition, output_path=output_path).model_dump_json()
+
+
+def pdf_artifacts_export_bundle(
+    artifact_paths: list[str],
+    output_path: str,
+    title: str | None = None,
+    metadata: dict[str, object] | None = None,
+) -> str:
+    """Export local artifacts into a portable audit bundle."""
+    return run_artifacts_export_bundle(
+        artifact_paths=artifact_paths,
+        output_path=output_path,
+        title=title,
+        metadata=metadata,
+    ).model_dump_json()
+
+
+def pdf_artifacts_verify_bundle(bundle_path: str) -> str:
+    """Verify a portable audit bundle manifest and checksums."""
+    return run_artifacts_verify_bundle(bundle_path=bundle_path).model_dump_json()
+
+
+def pdf_patch_plan(
+    input_path: str,
+    operations: list[dict[str, object]],
+    output_path: str,
+    composition_path: str | None = None,
+    layer_manifest_path: str | None = None,
+    reason: str | None = None,
+) -> str:
+    """Create a structured patch manifest without mutating the input PDF."""
+    return run_patch_plan(
+        input_path=input_path,
+        operations=operations,
+        output_path=output_path,
+        composition_path=composition_path,
+        layer_manifest_path=layer_manifest_path,
+        reason=reason,
+    ).model_dump_json()
+
+
+def pdf_patch_preview(patch_manifest: dict[str, object] | str, output_path: str | None = None) -> str:
+    """Preview patch effects and validation requirements."""
+    return run_patch_preview(patch_manifest, output_path=output_path).model_dump_json()
+
+
+def pdf_patch_apply(patch_manifest: dict[str, object] | str, output_path: str) -> str:
+    """Apply a patch transaction to a new output PDF artifact."""
+    return run_patch_apply(patch_manifest, output_path=output_path).model_dump_json()
+
+
+def pdf_patch_verify(patch_manifest: dict[str, object] | str, patched_path: str) -> str:
+    """Verify a patched PDF against a patch manifest."""
+    return run_patch_verify(patch_manifest, patched_path=patched_path).model_dump_json()
 
 
 def pdf_render_pages(

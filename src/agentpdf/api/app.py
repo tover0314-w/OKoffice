@@ -10,10 +10,24 @@ from agentpdf.schemas.errors import AgentPDFException
 from agentpdf.schemas.models import AgentPDFError, ToolResult
 from agentpdf.tools.registry import get_tool, load_tool_manifest
 from agentpdf.tools.runner import (
+    run_agent_setup_claude_code,
+    run_artifacts_export_bundle,
+    run_artifacts_verify_bundle,
     run_blank_page_check,
+    run_build_context_packet,
+    run_compose_from_context,
     run_compress,
     run_create_markdown,
     run_create_text,
+    run_create_agent,
+    run_create_from_prompt,
+    run_create_from_template_pack,
+    run_plan_template_pack_creation,
+    run_create_template_preview,
+    run_create_template_packs,
+    run_create_templates,
+    run_validate_template_pack,
+    run_evidence_coverage_report,
     run_extract_images,
     run_extract_pages,
     run_extract_text,
@@ -26,6 +40,10 @@ from agentpdf.tools.runner import (
     run_metadata_update,
     run_merge,
     run_page_numbers,
+    run_patch_apply,
+    run_patch_plan,
+    run_patch_preview,
+    run_patch_verify,
     run_parse_lite,
     run_pdf_to_markdown,
     run_pdf_to_json,
@@ -43,7 +61,9 @@ from agentpdf.tools.runner import (
     run_reorder_pages,
     run_rotate_pages,
     run_split,
+    run_target_profiles,
     run_validate_output,
+    run_validate_target_profile,
     run_watermark,
     run_workflow_plan,
     run_workflow_report,
@@ -128,6 +148,16 @@ def _record_result(app: FastAPI, result: ToolResult) -> None:
 
 
 def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
+    if tool_name == "agent.setup.claude_code":
+        args_prefix = payload.get("args_prefix")
+        return run_agent_setup_claude_code(
+            output_path=payload.get("output_path"),
+            safe_root=str(payload.get("safe_root", "${CLAUDE_PROJECT_DIR:-.}")),
+            command=str(payload.get("command", "okpdf")),
+            args_prefix=[str(arg) for arg in args_prefix] if isinstance(args_prefix, list) else None,
+            server_name=str(payload.get("server_name", "agentpdf")),
+            scope=str(payload.get("scope", "project")),
+        )
     if tool_name == "pdf.inspect.document":
         return run_inspect(payload.get("path", ""))
     if tool_name == "pdf.inspect.pages":
@@ -238,6 +268,151 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
             output_path=payload.get("output_path", ""),
             title=payload.get("title"),
             style_pack=str(payload.get("style_pack", "plain_report")),
+        )
+    if tool_name == "pdf.ai.create.from_prompt":
+        data = payload.get("data")
+        colors = payload.get("colors")
+        return run_create_from_prompt(
+            prompt=str(payload.get("prompt", "")),
+            output_path=payload.get("output_path", ""),
+            template=payload.get("template"),
+            style_pack=payload.get("style_pack"),
+            data=data if isinstance(data, dict) else None,
+            title=payload.get("title"),
+            colors={str(key): str(value) for key, value in colors.items()}
+            if isinstance(colors, dict)
+            else None,
+        )
+    if tool_name == "pdf.ai.create.templates":
+        return run_create_templates()
+    if tool_name == "pdf.ai.create.template_packs":
+        return run_create_template_packs(output_path=payload.get("output_path"))
+    if tool_name == "pdf.ai.create.validate_template_pack":
+        return run_validate_template_pack(
+            template_pack=payload.get("template_pack") or payload.get("template_pack_path", ""),
+            output_path=payload.get("output_path"),
+        )
+    if tool_name == "pdf.ai.create.plan_template_pack":
+        context_packet = payload.get("context_packet")
+        return run_plan_template_pack_creation(
+            template_pack=payload.get("template_pack") or payload.get("template_pack_path", ""),
+            target_profile=payload.get("target_profile") or payload.get("profile"),
+            context_packet=context_packet if isinstance(context_packet, dict) else None,
+            context_packet_path=payload.get("context_packet_path"),
+            planned_output_path=payload.get("planned_output_path") or payload.get("planned_output"),
+            output_path=payload.get("output_path"),
+            preferred_template_id=payload.get("preferred_template_id") or payload.get("preferred_template"),
+            preferred_color_scheme=payload.get("preferred_color_scheme") or payload.get("preferred_color"),
+        )
+    if tool_name == "pdf.ai.create.agent":
+        context_packet = payload.get("context_packet")
+        return run_create_agent(
+            template_pack=payload.get("template_pack") or payload.get("template_pack_path", ""),
+            target_profile=payload.get("target_profile") or payload.get("profile"),
+            context_packet=context_packet if isinstance(context_packet, dict) else None,
+            context_packet_path=payload.get("context_packet_path"),
+            output_path=payload.get("output_path", ""),
+            plan_output_path=payload.get("plan_output_path"),
+            coverage_output_path=payload.get("coverage_output_path"),
+            preferred_template_id=payload.get("preferred_template_id") or payload.get("preferred_template"),
+            preferred_color_scheme=payload.get("preferred_color_scheme") or payload.get("preferred_color"),
+            title=payload.get("title"),
+            prompt=payload.get("prompt"),
+            style_pack=payload.get("style_pack"),
+        )
+    if tool_name == "pdf.ai.create.from_template_pack":
+        data = payload.get("data")
+        context_packet = payload.get("context_packet")
+        return run_create_from_template_pack(
+            template_pack=payload.get("template_pack") or payload.get("template_pack_path", ""),
+            template_id=str(payload.get("template_id") or payload.get("template", "")),
+            output_path=payload.get("output_path", ""),
+            color_scheme=payload.get("color_scheme"),
+            data=data if isinstance(data, dict) else None,
+            context_packet=context_packet if isinstance(context_packet, dict) else None,
+            context_packet_path=payload.get("context_packet_path"),
+            title=payload.get("title"),
+            prompt=payload.get("prompt"),
+            style_pack=payload.get("style_pack"),
+        )
+    if tool_name == "pdf.ai.create.template_preview":
+        data = payload.get("data")
+        colors = payload.get("colors")
+        return run_create_template_preview(
+            template=str(payload.get("template", "")),
+            output_path=payload.get("output_path", ""),
+            style_pack=payload.get("style_pack"),
+            data=data if isinstance(data, dict) else None,
+            colors={str(key): str(value) for key, value in colors.items()}
+            if isinstance(colors, dict)
+            else None,
+        )
+    if tool_name == "pdf.context.build_packet":
+        context_items = payload.get("context_items", [])
+        return run_build_context_packet(
+            context_items if isinstance(context_items, list) else [],
+            output_path=payload.get("output_path", ""),
+            title=payload.get("title"),
+            intent=payload.get("intent"),
+        )
+    if tool_name == "pdf.compose.from_context":
+        context_packet = payload.get("context_packet") or payload.get("context_packet_path", "")
+        target_profile = payload.get("target_profile") or payload.get("profile") or "research_brief"
+        return run_compose_from_context(
+            context_packet=context_packet,
+            target_profile=target_profile,
+            output_path=payload.get("output_path", ""),
+            style_pack=payload.get("style_pack"),
+            title=payload.get("title"),
+        )
+    if tool_name == "pdf.target.profiles":
+        return run_target_profiles(output_path=payload.get("output_path"))
+    if tool_name == "pdf.target.validate_profile":
+        target_profile = payload.get("target_profile") or payload.get("profile") or "research_brief"
+        return run_validate_target_profile(
+            target_profile=target_profile,
+            output_path=payload.get("output_path"),
+        )
+    if tool_name == "pdf.evidence.coverage_report":
+        return run_evidence_coverage_report(
+            payload.get("composition") or payload.get("composition_path", ""),
+            output_path=payload.get("output_path"),
+        )
+    if tool_name == "pdf.artifacts.export_bundle":
+        artifact_paths = payload.get("artifact_paths") or payload.get("files") or []
+        metadata = payload.get("metadata")
+        return run_artifacts_export_bundle(
+            artifact_paths=artifact_paths if isinstance(artifact_paths, list) else [],
+            output_path=payload.get("output_path", ""),
+            title=payload.get("title"),
+            metadata=metadata if isinstance(metadata, dict) else None,
+        )
+    if tool_name == "pdf.artifacts.verify_bundle":
+        return run_artifacts_verify_bundle(payload.get("bundle_path") or payload.get("input_path", ""))
+    if tool_name == "pdf.patch.plan":
+        operations = payload.get("operations", [])
+        return run_patch_plan(
+            input_path=payload.get("input_path", ""),
+            operations=operations if isinstance(operations, list) else [],
+            output_path=payload.get("output_path", ""),
+            composition_path=payload.get("composition_path"),
+            layer_manifest_path=payload.get("layer_manifest_path"),
+            reason=payload.get("reason"),
+        )
+    if tool_name == "pdf.patch.preview":
+        return run_patch_preview(
+            payload.get("patch_manifest") or payload.get("patch_manifest_path", ""),
+            output_path=payload.get("output_path"),
+        )
+    if tool_name == "pdf.patch.apply":
+        return run_patch_apply(
+            payload.get("patch_manifest") or payload.get("patch_manifest_path", ""),
+            output_path=payload.get("output_path", ""),
+        )
+    if tool_name == "pdf.patch.verify":
+        return run_patch_verify(
+            payload.get("patch_manifest") or payload.get("patch_manifest_path", ""),
+            patched_path=payload.get("patched_path", ""),
         )
     if tool_name == "pdf.convert.pdf_to_images":
         return run_render(

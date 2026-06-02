@@ -18,7 +18,7 @@
   <img alt="MCP" src="https://img.shields.io/badge/MCP-ready-purple">
 </p>
 
-okpdf is building the open-source foundation for agent-readable PDF operations: inspect, organize, render, extract text and images, edit metadata, validate outputs, and expose everything through local interfaces that coding agents can call safely.
+okpdf is building the open-source foundation for agent-native PDF infrastructure: inspect, organize, render, extract, compose, patch, validate, and expose evidence-backed document artifacts through local interfaces that coding agents can call safely.
 
 The public CLI is `okpdf`. The legacy/internal command `agentpdf` still works for compatibility. The TypeScript/Node package lives at `packages/agentpdf-node` and is named `@okpdf/agentpdf-node`.
 
@@ -27,6 +27,7 @@ The public CLI is `okpdf`. The legacy/internal command `agentpdf` still works fo
 - Complete public tool map from day one: 160+ planned namespaces are discoverable now.
 - Local-first by default: no hosted URL, paid key, or cloud dependency required.
 - Agent-first outputs: every tool returns structured JSON with artifacts, validation, warnings, and next recommended tools.
+- Bigger than RAG: the product direction covers context packets, target PDF profiles, source graphs, composition IR, PDF patch transactions, evidence coverage, and multimodal context-to-PDF workflows.
 - MCP, REST, and TypeScript ready: Claude Code, Claude Desktop, Cursor, Codex-style agents, Node scripts, and web apps can call the same tool layer.
 - Safety-minded PDF workflow: explicit paths, no input mutation, path traversal rejection, metadata removal, and validation for generated PDFs.
 - License-safe core: default dependencies avoid GPL/AGPL.
@@ -39,6 +40,9 @@ The public CLI is `okpdf`. The legacy/internal command `agentpdf` still works fo
 | Organize | merge, split, extract/remove/reorder/rotate pages, insert blank pages | CLI, MCP, REST |
 | Optimize | content-stream compression, parseable PDF repair/rewrite | CLI, MCP, REST, Node.js |
 | Convert | image/Markdown/Text to PDF, render pages to images, extract text and embedded images | CLI, MCP, REST, Node.js |
+| Create Agent | local prompt-to-template PDF creation with templates, style packs, and validation | CLI, MCP, REST, Node.js |
+| Context / Compose | context packets, target PDF profiles, source graphs, composition IR, and context-backed PDF creation | CLI, MCP, REST, Node.js |
+| Evidence / Patch | coverage reports plus structured append transactions for Markdown, code, tables, images, and slide pages that do not mutate inputs | CLI, MCP, REST, Node.js |
 | Edit | text watermark, page numbers | CLI, MCP, REST |
 | Metadata | read, update, remove | CLI, MCP, REST |
 | Validation | generated PDF validation, render check, blank page check | CLI, MCP, REST |
@@ -102,6 +106,28 @@ okpdf compress .agentpdf-out/with-blank.pdf -o .agentpdf-out/with-blank-compress
 okpdf repair .agentpdf-out/with-blank-compressed.pdf -o .agentpdf-out/with-blank-repaired.pdf --json
 okpdf image-to-pdf cover.png -o .agentpdf-out/cover.pdf --json
 okpdf create markdown examples/sample-documents/business_report.md -o .agentpdf-out/business-report.pdf --style-pack business_report_modern --json
+okpdf create templates --json
+okpdf create template-packs -o .agentpdf-out/template-packs.json --json
+okpdf create validate-template-pack examples/template-packs/local-agent-starter.json -o .agentpdf-out/template-pack.validation.json --json
+okpdf create from-template-pack examples/template-packs/local-agent-starter.json --template board_audit --color-scheme executive_blue -o .agentpdf-out/board-audit.pdf --json
+okpdf evidence coverage-report .agentpdf-out/board-audit.composition.json -o .agentpdf-out/board-audit.coverage.json --json
+okpdf patch plan .agentpdf-out/board-audit.pdf --operations examples/patch-operations/layer-aware-reviewer-note.json -o .agentpdf-out/board-audit.layer.patch.json --composition .agentpdf-out/board-audit.composition.json --layers .agentpdf-out/board-audit.layers.json --reason "Append a layer-aware reviewer note." --json
+okpdf create preview invoice -o .agentpdf-out/invoice-preview.pdf --json
+okpdf create from-prompt "Create a research brief about local PDF agents and template validation." -o .agentpdf-out/research-brief.pdf --template research_brief --style-pack paper_ink --color primary=#4f46e5 --color accent=#f59e0b --json
+okpdf create from-prompt "Create an invoice for okpdf local template work." -o .agentpdf-out/invoice.pdf --template invoice --data examples/create-data/invoice.json --json
+okpdf context build --text "Create a technical audit PDF from code, metrics, visual evidence, project docs, and media context." --file src/agentpdf/compose/context.py --file examples/create-data/metrics.csv --file assets/brand/okpdf-logo.png --file examples/sample-documents/business_report.md --item-json examples/context/media-items.json -o .agentpdf-out/context.packet.json --title "Audit Context" --json
+okpdf create from-template-pack examples/template-packs/local-agent-starter.json --template board_audit --color-scheme executive_blue --context-packet .agentpdf-out/context.packet.json -o .agentpdf-out/board-audit-from-context.pdf --json
+okpdf target profiles -o .agentpdf-out/target-profiles.json --json
+okpdf target validate --profile-json examples/target-profiles/media-learning-deck.json -o .agentpdf-out/media-learning-deck.validation.json --json
+okpdf compose from-context .agentpdf-out/context.packet.json --profile technical_audit -o .agentpdf-out/technical-audit.pdf --json
+okpdf compose from-context .agentpdf-out/context.packet.json --profile slide_deck -o .agentpdf-out/agent-review-deck.pdf --json
+okpdf compose from-context .agentpdf-out/context.packet.json --profile-json examples/target-profiles/media-learning-deck.json -o .agentpdf-out/media-learning-deck.pdf --json
+okpdf evidence coverage-report .agentpdf-out/technical-audit.composition.json -o .agentpdf-out/technical-audit.coverage.json --json
+okpdf patch plan .agentpdf-out/technical-audit.pdf --operations examples/patch-operations/reviewer-note.json -o .agentpdf-out/technical-audit.patch.json --composition .agentpdf-out/technical-audit.composition.json --reason "Add reviewer note appendix." --json
+okpdf patch preview .agentpdf-out/technical-audit.patch.json -o .agentpdf-out/technical-audit.patch-preview.json --json
+okpdf patch apply .agentpdf-out/technical-audit.patch.json -o .agentpdf-out/technical-audit-patched.pdf --json
+okpdf patch verify .agentpdf-out/technical-audit.patch.json .agentpdf-out/technical-audit-patched.pdf --json
+okpdf patch plan .agentpdf-out/technical-audit.pdf --operations examples/patch-operations/structured-appendix.json -o .agentpdf-out/technical-audit.structured.patch.json --composition .agentpdf-out/technical-audit.composition.json --reason "Append code, table, image, and slide evidence." --json
 okpdf watermark .agentpdf-out/cover.pdf --text "CONFIDENTIAL" -o .agentpdf-out/watermarked.pdf --json
 okpdf page-numbers .agentpdf-out/watermarked.pdf --template "Page {page} of {total}" -o .agentpdf-out/numbered.pdf --json
 okpdf render tests/fixtures/simple.pdf --pages 1 --format png --out-dir .agentpdf-out/renders --json
@@ -122,6 +148,8 @@ okpdf rag cite-answer .agentpdf-out/numbered.index.json --answer "This document 
 okpdf rag highlight-sources .agentpdf-out/numbered.index.json --answer "This document is locally indexed." -o .agentpdf-out/numbered-highlighted.pdf --json
 okpdf rag export-report .agentpdf-out/numbered.index.json --question "What does this document say?" --answer "This document is locally indexed." -o .agentpdf-out/numbered-rag-report.pdf --json
 ```
+
+Template-pack creation writes a validated PDF plus sibling `.composition.json` and `.layers.json` artifacts. The composition file carries source maps, slot routing, and evidence coverage; the layer manifest gives agents stable block/layer ids, target slots, source refs, estimated normalized-page anchors, and edit policies for future PDF patch/edit workflows.
 
 ## TypeScript / Node.js
 
@@ -144,6 +172,13 @@ const result = await client.createMarkdownPdf({
   outputPath: ".agentpdf-out/report.pdf",
   stylePack: "business_report_modern",
 });
+const brief = await client.createFromPrompt({
+  prompt: "Create a proposal about local PDF template agents.",
+  outputPath: ".agentpdf-out/proposal.pdf",
+  template: "proposal",
+  stylePack: "business_report_modern",
+  colors: { primary: "#4f46e5", accent: "#f59e0b" },
+});
 const pageFacts = await client.inspectPages({
   inputPath: ".agentpdf-out/report.pdf",
   pages: "1",
@@ -158,6 +193,7 @@ await client.watermark({
 
 console.log(pageFacts.usage.pages);
 console.log(result.artifacts[0]?.path);
+console.log(brief.usage.template_id, brief.validation?.status);
 ```
 
 ## Agent Interfaces
@@ -170,14 +206,21 @@ Run a local stdio MCP server:
 okpdf serve --mcp --safe-root .
 ```
 
+Generate a Claude Code project config:
+
+```bash
+okpdf agent setup claude-code -o .mcp.json --json
+```
+
 Example config:
 
 ```json
 {
   "mcpServers": {
     "agentpdf": {
+      "type": "stdio",
       "command": "okpdf",
-      "args": ["serve", "--mcp", "--safe-root", "."]
+      "args": ["serve", "--mcp", "--safe-root", "${CLAUDE_PROJECT_DIR:-.}"]
     }
   }
 }
@@ -185,6 +228,7 @@ Example config:
 
 MCP tools currently exposed:
 
+- `agent_setup_claude_code`
 - `agentpdf_tool_manifest`
 - `pdf_inspect_document`
 - `pdf_inspect_pages`
@@ -205,6 +249,12 @@ MCP tools currently exposed:
 - `pdf_add_page_numbers`
 - `pdf_create_text`
 - `pdf_create_markdown`
+- `pdf_ai_create_from_prompt`
+- `pdf_ai_create_templates`
+- `pdf_ai_create_template_packs`
+- `pdf_ai_create_validate_template_pack`
+- `pdf_ai_create_from_template_pack`
+- `pdf_ai_create_template_preview`
 - `pdf_render_pages`
 - `pdf_extract_images`
 - `pdf_extract_text`
@@ -369,8 +419,10 @@ okpdf is inspired by mature open-source document processing projects such as pdf
 - More creation inputs and style packs.
 - More deterministic operations: cropping, forms baseline, metadata page info, attachments, and safe redaction helpers.
 - Richer validation: repair diagnostics, page visual diff, redaction verification.
+- Context packet, target PDF profile, source graph, composition IR, artifact lineage, and patch manifests.
+- Multimodal context-to-PDF workflows for images, video, documents, code, links, data, and existing PDFs.
 - Docker and self-hosted examples.
-- Cloud worker boundary for advanced OCR, agentic parse, and hosted batch jobs.
+- Cloud worker boundary for advanced OCR, agentic parse, multimodal processing, and hosted batch jobs.
 
 ## Development
 
@@ -387,7 +439,7 @@ This workspace currently has no required cloud service for local development.
 
 The project intentionally studies mature PDF/document tooling such as [pypdf](https://github.com/py-pdf/pypdf), [qpdf](https://github.com/qpdf/qpdf), [pdfcpu](https://github.com/pdfcpu/pdfcpu), [pdfplumber](https://github.com/jsvine/pdfplumber), [OCRmyPDF](https://ocrmypdf.readthedocs.io/), [Docling](https://github.com/docling-project/docling), [Marker](https://github.com/VikParuchuri/marker), and [Stirling-PDF](https://github.com/Stirling-Tools/Stirling-PDF). The synthesis lives in [docs/33_REFERENCE_PROJECT_SYNTHESIS.md](docs/33_REFERENCE_PROJECT_SYNTHESIS.md).
 
-The larger agent-infra and cloud strategy lives in [docs/34_AGENT_INFRA_AI_CLOUD_STRATEGY.md](docs/34_AGENT_INFRA_AI_CLOUD_STRATEGY.md).
+The larger agent-native multimodal PRD lives in [docs/35_AGENT_NATIVE_MULTIMODAL_PDF_INFRA_PRD.md](docs/35_AGENT_NATIVE_MULTIMODAL_PDF_INFRA_PRD.md). The agent-infra and cloud strategy lives in [docs/34_AGENT_INFRA_AI_CLOUD_STRATEGY.md](docs/34_AGENT_INFRA_AI_CLOUD_STRATEGY.md).
 
 ## License
 

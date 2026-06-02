@@ -2,6 +2,8 @@
 
 okpdf's first implementation priority is local agent-callable PDF tooling. Cloud workers can be added later, but the local CLI, MCP server, and REST API must remain useful without paid services, hosted URLs, or proprietary keys.
 
+The longer-term agent integration shape is larger than PDF chat. Agents should be able to collect heterogeneous context, choose a target PDF profile, build source graphs, compose new PDF artifacts, apply patch transactions, verify evidence coverage, and report artifact lineage. Current local tools provide the first runnable subset; planned namespaces such as `pdf.context.*`, `pdf.target.*`, `pdf.evidence.*`, `pdf.compose.*`, `pdf.patch.*`, `pdf.present.*`, and `pdf.artifacts.*` describe the next agent-native surface.
+
 ## Fast Setup
 
 ```bash
@@ -26,12 +28,21 @@ okpdf serve --mcp --transport streamable-http --safe-root .
 
 ## Claude Desktop / Claude Code Style Config
 
+Generate a project-level Claude Code config:
+
+```bash
+okpdf agent setup claude-code -o .mcp.json --json
+```
+
+This writes a local `.mcp.json` that starts okpdf as a stdio MCP server from the Claude project directory. The same setup is also available as REST tool `agent.setup.claude_code` and MCP tool `agent_setup_claude_code`.
+
 ```json
 {
   "mcpServers": {
     "agentpdf": {
+      "type": "stdio",
       "command": "okpdf",
-      "args": ["serve", "--mcp", "--safe-root", "."]
+      "args": ["serve", "--mcp", "--safe-root", "${CLAUDE_PROJECT_DIR:-.}"]
     }
   }
 }
@@ -52,6 +63,7 @@ Use the same stdio MCP command from any agent runtime that supports MCP:
 
 ## Exposed Local Tools
 
+- `agent_setup_claude_code`
 - `agentpdf_tool_manifest`
 - `pdf_inspect_document`
 - `pdf_inspect_pages`
@@ -72,6 +84,25 @@ Use the same stdio MCP command from any agent runtime that supports MCP:
 - `pdf_add_page_numbers`
 - `pdf_create_text`
 - `pdf_create_markdown`
+- `pdf_ai_create_from_prompt`
+- `pdf_ai_create_templates`
+- `pdf_ai_create_template_packs`
+- `pdf_ai_create_validate_template_pack`
+- `pdf_ai_create_plan_template_pack`
+- `pdf_ai_create_agent`
+- `pdf_ai_create_from_template_pack`
+- `pdf_ai_create_template_preview`
+- `pdf_context_build_packet`
+- `pdf_compose_from_context`
+- `pdf_target_profiles`
+- `pdf_target_validate_profile`
+- `pdf_evidence_coverage_report`
+- `pdf_artifacts_export_bundle`
+- `pdf_artifacts_verify_bundle`
+- `pdf_patch_plan`
+- `pdf_patch_preview`
+- `pdf_patch_apply`
+- `pdf_patch_verify`
 - `pdf_render_pages`
 - `pdf_extract_images`
 - `pdf_extract_text`
@@ -111,6 +142,17 @@ Useful endpoints:
 - `GET /v1/jobs/{job_id}`
 - `GET /v1/artifacts/{artifact_id}`
 - `GET /v1/artifacts/{artifact_id}/download`
+
+Example Claude Code setup request:
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/agent.setup.claude_code/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "output_path": ".mcp.json",
+    "safe_root": "${CLAUDE_PROJECT_DIR:-.}"
+  }'
+```
 
 Example inspect request:
 
@@ -233,6 +275,108 @@ curl -X POST http://127.0.0.1:7331/v1/tools/pdf.convert.markdown_to_pdf/run \
   -H 'Content-Type: application/json' \
   -d '{"markdown": "# Agent Report\n\n- Created locally", "output_path": "agent-report.pdf"}'
 ```
+
+Example local create-agent request:
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.ai.create.templates/run \
+  -H 'Content-Type: application/json' \
+  -d '{}'
+
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.ai.create.template_packs/run \
+  -H 'Content-Type: application/json' \
+  -d '{"output_path": "template-packs.json"}'
+
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.ai.create.validate_template_pack/run \
+  -H 'Content-Type: application/json' \
+  -d '{"template_pack_path": "examples/template-packs/local-agent-starter.json"}'
+
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.ai.create.plan_template_pack/run \
+  -H 'Content-Type: application/json' \
+  -d '{"template_pack_path": "examples/template-packs/local-agent-starter.json", "target_profile": "technical_audit", "context_packet_path": "context.packet.json", "planned_output_path": "board-audit.pdf", "output_path": "board-audit.plan.json"}'
+
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.ai.create.agent/run \
+  -H 'Content-Type: application/json' \
+  -d '{"template_pack_path": "examples/template-packs/local-agent-starter.json", "target_profile": "technical_audit", "context_packet_path": "context.packet.json", "output_path": "board-audit.pdf", "plan_output_path": "board-audit.plan.json", "coverage_output_path": "board-audit.coverage.json"}'
+
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.ai.create.from_template_pack/run \
+  -H 'Content-Type: application/json' \
+  -d '{"template_pack_path": "examples/template-packs/local-agent-starter.json", "template_id": "board_audit", "color_scheme": "executive_blue", "output_path": "board-audit.pdf"}'
+
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.ai.create.from_template_pack/run \
+  -H 'Content-Type: application/json' \
+  -d '{"template_pack_path": "examples/template-packs/local-agent-starter.json", "template_id": "board_audit", "color_scheme": "executive_blue", "context_packet_path": "context.packet.json", "output_path": "board-audit-from-context.pdf"}'
+
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.ai.create.template_preview/run \
+  -H 'Content-Type: application/json' \
+  -d '{"template": "invoice", "output_path": "invoice-preview.pdf"}'
+
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.ai.create.from_prompt/run \
+  -H 'Content-Type: application/json' \
+  -d '{"prompt": "Create a research brief about local PDF agents.", "output_path": "research-brief.pdf", "template": "research_brief", "style_pack": "paper_ink", "colors": {"primary": "#4f46e5"}}'
+```
+
+For structured templates, agents should call `pdf.ai.create.templates` or `pdf.ai.create.template_packs` first, inspect `fields`, `layout_slots`, `supported_block_types`, `sample_data`, `target_profile`, and color schemes, optionally run `pdf.ai.create.plan_template_pack` to pick a template from a Context Packet and Target PDF Profile, or call `pdf.ai.create.agent` to plan, create, render-check, blank-check, and write coverage evidence in one local step. The local starter pack now covers technical audits, research briefs, evidence packets, resumes, invoices, proposals, worksheets, and media review decks. Template pack `data.blocks` can include `section`, `code`, `table`, `image`, `slide`, and `citation` blocks with `target_slot` and `source_refs`; these render into the PDF and are recorded at block level. When a Context Packet is supplied, okpdf automatically maps packet text/document/PDF items into sections, code into code blocks, tables into tables, images into embedded image blocks, web links into citations, and media into slide blocks. The returned `slot_routing_plan` records every block placement with route ids, target slots, source refs, accepted/warning status, block-type support checks, slot-known facts, target profile compatibility, candidate target-profile slots, and a routing reason. Code items include local `code_evidence` with language, line count, character count, SHA-256 code hash, symbol count, and a lightweight function/class symbol list. Table items include local `table_evidence` with row count, column count, preview row count, inferred column types, and a deterministic table hash. PDF items include local `pdf_evidence` with text-layer availability, extracted page count, text character count, page-level text previews, and page bboxes. Image blocks validate the local image file and record dimensions/MIME evidence plus a local `visual_evidence` scaffold: aspect ratio, average RGB color, non-white ratio, blank detection, and a 16-character perceptual hash. Web links become citation blocks with local `citation_evidence`: normalized URL, scheme, domain, path/query/fragment, optional title/snippet/author/publication fields, and `fetch_status=not_fetched` by default. These are deterministic local evidence scaffolds for traceability and routing, not claims of OCR, VLM, code execution, or web-fetch understanding. Template pack creation writes sibling `.composition.json` and `.layers.json` artifacts. The composition artifact includes `composition_ir`, `source_map`, `slot_routing_plan`, and `evidence_coverage`; the layer manifest includes stable layer ids, block ids, target slots, source refs, source kinds, estimated normalized-page anchors, and edit policies for future template/block editing agents. Because the current renderer does not yet return exact physical bboxes, layer anchors are explicitly marked `estimated_slot_anchor` rather than exact layout coordinates. When a patch plan receives `composition_path`, it verifies every operation `source_refs` value against the composition `source_map`; matched mappings are written to `source_map_evidence`, and unknown refs fail with `source_ref_not_found`. When it also receives `layer_manifest_path` or CLI `--layers`, operations may include `layer_id`, `block_id`, or `target_slot`; matched layers are written to `layer_evidence` and `operation_layer_map` with anchor and edit-policy evidence. This remains append-only planning today and does not claim layout-preserving in-place body edits. The invoice renderer supports `invoice_number`, `client`, `due_date`, `items`, and `payment_notes`; the resume renderer supports `name`, `headline`, `contact`, `summary`, `skills`, and `experience`.
+
+Example context-to-PDF request:
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.context.build_packet/run \
+  -H 'Content-Type: application/json' \
+  -d '{"context_items": [{"text": "Create a technical audit PDF.", "role": "brief"}, {"path": "src/agentpdf/compose/context.py", "role": "code_evidence"}, {"table": {"columns": ["metric", "value"], "rows": [["latency_ms", "42"], ["error_rate", "0.01"]]}, "role": "data_evidence", "label": "Runtime Metrics"}, {"path": "assets/brand/okpdf-logo.png", "role": "image_evidence"}, {"path": "examples/media/meeting-audio.mp3", "role": "audio_context", "label": "Meeting Audio", "transcript": "00:00 Kickoff\n00:12 Decision: keep the local worker boundary explicit.", "duration_seconds": 42.5, "chapters": [{"start_seconds": 0, "title": "Kickoff"}, {"start_seconds": 12, "title": "Decision"}]}, {"path": "examples/media/training-video.mp4", "role": "video_context", "label": "Training Video", "transcript": "00:00 Dashboard tour\n00:20 Export demo", "duration_seconds": 84, "keyframes": [{"timestamp_seconds": 20, "label": "Export screen"}]}, {"path": "README.md", "role": "project_context"}], "output_path": "context.packet.json", "title": "Audit Context"}'
+
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.target.profiles/run \
+  -H 'Content-Type: application/json' \
+  -d '{"output_path": "target-profiles.json"}'
+
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.target.validate_profile/run \
+  -H 'Content-Type: application/json' \
+  -d '{"target_profile": {"profile_id": "media_learning_deck", "layout_mode": "slides", "layout_slots": {"title": {"accepts": ["section"], "required": true}, "evidence_slide": {"accepts": ["slide", "audio_reference", "video_reference"], "repeats": true}}, "accepted_block_types": ["slide", "section", "audio_reference", "video_reference"], "accepted_context_types": ["text", "audio", "video"], "validation_required": ["render_check", "evidence_coverage_report"]}, "output_path": "media-learning-deck.validation.json"}'
+
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.compose.from_context/run \
+  -H 'Content-Type: application/json' \
+  -d '{"context_packet_path": "context.packet.json", "profile": "technical_audit", "output_path": "technical-audit.pdf"}'
+
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.compose.from_context/run \
+  -H 'Content-Type: application/json' \
+  -d '{"context_packet_path": "context.packet.json", "profile": "slide_deck", "output_path": "agent-review-deck.pdf"}'
+```
+
+For context-to-PDF composition, agents should build a context packet, inspect the returned `source_graph`, call `pdf.target.profiles` to inspect available target slots and accepted block/context types, optionally call `pdf.target.validate_profile` for a custom profile, then compose. The local baseline now accepts text, files, links, inline table JSON, and audio/video media files with optional agent-provided transcripts, chapters, and keyframes. Code files become `code` blocks, CSV/inline tables become `table` blocks, image files become embedded `image` blocks, PDFs become `pdf_reference` blocks, and media files become `audio_reference` or `video_reference` blocks in `composition_ir`. The `slide_deck` profile renders one slide-like PDF page per deck slide and stores `slide` blocks with slide numbers and source refs. The result includes a PDF artifact, a `.composition.json` artifact, `composition_ir`, `source_map`, and `evidence_coverage`.
+
+Example evidence and patch transaction request:
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.evidence.coverage_report/run \
+  -H 'Content-Type: application/json' \
+  -d '{"composition_path": "technical-audit.composition.json", "output_path": "technical-audit.coverage.json"}'
+
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.patch.plan/run \
+  -H 'Content-Type: application/json' \
+  -d '{"input_path": "technical-audit.pdf", "operations": [{"op": "append_code_block", "title": "Risky Function", "language": "python", "code": "def risky_total(items):\n    return sum(items)\n", "source_refs": ["ctx_001"], "block_id": "blk_ctx_001"}, {"op": "append_table", "title": "Runtime Metrics", "columns": ["metric", "value"], "rows": [["latency_ms", "42"], ["error_rate", "0.01"]], "source_refs": ["ctx_002"], "target_slot": "findings"}, {"op": "append_image", "title": "Architecture Figure", "path": "assets/brand/okpdf-logo.png", "caption": "Local visual evidence rendered into the patched PDF.", "source_refs": ["ctx_003"]}, {"op": "append_slide", "title": "Agent Review Appendix", "body": ["Patch transactions can append slide-like evidence pages."], "source_refs": ["ctx_001", "ctx_002", "ctx_003"]}], "output_path": "technical-audit.patch.json", "composition_path": "technical-audit.composition.json", "layer_manifest_path": "technical-audit.layers.json", "reason": "Append structured evidence appendix."}'
+
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.patch.preview/run \
+  -H 'Content-Type: application/json' \
+  -d '{"patch_manifest_path": "technical-audit.patch.json", "output_path": "technical-audit.patch-preview.json"}'
+
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.patch.apply/run \
+  -H 'Content-Type: application/json' \
+  -d '{"patch_manifest_path": "technical-audit.patch.json", "output_path": "technical-audit-patched.pdf"}'
+
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.patch.verify/run \
+  -H 'Content-Type: application/json' \
+  -d '{"patch_manifest_path": "technical-audit.patch.json", "patched_path": "technical-audit-patched.pdf"}'
+
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.artifacts.export_bundle/run \
+  -H 'Content-Type: application/json' \
+  -d '{"artifact_paths": ["technical-audit-patched.pdf", "technical-audit.composition.json", "technical-audit.coverage.json", "technical-audit.patch.json"], "output_path": "technical-audit.agentpdf-bundle.zip", "title": "Technical Audit Bundle", "metadata": {"workflow": "context-packet-patch"}}'
+
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.artifacts.verify_bundle/run \
+  -H 'Content-Type: application/json' \
+  -d '{"bundle_path": "technical-audit.agentpdf-bundle.zip"}'
+```
+
+For patch workflows, agents should always plan first, preview the transaction, apply to a new output path, verify, export an artifact bundle, then verify the bundle before handing it to another agent or human reviewer. The current local patch implementation supports audited append-only Markdown, code block, table, image, and slide page operations; it records the original PDF SHA, page-count delta, rollback manifest, source-ref validation, matched source-map evidence, and validation report. The bundle adds a portable manifest and SHA-256 checksums for downstream review. It must not claim layout-preserving body edits.
 
 Example compression request:
 

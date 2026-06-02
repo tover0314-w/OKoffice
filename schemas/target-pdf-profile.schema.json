@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://okpdf.dev/schemas/target-pdf-profile.schema.json",
+  "title": "AgentPDF Target PDF Profile",
+  "type": "object",
+  "required": ["profile_id"],
+  "properties": {
+    "profile_id": {
+      "type": "string",
+      "examples": ["technical_audit", "research_brief", "evidence_packet_pdf", "training_handout", "slide_deck"]
+    },
+    "title": {"type": "string"},
+    "name": {"type": "string"},
+    "audience": {"type": "string"},
+    "style_pack": {"type": "string"},
+    "layout_mode": {
+      "type": "string",
+      "enum": ["document", "slides"],
+      "examples": ["document", "slides"]
+    },
+    "sections": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "validation_required": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "examples": ["render_check", "evidence_coverage_report"]
+      }
+    },
+    "layout_constraints": {"type": "object"},
+    "layout_slots": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "accepts": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          "required": {"type": "boolean"},
+          "repeats": {"type": "boolean"}
+        }
+      }
+    },
+    "accepted_block_types": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "section",
+          "slide",
+          "code",
+          "table",
+          "image",
+          "data",
+          "pdf_reference",
+          "audio_reference",
+          "video_reference",
+          "media_reference",
+          "citation"
+        ]
+      }
+    },
+    "accepted_context_types": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["text", "document", "code", "data", "image", "pdf", "audio", "video", "media", "web_link", "file"]
+      }
+    },
+    "evidence_policy": {"type": "object"}
+  }
+}

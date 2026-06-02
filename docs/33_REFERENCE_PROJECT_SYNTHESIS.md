@@ -93,6 +93,8 @@ Implemented baseline:
 - `pdf.ai.rag.cite_answer`
 - `pdf.ai.rag.highlight_sources`
 - `pdf.ai.rag.export_report`
+- `pdf.ai.create.from_prompt`
+- `pdf.ai.create.templates`
 - `pdf.convert.pdf_to_json`
 - `pdf.convert.pdf_to_markdown`
 - `pdf.organize.reorder_pages`
@@ -101,6 +103,7 @@ Implemented baseline:
 Next local improvements:
 
 - Highlighted source reports.
+- Local prompt-to-template PDF creation should stay deterministic in OSS: list templates, choose a template, apply a style pack and color overrides, render, validate, and return the generated Markdown and agent plan.
 - Better paragraph/table/formula/image segmentation.
 - Optional parser worker contracts inspired by pdf-craft and LiteParse.
 

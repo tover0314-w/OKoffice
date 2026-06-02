@@ -16,6 +16,8 @@ okpdf workflow plan --goal "Chat with this PDF and cite answers" --input-path re
 
 The implemented `pdf.workflow.plan` tool returns a `ToolResult` with a workflow plan id, agent roles, ordered tool steps, expected JSON outputs, and an explicit cloud boundary.
 
+Future workflow plans should also be able to describe context packet inputs, target PDF profiles, source graph evidence, composition IR outputs, patch transactions, evidence coverage checks, and artifact graph updates. This keeps the workflow layer useful for agent-native document assembly, not only single-PDF tool chaining.
+
 Agents can also execute a concrete local workflow manifest:
 
 ```bash
@@ -67,6 +69,7 @@ Current limitations:
 - No parallel execution yet.
 - No variable substitution yet; concrete paths must be supplied before execution.
 - Cloud-only/model tools are rejected by the local runner.
+- Context packets, target PDF profiles, source graph, artifact graph, composition IR, and patch manifests are product-direction concepts; first local implementations may be schema-only or example-driven.
 
 ## Workflow YAML concept
 
@@ -86,6 +89,50 @@ outputs:
   folder: ./out
 ```
 
+## Agent-native workflow concept
+
+```yaml
+name: context-to-board-deck
+inputs:
+  context:
+    - ./meeting-transcript.md
+    - ./metrics.csv
+    - ./screenshots/
+steps:
+  - tool: pdf.context.packet
+  - tool: pdf.target.select_profile
+  - tool: pdf.compose.plan
+  - tool: pdf.compose.render_ir
+  - tool: pdf.evidence.coverage_report
+  - tool: pdf.validation.render_check
+outputs:
+  pdf: ./out/board-deck.pdf
+  source_map: ./out/board-deck.source-map.json
+  report: ./out/board-deck.validation.json
+```
+
+Patch workflow concept:
+
+```yaml
+name: insert-code-appendix
+inputs:
+  pdf: ./architecture-review.pdf
+  code: ./src/
+steps:
+  - tool: pdf.inspect.document
+  - tool: pdf.context.code_snapshot
+  - tool: pdf.target.select_profile
+  - tool: pdf.patch.plan
+  - tool: pdf.patch.preview
+  - tool: pdf.patch.apply
+  - tool: pdf.patch.verify
+  - tool: pdf.validation.visual_diff
+outputs:
+  pdf: ./out/architecture-review-with-appendix.pdf
+  patch_manifest: ./out/patch.json
+  diff_report: ./out/diff.json
+```
+
 ## Future cloud workflow features
 
 - Queue.
@@ -95,6 +142,11 @@ outputs:
 - Parallelism.
 - Scheduled jobs.
 - Team usage accounting.
+- Hosted context packet and source graph persistence.
+- Hosted artifact graph persistence.
+- Long-running video/image/audio workers.
+- Evidence and citation verification workers.
+- Enterprise audit logs and retention policies.
 
 ## Agent integration
 
@@ -105,3 +157,15 @@ pdf.workflow.plan -> pdf.workflow.run -> pdf.workflow.report
 ```
 
 `pdf.workflow.plan`, `pdf.workflow.run`, and `pdf.workflow.report` are implemented locally. Future orchestration work should add retries, parallel execution, richer variable binding, and batch persistence.
+
+Longer-term workflow runs should expose a complete audit trail:
+
+- Input context packet.
+- Target PDF profile.
+- Input source graph.
+- Step results.
+- Output artifacts.
+- Source maps.
+- Patch manifests.
+- Validation reports.
+- Warnings and unresolved risks.

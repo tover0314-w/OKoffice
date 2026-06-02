@@ -3,6 +3,11 @@
   "version": "0.1.0",
   "tools": [
     {
+      "name": "agent_setup_claude_code",
+      "maps_to": "agent.setup.claude_code",
+      "status": "beta"
+    },
+    {
       "name": "pdf_inspect_document",
       "maps_to": "pdf.inspect.document",
       "status": "stable"
@@ -25,6 +30,61 @@
     {
       "name": "pdf_workflow_report",
       "maps_to": "pdf.workflow.report",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_context_build_packet",
+      "maps_to": "pdf.context.build_packet",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_compose_from_context",
+      "maps_to": "pdf.compose.from_context",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_target_profiles",
+      "maps_to": "pdf.target.profiles",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_target_validate_profile",
+      "maps_to": "pdf.target.validate_profile",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_evidence_coverage_report",
+      "maps_to": "pdf.evidence.coverage_report",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_artifacts_export_bundle",
+      "maps_to": "pdf.artifacts.export_bundle",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_artifacts_verify_bundle",
+      "maps_to": "pdf.artifacts.verify_bundle",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_patch_plan",
+      "maps_to": "pdf.patch.plan",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_patch_preview",
+      "maps_to": "pdf.patch.preview",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_patch_apply",
+      "maps_to": "pdf.patch.apply",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_patch_verify",
+      "maps_to": "pdf.patch.verify",
       "status": "beta"
     },
     {
@@ -111,6 +171,46 @@
       "name": "pdf_create_markdown",
       "maps_to": "pdf.convert.markdown_to_pdf",
       "status": "stable"
+    },
+    {
+      "name": "pdf_ai_create_from_prompt",
+      "maps_to": "pdf.ai.create.from_prompt",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_ai_create_template_preview",
+      "maps_to": "pdf.ai.create.template_preview",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_ai_create_templates",
+      "maps_to": "pdf.ai.create.templates",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_ai_create_template_packs",
+      "maps_to": "pdf.ai.create.template_packs",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_ai_create_validate_template_pack",
+      "maps_to": "pdf.ai.create.validate_template_pack",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_ai_create_plan_template_pack",
+      "maps_to": "pdf.ai.create.plan_template_pack",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_ai_create_agent",
+      "maps_to": "pdf.ai.create.agent",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_ai_create_from_template_pack",
+      "maps_to": "pdf.ai.create.from_template_pack",
+      "status": "beta"
     },
     {
       "name": "pdf_watermark",

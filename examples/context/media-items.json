@@ -1,0 +1,23 @@
+[
+  {
+    "path": "examples/media/meeting-audio.mp3",
+    "role": "audio_context",
+    "label": "Meeting Audio",
+    "transcript": "00:00 Kickoff\n00:12 Decision: keep the local worker boundary explicit.",
+    "duration_seconds": 42.5,
+    "chapters": [
+      {"start_seconds": 0, "title": "Kickoff"},
+      {"start_seconds": 12, "title": "Decision"}
+    ]
+  },
+  {
+    "path": "examples/media/training-video.mp4",
+    "role": "video_context",
+    "label": "Training Video",
+    "transcript": "00:00 Dashboard tour\n00:20 Export demo",
+    "duration_seconds": 84,
+    "keyframes": [
+      {"timestamp_seconds": 20, "label": "Export screen"}
+    ]
+  }
+]

@@ -8,6 +8,7 @@ Provide a beautiful, scriptable command-line interface.
 
 ```text
 okpdf --help
+okpdf agent setup claude-code -o .mcp.json
 okpdf inspect FILE
 okpdf inspect-pages FILE --pages 1-3 --render-check
 okpdf workflow plan --goal "Chat with this PDF and cite answers" --input-path FILE

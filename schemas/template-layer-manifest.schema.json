@@ -1,0 +1,173 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://okpdf.dev/schemas/template-layer-manifest.schema.json",
+  "title": "AgentPDF Template Layer Manifest",
+  "type": "object",
+  "required": [
+    "template_layer_manifest_version",
+    "template_layer_manifest_id",
+    "pack_id",
+    "template_id",
+    "base_template",
+    "target_profile_id",
+    "context_packet_id",
+    "composition_id",
+    "slot_routing_plan_id",
+    "output_pdf_path",
+    "template_layer_manifest_path",
+    "layer_count",
+    "editable_layer_count",
+    "coordinate_policy",
+    "layers",
+    "next_recommended_tools"
+  ],
+  "properties": {
+    "template_layer_manifest_version": {"type": "string"},
+    "template_layer_manifest_id": {"type": "string", "pattern": "^layers_"},
+    "pack_id": {"type": "string"},
+    "template_id": {"type": "string"},
+    "template_name": {"type": "string"},
+    "base_template": {"type": "string"},
+    "target_profile_id": {"type": "string"},
+    "context_packet_id": {"type": "string", "pattern": "^ctxpkt_"},
+    "composition_id": {"type": "string", "pattern": "^cmp_"},
+    "slot_routing_plan_id": {"type": "string", "pattern": "^route_"},
+    "output_pdf_path": {"type": "string"},
+    "template_layer_manifest_path": {"type": "string"},
+    "page_count": {"type": ["integer", "null"], "minimum": 1},
+    "layer_count": {"type": "integer", "minimum": 0},
+    "editable_layer_count": {"type": "integer", "minimum": 0},
+    "layer_types": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "coordinate_policy": {
+      "type": "object",
+      "required": ["coordinate_system", "bbox_kind", "notes"],
+      "properties": {
+        "coordinate_system": {"type": "string", "enum": ["normalized_page"]},
+        "bbox_kind": {"type": "string", "enum": ["estimated", "exact"]},
+        "notes": {"type": "string"}
+      },
+      "additionalProperties": true
+    },
+    "layers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "layer_id",
+          "block_id",
+          "block_type",
+          "target_slot",
+          "slot_known",
+          "routing_status",
+          "source_refs",
+          "source_kinds",
+          "anchor",
+          "edit_policy",
+          "style"
+        ],
+        "properties": {
+          "layer_id": {"type": "string", "pattern": "^layer_"},
+          "block_id": {"type": "string"},
+          "block_type": {
+            "type": "string",
+            "enum": ["section", "code", "table", "image", "slide", "citation"]
+          },
+          "title": {"type": "string"},
+          "target_slot": {"type": "string"},
+          "slot_known": {"type": "boolean"},
+          "routing_status": {"type": "string", "enum": ["accepted", "warning"]},
+          "source_refs": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          "source_kinds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["template_pack", "agent_context", "web_link", "local_file"]
+            }
+          },
+          "source_context_item_id": {"type": "string"},
+          "anchor": {
+            "type": "object",
+            "required": ["anchor_id", "anchor_kind", "page_number", "confidence", "bbox"],
+            "properties": {
+              "anchor_id": {"type": "string", "pattern": "^anchor_"},
+              "anchor_kind": {"type": "string", "enum": ["estimated_slot_anchor", "exact_render_anchor"]},
+              "page_number": {"type": "integer", "minimum": 1},
+              "confidence": {"type": "string", "enum": ["estimated", "exact"]},
+              "bbox": {
+                "type": "object",
+                "required": ["x", "y", "width", "height", "coordinate_system"],
+                "properties": {
+                  "x": {"type": "number", "minimum": 0, "maximum": 1},
+                  "y": {"type": "number", "minimum": 0, "maximum": 1},
+                  "width": {"type": "number", "minimum": 0, "maximum": 1},
+                  "height": {"type": "number", "minimum": 0, "maximum": 1},
+                  "coordinate_system": {"type": "string", "enum": ["normalized_page"]}
+                },
+                "additionalProperties": false
+              },
+              "notes": {"type": "string"}
+            },
+            "additionalProperties": true
+          },
+          "edit_policy": {
+            "type": "object",
+            "required": [
+              "editable",
+              "mode",
+              "allowed_operations",
+              "requires_source_ref",
+              "preserves_input_pdf",
+              "claims_layout_preservation"
+            ],
+            "properties": {
+              "editable": {"type": "boolean"},
+              "mode": {"type": "string", "enum": ["template_block"]},
+              "allowed_operations": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "replace_block",
+                    "append_to_slot",
+                    "annotate",
+                    "hide_layer",
+                    "regenerate_block"
+                  ]
+                }
+              },
+              "requires_source_ref": {"type": "boolean"},
+              "preserves_input_pdf": {"type": "boolean"},
+              "claims_layout_preservation": {"type": "boolean"}
+            },
+            "additionalProperties": true
+          },
+          "style": {
+            "type": "object",
+            "required": ["style_pack", "color_scheme"],
+            "properties": {
+              "style_pack": {"type": "string"},
+              "color_scheme": {"type": ["string", "null"]}
+            },
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "next_recommended_tools": {
+      "type": "array",
+      "items": {"type": "string"}
+    }
+  },
+  "additionalProperties": true
+}

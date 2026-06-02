@@ -13,7 +13,10 @@ def build_artifact(path: str | Path, source_tool: str) -> Artifact:
     resolved = Path(path).resolve()
     data = resolved.read_bytes()
     digest = hashlib.sha256(data).hexdigest()
-    mime_type = mimetypes.guess_type(resolved.name)[0] or "application/octet-stream"
+    if resolved.suffix.lower() == ".zip":
+        mime_type = "application/zip"
+    else:
+        mime_type = mimetypes.guess_type(resolved.name)[0] or "application/octet-stream"
     page_count = _pdf_page_count(resolved) if mime_type == "application/pdf" else None
     return Artifact(
         artifact_id=f"art_{digest[:16]}",

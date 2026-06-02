@@ -6,13 +6,25 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+from reportlab.lib import colors as rl_colors
 from pypdf import PdfReader, PdfWriter
 from reportlab.lib.colors import HexColor
 from reportlab.lib.pagesizes import A4, landscape, letter
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.utils import ImageReader
+from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfgen import canvas
-from reportlab.platypus import ListFlowable, ListItem, Paragraph, SimpleDocTemplate, Spacer
+from reportlab.platypus import (
+    Image as RLImage,
+    ListFlowable,
+    ListItem,
+    Paragraph,
+    Preformatted,
+    SimpleDocTemplate,
+    Spacer,
+    Table,
+    TableStyle,
+)
 
 from agentpdf.artifacts.store import build_artifact
 from agentpdf.core.page_ranges import parse_page_range
@@ -103,6 +115,23 @@ BUILTIN_STYLE_PACKS: dict[str, dict[str, Any]] = {
         },
         "colors": {"primary": "#166534", "accent": "#94a3b8", "text": "#111827"},
         "components": ["table", "section_header"],
+    },
+    "paper_ink": {
+        "style_id": "paper_ink",
+        "name": "Paper Ink",
+        "description": "Polished document template style for agent-created briefs and worksheets.",
+        "page": {
+            "size": "A4",
+            "orientation": "portrait",
+            "margins": {"top": 50, "right": 54, "bottom": 54, "left": 54},
+        },
+        "typography": {
+            "heading_font": "system-sans",
+            "body_font": "system-sans",
+            "base_size": 10,
+        },
+        "colors": {"primary": "#20314f", "accent": "#2f7d6d", "text": "#1f2937"},
+        "components": ["cover", "section_header", "callout", "worksheet_prompt", "checklist"],
     },
 }
 
@@ -919,7 +948,7 @@ def create_markdown_pdf(
     markdown: str,
     output_path: str | Path,
     title: str | None = None,
-    style_pack: str = "plain_report",
+    style_pack: str | dict[str, Any] = "plain_report",
 ) -> ToolResult:
     tool = "pdf.convert.markdown_to_pdf"
     output = resolve_output_path(output_path)
@@ -953,9 +982,190 @@ def create_markdown_pdf(
     )
 
 
+def create_slide_deck_pdf(
+    slides: list[dict[str, Any]],
+    output_path: str | Path,
+    title: str | None = None,
+    style_pack: str | dict[str, Any] = "paper_ink",
+) -> ToolResult:
+    tool = "pdf.compose.render_slides"
+    if not slides:
+        raise AgentPDFException("invalid_input", "Slide deck must include at least one slide.")
+    output = resolve_output_path(output_path)
+    resolved_style = _resolve_style_pack(style_pack)
+    pack = resolved_style["pack"]
+    colors = pack.get("colors", {})
+    primary = _hex_color(str(colors.get("primary", "#20314f")))
+    accent = _hex_color(str(colors.get("accent", "#2f7d6d")))
+    text_color = _hex_color(str(colors.get("text", "#1f2937")))
+    page_size = landscape(letter)
+    document = canvas.Canvas(str(output), pagesize=page_size)
+    document.setTitle(title or "okpdf slide deck")
+    width, height = page_size
+
+    for index, slide in enumerate(slides, start=1):
+        document.setFillColor(HexColor("#ffffff"))
+        document.rect(0, 0, width, height, fill=1, stroke=0)
+        document.setFillColor(primary)
+        document.setFont("Helvetica-Bold", 25)
+        document.drawString(42, height - 54, str(slide.get("title") or f"Slide {index}"))
+        document.setStrokeColor(accent)
+        document.setLineWidth(2)
+        document.line(42, height - 68, width - 42, height - 68)
+
+        y = height - 96
+        subtitle = str(slide.get("subtitle") or "")
+        if subtitle:
+            document.setFillColor(accent)
+            document.setFont("Helvetica", 12)
+            y = _draw_wrapped_lines(document, subtitle, 42, y, width - 84, 15, "Helvetica", 12)
+            y -= 8
+        body = slide.get("body")
+        if isinstance(body, list):
+            document.setFillColor(text_color)
+            document.setFont("Helvetica", 13)
+            for item in body[:9]:
+                y = _draw_wrapped_lines(document, f"- {item}", 52, y, width - 104, 16, "Helvetica", 13)
+                y -= 3
+        elif isinstance(body, str) and body:
+            document.setFillColor(text_color)
+            y = _draw_wrapped_lines(document, body, 42, y, width - 84, 16, "Helvetica", 13)
+
+        table = slide.get("table")
+        if isinstance(table, dict):
+            y = _draw_slide_table(document, table, 42, y - 8, width - 84, text_color, accent)
+
+        code = str(slide.get("code") or "")
+        if code:
+            y = _draw_slide_code(document, code, 42, y - 6, width - 84)
+
+        image_path = slide.get("image_path")
+        if image_path:
+            _draw_slide_image(document, Path(str(image_path)), width - 312, 92, 270, 250)
+
+        refs = ", ".join(str(ref) for ref in slide.get("source_refs", []) if ref)
+        document.setFillColor(HexColor("#64748b"))
+        document.setFont("Helvetica", 8)
+        document.drawString(42, 28, f"Slide {index} / {len(slides)}")
+        if refs:
+            document.drawRightString(width - 42, 28, f"Sources: {refs}")
+        document.showPage()
+    document.save()
+    return _result_for_created_pdf(
+        tool=tool,
+        output=output,
+        usage={
+            "slide_count": len(slides),
+            "title": title,
+            "style_pack": pack["style_id"],
+            "style_pack_source": resolved_style["source"],
+        },
+        next_tools=["pdf.inspect.document", "pdf.validation.render_check"],
+    )
+
+
+def _draw_wrapped_lines(
+    document: canvas.Canvas,
+    text: str,
+    x: float,
+    y: float,
+    max_width: float,
+    line_height: float,
+    font_name: str,
+    font_size: float,
+) -> float:
+    document.setFont(font_name, font_size)
+    for line in _wrap_canvas_text(str(text), max_width, font_name, font_size):
+        document.drawString(x, y, line)
+        y -= line_height
+    return y
+
+
+def _wrap_canvas_text(text: str, max_width: float, font_name: str, font_size: float) -> list[str]:
+    wrapped: list[str] = []
+    for raw_line in text.splitlines() or [""]:
+        words = raw_line.split()
+        current = ""
+        for word in words:
+            candidate = f"{current} {word}".strip()
+            if pdfmetrics.stringWidth(candidate, font_name, font_size) <= max_width:
+                current = candidate
+            else:
+                if current:
+                    wrapped.append(current)
+                current = word
+        wrapped.append(current)
+    return wrapped
+
+
+def _draw_slide_table(
+    document: canvas.Canvas,
+    table: dict[str, Any],
+    x: float,
+    y: float,
+    width: float,
+    text_color: HexColor,
+    accent: HexColor,
+) -> float:
+    columns = [str(column) for column in table.get("columns", [])]
+    rows = [[str(cell) for cell in row] for row in table.get("rows", [])]
+    if not columns:
+        return y
+    column_width = width / max(len(columns), 1)
+    row_height = 24
+    document.setFillColor(HexColor("#eef2f7"))
+    document.rect(x, y - row_height + 6, width, row_height, fill=1, stroke=0)
+    document.setStrokeColor(accent)
+    document.setLineWidth(0.7)
+    document.setFillColor(text_color)
+    document.setFont("Helvetica-Bold", 10)
+    for col_index, column in enumerate(columns):
+        document.drawString(x + col_index * column_width + 6, y - 10, column[:28])
+    y -= row_height
+    document.setFont("Helvetica", 10)
+    for row in rows[:7]:
+        document.line(x, y + 4, x + width, y + 4)
+        for col_index, cell in enumerate(row[: len(columns)]):
+            document.drawString(x + col_index * column_width + 6, y - 10, cell[:28])
+        y -= row_height
+    return y
+
+
+def _draw_slide_code(document: canvas.Canvas, code: str, x: float, y: float, width: float) -> float:
+    lines = code.splitlines()[:12]
+    line_height = 12
+    box_height = max(len(lines), 1) * line_height + 18
+    document.setFillColor(HexColor("#f8fafc"))
+    document.rect(x, y - box_height + 6, width, box_height, fill=1, stroke=0)
+    document.setFillColor(HexColor("#0f172a"))
+    document.setFont("Courier", 8.5)
+    cursor = y - 10
+    for line in lines:
+        document.drawString(x + 10, cursor, line[:110])
+        cursor -= line_height
+    return y - box_height - 6
+
+
+def _draw_slide_image(document: canvas.Canvas, path: Path, x: float, y: float, max_width: float, max_height: float) -> None:
+    if not path.exists():
+        document.setFillColor(HexColor("#f8fafc"))
+        document.rect(x, y, max_width, max_height, fill=1, stroke=0)
+        document.setFillColor(HexColor("#64748b"))
+        document.setFont("Helvetica", 9)
+        document.drawCentredString(x + max_width / 2, y + max_height / 2, "image unavailable")
+        return
+    reader = ImageReader(str(path))
+    image_width, image_height = reader.getSize()
+    scale = min(max_width / image_width, max_height / image_height, 1.0)
+    draw_width = image_width * scale
+    draw_height = image_height * scale
+    document.drawImage(reader, x, y, width=draw_width, height=draw_height, preserveAspectRatio=True, mask="auto")
+
+
 def _markdown_to_story(markdown: str, styles: Any) -> list[Any]:
     story: list[Any] = []
     bullet_items: list[ListItem] = []
+    lines = markdown.splitlines()
 
     def flush_bullets() -> None:
         nonlocal bullet_items
@@ -964,10 +1174,13 @@ def _markdown_to_story(markdown: str, styles: Any) -> list[Any]:
             story.append(Spacer(1, 8))
             bullet_items = []
 
-    for raw_line in markdown.splitlines():
+    index = 0
+    while index < len(lines):
+        raw_line = lines[index]
         line = raw_line.strip()
         if not line:
             flush_bullets()
+            index += 1
             continue
         if line.startswith("# "):
             flush_bullets()
@@ -981,6 +1194,24 @@ def _markdown_to_story(markdown: str, styles: Any) -> list[Any]:
             flush_bullets()
             story.append(Paragraph(_escape_paragraph(line[4:].strip()), styles["Heading3"]))
             story.append(Spacer(1, 6))
+        elif line.startswith("```"):
+            flush_bullets()
+            code_lines: list[str] = []
+            index += 1
+            while index < len(lines) and not lines[index].strip().startswith("```"):
+                code_lines.append(lines[index])
+                index += 1
+            story.append(Preformatted(_escape_preformatted("\n".join(code_lines)), styles["Code"]))
+            story.append(Spacer(1, 8))
+        elif (image := _parse_markdown_image(line)) is not None:
+            flush_bullets()
+            story.extend(_image_story(image[0], image[1], styles))
+        elif _is_markdown_table_start(lines, index):
+            flush_bullets()
+            table_rows, index = _collect_markdown_table(lines, index)
+            story.append(_table_story(table_rows, styles))
+            story.append(Spacer(1, 8))
+            continue
         elif line.startswith(("- ", "* ")):
             bullet_items.append(
                 ListItem(Paragraph(_escape_paragraph(line[2:].strip()), styles["BodyText"]))
@@ -993,13 +1224,103 @@ def _markdown_to_story(markdown: str, styles: Any) -> list[Any]:
             flush_bullets()
             story.append(Paragraph(_escape_paragraph(line), styles["BodyText"]))
             story.append(Spacer(1, 8))
+        index += 1
     flush_bullets()
     if not story:
         story.append(Paragraph(" ", styles["BodyText"]))
     return story
 
 
-def _resolve_style_pack(style_pack: str) -> dict[str, Any]:
+def _parse_markdown_image(line: str) -> tuple[str, Path] | None:
+    if not line.startswith("![") or "](" not in line or not line.endswith(")"):
+        return None
+    alt_end = line.find("](")
+    alt = line[2:alt_end].strip() or "image"
+    raw_path = line[alt_end + 2 : -1].strip()
+    if raw_path.startswith("<") and raw_path.endswith(">"):
+        raw_path = raw_path[1:-1].strip()
+    if not raw_path:
+        return None
+    return alt, Path(raw_path)
+
+
+def _image_story(alt: str, path: Path, styles: Any) -> list[Any]:
+    if not path.exists():
+        return [
+            Paragraph(_escape_paragraph(f"Image unavailable: {alt} ({path})"), styles["Code"]),
+            Spacer(1, 8),
+        ]
+    reader = ImageReader(str(path))
+    width, height = reader.getSize()
+    max_width = 420.0
+    max_height = 280.0
+    scale = min(max_width / width, max_height / height, 1.0) if width and height else 1.0
+    flowables: list[Any] = [
+        RLImage(str(path), width=width * scale, height=height * scale),
+        Spacer(1, 4),
+        Paragraph(_escape_paragraph(alt), styles["Code"]),
+        Spacer(1, 8),
+    ]
+    return flowables
+
+
+def _is_markdown_table_start(lines: list[str], index: int) -> bool:
+    if index + 1 >= len(lines):
+        return False
+    current = lines[index].strip()
+    separator = lines[index + 1].strip()
+    return current.startswith("|") and separator.startswith("|") and _is_table_separator_row(separator)
+
+
+def _collect_markdown_table(lines: list[str], index: int) -> tuple[list[list[str]], int]:
+    rows: list[list[str]] = []
+    while index < len(lines) and lines[index].strip().startswith("|"):
+        raw = lines[index].strip()
+        if not _is_table_separator_row(raw):
+            rows.append(_split_table_row(raw))
+        index += 1
+    return rows, index
+
+
+def _split_table_row(row: str) -> list[str]:
+    normalized = row.strip().strip("|")
+    return [cell.strip().replace("\\|", "|") for cell in normalized.split("|")]
+
+
+def _is_table_separator_row(row: str) -> bool:
+    cells = _split_table_row(row)
+    return bool(cells) and all(cell and set(cell) <= {"-", ":", " "} for cell in cells)
+
+
+def _table_story(rows: list[list[str]], styles: Any) -> Table:
+    width = max(len(row) for row in rows) if rows else 1
+    normalized = [row + [""] * (width - len(row)) for row in rows] or [[""]]
+    data = [
+        [Paragraph(_escape_paragraph(cell), styles["BodyText"]) for cell in row]
+        for row in normalized
+    ]
+    table = Table(data, repeatRows=1, hAlign="LEFT")
+    table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), HexColor("#f1f5f9")),
+                ("TEXTCOLOR", (0, 0), (-1, 0), HexColor("#111827")),
+                ("GRID", (0, 0), (-1, -1), 0.35, rl_colors.lightgrey),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 5),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+                ("TOPPADDING", (0, 0), (-1, -1), 4),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+            ]
+        )
+    )
+    return table
+
+
+def _resolve_style_pack(style_pack: str | dict[str, Any]) -> dict[str, Any]:
+    if isinstance(style_pack, dict):
+        return {"pack": _normalize_style_pack(style_pack), "source": "inline"}
+
     if style_pack in BUILTIN_STYLE_PACKS:
         return {"pack": dict(BUILTIN_STYLE_PACKS[style_pack]), "source": "builtin"}
 
@@ -1170,6 +1491,10 @@ def _escape_paragraph(text: str) -> str:
         .replace(">", "&gt;")
         .replace("\n", "<br/>")
     )
+
+
+def _escape_preformatted(text: str) -> str:
+    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
 def _writer_from_reader_pages(reader: PdfReader) -> PdfWriter:

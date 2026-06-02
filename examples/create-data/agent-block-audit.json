@@ -1,0 +1,61 @@
+{
+  "title": "Agent Block Audit",
+  "audience": "engineering leadership",
+  "sections": [
+    {
+      "heading": "Executive Summary",
+      "body": "This audit packet is assembled from agent-supplied source blocks, not only static template sample data."
+    }
+  ],
+  "blocks": [
+    {
+      "block_id": "blk_agent_code",
+      "type": "code",
+      "title": "Risky Function",
+      "target_slot": "evidence",
+      "language": "python",
+      "code": "def risky_total(items):\n    return sum(items)\n",
+      "source_refs": ["ctx_code"]
+    },
+    {
+      "block_id": "blk_agent_table",
+      "type": "table",
+      "title": "Runtime Metrics",
+      "target_slot": "findings",
+      "columns": ["metric", "value"],
+      "rows": [
+        ["latency_ms", "42"],
+        ["error_rate", "0.01"]
+      ],
+      "source_refs": ["ctx_metrics"]
+    },
+    {
+      "block_id": "blk_agent_image",
+      "type": "image",
+      "title": "Architecture Figure",
+      "target_slot": "evidence",
+      "path": "assets/brand/okpdf-logo.png",
+      "caption": "Local visual evidence rendered from an agent-supplied image block.",
+      "source_refs": ["path://assets/brand/okpdf-logo.png"]
+    },
+    {
+      "block_id": "blk_agent_citation",
+      "type": "citation",
+      "title": "Reference Note",
+      "target_slot": "recommendations",
+      "quote": "Local outputs need evidence, validation, and portable audit artifacts.",
+      "source": "https://okpdf.local/docs/local-agent-integration",
+      "page": "local",
+      "source_refs": ["https://okpdf.local/docs/local-agent-integration"]
+    },
+    {
+      "block_id": "blk_agent_slide",
+      "type": "slide",
+      "title": "Decision Slide",
+      "target_slot": "recommendations",
+      "body": ["Keep local validation before sharing.", "Export an artifact bundle after patch verification."],
+      "source_refs": ["ctx_decision"]
+    }
+  ],
+  "checklist": ["Render check passed", "Evidence coverage reviewed", "Bundle exported"]
+}

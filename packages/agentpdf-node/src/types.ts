@@ -63,6 +63,15 @@ export interface ToolManifest {
   tools: ToolSpec[];
 }
 
+export interface SetupClaudeCodeInput {
+  outputPath?: string;
+  safeRoot?: string;
+  command?: string;
+  argsPrefix?: string[];
+  serverName?: string;
+  scope?: "project" | "local" | "user";
+}
+
 export interface InspectDocumentInput {
   path: string;
 }
@@ -86,6 +95,77 @@ export interface WorkflowRunInput {
 export interface WorkflowReportInput {
   workflowRun: JsonObject;
   outputPath?: string;
+}
+
+export interface BuildContextPacketInput {
+  contextItems: JsonObject[];
+  outputPath: string;
+  title?: string;
+  intent?: string;
+}
+
+export interface ComposeFromContextInput {
+  contextPacket?: JsonObject;
+  contextPacketPath?: string;
+  targetProfile?: JsonObject | string;
+  profile?: string;
+  outputPath: string;
+  stylePack?: string;
+  title?: string;
+}
+
+export interface TargetProfilesInput {
+  outputPath?: string;
+}
+
+export interface ValidateTargetProfileInput {
+  targetProfile?: JsonObject | string;
+  profile?: string;
+  outputPath?: string;
+}
+
+export interface EvidenceCoverageReportInput {
+  composition?: JsonObject;
+  compositionPath?: string;
+  outputPath?: string;
+}
+
+export interface ExportBundleInput {
+  artifactPaths: string[];
+  outputPath: string;
+  title?: string;
+  metadata?: JsonObject;
+}
+
+export interface VerifyBundleInput {
+  bundlePath: string;
+}
+
+export interface PatchPlanInput {
+  inputPath: string;
+  operations: JsonObject[];
+  outputPath: string;
+  compositionPath?: string;
+  layerManifestPath?: string;
+  reason?: string;
+}
+
+export interface PatchPreviewInput {
+  patchManifest?: JsonObject;
+  patchManifestPath?: string;
+  outputPath?: string;
+}
+
+export interface PatchApplyInput {
+  patchManifest?: JsonObject;
+  patchManifestPath?: string;
+  outputPath: string;
+}
+
+export interface PatchVerifyInput {
+  patchManifest?: JsonObject;
+  patchManifestPath?: string;
+  patchedPath: string;
 }
 
 export interface MergePdfInput {
@@ -144,6 +224,78 @@ export interface CreateMarkdownPdfInput {
   markdown: string;
   outputPath: string;
   title?: string;
+  stylePack?: string;
+}
+
+export interface CreateFromPromptInput {
+  prompt: string;
+  outputPath: string;
+  template?: string;
+  stylePack?: string;
+  colors?: Record<string, string>;
+  data?: JsonObject;
+  title?: string;
+}
+
+export interface CreateTemplatePreviewInput {
+  template: string;
+  outputPath: string;
+  stylePack?: string;
+  colors?: Record<string, string>;
+  data?: JsonObject;
+}
+
+export interface CreateTemplatePacksInput {
+  outputPath?: string;
+}
+
+export interface ValidateTemplatePackInput {
+  templatePack?: JsonObject | string;
+  templatePackPath?: string;
+  outputPath?: string;
+}
+
+export interface PlanTemplatePackInput {
+  templatePack?: JsonObject | string;
+  templatePackPath?: string;
+  targetProfile?: JsonObject | string;
+  profile?: string;
+  contextPacket?: JsonObject | string;
+  contextPacketPath?: string;
+  plannedOutputPath?: string;
+  outputPath?: string;
+  preferredTemplateId?: string;
+  preferredColorScheme?: string;
+}
+
+export interface CreateAgentInput {
+  templatePack?: JsonObject | string;
+  templatePackPath?: string;
+  targetProfile?: JsonObject | string;
+  profile?: string;
+  contextPacket?: JsonObject | string;
+  contextPacketPath?: string;
+  outputPath: string;
+  planOutputPath?: string;
+  coverageOutputPath?: string;
+  preferredTemplateId?: string;
+  preferredColorScheme?: string;
+  title?: string;
+  prompt?: string;
+  stylePack?: string;
+}
+
+export interface CreateFromTemplatePackInput {
+  templatePack?: JsonObject | string;
+  templatePackPath?: string;
+  templateId: string;
+  outputPath: string;
+  colorScheme?: string;
+  data?: JsonObject;
+  contextPacket?: JsonObject | string;
+  contextPacketPath?: string;
+  title?: string;
+  prompt?: string;
   stylePack?: string;
 }
 

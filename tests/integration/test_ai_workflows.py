@@ -3,6 +3,7 @@ from pathlib import Path
 
 from pypdf import PdfReader
 
+from agentpdf.creation.agent import create_pdf_from_prompt, create_template_preview, list_create_templates
 from agentpdf.core.pdf import create_markdown_pdf
 from agentpdf.ir.lite import parse_lite_pdf, write_document_ir_json, write_document_ir_markdown
 from agentpdf.rag.local import (
@@ -228,3 +229,187 @@ def test_local_rag_chat_runs_end_to_end_with_report_and_highlights(tmp_path: Pat
     report_text = "\n".join(page.extract_text() or "" for page in PdfReader(report).pages)
     assert "What gives agents cited evidence?" in report_text
     assert PdfReader(highlighted).pages[0].get("/Annots") is not None
+
+
+def test_create_pdf_from_prompt_selects_template_and_validates_output(tmp_path: Path) -> None:
+    output = tmp_path / "research-brief.pdf"
+
+    result = create_pdf_from_prompt(
+        "Create a research brief about local PDF agents. Include template selection, "
+        "theme control, validation, and agent-callable outputs.",
+        output_path=output,
+        template="research_brief",
+        style_pack="paper_ink",
+        data={
+            "audience": "agent infrastructure developers",
+            "sections": [
+                {"heading": "Template selection", "body": "Agents choose local templates."},
+                {"heading": "Validation", "body": "Every PDF is validated after creation."},
+            ],
+        },
+    )
+
+    assert result.status == "succeeded"
+    assert result.tool == "pdf.ai.create.from_prompt"
+    assert result.artifacts[0].mime_type == "application/pdf"
+    assert result.validation is not None
+    assert result.validation.status == "passed"
+    assert result.usage["template_id"] == "research_brief"
+    assert result.usage["style_pack"] == "paper_ink"
+    assert result.usage["agent_plan"]["steps"][0] == "select_template"
+    assert "Template selection" in result.usage["generated_markdown"]
+    assert output.exists()
+    text = "\n".join(page.extract_text() or "" for page in PdfReader(output).pages)
+    assert "local PDF agents" in text
+    assert "Every PDF is validated after creation." in text
+
+
+def test_create_template_catalog_returns_templates_and_style_packs() -> None:
+    result = list_create_templates()
+
+    assert result.status == "succeeded"
+    assert result.tool == "pdf.ai.create.templates"
+    assert result.usage["template_count"] >= 7
+    assert result.usage["templates"]["research_brief"]["default_style_pack"] == "paper_ink"
+    assert result.usage["templates"]["worksheet"]["default_sections"] == [
+        "Learning Goal",
+        "Practice",
+        "Checklist",
+    ]
+    assert "paper_ink" in result.usage["style_packs"]
+    assert result.next_recommended_tools == [
+        "pdf.ai.create.template_preview",
+        "pdf.ai.create.from_prompt",
+    ]
+
+
+def test_create_template_catalog_exposes_template_contracts_for_agents() -> None:
+    result = list_create_templates()
+
+    invoice = result.usage["templates"]["invoice"]
+
+    assert invoice["template_kind"] == "structured_document"
+    assert invoice["preview_tool"] == "pdf.ai.create.template_preview"
+    assert invoice["fields"]["required"] == ["items"]
+    assert "invoice_number" in invoice["fields"]["optional"]
+    assert invoice["layout_slots"] == ["header", "billing", "line_items", "totals", "notes"]
+    assert invoice["sample_data"]["invoice_number"] == "INV-1001"
+    assert result.next_recommended_tools == [
+        "pdf.ai.create.template_preview",
+        "pdf.ai.create.from_prompt",
+    ]
+
+
+def test_create_template_preview_uses_sample_data_and_validates_pdf(tmp_path: Path) -> None:
+    output = tmp_path / "invoice-preview.pdf"
+
+    result = create_template_preview("invoice", output_path=output)
+
+    assert result.status == "succeeded"
+    assert result.tool == "pdf.ai.create.template_preview"
+    assert result.validation is not None
+    assert result.validation.status == "passed"
+    assert result.usage["template_id"] == "invoice"
+    assert result.usage["data_source"] == "template_sample_data"
+    assert result.usage["preview_prompt"].startswith("Preview the Invoice template")
+    assert result.usage["create_result"]["tool"] == "pdf.ai.create.from_prompt"
+    assert output.exists()
+    text = "\n".join(page.extract_text() or "" for page in PdfReader(output).pages)
+    assert "Invoice INV-1001" in text
+    assert "Template implementation" in text
+
+
+def test_create_pdf_from_prompt_applies_color_overrides(tmp_path: Path) -> None:
+    output = tmp_path / "branded-proposal.pdf"
+
+    result = create_pdf_from_prompt(
+        "Create a proposal about branded local PDF templates.",
+        output_path=output,
+        template="proposal",
+        colors={"primary": "#4f46e5", "accent": "#f59e0b", "text": "#111827"},
+    )
+
+    assert result.status == "succeeded"
+    assert result.usage["template_id"] == "proposal"
+    assert result.usage["style_pack"] == "business_report_modern"
+    assert result.usage["colors"] == {
+        "primary": "#4f46e5",
+        "accent": "#f59e0b",
+        "text": "#111827",
+    }
+    assert result.usage["agent_plan"]["steps"][2] == "apply_theme"
+    assert output.exists()
+
+
+def test_create_invoice_template_renders_structured_items_and_totals(tmp_path: Path) -> None:
+    output = tmp_path / "invoice.pdf"
+
+    result = create_pdf_from_prompt(
+        "Create an invoice for okpdf local template work.",
+        output_path=output,
+        template="invoice",
+        data={
+            "title": "Invoice INV-1001",
+            "invoice_number": "INV-1001",
+            "client": "AgentPDF Labs",
+            "due_date": "2026-06-30",
+            "items": [
+                {"description": "Template implementation", "quantity": 2, "unit_price": 500},
+                {"description": "Validation workflow", "quantity": 1, "unit_price": 350},
+            ],
+            "payment_notes": "Pay by bank transfer.",
+        },
+    )
+
+    assert result.status == "succeeded"
+    assert result.usage["template_id"] == "invoice"
+    assert result.usage["template_renderer"] == "invoice"
+    markdown = result.usage["generated_markdown"]
+    assert "| Template implementation | 2 | 500 | 1000 |" in markdown
+    assert "| Validation workflow | 1 | 350 | 350 |" in markdown
+    assert "**Total:** 1350" in markdown
+    text = "\n".join(page.extract_text() or "" for page in PdfReader(output).pages)
+    assert "INV-1001" in text
+    assert "Template implementation" in text
+    assert "1350" in text
+
+
+def test_create_resume_template_renders_profile_experience_and_skills(tmp_path: Path) -> None:
+    output = tmp_path / "resume.pdf"
+
+    result = create_pdf_from_prompt(
+        "Create a resume for an agent infrastructure engineer.",
+        output_path=output,
+        template="resume",
+        data={
+            "name": "Alex Agent",
+            "headline": "Agent Infrastructure Engineer",
+            "contact": {"email": "alex@example.com", "location": "Remote"},
+            "summary": "Builds local-first document agents.",
+            "skills": ["PDF tooling", "MCP", "TypeScript", "Python"],
+            "experience": [
+                {
+                    "role": "Lead Engineer",
+                    "company": "OkPDF",
+                    "period": "2024-2026",
+                    "bullets": [
+                        "Built template-driven PDF creation.",
+                        "Designed agent-readable validation reports.",
+                    ],
+                }
+            ],
+        },
+    )
+
+    assert result.status == "succeeded"
+    assert result.usage["template_id"] == "resume"
+    assert result.usage["template_renderer"] == "resume"
+    markdown = result.usage["generated_markdown"]
+    assert "# Alex Agent" in markdown
+    assert "Agent Infrastructure Engineer" in markdown
+    assert "- PDF tooling" in markdown
+    assert "Lead Engineer - OkPDF" in markdown
+    text = "\n".join(page.extract_text() or "" for page in PdfReader(output).pages)
+    assert "Alex Agent" in text
+    assert "PDF tooling" in text
+    assert "Lead Engineer" in text

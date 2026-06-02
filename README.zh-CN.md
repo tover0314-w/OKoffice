@@ -1,6 +1,6 @@
 # okpdf 中文说明
 
-okpdf 是一个本地优先、面向 AI Agent 的开源 PDF 基础设施项目。它不是一个单点 PDF 小工具，而是一套可以被 CLI、MCP、REST、TypeScript/Node SDK 和未来云端服务共同调用的 PDF 工具层。
+okpdf 是一个本地优先、面向 AI Agent 的开源 PDF 基础设施项目。它不是一个单点 PDF 小工具，也不只是 PDF RAG，而是一套可以被 CLI、MCP、REST、TypeScript/Node SDK 和未来云端服务共同调用的 PDF 操作、组合、验证和证据交付层。
 
 ## 一分钟开始
 
@@ -38,6 +38,7 @@ okpdf blank-page-check .agentpdf-out/numbered.pdf --pages all --json
 - 文本水印、页码叠加、生成 PDF 验证
 - Lite parse、Document IR、本地 RAG ingest/query 和页码引用
 - 标准 `ToolResult` JSON、artifact manifest、warnings、next recommended tools
+- 产品方向已经扩展到 context packet、target PDF profile、source graph、composition IR、PDF patch transaction、evidence coverage、多模态上下文转多样式 PDF
 
 ## Node.js / TypeScript
 
@@ -76,6 +77,7 @@ console.log(result.status);
 
 - 本地优先：不启用云服务、不提供 API key 也能工作。
 - Agent 优先：工具输出结构化 JSON，而不是只返回 `success: true`。
+- 证据优先：生成内容、引用、修改和验证都应该能追溯来源。
 - Python core + TypeScript SDK：PDF 处理集中在 Python，本地 Node/Web/Agent 走同一套工具结果。
 - 云边界清晰：收费、托管、AI 高级能力不混进 OSS core。
 - 依赖安全：默认核心避免 GPL/AGPL 依赖。
@@ -88,3 +90,6 @@ console.log(result.status);
 - 更完整的 PDF 工具覆盖：压缩、裁剪、表单、安全、diff、redaction verification。
 - 更强输出验证：空白页检测、渲染检查、视觉 diff。
 - 更强 Document IR：段落、表格、bbox、Markdown/JSON export。
+- Context packet、target PDF profile、source graph、composition IR、artifact lineage、patch manifest。
+- 图片、视频、文档、代码、数据、网络链接、现有 PDF 到学习 PDF、简历 PDF、论文 PDF、报告、证据包、演示文稿式 PDF 的工作流。
+- 云端高级能力边界：OCR、agentic parse、多模态处理、批处理、长期 artifact graph、企业审计。

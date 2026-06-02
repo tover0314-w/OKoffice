@@ -9,7 +9,13 @@
 
 ## Claude Desktop / Claude Code
 
-Use MCP stdio config. See `examples/mcp/claude_desktop_config.json`.
+Generate a project-level MCP stdio config:
+
+```bash
+okpdf agent setup claude-code -o .mcp.json --json
+```
+
+See `examples/agent/claude-code.mcp.json` for the generated shape.
 
 ## Cursor
 

@@ -1,0 +1,11 @@
+[
+  {
+    "op": "append_markdown",
+    "title": "Layer-Aware Reviewer Note",
+    "markdown": "## Layer-Aware Reviewer Note\n\nThis append-only patch targets a template layer anchor and records the matched layer evidence for downstream agents.",
+    "source_refs": ["tpl://local_agent_starter/board_audit/sample_data"],
+    "layer_id": "layer_blk_tpl_001",
+    "block_id": "blk_tpl_001",
+    "target_slot": "cover"
+  }
+]

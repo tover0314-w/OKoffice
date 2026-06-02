@@ -7,6 +7,9 @@ from PIL import Image
 from agentpdf.mcp.server import (
     create_mcp_server,
     pdf_ai_parse_lite,
+    pdf_ai_create_from_prompt,
+    pdf_ai_create_template_preview,
+    pdf_ai_create_templates,
     pdf_ai_rag_cite_answer,
     pdf_ai_rag_chat,
     pdf_ai_rag_export_report,
@@ -72,6 +75,12 @@ def test_mcp_server_exposes_local_pdf_tools() -> None:
     assert "pdf_render_check" in tool_names
     assert "pdf_blank_page_check" in tool_names
     assert "pdf_ai_parse_lite" in tool_names
+    assert "pdf_ai_create_from_prompt" in tool_names
+    assert "pdf_ai_create_template_preview" in tool_names
+    assert "pdf_ai_create_templates" in tool_names
+    assert "pdf_ai_create_template_packs" in tool_names
+    assert "pdf_ai_create_validate_template_pack" in tool_names
+    assert "pdf_ai_create_from_template_pack" in tool_names
     assert "pdf_ai_rag_ingest" in tool_names
     assert "pdf_ai_rag_cite_answer" in tool_names
     assert "pdf_ai_rag_chat" in tool_names
@@ -79,11 +88,13 @@ def test_mcp_server_exposes_local_pdf_tools() -> None:
     assert "pdf_ai_rag_highlight_sources" in tool_names
     assert "pdf_ai_rag_query" in tool_names
     assert "pdf_ai_rag_search" in tool_names
+    assert "agent_setup_claude_code" in tool_names
     assert "pdf_pdf_to_json" in tool_names
     assert "pdf_pdf_to_markdown" in tool_names
     assert "pdf_workflow_plan" in tool_names
     assert "pdf_workflow_run" in tool_names
     assert "pdf_workflow_report" in tool_names
+    assert "pdf_artifacts_export_bundle" in tool_names
     assert "agentpdf_tool_manifest" in tool_names
 
 
@@ -240,6 +251,57 @@ def test_mcp_create_text_and_markdown(tmp_path: Path) -> None:
     assert text["tool"] == "pdf.convert.text_to_pdf"
     assert markdown["status"] == "succeeded"
     assert markdown["tool"] == "pdf.convert.markdown_to_pdf"
+
+
+def test_mcp_create_from_prompt_returns_validated_pdf(tmp_path: Path) -> None:
+    output = tmp_path / "mcp-brief.pdf"
+
+    payload = json.loads(
+        pdf_ai_create_from_prompt(
+            "Create a worksheet about validating generated PDFs.",
+            str(output),
+            template="worksheet",
+            style_pack="paper_ink",
+            colors={"primary": "#4f46e5"},
+            data={
+                "audience": "agent builders",
+                "sections": [
+                    {
+                        "heading": "Check the output",
+                        "body": "Renderability and page count should be inspected.",
+                    }
+                ],
+            },
+        )
+    )
+
+    assert payload["status"] == "succeeded"
+    assert payload["tool"] == "pdf.ai.create.from_prompt"
+    assert payload["usage"]["template_id"] == "worksheet"
+    assert payload["usage"]["colors"]["primary"] == "#4f46e5"
+    assert payload["validation"]["status"] == "passed"
+    assert output.exists()
+
+
+def test_mcp_create_templates_returns_catalog() -> None:
+    payload = json.loads(pdf_ai_create_templates())
+
+    assert payload["tool"] == "pdf.ai.create.templates"
+    assert "worksheet" in payload["usage"]["templates"]
+    assert "paper_ink" in payload["usage"]["style_packs"]
+    assert payload["usage"]["templates"]["invoice"]["preview_tool"] == "pdf.ai.create.template_preview"
+
+
+def test_mcp_create_template_preview_generates_pdf(tmp_path: Path) -> None:
+    output = tmp_path / "mcp-preview.pdf"
+
+    payload = json.loads(pdf_ai_create_template_preview("invoice", str(output)))
+
+    assert payload["tool"] == "pdf.ai.create.template_preview"
+    assert payload["usage"]["template_id"] == "invoice"
+    assert payload["usage"]["data_source"] == "template_sample_data"
+    assert payload["validation"]["status"] == "passed"
+    assert output.exists()
 
 
 def test_mcp_image_watermark_page_numbers_and_validate(tmp_path: Path) -> None:

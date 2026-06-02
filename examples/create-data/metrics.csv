@@ -1,0 +1,4 @@
+metric,value,change
+latency_ms,42,-8%
+error_rate,0.01,-2pp
+throughput_rps,1280,+14%

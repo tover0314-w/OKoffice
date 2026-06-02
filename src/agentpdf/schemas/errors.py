@@ -17,6 +17,7 @@ KNOWN_ERROR_CODES = {
     "dependency_missing",
     "tool_not_implemented",
     "unsafe_input_rejected",
+    "source_ref_not_found",
 }
 
 

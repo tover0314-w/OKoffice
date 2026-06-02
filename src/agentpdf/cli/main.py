@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 import typer
 
@@ -8,10 +8,24 @@ from agentpdf import __version__
 from agentpdf.schemas.models import ToolResult
 from agentpdf.tools.registry import get_tool, load_tool_manifest
 from agentpdf.tools.runner import (
+    run_agent_setup_claude_code,
+    run_artifacts_export_bundle,
+    run_artifacts_verify_bundle,
     run_blank_page_check,
+    run_build_context_packet,
+    run_compose_from_context,
     run_compress,
     run_create_markdown,
     run_create_text,
+    run_create_agent,
+    run_create_from_prompt,
+    run_create_from_template_pack,
+    run_plan_template_pack_creation,
+    run_create_template_preview,
+    run_create_template_packs,
+    run_create_templates,
+    run_validate_template_pack,
+    run_evidence_coverage_report,
     run_extract_images,
     run_extract_pages,
     run_extract_text,
@@ -24,6 +38,10 @@ from agentpdf.tools.runner import (
     run_metadata_update,
     run_merge,
     run_page_numbers,
+    run_patch_apply,
+    run_patch_plan,
+    run_patch_preview,
+    run_patch_verify,
     run_parse_lite,
     run_pdf_to_markdown,
     run_pdf_to_json,
@@ -41,7 +59,9 @@ from agentpdf.tools.runner import (
     run_reorder_pages,
     run_rotate_pages,
     run_split,
+    run_target_profiles,
     run_validate_output,
+    run_validate_target_profile,
     run_watermark,
     run_workflow_plan,
     run_workflow_report,
@@ -49,14 +69,30 @@ from agentpdf.tools.runner import (
 )
 
 app = typer.Typer(help="AgentPDF Infra CLI")
+agent_app = typer.Typer(help="Generate local agent runtime configs.")
+agent_setup_app = typer.Typer(help="Set up specific agent runtimes.")
 tools_app = typer.Typer(help="Discover AgentPDF tools.")
 metadata_app = typer.Typer(help="Read and write PDF metadata.")
 create_app = typer.Typer(help="Create PDFs from local inputs.")
+context_app = typer.Typer(help="Build agent context packets.")
+compose_app = typer.Typer(help="Compose target PDFs from context packets.")
+target_app = typer.Typer(help="List and validate target PDF profiles.")
+evidence_app = typer.Typer(help="Audit source evidence and coverage.")
+patch_app = typer.Typer(help="Plan, preview, apply, and verify PDF patch transactions.")
+artifacts_app = typer.Typer(help="Export and inspect local artifact lineage.")
 rag_app = typer.Typer(help="Local document retrieval tools.")
 workflow_app = typer.Typer(help="Plan local agent PDF workflows.")
+app.add_typer(agent_app, name="agent")
+agent_app.add_typer(agent_setup_app, name="setup")
 app.add_typer(tools_app, name="tools")
 app.add_typer(metadata_app, name="metadata")
 app.add_typer(create_app, name="create")
+app.add_typer(context_app, name="context")
+app.add_typer(compose_app, name="compose")
+app.add_typer(target_app, name="target")
+app.add_typer(evidence_app, name="evidence")
+app.add_typer(patch_app, name="patch")
+app.add_typer(artifacts_app, name="artifacts")
 app.add_typer(rag_app, name="rag")
 app.add_typer(workflow_app, name="workflow")
 
@@ -70,6 +106,48 @@ def main() -> None:
 def version() -> None:
     """Print the AgentPDF version."""
     typer.echo(f"agentpdf {__version__}")
+
+
+@agent_setup_app.command("claude-code")
+def agent_setup_claude_code(
+    output_path: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", help="Optional .mcp.json output path."),
+    ] = None,
+    safe_root: Annotated[
+        str,
+        typer.Option("--safe-root", help="Claude Code project safe root."),
+    ] = "${CLAUDE_PROJECT_DIR:-.}",
+    command: Annotated[
+        str,
+        typer.Option("--command", help="Executable used by Claude Code to start okpdf."),
+    ] = "okpdf",
+    args_prefix: Annotated[
+        list[str] | None,
+        typer.Option("--arg-prefix", help="Extra args before 'serve', e.g. -m agentpdf.cli."),
+    ] = None,
+    server_name: Annotated[
+        str,
+        typer.Option("--server-name", help="MCP server name in Claude Code config."),
+    ] = "agentpdf",
+    scope: Annotated[
+        str,
+        typer.Option("--scope", help="Claude Code MCP scope: project, local, or user."),
+    ] = "project",
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Generate a Claude Code MCP config for local okpdf tools."""
+    _emit_result(
+        run_agent_setup_claude_code(
+            output_path=output_path,
+            safe_root=safe_root,
+            command=command,
+            args_prefix=args_prefix,
+            server_name=server_name,
+            scope=scope,
+        ),
+        json_output=json_output,
+    )
 
 
 @tools_app.command("list")
@@ -338,6 +416,502 @@ def create_markdown(
             title=title,
             style_pack=style_pack,
         ),
+        json_output=json_output,
+    )
+
+
+@create_app.command("from-prompt")
+def create_from_prompt(
+    prompt: Annotated[str, typer.Argument(help="Creation brief or prompt for the local PDF agent.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output PDF path.")],
+    template: Annotated[
+        str | None,
+        typer.Option("--template", help="Template id such as research_brief, proposal, or worksheet."),
+    ] = None,
+    style_pack: Annotated[
+        str | None,
+        typer.Option("--style-pack", help="Style pack id or local JSON style pack path."),
+    ] = None,
+    data_path: Annotated[
+        Path | None,
+        typer.Option("--data", help="Optional JSON data file for template fields."),
+    ] = None,
+    colors: Annotated[
+        list[str] | None,
+        typer.Option("--color", help="Theme color override such as primary=#4f46e5."),
+    ] = None,
+    title: Annotated[str | None, typer.Option("--title", help="Optional document title.")] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Create a validated local PDF from a prompt, template, and optional JSON data."""
+    data = _read_json_object(data_path) if data_path is not None else None
+    _emit_result(
+        run_create_from_prompt(
+            prompt,
+            output_path=output_path,
+            template=template,
+            style_pack=style_pack,
+            data=data,
+            title=title,
+            colors=_parse_color_overrides(colors or []),
+        ),
+        json_output=json_output,
+    )
+
+
+@create_app.command("templates")
+def create_templates(
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """List local PDF creation templates, style packs, and color keys."""
+    _emit_result(run_create_templates(), json_output=json_output)
+
+
+@create_app.command("template-packs")
+def create_template_packs(
+    output_path: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", help="Optional output catalog JSON path."),
+    ] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """List local template packs for agent-created PDFs."""
+    _emit_result(run_create_template_packs(output_path=output_path), json_output=json_output)
+
+
+@create_app.command("validate-template-pack")
+def create_validate_template_pack(
+    template_pack: Annotated[Path, typer.Argument(help="Template pack JSON file.")],
+    output_path: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", help="Optional validation JSON output path."),
+    ] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Validate a local template pack contract."""
+    _emit_result(
+        run_validate_template_pack(template_pack, output_path=output_path),
+        json_output=json_output,
+    )
+
+
+@create_app.command("plan-template-pack")
+def create_plan_template_pack(
+    template_pack: Annotated[Path, typer.Argument(help="Template pack JSON file or built-in pack id.")],
+    target_profile: Annotated[
+        str | None,
+        typer.Option("--target-profile", "--profile", help="Target PDF Profile id or inline profile JSON."),
+    ] = None,
+    target_profile_path: Annotated[
+        Path | None,
+        typer.Option("--target-profile-file", help="Optional Target PDF Profile JSON file."),
+    ] = None,
+    context_packet_path: Annotated[
+        Path | None,
+        typer.Option("--context-packet", help="Optional Context Packet JSON path for planning."),
+    ] = None,
+    planned_output_path: Annotated[
+        Path | None,
+        typer.Option("--planned-output", help="Recommended PDF output path to include in the create payload."),
+    ] = None,
+    output_path: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", help="Optional plan JSON output path."),
+    ] = None,
+    preferred_template_id: Annotated[
+        str | None,
+        typer.Option("--preferred-template", help="Preferred template id to bias selection."),
+    ] = None,
+    preferred_color_scheme: Annotated[
+        str | None,
+        typer.Option("--preferred-color-scheme", help="Preferred color scheme id to use if available."),
+    ] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Plan a local template-pack PDF creation call from target and context evidence."""
+    resolved_target_profile: dict[str, object] | str | None
+    if target_profile_path is not None:
+        resolved_target_profile = _read_json_object(target_profile_path)
+    elif target_profile is not None and target_profile.strip().startswith("{"):
+        payload = json.loads(target_profile)
+        resolved_target_profile = payload if isinstance(payload, dict) else target_profile
+    else:
+        resolved_target_profile = target_profile
+    _emit_result(
+        run_plan_template_pack_creation(
+            template_pack,
+            target_profile=resolved_target_profile,
+            context_packet_path=context_packet_path,
+            planned_output_path=planned_output_path,
+            output_path=output_path,
+            preferred_template_id=preferred_template_id,
+            preferred_color_scheme=preferred_color_scheme,
+        ),
+        json_output=json_output,
+    )
+
+
+@create_app.command("agent")
+def create_agent(
+    template_pack: Annotated[Path, typer.Argument(help="Template pack JSON file or built-in pack id.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output PDF path.")],
+    target_profile: Annotated[
+        str | None,
+        typer.Option("--target-profile", "--profile", help="Target PDF Profile id or inline profile JSON."),
+    ] = None,
+    target_profile_path: Annotated[
+        Path | None,
+        typer.Option("--target-profile-file", help="Optional Target PDF Profile JSON file."),
+    ] = None,
+    context_packet_path: Annotated[
+        Path | None,
+        typer.Option("--context-packet", help="Context Packet JSON path for planning and creation."),
+    ] = None,
+    plan_output_path: Annotated[
+        Path | None,
+        typer.Option("--plan-output", help="Optional plan JSON output path."),
+    ] = None,
+    coverage_output_path: Annotated[
+        Path | None,
+        typer.Option("--coverage-output", help="Optional evidence coverage JSON output path."),
+    ] = None,
+    preferred_template_id: Annotated[
+        str | None,
+        typer.Option("--preferred-template", help="Preferred template id to bias selection."),
+    ] = None,
+    preferred_color_scheme: Annotated[
+        str | None,
+        typer.Option("--preferred-color-scheme", help="Preferred color scheme id to use if available."),
+    ] = None,
+    title: Annotated[str | None, typer.Option("--title", help="Optional document title.")] = None,
+    prompt: Annotated[str | None, typer.Option("--prompt", help="Optional creation prompt.")] = None,
+    style_pack: Annotated[
+        str | None,
+        typer.Option("--style-pack", help="Optional style pack override."),
+    ] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Run the local create agent: plan, create, render-check, blank-check, and coverage."""
+    resolved_target_profile: dict[str, object] | str | None
+    if target_profile_path is not None:
+        resolved_target_profile = _read_json_object(target_profile_path)
+    elif target_profile is not None and target_profile.strip().startswith("{"):
+        payload = json.loads(target_profile)
+        resolved_target_profile = payload if isinstance(payload, dict) else target_profile
+    else:
+        resolved_target_profile = target_profile
+    _emit_result(
+        run_create_agent(
+            template_pack,
+            target_profile=resolved_target_profile,
+            context_packet_path=context_packet_path,
+            output_path=output_path,
+            plan_output_path=plan_output_path,
+            coverage_output_path=coverage_output_path,
+            preferred_template_id=preferred_template_id,
+            preferred_color_scheme=preferred_color_scheme,
+            title=title,
+            prompt=prompt,
+            style_pack=style_pack,
+        ),
+        json_output=json_output,
+    )
+
+
+@create_app.command("from-template-pack")
+def create_from_template_pack(
+    template_pack: Annotated[Path, typer.Argument(help="Template pack JSON file or built-in pack id.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output PDF path.")],
+    template_id: Annotated[str, typer.Option("--template", help="Template id inside the pack.")],
+    color_scheme: Annotated[
+        str | None,
+        typer.Option("--color-scheme", help="Template pack color scheme id."),
+    ] = None,
+    data_path: Annotated[
+        Path | None,
+        typer.Option("--data", help="Optional JSON data file for template fields."),
+    ] = None,
+    context_packet_path: Annotated[
+        Path | None,
+        typer.Option("--context-packet", help="Optional Context Packet JSON path to auto-build agent blocks."),
+    ] = None,
+    title: Annotated[str | None, typer.Option("--title", help="Optional document title.")] = None,
+    prompt: Annotated[str | None, typer.Option("--prompt", help="Optional creation prompt.")] = None,
+    style_pack: Annotated[
+        str | None,
+        typer.Option("--style-pack", help="Optional style pack override."),
+    ] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Create a validated PDF from a local template pack."""
+    data = _read_json_object(data_path) if data_path is not None else None
+    _emit_result(
+        run_create_from_template_pack(
+            template_pack,
+            template_id=template_id,
+            output_path=output_path,
+            color_scheme=color_scheme,
+            data=data,
+            context_packet_path=context_packet_path,
+            title=title,
+            prompt=prompt,
+            style_pack=style_pack,
+        ),
+        json_output=json_output,
+    )
+
+
+@create_app.command("preview")
+def create_preview(
+    template: Annotated[str, typer.Argument(help="Template id to preview, such as invoice or worksheet.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output preview PDF path.")],
+    style_pack: Annotated[
+        str | None,
+        typer.Option("--style-pack", help="Optional style pack override."),
+    ] = None,
+    data_path: Annotated[
+        Path | None,
+        typer.Option("--data", help="Optional JSON data file instead of built-in sample data."),
+    ] = None,
+    colors: Annotated[
+        list[str] | None,
+        typer.Option("--color", help="Theme color override such as primary=#4f46e5."),
+    ] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Generate and validate a local preview PDF for a creation template."""
+    data = _read_json_object(data_path) if data_path is not None else None
+    _emit_result(
+        run_create_template_preview(
+            template,
+            output_path=output_path,
+            style_pack=style_pack,
+            data=data,
+            colors=_parse_color_overrides(colors or []),
+        ),
+        json_output=json_output,
+    )
+
+
+@context_app.command("build")
+def context_build(
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output context packet JSON path.")],
+    files: Annotated[
+        list[Path] | None,
+        typer.Option("--file", help="Local context file. Can be repeated."),
+    ] = None,
+    texts: Annotated[
+        list[str] | None,
+        typer.Option("--text", help="Inline text context. Can be repeated."),
+    ] = None,
+    links: Annotated[
+        list[str] | None,
+        typer.Option("--link", help="Web/link context URI. Can be repeated."),
+    ] = None,
+    item_json: Annotated[
+        list[str] | None,
+        typer.Option("--item-json", help="Structured context item JSON object or JSON file. Can be repeated."),
+    ] = None,
+    title: Annotated[str | None, typer.Option("--title", help="Context packet title.")] = None,
+    intent: Annotated[str | None, typer.Option("--intent", help="User or agent intent for this context packet.")] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Build a local Context Packet with source graph metadata."""
+    _emit_result(
+        run_build_context_packet(
+            _context_items_from_cli(files or [], texts or [], links or [], item_json or []),
+            output_path=output_path,
+            title=title,
+            intent=intent,
+        ),
+        json_output=json_output,
+    )
+
+
+@compose_app.command("from-context")
+def compose_from_context_command(
+    context_packet_path: Annotated[Path, typer.Argument(help="Context packet JSON path.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output composed PDF path.")],
+    profile: Annotated[str, typer.Option("--profile", help="Target PDF profile id.")] = "research_brief",
+    profile_path: Annotated[
+        Path | None,
+        typer.Option("--profile-json", help="Optional target profile JSON file."),
+    ] = None,
+    style_pack: Annotated[str | None, typer.Option("--style-pack", help="Optional style pack override.")] = None,
+    title: Annotated[str | None, typer.Option("--title", help="Optional composed PDF title.")] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Compose a validated target PDF from a Context Packet and target profile."""
+    target_profile: dict[str, object] | str = _read_json_object(profile_path) if profile_path else profile
+    _emit_result(
+        run_compose_from_context(
+            context_packet_path,
+            target_profile=target_profile,
+            output_path=output_path,
+            style_pack=style_pack,
+            title=title,
+        ),
+        json_output=json_output,
+    )
+
+
+@target_app.command("profiles")
+def target_profiles(
+    output_path: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", help="Optional output target profile catalog JSON path."),
+    ] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """List built-in target PDF profiles with layout slots and accepted block types."""
+    _emit_result(run_target_profiles(output_path=output_path), json_output=json_output)
+
+
+@target_app.command("validate")
+def target_validate(
+    profile: Annotated[str, typer.Option("--profile", help="Built-in target profile id.")] = "research_brief",
+    profile_path: Annotated[
+        Path | None,
+        typer.Option("--profile-json", help="Target profile JSON file to validate."),
+    ] = None,
+    output_path: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", help="Optional output target profile validation JSON path."),
+    ] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Validate a built-in or custom target PDF profile."""
+    target_profile: dict[str, object] | str = _read_json_object(profile_path) if profile_path else profile
+    _emit_result(
+        run_validate_target_profile(target_profile, output_path=output_path),
+        json_output=json_output,
+    )
+
+
+@evidence_app.command("coverage-report")
+def evidence_coverage_report(
+    composition_path: Annotated[Path, typer.Argument(help="Composition JSON artifact path.")],
+    output_path: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", help="Optional output coverage JSON path."),
+    ] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Create an evidence coverage report from a composition artifact."""
+    _emit_result(
+        run_evidence_coverage_report(composition_path, output_path=output_path),
+        json_output=json_output,
+    )
+
+
+@patch_app.command("plan")
+def patch_plan(
+    input_path: Annotated[Path, typer.Argument(help="Input PDF path to patch.")],
+    operations_path: Annotated[Path, typer.Option("--operations", help="Patch operations JSON file.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output patch manifest JSON path.")],
+    composition_path: Annotated[
+        Path | None,
+        typer.Option("--composition", help="Optional composition JSON artifact for source refs."),
+    ] = None,
+    layer_manifest_path: Annotated[
+        Path | None,
+        typer.Option("--layers", help="Optional template layer manifest JSON artifact for layer/block/slot refs."),
+    ] = None,
+    reason: Annotated[str | None, typer.Option("--reason", help="Reason for this patch transaction.")] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Create a structured patch manifest without mutating the input PDF."""
+    operations_raw = _read_json_value(operations_path)
+    operations = _parse_patch_operations(operations_raw)
+    _emit_result(
+        run_patch_plan(
+            input_path=input_path,
+            operations=operations,
+            output_path=output_path,
+            composition_path=composition_path,
+            layer_manifest_path=layer_manifest_path,
+            reason=reason,
+        ),
+        json_output=json_output,
+    )
+
+
+@patch_app.command("preview")
+def patch_preview(
+    patch_manifest_path: Annotated[Path, typer.Argument(help="Patch manifest JSON path.")],
+    output_path: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", help="Optional output preview JSON path."),
+    ] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Preview patch effects and validation requirements."""
+    _emit_result(
+        run_patch_preview(patch_manifest_path, output_path=output_path),
+        json_output=json_output,
+    )
+
+
+@patch_app.command("apply")
+def patch_apply(
+    patch_manifest_path: Annotated[Path, typer.Argument(help="Patch manifest JSON path.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output patched PDF path.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Apply a patch transaction to a new output PDF artifact."""
+    _emit_result(
+        run_patch_apply(patch_manifest_path, output_path=output_path),
+        json_output=json_output,
+    )
+
+
+@patch_app.command("verify")
+def patch_verify(
+    patch_manifest_path: Annotated[Path, typer.Argument(help="Patch manifest JSON path.")],
+    patched_path: Annotated[Path, typer.Argument(help="Patched PDF path.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Verify a patched PDF against a patch manifest."""
+    _emit_result(
+        run_patch_verify(patch_manifest_path, patched_path=patched_path),
+        json_output=json_output,
+    )
+
+
+@artifacts_app.command("export-bundle")
+def artifacts_export_bundle(
+    artifact_paths: Annotated[
+        list[Path],
+        typer.Option("--file", help="Artifact file to include; repeat for PDF, manifests, coverage, reports."),
+    ],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output .zip bundle path.")],
+    title: Annotated[str | None, typer.Option("--title", help="Human-readable bundle title.")] = None,
+    metadata: Annotated[
+        list[str] | None,
+        typer.Option("--metadata", help="Bundle metadata as KEY=VALUE; repeat as needed."),
+    ] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Export local artifacts into a portable audit bundle."""
+    _emit_result(
+        run_artifacts_export_bundle(
+            artifact_paths=artifact_paths,
+            output_path=output_path,
+            title=title,
+            metadata=_parse_key_value_items(metadata or []),
+        ),
+        json_output=json_output,
+    )
+
+
+@artifacts_app.command("verify-bundle")
+def artifacts_verify_bundle(
+    bundle_path: Annotated[Path, typer.Argument(help="Input .agentpdf-bundle.zip path.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Verify a portable audit bundle manifest and checksums."""
+    _emit_result(
+        run_artifacts_verify_bundle(bundle_path=bundle_path),
         json_output=json_output,
     )
 
@@ -743,6 +1317,86 @@ def _parse_bindings(bindings: list[str]) -> dict[str, str]:
             raise typer.BadParameter("Bindings must use KEY=VALUE syntax.")
         parsed[key] = value
     return parsed
+
+
+def _read_json_object(path: Path) -> dict[str, object]:
+    payload = _read_json_value(path)
+    if not isinstance(payload, dict):
+        raise typer.BadParameter("--data must point to a JSON object.")
+    return payload
+
+
+def _read_json_value(path: Path) -> object:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _parse_patch_operations(value: object) -> list[dict[str, Any]]:
+    operations: object
+    if isinstance(value, list):
+        operations = value
+    elif isinstance(value, dict) and isinstance(value.get("operations"), list):
+        operations = value["operations"]
+    elif isinstance(value, dict):
+        operations = [value]
+    else:
+        raise typer.BadParameter("--operations must be a JSON array, a single operation object, or {'operations': [...]}.")
+    if not all(isinstance(operation, dict) for operation in operations):
+        raise typer.BadParameter("--operations entries must be JSON objects.")
+    return list(operations)
+
+
+def _parse_color_overrides(items: list[str]) -> dict[str, str]:
+    colors = {}
+    for item in items:
+        key, separator, value = item.partition("=")
+        if not separator or not key:
+            raise typer.BadParameter("--color must use KEY=#RRGGBB syntax.")
+        colors[key] = value
+    return colors
+
+
+def _parse_key_value_items(items: list[str]) -> dict[str, str]:
+    values = {}
+    for item in items:
+        key, separator, value = item.partition("=")
+        if not separator or not key:
+            raise typer.BadParameter("metadata must use KEY=VALUE syntax.")
+        values[key] = value
+    return values
+
+
+def _context_items_from_cli(
+    files: list[Path],
+    texts: list[str],
+    links: list[str],
+    item_json: list[str],
+) -> list[dict[str, object]]:
+    items: list[dict[str, object]] = []
+    for text in texts:
+        items.append({"text": text, "role": "brief"})
+    for path in files:
+        items.append({"path": str(path), "role": "source"})
+    for link in links:
+        items.append({"uri": link, "role": "link"})
+    for value in item_json:
+        items.extend(_parse_context_item_json(value))
+    return items
+
+
+def _parse_context_item_json(value: str) -> list[dict[str, object]]:
+    raw_value = value.strip()
+    candidate_path = Path(raw_value)
+    if candidate_path.exists():
+        raw_value = candidate_path.read_text(encoding="utf-8")
+    try:
+        payload = json.loads(raw_value)
+    except json.JSONDecodeError as exc:
+        raise typer.BadParameter("--item-json must be a JSON object, JSON array, or path to one.") from exc
+    if isinstance(payload, dict):
+        return [payload]
+    if isinstance(payload, list) and all(isinstance(item, dict) for item in payload):
+        return payload
+    raise typer.BadParameter("--item-json must decode to a JSON object or array of objects.")
 
 
 def _emit_result(result: ToolResult, json_output: bool) -> None:

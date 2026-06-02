@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://okpdf.dev/schemas/template-pack-plan.schema.json",
+  "title": "AgentPDF Template Pack Plan",
+  "type": "object",
+  "required": [
+    "template_pack_plan_version",
+    "template_pack_plan_id",
+    "pack_id",
+    "target_profile",
+    "selected_template_id",
+    "selected_color_scheme",
+    "selected_style_pack",
+    "context_block_type_counts",
+    "candidates",
+    "create_payload",
+    "preview_payload",
+    "validation_required"
+  ],
+  "properties": {
+    "template_pack_plan_version": {"type": "string"},
+    "template_pack_plan_id": {"type": "string", "pattern": "^tplplan_"},
+    "pack_id": {"type": "string"},
+    "pack_name": {"type": "string"},
+    "target_profile": {"type": ["string", "null"]},
+    "target_profile_known": {"type": "boolean"},
+    "context_packet_id": {"type": ["string", "null"]},
+    "context_packet_item_count": {"type": "integer", "minimum": 0},
+    "context_block_count": {"type": "integer", "minimum": 0},
+    "context_block_type_counts": {
+      "type": "object",
+      "additionalProperties": {"type": "integer", "minimum": 0}
+    },
+    "selected_template_id": {"type": "string"},
+    "selected_color_scheme": {"type": ["string", "null"]},
+    "selected_style_pack": {"type": "string"},
+    "selection_reason": {"type": "string"},
+    "selected_template": {
+      "type": "object",
+      "required": ["template_id", "base_template", "supported_block_types", "layout_slots"],
+      "properties": {
+        "template_id": {"type": "string"},
+        "name": {"type": "string"},
+        "base_template": {"type": "string"},
+        "target_profile": {"type": ["string", "null"]},
+        "supported_block_types": {"type": "array", "items": {"type": "string"}},
+        "layout_slots": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "template_id",
+          "target_profile_match",
+          "score",
+          "matched_block_types",
+          "unsupported_context_block_types",
+          "supported_block_types",
+          "selection_reason"
+        ],
+        "properties": {
+          "template_id": {"type": "string"},
+          "name": {"type": "string"},
+          "base_template": {"type": "string"},
+          "target_profile": {"type": ["string", "null"]},
+          "target_profile_match": {"type": "boolean"},
+          "score": {"type": "integer"},
+          "matched_block_types": {"type": "array", "items": {"type": "string"}},
+          "unsupported_context_block_types": {"type": "array", "items": {"type": "string"}},
+          "supported_block_types": {"type": "array", "items": {"type": "string"}},
+          "color_scheme_ids": {"type": "array", "items": {"type": "string"}},
+          "signals": {"type": "array", "items": {"type": "string"}},
+          "selection_reason": {"type": "string"}
+        }
+      }
+    },
+    "create_payload": {"type": "object"},
+    "preview_payload": {"type": "object"},
+    "validation_required": {"type": "array", "items": {"type": "string"}}
+  }
+}

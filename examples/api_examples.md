@@ -12,6 +12,139 @@ okpdf serve --api
 curl http://127.0.0.1:7331/v1/tools
 ```
 
+## Template packs
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.ai.create.template_packs/run \
+  -H 'Content-Type: application/json' \
+  -d '{"output_path": ".agentpdf-out/template-packs.json"}'
+```
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.ai.create.validate_template_pack/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "template_pack_path": "examples/template-packs/local-agent-starter.json",
+    "output_path": ".agentpdf-out/template-pack.validation.json"
+  }'
+```
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.ai.create.plan_template_pack/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "template_pack_path": "examples/template-packs/local-agent-starter.json",
+    "target_profile": "technical_audit",
+    "context_packet_path": ".agentpdf-out/context.packet.json",
+    "planned_output_path": ".agentpdf-out/board-audit.pdf",
+    "output_path": ".agentpdf-out/board-audit.plan.json"
+  }'
+```
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.ai.create.agent/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "template_pack_path": "examples/template-packs/local-agent-starter.json",
+    "target_profile": "technical_audit",
+    "context_packet_path": ".agentpdf-out/context.packet.json",
+    "output_path": ".agentpdf-out/board-audit.pdf",
+    "plan_output_path": ".agentpdf-out/board-audit.plan.json",
+    "coverage_output_path": ".agentpdf-out/board-audit.coverage.json"
+  }'
+```
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.ai.create.from_template_pack/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "template_pack_path": "examples/template-packs/local-agent-starter.json",
+    "template_id": "board_audit",
+    "color_scheme": "executive_blue",
+    "output_path": ".agentpdf-out/board-audit.pdf"
+  }'
+```
+
+Context Packet items can be mapped into template blocks automatically:
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.ai.create.from_template_pack/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "template_pack_path": "examples/template-packs/local-agent-starter.json",
+    "template_id": "board_audit",
+    "color_scheme": "executive_blue",
+    "context_packet_path": ".agentpdf-out/context.packet.json",
+    "output_path": ".agentpdf-out/board-audit-from-context.pdf"
+  }'
+```
+
+Agent-supplied blocks can target template slots and carry source refs:
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.ai.create.from_template_pack/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "template_pack_path": "examples/template-packs/local-agent-starter.json",
+    "template_id": "board_audit",
+    "color_scheme": "executive_blue",
+    "output_path": ".agentpdf-out/board-audit-blocks.pdf",
+    "data": {
+      "title": "Agent Block Audit",
+      "blocks": [
+        {
+          "block_id": "blk_agent_code",
+          "type": "code",
+          "title": "Risky Function",
+          "target_slot": "evidence",
+          "language": "python",
+          "code": "def risky_total(items):\\n    return sum(items)\\n",
+          "source_refs": ["ctx_code"]
+        },
+        {
+          "block_id": "blk_agent_table",
+          "type": "table",
+          "title": "Runtime Metrics",
+          "target_slot": "findings",
+          "columns": ["metric", "value"],
+          "rows": [["latency_ms", "42"]],
+          "source_refs": ["ctx_metrics"]
+        },
+        {
+          "block_id": "blk_agent_image",
+          "type": "image",
+          "title": "Architecture Figure",
+          "target_slot": "evidence",
+          "path": "assets/brand/okpdf-logo.png",
+          "caption": "Local visual evidence rendered from an agent-supplied image block.",
+          "source_refs": ["path://assets/brand/okpdf-logo.png"]
+        },
+        {
+          "block_id": "blk_agent_citation",
+          "type": "citation",
+          "title": "Reference Note",
+          "target_slot": "recommendations",
+          "quote": "Local outputs need evidence, validation, and portable audit artifacts.",
+          "source": "https://okpdf.local/docs/local-agent-integration",
+          "page": "local",
+          "source_refs": ["https://okpdf.local/docs/local-agent-integration"]
+        }
+      ]
+    }
+  }'
+```
+
+## Claude Code setup
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/agent.setup.claude_code/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "output_path": ".mcp.json",
+    "safe_root": "${CLAUDE_PROJECT_DIR:-.}"
+  }'
+```
+
 ## Run merge
 
 ```bash
@@ -137,6 +270,259 @@ curl -X POST http://127.0.0.1:7331/v1/tools/pdf.convert.markdown_to_pdf/run \
     "markdown": "# Agent Report\n\n- Local first\n- Agent ready",
     "output_path": ".agentpdf-out/agent-report.pdf",
     "style_pack": "business_report_modern"
+  }'
+```
+
+## Create PDF from prompt and template
+
+## Context Packet to target PDF
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.context.build_packet/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "context_items": [
+      {"text": "Create a technical audit PDF from these sources.", "role": "brief"},
+      {"path": "src/agentpdf/compose/context.py", "role": "code_evidence"},
+      {
+        "table": {
+          "columns": ["metric", "value"],
+          "rows": [["latency_ms", "42"], ["error_rate", "0.01"]]
+        },
+        "role": "data_evidence",
+        "label": "Runtime Metrics"
+      },
+      {"path": "assets/brand/okpdf-logo.png", "role": "image_evidence"},
+      {
+        "path": "examples/media/meeting-audio.mp3",
+        "role": "audio_context",
+        "label": "Meeting Audio",
+        "transcript": "00:00 Kickoff\n00:12 Decision: keep the local worker boundary explicit.",
+        "duration_seconds": 42.5,
+        "chapters": [{"start_seconds": 0, "title": "Kickoff"}, {"start_seconds": 12, "title": "Decision"}]
+      },
+      {
+        "path": "examples/media/training-video.mp4",
+        "role": "video_context",
+        "label": "Training Video",
+        "transcript": "00:00 Dashboard tour\n00:20 Export demo",
+        "duration_seconds": 84,
+        "keyframes": [{"timestamp_seconds": 20, "label": "Export screen"}]
+      },
+      {"path": "examples/sample-documents/business_report.md", "role": "source_document"}
+    ],
+    "output_path": ".agentpdf-out/context.packet.json",
+    "title": "Audit Context",
+    "intent": "Compose a target PDF with source map evidence."
+  }'
+```
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.target.profiles/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "output_path": ".agentpdf-out/target-profiles.json"
+  }'
+```
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.target.validate_profile/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "target_profile": {
+      "profile_id": "media_learning_deck",
+      "name": "Media Learning Deck",
+      "layout_mode": "slides",
+      "layout_slots": {
+        "title": {"accepts": ["section"], "required": true},
+        "evidence_slide": {"accepts": ["slide", "audio_reference", "video_reference"], "repeats": true}
+      },
+      "accepted_block_types": ["slide", "section", "audio_reference", "video_reference"],
+      "accepted_context_types": ["text", "audio", "video"],
+      "validation_required": ["render_check", "evidence_coverage_report"]
+    },
+    "output_path": ".agentpdf-out/media-learning-deck.validation.json"
+  }'
+```
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.compose.from_context/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "context_packet_path": ".agentpdf-out/context.packet.json",
+    "profile": "technical_audit",
+    "output_path": ".agentpdf-out/technical-audit.pdf"
+  }'
+```
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.compose.from_context/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "context_packet_path": ".agentpdf-out/context.packet.json",
+    "profile": "slide_deck",
+    "output_path": ".agentpdf-out/agent-review-deck.pdf"
+  }'
+```
+
+## Evidence coverage and patch transaction
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.evidence.coverage_report/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "composition_path": ".agentpdf-out/technical-audit.composition.json",
+    "output_path": ".agentpdf-out/technical-audit.coverage.json"
+  }'
+```
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.patch.plan/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "input_path": ".agentpdf-out/technical-audit.pdf",
+    "operations": [
+      {
+        "op": "append_code_block",
+        "title": "Risky Function",
+        "language": "python",
+        "code": "def risky_total(items):\n    return sum(items)\n",
+        "source_refs": ["ctx_001"],
+        "block_id": "blk_ctx_001"
+      },
+      {
+        "op": "append_table",
+        "title": "Runtime Metrics",
+        "columns": ["metric", "value"],
+        "rows": [["latency_ms", "42"], ["error_rate", "0.01"]],
+        "source_refs": ["ctx_002"],
+        "target_slot": "findings"
+      },
+      {
+        "op": "append_image",
+        "title": "Architecture Figure",
+        "path": "assets/brand/okpdf-logo.png",
+        "caption": "Local visual evidence rendered into the patched PDF.",
+        "source_refs": ["ctx_003"]
+      },
+      {
+        "op": "append_slide",
+        "title": "Agent Review Appendix",
+        "body": ["Patch transactions can append slide-like evidence pages."],
+        "source_refs": ["ctx_001", "ctx_002", "ctx_003"]
+      }
+    ],
+    "output_path": ".agentpdf-out/technical-audit.structured.patch.json",
+    "composition_path": ".agentpdf-out/technical-audit.composition.json",
+    "layer_manifest_path": ".agentpdf-out/technical-audit.layers.json",
+    "reason": "Append code, table, image, and slide evidence."
+  }'
+```
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.patch.preview/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "patch_manifest_path": ".agentpdf-out/technical-audit.patch.json",
+    "output_path": ".agentpdf-out/technical-audit.patch-preview.json"
+  }'
+```
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.patch.apply/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "patch_manifest_path": ".agentpdf-out/technical-audit.patch.json",
+    "output_path": ".agentpdf-out/technical-audit-patched.pdf"
+  }'
+```
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.patch.verify/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "patch_manifest_path": ".agentpdf-out/technical-audit.patch.json",
+    "patched_path": ".agentpdf-out/technical-audit-patched.pdf"
+  }'
+```
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.artifacts.export_bundle/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "artifact_paths": [
+      ".agentpdf-out/technical-audit-patched.pdf",
+      ".agentpdf-out/technical-audit.composition.json",
+      ".agentpdf-out/technical-audit.coverage.json",
+      ".agentpdf-out/technical-audit.patch.json"
+    ],
+    "output_path": ".agentpdf-out/technical-audit.agentpdf-bundle.zip",
+    "title": "Technical Audit Bundle",
+    "metadata": {"workflow": "context-packet-patch", "agent": "codex"}
+  }'
+```
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.artifacts.verify_bundle/run \
+  -H 'Content-Type: application/json' \
+  -d '{"bundle_path": ".agentpdf-out/technical-audit.agentpdf-bundle.zip"}'
+```
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.ai.create.templates/run \
+  -H 'Content-Type: application/json' \
+  -d '{}'
+```
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.ai.create.template_preview/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "template": "invoice",
+    "output_path": ".agentpdf-out/invoice-preview.pdf"
+  }'
+```
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.ai.create.from_prompt/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "prompt": "Create a research brief about local PDF template agents.",
+    "output_path": ".agentpdf-out/research-brief.pdf",
+    "template": "research_brief",
+    "style_pack": "paper_ink",
+    "colors": {"primary": "#4f46e5", "accent": "#f59e0b"},
+    "data": {
+      "audience": "agent infrastructure developers",
+      "sections": [
+        {
+          "heading": "Template selection",
+          "body": "The local create agent chooses deterministic templates and validates output."
+        }
+      ]
+    }
+  }'
+```
+
+Structured invoice and resume templates accept JSON data:
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.ai.create.from_prompt/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "prompt": "Create an invoice for okpdf local template work.",
+    "output_path": ".agentpdf-out/invoice.pdf",
+    "template": "invoice",
+    "data": {
+      "invoice_number": "INV-1001",
+      "client": "AgentPDF Labs",
+      "due_date": "2026-06-30",
+      "items": [
+        {"description": "Template implementation", "quantity": 2, "unit_price": 500},
+        {"description": "Validation workflow", "quantity": 1, "unit_price": 350}
+      ],
+      "payment_notes": "Pay by bank transfer."
+    }
   }'
 ```
 

@@ -1,0 +1,21 @@
+{
+  "name": "Alex Agent",
+  "headline": "Agent Infrastructure Engineer",
+  "contact": {
+    "email": "alex@example.com",
+    "location": "Remote"
+  },
+  "summary": "Builds local-first document agents and validation workflows.",
+  "skills": ["PDF tooling", "MCP", "TypeScript", "Python"],
+  "experience": [
+    {
+      "role": "Lead Engineer",
+      "company": "OkPDF",
+      "period": "2024-2026",
+      "bullets": [
+        "Built template-driven PDF creation.",
+        "Designed agent-readable validation reports."
+      ]
+    }
+  ]
+}

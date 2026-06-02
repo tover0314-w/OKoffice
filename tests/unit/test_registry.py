@@ -5,6 +5,7 @@ def test_registry_loads_complete_public_manifest() -> None:
     manifest = load_tool_manifest()
 
     assert len(manifest.tools) >= 100
+    assert get_tool("agent.setup.claude_code").implemented is True
     assert get_tool("pdf.inspect.document").name == "pdf.inspect.document"
     assert get_tool("pdf.inspect.pages").implemented is True
     assert get_tool("pdf.organize.merge").implemented is True
@@ -32,6 +33,12 @@ def test_registry_loads_complete_public_manifest() -> None:
     assert get_tool("pdf.validation.validate_output").implemented is True
     assert get_tool("pdf.validation.render_check").implemented is True
     assert get_tool("pdf.validation.blank_page_check").implemented is True
+    assert get_tool("pdf.ai.create.from_prompt").implemented is True
+    assert get_tool("pdf.ai.create.template_preview").implemented is True
+    assert get_tool("pdf.ai.create.templates").implemented is True
+    assert get_tool("pdf.ai.create.template_packs").implemented is True
+    assert get_tool("pdf.ai.create.validate_template_pack").implemented is True
+    assert get_tool("pdf.ai.create.from_template_pack").implemented is True
     assert get_tool("pdf.ai.rag.cite_answer").implemented is True
     assert get_tool("pdf.ai.rag.chat").implemented is True
     assert get_tool("pdf.ai.rag.export_report").implemented is True
@@ -39,6 +46,16 @@ def test_registry_loads_complete_public_manifest() -> None:
     assert get_tool("pdf.workflow.plan").implemented is True
     assert get_tool("pdf.workflow.run").implemented is True
     assert get_tool("pdf.workflow.report").implemented is True
+    assert get_tool("pdf.context.build_packet").implemented is True
+    assert get_tool("pdf.compose.from_context").implemented is True
+    assert get_tool("pdf.target.profiles").implemented is True
+    assert get_tool("pdf.target.validate_profile").implemented is True
+    assert get_tool("pdf.evidence.coverage_report").implemented is True
+    assert get_tool("pdf.artifacts.export_bundle").implemented is True
+    assert get_tool("pdf.patch.plan").implemented is True
+    assert get_tool("pdf.patch.preview").implemented is True
+    assert get_tool("pdf.patch.apply").implemented is True
+    assert get_tool("pdf.patch.verify").implemented is True
 
 
 def test_registry_keeps_planned_tools_discoverable() -> None:
@@ -48,8 +65,26 @@ def test_registry_keeps_planned_tools_discoverable() -> None:
     assert tool.implemented is False
 
 
+def test_registry_marks_local_create_agent_as_beta() -> None:
+    tool = get_tool("pdf.ai.create.from_prompt")
+    preview_tool = get_tool("pdf.ai.create.template_preview")
+    catalog_tool = get_tool("pdf.ai.create.templates")
+    pack_tool = get_tool("pdf.ai.create.template_packs")
+
+    assert tool.status == "beta"
+    assert "cli" in tool.interfaces
+    assert "mcp" in tool.interfaces
+    assert preview_tool.status == "beta"
+    assert "rest" in preview_tool.interfaces
+    assert catalog_tool.status == "beta"
+    assert "rest" in catalog_tool.interfaces
+    assert pack_tool.status == "beta"
+    assert "mcp" in pack_tool.interfaces
+
+
 def test_implemented_tools_are_known_names() -> None:
     assert IMPLEMENTED_TOOLS == {
+        "agent.setup.claude_code",
         "pdf.inspect.document",
         "pdf.inspect.pages",
         "pdf.organize.merge",
@@ -78,6 +113,14 @@ def test_implemented_tools_are_known_names() -> None:
         "pdf.validation.render_check",
         "pdf.validation.blank_page_check",
         "pdf.ai.parse.lite",
+        "pdf.ai.create.from_prompt",
+        "pdf.ai.create.template_preview",
+        "pdf.ai.create.templates",
+        "pdf.ai.create.template_packs",
+        "pdf.ai.create.validate_template_pack",
+        "pdf.ai.create.plan_template_pack",
+        "pdf.ai.create.agent",
+        "pdf.ai.create.from_template_pack",
         "pdf.ai.rag.ingest",
         "pdf.ai.rag.query",
         "pdf.ai.rag.search",
@@ -88,4 +131,15 @@ def test_implemented_tools_are_known_names() -> None:
         "pdf.workflow.plan",
         "pdf.workflow.run",
         "pdf.workflow.report",
+        "pdf.context.build_packet",
+        "pdf.compose.from_context",
+        "pdf.target.profiles",
+        "pdf.target.validate_profile",
+        "pdf.evidence.coverage_report",
+        "pdf.artifacts.export_bundle",
+        "pdf.artifacts.verify_bundle",
+        "pdf.patch.plan",
+        "pdf.patch.preview",
+        "pdf.patch.apply",
+        "pdf.patch.verify",
     }

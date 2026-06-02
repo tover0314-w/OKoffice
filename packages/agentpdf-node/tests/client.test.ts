@@ -76,6 +76,253 @@ test("AgentPDFClient runs text-to-PDF with the expected payload", async () => {
   assert.equal(result.tool, "pdf.convert.text_to_pdf");
 });
 
+
+test("AgentPDFClient exposes target profile helpers", async () => {
+  const calls: Array<{ url: string; body: unknown }> = [];
+  const toolResult = (tool: string): ToolResult => ({
+    job_id: `job_${tool}`,
+    status: "succeeded",
+    tool,
+    artifacts: [],
+    validation: null,
+    warnings: [],
+    usage: {},
+    next_recommended_tools: [],
+    error: null,
+  });
+  const client = new AgentPDFClient({
+    baseUrl: "http://agentpdf.test",
+    fetch: async (input, init) => {
+      calls.push({ url: String(input), body: JSON.parse(String(init?.body)) });
+      const tool = String(input).includes("validate_profile")
+        ? "pdf.target.validate_profile"
+        : "pdf.target.profiles";
+      return jsonResponse(toolResult(tool));
+    },
+  });
+
+  await client.targetProfiles({ outputPath: "profiles.json" });
+  await client.validateTargetProfile({
+    targetProfile: { profile_id: "board_packet", layout_mode: "document" },
+    outputPath: "profile.validation.json",
+  });
+
+  assert.deepEqual(calls, [
+    {
+      url: "http://agentpdf.test/v1/tools/pdf.target.profiles/run",
+      body: { output_path: "profiles.json" },
+    },
+    {
+      url: "http://agentpdf.test/v1/tools/pdf.target.validate_profile/run",
+      body: {
+        target_profile: { profile_id: "board_packet", layout_mode: "document" },
+        output_path: "profile.validation.json",
+      },
+    },
+  ]);
+});
+
+test("AgentPDFClient exposes template pack helpers", async () => {
+  const calls: Array<{ url: string; body: unknown }> = [];
+  const client = new AgentPDFClient({
+    baseUrl: "http://agentpdf.test",
+    fetch: async (input, init) => {
+      calls.push({ url: String(input), body: JSON.parse(String(init?.body)) });
+      return jsonResponse({
+        job_id: "job_template_pack",
+        status: "succeeded",
+        tool: calls.at(-1)?.url.split("/v1/tools/")[1]?.split("/run")[0] ?? "unknown",
+        artifacts: [],
+        validation: null,
+        warnings: [],
+        usage: {},
+        next_recommended_tools: [],
+        error: null,
+      });
+    },
+  });
+
+  await client.createTemplatePacks({ outputPath: "template-packs.json" });
+  await client.validateTemplatePack({
+    templatePackPath: "examples/template-packs/local-agent-starter.json",
+    outputPath: "template-pack.validation.json",
+  });
+  await client.planTemplatePack({
+    templatePackPath: "examples/template-packs/local-agent-starter.json",
+    profile: "technical_audit",
+    contextPacketPath: "context.packet.json",
+    plannedOutputPath: "board-audit.pdf",
+    outputPath: "board-audit.plan.json",
+  });
+  await client.createAgent({
+    templatePackPath: "examples/template-packs/local-agent-starter.json",
+    profile: "technical_audit",
+    contextPacketPath: "context.packet.json",
+    outputPath: "board-audit.pdf",
+    planOutputPath: "board-audit.plan.json",
+    coverageOutputPath: "board-audit.coverage.json",
+  });
+  await client.createFromTemplatePack({
+    templatePackPath: "examples/template-packs/local-agent-starter.json",
+    templateId: "board_audit",
+    colorScheme: "executive_blue",
+    contextPacketPath: "context.packet.json",
+    outputPath: "board-audit.pdf",
+  });
+
+  assert.deepEqual(calls, [
+    {
+      url: "http://agentpdf.test/v1/tools/pdf.ai.create.template_packs/run",
+      body: { output_path: "template-packs.json" },
+    },
+    {
+      url: "http://agentpdf.test/v1/tools/pdf.ai.create.validate_template_pack/run",
+      body: {
+        template_pack_path: "examples/template-packs/local-agent-starter.json",
+        output_path: "template-pack.validation.json",
+      },
+    },
+    {
+      url: "http://agentpdf.test/v1/tools/pdf.ai.create.plan_template_pack/run",
+      body: {
+        template_pack_path: "examples/template-packs/local-agent-starter.json",
+        profile: "technical_audit",
+        context_packet_path: "context.packet.json",
+        planned_output_path: "board-audit.pdf",
+        output_path: "board-audit.plan.json",
+      },
+    },
+    {
+      url: "http://agentpdf.test/v1/tools/pdf.ai.create.agent/run",
+      body: {
+        template_pack_path: "examples/template-packs/local-agent-starter.json",
+        profile: "technical_audit",
+        context_packet_path: "context.packet.json",
+        output_path: "board-audit.pdf",
+        plan_output_path: "board-audit.plan.json",
+        coverage_output_path: "board-audit.coverage.json",
+      },
+    },
+    {
+      url: "http://agentpdf.test/v1/tools/pdf.ai.create.from_template_pack/run",
+      body: {
+        template_pack_path: "examples/template-packs/local-agent-starter.json",
+        template_id: "board_audit",
+        output_path: "board-audit.pdf",
+        color_scheme: "executive_blue",
+        context_packet_path: "context.packet.json",
+      },
+    },
+  ]);
+});
+
+test("AgentPDFClient exposes artifact bundle export helper", async () => {
+  let postedBody: unknown;
+  const client = new AgentPDFClient({
+    baseUrl: "http://agentpdf.test",
+    fetch: async (input, init) => {
+      assert.equal(String(input), "http://agentpdf.test/v1/tools/pdf.artifacts.export_bundle/run");
+      postedBody = JSON.parse(String(init?.body));
+      return jsonResponse({
+        job_id: "job_bundle",
+        status: "succeeded",
+        tool: "pdf.artifacts.export_bundle",
+        artifacts: [],
+        validation: null,
+        warnings: [],
+        usage: {},
+        next_recommended_tools: [],
+        error: null,
+      });
+    },
+  });
+
+  const result = await client.exportBundle({
+    artifactPaths: ["report.pdf", "report.composition.json"],
+    outputPath: "report.agentpdf-bundle.zip",
+    title: "Report Bundle",
+    metadata: { agent: "codex" },
+  });
+
+  assert.equal(result.tool, "pdf.artifacts.export_bundle");
+  assert.deepEqual(postedBody, {
+    artifact_paths: ["report.pdf", "report.composition.json"],
+    output_path: "report.agentpdf-bundle.zip",
+    title: "Report Bundle",
+    metadata: { agent: "codex" },
+  });
+});
+
+test("AgentPDFClient exposes artifact bundle verify helper", async () => {
+  let postedBody: unknown;
+  const client = new AgentPDFClient({
+    baseUrl: "http://agentpdf.test",
+    fetch: async (input, init) => {
+      assert.equal(String(input), "http://agentpdf.test/v1/tools/pdf.artifacts.verify_bundle/run");
+      postedBody = JSON.parse(String(init?.body));
+      return jsonResponse({
+        job_id: "job_bundle_verify",
+        status: "succeeded",
+        tool: "pdf.artifacts.verify_bundle",
+        artifacts: [],
+        validation: { status: "passed", checks: [], warnings: [] },
+        warnings: [],
+        usage: {},
+        next_recommended_tools: [],
+        error: null,
+      });
+    },
+  });
+
+  const result = await client.verifyBundle({
+    bundlePath: "report.agentpdf-bundle.zip",
+  });
+
+  assert.equal(result.tool, "pdf.artifacts.verify_bundle");
+  assert.deepEqual(postedBody, {
+    bundle_path: "report.agentpdf-bundle.zip",
+  });
+});
+
+test("AgentPDFClient exposes Claude Code agent setup helper", async () => {
+  let postedBody: unknown;
+  const client = new AgentPDFClient({
+    baseUrl: "http://agentpdf.test",
+    fetch: async (input, init) => {
+      assert.equal(String(input), "http://agentpdf.test/v1/tools/agent.setup.claude_code/run");
+      postedBody = JSON.parse(String(init?.body));
+      return jsonResponse({
+        job_id: "job_agent_setup",
+        status: "succeeded",
+        tool: "agent.setup.claude_code",
+        artifacts: [],
+        validation: null,
+        warnings: [],
+        usage: {},
+        next_recommended_tools: [],
+        error: null,
+      });
+    },
+  });
+
+  const result = await client.setupClaudeCode({
+    outputPath: ".mcp.json",
+    safeRoot: "${CLAUDE_PROJECT_DIR:-.}",
+    command: "python",
+    argsPrefix: ["-m", "agentpdf.cli"],
+    scope: "project",
+  });
+
+  assert.equal(result.tool, "agent.setup.claude_code");
+  assert.deepEqual(postedBody, {
+    output_path: ".mcp.json",
+    safe_root: "${CLAUDE_PROJECT_DIR:-.}",
+    command: "python",
+    args_prefix: ["-m", "agentpdf.cli"],
+    scope: "project",
+  });
+});
+
 test("AgentPDFClient exposes high-frequency PDF utility wrappers", async () => {
   const calls: Array<{ url: string; body: unknown }> = [];
   const client = new AgentPDFClient({
@@ -131,6 +378,21 @@ test("AgentPDFClient exposes high-frequency PDF utility wrappers", async () => {
   await client.renderCheck({ path: "numbered.pdf", pages: "1" });
   await client.blankPageCheck({ path: "numbered.pdf", pages: "1" });
   await client.parseLite({ inputPath: "numbered.pdf" });
+  await client.createFromPrompt({
+    prompt: "Create a research brief about local PDF templates.",
+    outputPath: "brief.pdf",
+    template: "research_brief",
+    stylePack: "paper_ink",
+    colors: {
+      primary: "#4f46e5",
+      accent: "#f59e0b",
+    },
+    data: {
+      sections: [{ heading: "Templates", body: "Agents can create PDFs locally." }],
+    },
+  });
+  await client.createTemplatePreview({ template: "invoice", outputPath: "invoice-preview.pdf" });
+  await client.createTemplates();
   await client.extractImages({ inputPath: "numbered.pdf", pages: "1", outDir: "images" });
   await client.ragIngest({
     inputPath: "numbered.pdf",
@@ -160,6 +422,52 @@ test("AgentPDFClient exposes high-frequency PDF utility wrappers", async () => {
     highlightOutputPath: "numbered-chat-highlighted.pdf",
     topK: 2,
   });
+  await client.buildContextPacket({
+    contextItems: [
+      { text: "Create a technical audit PDF.", role: "brief" },
+      { path: "src/service.py", role: "code_evidence" },
+    ],
+    outputPath: "context.packet.json",
+    title: "Audit Context",
+    intent: "Compose a target PDF with evidence.",
+  });
+  await client.composeFromContext({
+    contextPacketPath: "context.packet.json",
+    profile: "technical_audit",
+    outputPath: "technical-audit.pdf",
+  });
+  await client.evidenceCoverageReport({
+    compositionPath: "technical-audit.composition.json",
+    outputPath: "technical-audit.coverage.json",
+  });
+  await client.patchPlan({
+    inputPath: "technical-audit.pdf",
+    operations: [
+      {
+        op: "append_table",
+        title: "Runtime Metrics",
+        columns: ["metric", "value"],
+        rows: [["latency_ms", "42"]],
+        source_refs: ["ctx_002"],
+      },
+    ],
+    outputPath: "technical-audit.patch.json",
+    compositionPath: "technical-audit.composition.json",
+    layerManifestPath: "technical-audit.layers.json",
+    reason: "Append structured evidence.",
+  });
+  await client.patchPreview({
+    patchManifestPath: "technical-audit.patch.json",
+    outputPath: "technical-audit.patch-preview.json",
+  });
+  await client.patchApply({
+    patchManifestPath: "technical-audit.patch.json",
+    outputPath: "technical-audit-patched.pdf",
+  });
+  await client.patchVerify({
+    patchManifestPath: "technical-audit.patch.json",
+    patchedPath: "technical-audit-patched.pdf",
+  });
   await client.pdfToJson({ inputPath: "numbered.pdf", outputPath: "numbered.ir.json" });
   await client.pdfToMarkdown({ inputPath: "numbered.pdf", outputPath: "numbered.md" });
 
@@ -179,6 +487,9 @@ test("AgentPDFClient exposes high-frequency PDF utility wrappers", async () => {
     "http://agentpdf.test/v1/tools/pdf.validation.render_check/run",
     "http://agentpdf.test/v1/tools/pdf.validation.blank_page_check/run",
     "http://agentpdf.test/v1/tools/pdf.ai.parse.lite/run",
+    "http://agentpdf.test/v1/tools/pdf.ai.create.from_prompt/run",
+    "http://agentpdf.test/v1/tools/pdf.ai.create.template_preview/run",
+    "http://agentpdf.test/v1/tools/pdf.ai.create.templates/run",
     "http://agentpdf.test/v1/tools/pdf.convert.extract_images/run",
     "http://agentpdf.test/v1/tools/pdf.ai.rag.ingest/run",
     "http://agentpdf.test/v1/tools/pdf.ai.rag.query/run",
@@ -187,6 +498,13 @@ test("AgentPDFClient exposes high-frequency PDF utility wrappers", async () => {
     "http://agentpdf.test/v1/tools/pdf.ai.rag.highlight_sources/run",
     "http://agentpdf.test/v1/tools/pdf.ai.rag.export_report/run",
     "http://agentpdf.test/v1/tools/pdf.ai.rag.chat/run",
+    "http://agentpdf.test/v1/tools/pdf.context.build_packet/run",
+    "http://agentpdf.test/v1/tools/pdf.compose.from_context/run",
+    "http://agentpdf.test/v1/tools/pdf.evidence.coverage_report/run",
+    "http://agentpdf.test/v1/tools/pdf.patch.plan/run",
+    "http://agentpdf.test/v1/tools/pdf.patch.preview/run",
+    "http://agentpdf.test/v1/tools/pdf.patch.apply/run",
+    "http://agentpdf.test/v1/tools/pdf.patch.verify/run",
     "http://agentpdf.test/v1/tools/pdf.convert.pdf_to_json/run",
     "http://agentpdf.test/v1/tools/pdf.convert.pdf_to_markdown/run",
   ]);
@@ -264,41 +582,60 @@ test("AgentPDFClient exposes high-frequency PDF utility wrappers", async () => {
     input_path: "numbered.pdf",
   });
   assert.deepEqual(calls[15]?.body, {
+    prompt: "Create a research brief about local PDF templates.",
+    output_path: "brief.pdf",
+    template: "research_brief",
+    style_pack: "paper_ink",
+    colors: {
+      primary: "#4f46e5",
+      accent: "#f59e0b",
+    },
+    data: {
+      sections: [{ heading: "Templates", body: "Agents can create PDFs locally." }],
+    },
+  });
+  assert.deepEqual(calls[16]?.body, {
+    template: "invoice",
+    output_path: "invoice-preview.pdf",
+  });
+  assert.deepEqual(calls[17]?.body, {
+  });
+  assert.deepEqual(calls[18]?.body, {
     input_path: "numbered.pdf",
     pages: "1",
     out_dir: "images",
   });
-  assert.deepEqual(calls[16]?.body, {
+  assert.deepEqual(calls[19]?.body, {
     input_path: "numbered.pdf",
     index_path: "numbered.index.json",
     max_chars: 80,
   });
-  assert.deepEqual(calls[17]?.body, {
+  assert.deepEqual(calls[20]?.body, {
     index_path: "numbered.index.json",
     query: "What is cited?",
   });
-  assert.deepEqual(calls[18]?.body, {
+  assert.deepEqual(calls[21]?.body, {
     index_path: "numbered.index.json",
     query: "cited evidence",
   });
-  assert.deepEqual(calls[19]?.body, {
+  assert.deepEqual(calls[22]?.body, {
     index_path: "numbered.index.json",
     answer: "cited evidence",
     top_k: 2,
   });
-  assert.deepEqual(calls[20]?.body, {
+  assert.deepEqual(calls[23]?.body, {
     index_path: "numbered.index.json",
     answer: "cited evidence",
     output_path: "numbered-highlighted.pdf",
   });
-  assert.deepEqual(calls[21]?.body, {
+  assert.deepEqual(calls[24]?.body, {
     index_path: "numbered.index.json",
     question: "What is cited?",
     answer: "cited evidence",
     output_path: "numbered-report.pdf",
     top_k: 2,
   });
-  assert.deepEqual(calls[22]?.body, {
+  assert.deepEqual(calls[25]?.body, {
     input_path: "numbered.pdf",
     question: "What is cited?",
     index_path: "numbered-chat.index.json",
@@ -306,11 +643,57 @@ test("AgentPDFClient exposes high-frequency PDF utility wrappers", async () => {
     highlight_output_path: "numbered-chat-highlighted.pdf",
     top_k: 2,
   });
-  assert.deepEqual(calls[23]?.body, {
+  assert.deepEqual(calls[26]?.body, {
+    context_items: [
+      { text: "Create a technical audit PDF.", role: "brief" },
+      { path: "src/service.py", role: "code_evidence" },
+    ],
+    output_path: "context.packet.json",
+    title: "Audit Context",
+    intent: "Compose a target PDF with evidence.",
+  });
+  assert.deepEqual(calls[27]?.body, {
+    context_packet_path: "context.packet.json",
+    profile: "technical_audit",
+    output_path: "technical-audit.pdf",
+  });
+  assert.deepEqual(calls[28]?.body, {
+    composition_path: "technical-audit.composition.json",
+    output_path: "technical-audit.coverage.json",
+  });
+  assert.deepEqual(calls[29]?.body, {
+    input_path: "technical-audit.pdf",
+    operations: [
+      {
+        op: "append_table",
+        title: "Runtime Metrics",
+        columns: ["metric", "value"],
+        rows: [["latency_ms", "42"]],
+        source_refs: ["ctx_002"],
+      },
+    ],
+    output_path: "technical-audit.patch.json",
+    composition_path: "technical-audit.composition.json",
+    layer_manifest_path: "technical-audit.layers.json",
+    reason: "Append structured evidence.",
+  });
+  assert.deepEqual(calls[30]?.body, {
+    patch_manifest_path: "technical-audit.patch.json",
+    output_path: "technical-audit.patch-preview.json",
+  });
+  assert.deepEqual(calls[31]?.body, {
+    patch_manifest_path: "technical-audit.patch.json",
+    output_path: "technical-audit-patched.pdf",
+  });
+  assert.deepEqual(calls[32]?.body, {
+    patch_manifest_path: "technical-audit.patch.json",
+    patched_path: "technical-audit-patched.pdf",
+  });
+  assert.deepEqual(calls[33]?.body, {
     input_path: "numbered.pdf",
     output_path: "numbered.ir.json",
   });
-  assert.deepEqual(calls[24]?.body, {
+  assert.deepEqual(calls[34]?.body, {
     input_path: "numbered.pdf",
     output_path: "numbered.md",
   });

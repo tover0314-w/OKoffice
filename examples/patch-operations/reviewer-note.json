@@ -1,0 +1,7 @@
+[
+  {
+    "op": "append_markdown",
+    "markdown": "## Reviewer Note\n\nThis appendix was added through a local patch transaction. Keep the source map and coverage report with the final artifact.",
+    "source_refs": ["ctx_001"]
+  }
+]

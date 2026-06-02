@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://okpdf.dev/schemas/slot-routing-plan.schema.json",
+  "title": "AgentPDF Slot Routing Plan",
+  "type": "object",
+  "required": [
+    "slot_routing_plan_version",
+    "slot_routing_plan_id",
+    "template_id",
+    "target_profile_id",
+    "target_profile_known",
+    "target_profile_slots",
+    "routes"
+  ],
+  "properties": {
+    "slot_routing_plan_version": {"type": "string"},
+    "slot_routing_plan_id": {"type": "string", "pattern": "^route_"},
+    "template_id": {"type": "string"},
+    "target_profile_id": {"type": "string"},
+    "target_profile_known": {"type": "boolean"},
+    "target_profile_slots": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {"type": "string"}
+      }
+    },
+    "template_slots": {"type": "array", "items": {"type": "string"}},
+    "supported_block_types": {"type": "array", "items": {"type": "string"}},
+    "route_count": {"type": "integer", "minimum": 0},
+    "accepted_route_count": {"type": "integer", "minimum": 0},
+    "warning_route_count": {"type": "integer", "minimum": 0},
+    "warnings": {"type": "array", "items": {"type": "string"}},
+    "next_recommended_tools": {"type": "array", "items": {"type": "string"}},
+    "routes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "route_id",
+          "block_id",
+          "block_type",
+          "source_refs",
+          "target_slot",
+          "slot_known",
+          "block_type_supported",
+          "target_profile_known",
+          "target_profile_accepts_block_type",
+          "target_profile_candidate_slots",
+          "routing_status",
+          "routing_reason"
+        ],
+        "properties": {
+          "route_id": {"type": "string", "pattern": "^route_"},
+          "block_id": {"type": "string"},
+          "block_type": {"type": "string"},
+          "title": {"type": "string"},
+          "source_refs": {"type": "array", "items": {"type": "string"}},
+          "source_context_item_id": {"type": "string"},
+          "target_slot": {"type": "string"},
+          "slot_known": {"type": "boolean"},
+          "block_type_supported": {"type": "boolean"},
+          "target_profile_known": {"type": "boolean"},
+          "target_profile_accepts_block_type": {"type": "boolean"},
+          "target_profile_candidate_slots": {"type": "array", "items": {"type": "string"}},
+          "routing_status": {"type": "string", "enum": ["accepted", "warning"]},
+          "routing_reason": {"type": "string"}
+        }
+      }
+    }
+  }
+}

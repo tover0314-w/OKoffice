@@ -1,0 +1,29 @@
+{
+  "profile_id": "media_learning_deck",
+  "name": "Media Learning Deck",
+  "layout_mode": "slides",
+  "style_pack": "paper_ink",
+  "sections": ["Title", "Learning Context", "Evidence Slides", "Source Map"],
+  "layout_slots": {
+    "title": {"accepts": ["section"], "required": true},
+    "learning_context": {"accepts": ["section", "citation"], "required": true},
+    "evidence_slide": {
+      "accepts": ["slide", "image", "table", "code", "audio_reference", "video_reference", "media_reference"],
+      "repeats": true
+    },
+    "source_map": {"accepts": ["slide", "section"], "required": true}
+  },
+  "accepted_block_types": [
+    "slide",
+    "section",
+    "image",
+    "table",
+    "code",
+    "audio_reference",
+    "video_reference",
+    "media_reference",
+    "citation"
+  ],
+  "accepted_context_types": ["text", "document", "image", "data", "code", "audio", "video", "web_link"],
+  "validation_required": ["render_check", "evidence_coverage_report"]
+}

@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "agentpdf": {
+      "type": "stdio",
+      "command": "okpdf",
+      "args": [
+        "serve",
+        "--mcp",
+        "--safe-root",
+        "${CLAUDE_PROJECT_DIR:-.}"
+      ]
+    }
+  }
+}
