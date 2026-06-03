@@ -3,6 +3,7 @@ import test from "node:test";
 
 import { AgentPDFClient } from "../src/index.js";
 import type { ToolManifest, ToolResult } from "../src/index.js";
+import type { AuthoringBrief, EvidenceCard, WorkflowResearchDeckRequest } from "../src/types.js";
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -555,6 +556,7 @@ test("AgentPDFClient exposes conversion, PDF/A, and security helpers", async () 
   await client.subsetFonts({ inputPath: "report.pdf", outputPath: "report.subset.pdf" });
   await client.toPdfa({ inputPath: "report.pdf", outputPath: "report.pdfa.pdf", profile: "PDF/A-2b" });
   await client.htmlToPdf({ inputPath: "page.html", outputPath: "page.pdf" });
+  await client.renderHtmlPackage({ packagePath: "page.html-manifest.json", outputPath: "page.pdf" });
   await client.urlToPdf({
     url: "https://example.com",
     outputPath: "url.pdf",
@@ -615,6 +617,7 @@ test("AgentPDFClient exposes conversion, PDF/A, and security helpers", async () 
     "http://agentpdf.test/v1/tools/pdf.optimize.subset_fonts/run",
     "http://agentpdf.test/v1/tools/pdf.optimize.to_pdfa/run",
     "http://agentpdf.test/v1/tools/pdf.convert.html_to_pdf/run",
+    "http://agentpdf.test/v1/tools/pdf.render.html_package/run",
     "http://agentpdf.test/v1/tools/pdf.convert.url_to_pdf/run",
     "http://agentpdf.test/v1/tools/pdf.convert.docx_to_pdf/run",
     "http://agentpdf.test/v1/tools/pdf.convert.pptx_to_pdf/run",
@@ -641,44 +644,48 @@ test("AgentPDFClient exposes conversion, PDF/A, and security helpers", async () 
     profile: "PDF/A-2b",
   });
   assert.deepEqual(calls[3]?.body, {
+    package_path: "page.html-manifest.json",
+    output_path: "page.pdf",
+  });
+  assert.deepEqual(calls[4]?.body, {
     url: "https://example.com",
     output_path: "url.pdf",
     allow_private_hosts: true,
     allow_file_urls: true,
   });
-  assert.deepEqual(calls[7]?.body, {
+  assert.deepEqual(calls[8]?.body, {
     input_path: "report.pdf",
     output_path: "report.html",
     pages: "1",
   });
-  assert.deepEqual(calls[11]?.body, {
+  assert.deepEqual(calls[12]?.body, {
     input_path: "report.pdf",
     output_path: "protected.pdf",
     password: "open",
     owner_password: "owner",
   });
-  assert.deepEqual(calls[16]?.body, {
+  assert.deepEqual(calls[17]?.body, {
     input_path: "signed.pdf",
     signature_path: "signed.pdf.signature.json",
     secret: "local-secret",
   });
-  assert.deepEqual(calls[17]?.body, {
+  assert.deepEqual(calls[18]?.body, {
     input_path: "report.pdf",
   });
-  assert.deepEqual(calls[18]?.body, {
+  assert.deepEqual(calls[19]?.body, {
     input_path: "report.pdf",
     output_path: "sanitized.pdf",
   });
-  assert.deepEqual(calls[19]?.body, {
+  assert.deepEqual(calls[20]?.body, {
     input_path: "report.pdf",
     output_path: "redacted.pdf",
     regions: [{ page: 1, bbox: [60, 700, 280, 760], label: "secret" }],
   });
-  assert.deepEqual(calls[20]?.body, {
+  assert.deepEqual(calls[21]?.body, {
     input_path: "redacted.pdf",
     search_terms: ["SECRET-CODE-123"],
   });
-  assert.deepEqual(calls[21]?.body, {
+  assert.deepEqual(calls[22]?.body, {
     input_path: "redacted.pdf",
     search_terms: ["SECRET-CODE-123"],
   });
@@ -1099,6 +1106,8 @@ test("AgentPDFClient exposes template pack helpers", async () => {
     colorScheme: "executive_blue",
     contextPacketPath: "context.packet.json",
     outputPath: "board-audit.pdf",
+    renderer: "html",
+    htmlOutputPath: "board-audit.html",
   });
 
   assert.deepEqual(calls, [
@@ -1146,9 +1155,157 @@ test("AgentPDFClient exposes template pack helpers", async () => {
         output_path: "board-audit.pdf",
         color_scheme: "executive_blue",
         context_packet_path: "context.packet.json",
+        renderer: "html",
+        html_output_path: "board-audit.html",
       },
     },
   ]);
+});
+
+test("AgentPDFClient exposes authoring workflow helpers", async () => {
+  const calls: Array<{ url: string; body: unknown }> = [];
+  const client = new AgentPDFClient({
+    baseUrl: "http://agentpdf.test",
+    fetch: async (input, init) => {
+      calls.push({ url: String(input), body: JSON.parse(String(init?.body)) });
+      return jsonResponse({
+        job_id: "job_authoring",
+        status: "succeeded",
+        tool: calls.at(-1)?.url.split("/v1/tools/")[1]?.split("/run")[0] ?? "unknown",
+        artifacts: [],
+        validation: null,
+        warnings: [],
+        usage: {},
+        next_recommended_tools: [],
+        error: null,
+      });
+    },
+  });
+  const brief: AuthoringBrief = {
+    topic: "Independent developers going global",
+    page_count: 4,
+    deliverable: "deck",
+  };
+  const evidenceCards: EvidenceCard[] = [
+    {
+      id: "ev_market",
+      claim: "Mobile monetization remains strong.",
+      evidence: "Revenue growth continues while downloads flatten.",
+      source_title: "State of Mobile 2026",
+    },
+  ];
+
+  await client.authoringPlan({ brief });
+  await client.researchPlan({ brief });
+  await client.researchSourceCards({
+    brief,
+    sources: [
+      {
+        title: "State of Mobile 2026",
+        source_type: "report",
+        summary: "Revenue growth continues while downloads flatten.",
+      },
+    ],
+  });
+  await client.researchEvidenceCards({
+    sourceCards: [
+      {
+        id: "source_001",
+        title: "State of Mobile 2026",
+        summary: "Revenue growth continues while downloads flatten.",
+        key_points: ["Revenue growth continues while downloads flatten."],
+      },
+    ],
+  });
+  await client.designTokens({ theme: "consulting", overrides: { primary_color: "#123456" } });
+  await client.storyboardPlan({ brief, authoringPlan: { recommended_authoring_format: "html" }, evidenceCards });
+  await client.pagesWrite({
+    brief,
+    storyboard: { storyboard_id: "storyboard_1", page_count: 1, pages: [] },
+    evidenceCards,
+    designTokens: { theme: "business_tech" },
+  });
+  await client.pagesRevise({
+    pageDocument: { page_document_id: "pages_1", page_count: 1, pages: [{ page_number: 1, layout: "cover", title: "Old" }] },
+    revisions: [{ page_number: 1, title: "New" }],
+  });
+  await client.createHtmlPackage({
+    pageDocument: { page_document_id: "pages_1", page_count: 0, pages: [] },
+    htmlOutputPath: "deck.html",
+    title: "Independent developers going global",
+  });
+  await client.createHtmlPackage({
+    html: "<main><h1>HTML First</h1><p>Node SDK raw HTML package.</p></main>",
+    htmlOutputPath: "raw.html",
+    title: "HTML First",
+  });
+  await client.qaVisualReport({
+    inputPath: "deck.pdf",
+    expectedPageCount: 4,
+    htmlPackageManifestPath: "deck.html-manifest.json",
+    pages: "all",
+  });
+  const workflowRequest: WorkflowResearchDeckRequest = {
+    brief,
+    evidenceCards,
+    htmlOutputPath: "deck.html",
+    pdfOutputPath: "deck.pdf",
+    artifactDir: "workflow-artifacts",
+    execute: true,
+  };
+  await client.workflowResearchDeck(workflowRequest);
+  await client.workflowCreatePdf({
+    html: "<main><h1>CreatePDF</h1><p>Node SDK creates audited PDFs.</p></main>",
+    htmlOutputPath: "createpdf.html",
+    pdfOutputPath: "createpdf.pdf",
+    artifactDir: "audit",
+    expectedPageCount: 1,
+    pages: "1",
+  });
+
+  assert.deepEqual(calls.map((call) => call.url), [
+    "http://agentpdf.test/v1/tools/pdf.authoring.plan/run",
+    "http://agentpdf.test/v1/tools/pdf.research.plan/run",
+    "http://agentpdf.test/v1/tools/pdf.research.source_cards/run",
+    "http://agentpdf.test/v1/tools/pdf.research.evidence_cards/run",
+    "http://agentpdf.test/v1/tools/pdf.design.tokens/run",
+    "http://agentpdf.test/v1/tools/pdf.storyboard.plan/run",
+    "http://agentpdf.test/v1/tools/pdf.pages.write/run",
+    "http://agentpdf.test/v1/tools/pdf.pages.revise/run",
+    "http://agentpdf.test/v1/tools/pdf.create.html_package/run",
+    "http://agentpdf.test/v1/tools/pdf.create.html_package/run",
+    "http://agentpdf.test/v1/tools/pdf.qa.visual_report/run",
+    "http://agentpdf.test/v1/tools/pdf.workflow.research_deck/run",
+    "http://agentpdf.test/v1/tools/pdf.workflow.createpdf/run",
+  ]);
+  assert.deepEqual(calls[0]?.body, { brief });
+  assert.deepEqual(calls[4]?.body, { theme: "consulting", overrides: { primary_color: "#123456" } });
+  assert.deepEqual(calls[8]?.body, {
+    page_document: { page_document_id: "pages_1", page_count: 0, pages: [] },
+    html_output_path: "deck.html",
+    title: "Independent developers going global",
+  });
+  assert.deepEqual(calls[9]?.body, {
+    html: "<main><h1>HTML First</h1><p>Node SDK raw HTML package.</p></main>",
+    html_output_path: "raw.html",
+    title: "HTML First",
+  });
+  assert.deepEqual(calls[11]?.body, {
+    brief,
+    evidence_cards: evidenceCards,
+    html_output_path: "deck.html",
+    pdf_output_path: "deck.pdf",
+    artifact_dir: "workflow-artifacts",
+    execute: true,
+  });
+  assert.deepEqual(calls[12]?.body, {
+    html: "<main><h1>CreatePDF</h1><p>Node SDK creates audited PDFs.</p></main>",
+    html_output_path: "createpdf.html",
+    pdf_output_path: "createpdf.pdf",
+    artifact_dir: "audit",
+    expected_page_count: 1,
+    pages: "1",
+  });
 });
 
 test("AgentPDFClient exposes artifact bundle export helper", async () => {

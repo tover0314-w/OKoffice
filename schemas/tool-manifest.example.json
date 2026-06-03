@@ -512,6 +512,21 @@
       "requires_model": false
     },
     {
+      "name": "pdf.render.html_package",
+      "status": "beta",
+      "description": "Validate an AgentPDF HTML package manifest and render it to PDF.",
+      "category": "render",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
       "name": "pdf.convert.pdf_to_images",
       "status": "stable",
       "description": "Render PDF pages to images.",

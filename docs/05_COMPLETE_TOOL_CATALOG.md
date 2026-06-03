@@ -73,7 +73,7 @@ Create new PDF artifacts from context packets, target PDF profiles, composition 
 | Tool | Status | Description |
 |---|---:|---|
 | `pdf.compose.plan` | beta | Plan a context-to-target-PDF artifact with Composition IR, source refs, validation, render plan, and style constraints. |
-| `pdf.compose.from_context` | beta | Compose a validated target PDF from a Context Packet and target profile with source map, evidence coverage, and optional HTML package artifacts. |
+| `pdf.compose.from_context` | beta | Compose a validated target PDF from a Context Packet and target profile with source map, evidence coverage, optional HTML package artifacts, local asset manifest, and HTML package validation. |
 | `pdf.compose.render_ir` | beta | Render a composition plan or IR payload into a validated PDF artifact. |
 | `pdf.compose.add_code_block` | beta target | Append a code evidence page to a new PDF with source refs, patch evidence, rollback metadata, and validation. |
 | `pdf.compose.add_figure` | beta target | Append an image/figure evidence page to a new PDF with captions, source refs, patch evidence, rollback metadata, and validation. |
@@ -116,7 +116,7 @@ Inspect artifact lineage and manifests.
 
 | Tool | Status | Description |
 |---|---:|---|
-| `pdf.artifacts.manifest` | beta target | Return artifact metadata, checksums, source refs, validation links, and retention hints. |
+| `pdf.artifacts.manifest` | beta target | Return artifact metadata, checksums, source refs, HTML package refs, Context Packet refs, validation links, and retention hints. |
 | `pdf.artifacts.graph` | beta target | Return parent/child artifact lineage for a workflow or output. |
 | `pdf.artifacts.source_map` | beta target | Return generated PDF block/page refs mapped back to sources. |
 | `pdf.artifacts.export_bundle` | beta/local | Export PDF, manifests, validations, source maps, and reports as a portable audit ZIP with checksums. |
@@ -131,6 +131,24 @@ Inspect artifact lineage and manifests.
 | `pdf.workflow.plan` | beta target | Plan a local-first agent workflow with roles, steps, validation, and cloud boundary. |
 | `pdf.workflow.run` | beta target | Execute a local workflow manifest and return per-step evidence. |
 | `pdf.workflow.report` | beta target | Summarize workflow artifacts, warnings, validation, and step evidence. |
+| `pdf.workflow.createpdf` | beta target | Create a validated PDF through a local HTML-first workflow with visual QA and artifact lineage reports. |
+| `pdf.workflow.research_deck` | beta target | Plan or execute a local research-to-deck workflow from brief and evidence cards through authoring, storyboard, page JSON, HTML package, render, and visual QA steps. |
+
+### Authoring workflow
+
+| Tool | Status | Description |
+|---|---:|---|
+| `pdf.authoring.plan` | beta | Choose the safest local source format before rendering a new PDF artifact. |
+| `pdf.storyboard.plan` | beta | Create a deterministic page-by-page storyboard from a brief and optional evidence cards. |
+| `pdf.pages.write` | beta | Convert storyboard pages into page JSON blocks with source footers and design tokens. |
+| `pdf.create.html_package` | beta | Write a self-contained local HTML/CSS source package from page JSON, a raw HTML string, or a local HTML file. |
+| `pdf.qa.visual_report` | beta | Combine page-count, renderability, blank-page, and authoring/raw HTML package manifest checks for generated PDFs. |
+| `pdf.research.plan` | beta | Plan source gathering for an agent-authored PDF without performing network research in the OSS core. |
+| `pdf.research.source_cards` | beta | Normalize researched sources into structured source cards for authoring workflows. |
+| `pdf.research.evidence_cards` | beta | Turn source cards into evidence cards with claims, confidence, and usable page targets. |
+| `pdf.insights.synthesize` | planned | Synthesize source-backed insights behind an explicit model-enabled boundary. |
+| `pdf.design.tokens` | beta | Generate or select reusable design tokens for authoring source packages. |
+| `pdf.pages.revise` | beta | Revise generated page JSON while preserving source references and validation evidence. |
 
 ### `pdf.inspect`
 
@@ -179,6 +197,7 @@ Inspect artifact lineage and manifests.
 | `pdf.convert.image_to_pdf` | stable target | Create PDF from images. |
 | `pdf.convert.markdown_to_pdf` | stable target | Render Markdown to PDF using templates. |
 | `pdf.convert.html_to_pdf` | beta target | Convert local HTML into a validated PDF; the current OSS converter preserves text and emits layout-approximation warnings. |
+| `pdf.render.html_package` | beta | Validate an AgentPDF HTML package manifest, local assets, and render it to a validated PDF through the local fallback renderer. |
 | `pdf.convert.url_to_pdf` | beta | Fetch URL with safety checks and convert HTML text to PDF. |
 | `pdf.convert.text_to_pdf` | stable target | Plain text to PDF. |
 | `pdf.convert.docx_to_pdf` | beta | Convert DOCX text to local PDF. |
@@ -363,7 +382,7 @@ RAG tools are useful evidence helpers, but the broader product layer is `pdf.evi
 | `pdf.ai.create.validate_template_pack` | beta target | Validate a local template pack contract, including layout slots and supported agent blocks. |
 | `pdf.ai.create.plan_template_pack` | beta target | Recommend a local template-pack create payload from a target profile and Context Packet. |
 | `pdf.ai.create.agent` | beta target | Run the local create agent: plan a template, classify Context Packet routing, create the PDF, write a Context Packet report, render-check, blank-check, write coverage evidence, and optionally export/verify an audit bundle. |
-| `pdf.ai.create.from_template_pack` | beta target | Create and validate a PDF from a local template pack entry, color scheme, optional slot-targeted `data.blocks`, or a Context Packet auto-mapped into blocks with a slot routing plan. |
+| `pdf.ai.create.from_template_pack` | beta target | Create and validate a PDF from a local template pack entry, color scheme, optional slot-targeted `data.blocks`, or a Context Packet auto-mapped into blocks with a slot routing plan; `renderer=html` also writes an HTML package, asset manifest, and package validation evidence before rendering the PDF. |
 | `pdf.ai.create.report` | beta/cloud | Dedicated report creation endpoint; local report templates are available through `pdf.ai.create.from_prompt`. |
 | `pdf.ai.create.paper` | planned/cloud | Create academic paper format. |
 | `pdf.ai.create.resume` | beta/cloud | Dedicated resume endpoint; local structured resume templates are available through `pdf.ai.create.from_prompt`. |

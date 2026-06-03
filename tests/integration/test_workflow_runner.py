@@ -118,6 +118,32 @@ def test_workflow_run_rejects_unresolved_placeholders_before_execution() -> None
     assert run["step_results"][0]["status"] == "failed"
 
 
+def test_workflow_run_rejects_bad_authoring_qa_expected_page_count() -> None:
+    result = run_workflow(
+        {
+            "steps": [
+                {
+                    "step_id": "visual_qa",
+                    "tool": "pdf.qa.visual_report",
+                    "input": {
+                        "input_path": "deck.pdf",
+                        "expected_page_count": "abc",
+                    },
+                }
+            ]
+        }
+    )
+
+    assert result.status == "failed"
+    assert result.tool == "pdf.workflow.run"
+    assert result.error is not None
+    assert result.error.code == "unsafe_input_rejected"
+    run = result.usage["workflow_run"]
+    assert run["executed_steps"] == 1
+    assert run["failed_steps"] == 1
+    assert run["step_results"][0]["error"]["code"] == "unsafe_input_rejected"
+
+
 def test_workflow_run_dry_run_reports_supported_steps_without_running_files() -> None:
     result = run_workflow(
         {

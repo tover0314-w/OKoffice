@@ -1,0 +1,15 @@
+[
+  {
+    "title": "State of Mobile 2026",
+    "publisher": "Example Research",
+    "date": "2026-01-01",
+    "url": "https://example.com/mobile",
+    "source_type": "report",
+    "summary": "Revenue growth continues while downloads flatten.",
+    "key_points": [
+      "Revenue growth continues while downloads flatten.",
+      "Non-game subscriptions keep expanding."
+    ],
+    "usable_for": ["market_context", "executive_summary"]
+  }
+]

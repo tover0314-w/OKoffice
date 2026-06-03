@@ -58,6 +58,66 @@
       "status": "beta"
     },
     {
+      "name": "pdf_workflow_createpdf",
+      "maps_to": "pdf.workflow.createpdf",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_workflow_research_deck",
+      "maps_to": "pdf.workflow.research_deck",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_authoring_plan",
+      "maps_to": "pdf.authoring.plan",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_storyboard_plan",
+      "maps_to": "pdf.storyboard.plan",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_pages_write",
+      "maps_to": "pdf.pages.write",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_research_plan",
+      "maps_to": "pdf.research.plan",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_research_source_cards",
+      "maps_to": "pdf.research.source_cards",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_research_evidence_cards",
+      "maps_to": "pdf.research.evidence_cards",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_design_tokens",
+      "maps_to": "pdf.design.tokens",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_pages_revise",
+      "maps_to": "pdf.pages.revise",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_create_html_package",
+      "maps_to": "pdf.create.html_package",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_qa_visual_report",
+      "maps_to": "pdf.qa.visual_report",
+      "status": "beta"
+    },
+    {
       "name": "pdf_context_build_packet",
       "maps_to": "pdf.context.build_packet",
       "status": "beta"
@@ -620,6 +680,11 @@
     {
       "name": "pdf_html_to_pdf",
       "maps_to": "pdf.convert.html_to_pdf",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_render_html_package",
+      "maps_to": "pdf.render.html_package",
       "status": "beta"
     },
     {

@@ -233,6 +233,10 @@ const audit = await client.composeFromContext({
   renderer: "html",
   htmlOutputPath: ".agentpdf-out/technical-audit.html",
 });
+const rerenderedAudit = await client.renderHtmlPackage({
+  packagePath: ".agentpdf-out/technical-audit.html-manifest.json",
+  outputPath: ".agentpdf-out/technical-audit-rendered.pdf",
+});
 const deck = await client.composeFromContext({
   contextPacketPath: ".agentpdf-out/context.packet.json",
   profile: "slide_deck",
@@ -576,21 +580,35 @@ agentpdf-node create-template-packs -o template-packs.json
 agentpdf-node create-validate-template-pack examples/template-packs/local-agent-starter.json -o template-pack.validation.json
 agentpdf-node create-agent examples/template-packs/local-agent-starter.json --profile technical_audit --context-packet context.packet.json -o board-audit-agent.pdf --plan-output board-audit-agent.plan.json --coverage-output board-audit-agent.coverage.json --context-classification-output board-audit-agent.context-classification.json --context-report-output board-audit-agent.context-report.pdf --context-report-json-output board-audit-agent.context-report.json --bundle-output board-audit-agent.agentpdf-bundle.zip
 agentpdf-node create-from-template-pack examples/template-packs/local-agent-starter.json --template board_audit --color-scheme executive_blue --data examples/create-data/agent-block-audit.json -o board-audit.pdf
-agentpdf-node create-from-template-pack examples/template-packs/local-agent-starter.json --template board_audit --color-scheme executive_blue --context-packet context.packet.json -o board-audit-from-context.pdf
+agentpdf-node create-from-template-pack examples/template-packs/local-agent-starter.json --template board_audit --color-scheme executive_blue --context-packet context.packet.json -o board-audit-from-context.pdf --renderer html --html-output board-audit-from-context.html
 agentpdf-node create-template-preview --template invoice -o invoice-preview.pdf
 agentpdf-node create-from-prompt --prompt "Create a research brief about local PDF agents." -o brief.pdf --template research_brief --style-pack paper_ink --color primary=#4f46e5
 agentpdf-node context-ingest --file src/agentpdf/compose/context.py --role code_evidence --label "Composer Source" -o composer.context-item.json
+agentpdf-node context-ingest --link okpdf.dev/docs/context --role citation --label "Context Docs" -o context-docs.context-item.json
 agentpdf-node code-snapshot src/agentpdf/compose/context.py --line-start 1 --line-end 80 --repository-root . -o composer.snapshot.context-item.json
 agentpdf-node data-profile examples/create-data/metrics.csv --label "Runtime Metrics" -o metrics.profile.context-item.json
 agentpdf-node context-image-analyze assets/brand/okpdf-logo.png --skip-ocr
 agentpdf-node context-packet --item-json composer.context-item.json --text "Create a technical audit PDF from pre-ingested code evidence." -o agent.context.packet.json
-agentpdf-node context-build --text "Create a technical audit PDF." --file README.md --item-json examples/context/media-items.json -o context.packet.json
+agentpdf-node context-build --text "Create a technical audit PDF." --file README.md --link okpdf.dev/docs/context --item-json examples/context/media-items.json -o context.packet.json
 agentpdf-node context-classify context.packet.json --profile technical_audit -o context.classification.json
 agentpdf-node target-profiles -o target-profiles.json
 agentpdf-node target-validate --target-profile '{"profile_id":"media_learning_deck","layout_mode":"slides","accepted_block_types":["slide","audio_reference","video_reference"],"accepted_context_types":["text","audio","video"],"validation_required":["render_check","evidence_coverage_report"]}' -o media-learning-deck.validation.json
 agentpdf-node compose-plan context.packet.json --profile technical_audit -o technical-audit.plan.json
 agentpdf-node compose-render-ir technical-audit.plan.json -o technical-audit-from-ir.pdf
 agentpdf-node compose-from-context context.packet.json --profile technical_audit -o technical-audit.pdf --renderer html --html-output technical-audit.html
+agentpdf-node render-html-package technical-audit.html-manifest.json -o technical-audit-rendered.pdf
+agentpdf-node create-html-package --html "<main><h1>HTML First</h1><p>Inspectable source before PDF.</p></main>" --html-output html-first.html --title "HTML First"
+agentpdf-node render-html-package html-first.html-manifest.json -o html-first.pdf
+agentpdf-node qa-visual-report --input html-first.pdf --html-package-manifest html-first.html-manifest.json --pages 1
+agentpdf-node artifact-manifest --file html-first.pdf --file html-first.html --file html-first.html-manifest.json -o html-first.artifacts.json --title "HTML First Artifacts" --metadata workflow=html-first-createpdf
+agentpdf-node artifact-graph --manifest html-first.artifacts.json -o html-first.artifact-graph.json --title "HTML First Artifact Graph"
+agentpdf-node createpdf --html "<main><h1>CreatePDF</h1><p>HTML-first workflow with audit evidence.</p></main>" --html-output createpdf.html --pdf-output createpdf.pdf --artifact-dir createpdf-audit --title "CreatePDF"
+agentpdf-node authoring-plan --brief examples/research_deck_brief.json
+agentpdf-node research-plan --brief examples/research_deck_brief.json
+agentpdf-node research-source-cards --brief examples/research_deck_brief.json --sources examples/research_deck_sources.json
+agentpdf-node research-evidence-cards --source-cards examples/research_deck_source_cards.json
+agentpdf-node design-tokens --theme consulting --color primary_color=#123456
+agentpdf-node workflow-research-deck --brief examples/research_deck_brief.json --evidence-cards examples/research_deck_evidence.json --html-output research-deck.html --pdf-output research-deck.pdf --artifact-dir research-deck-artifacts --execute
 agentpdf-node compose-from-context context.packet.json --profile slide_deck -o agent-review-deck.pdf
 agentpdf-node compose-add-code-block technical-audit.pdf --title "Risk Function" --code "def risky_total(items): return sum(items)" --language python --source-ref ctx_002 --target-slot code_review -o technical-audit.code.pdf
 agentpdf-node compose-add-table technical-audit.pdf --title "Runtime Metrics" --columns metric,value --row latency_ms,42 --source-ref ctx_003 -o technical-audit.table.pdf
@@ -608,9 +626,9 @@ agentpdf-node patch-plan technical-audit.pdf --operations '[{"op":"append_table"
 agentpdf-node patch-preview technical-audit.patch.json -o technical-audit.patch-preview.json
 agentpdf-node patch-apply technical-audit.patch.json -o technical-audit-patched.pdf
 agentpdf-node patch-verify technical-audit.patch.json technical-audit-patched.pdf
-agentpdf-node artifact-manifest --file technical-audit-patched.pdf --file technical-audit.composition.json --file technical-audit.coverage.json --file technical-audit.source-map.json --file technical-audit.artifact-source-map.json --file technical-audit.citations.json --file technical-audit.patch.json -o technical-audit.artifacts.json --title "Technical Audit Artifacts" --metadata workflow=context-packet-patch
+agentpdf-node artifact-manifest --file technical-audit-patched.pdf --file context.packet.json --file technical-audit.composition.json --file technical-audit.coverage.json --file technical-audit.source-map.json --file technical-audit.artifact-source-map.json --file technical-audit.citations.json --file technical-audit.patch.json -o technical-audit.artifacts.json --title "Technical Audit Artifacts" --metadata workflow=context-packet-patch
 agentpdf-node artifact-graph --manifest technical-audit.artifacts.json -o technical-audit.artifact-graph.json --title "Technical Audit Artifact Graph"
-agentpdf-node export-bundle --file technical-audit-patched.pdf --file technical-audit.composition.json --file technical-audit.coverage.json --file technical-audit.patch.json -o technical-audit.agentpdf-bundle.zip --title "Technical Audit Bundle" --metadata workflow=context-packet-patch
+agentpdf-node export-bundle --file technical-audit-patched.pdf --file context.packet.json --file technical-audit.composition.json --file technical-audit.coverage.json --file technical-audit.patch.json -o technical-audit.agentpdf-bundle.zip --title "Technical Audit Bundle" --metadata workflow=context-packet-patch
 agentpdf-node verify-bundle technical-audit.agentpdf-bundle.zip
 ```
 

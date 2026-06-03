@@ -1,6 +1,6 @@
 # 23 — Full Tool Status Matrix
 
-Total tools specified: **227**
+Total tools specified: **241**
 
 | Tool | Category | Status | OSS default |
 |---|---|---:|---:|
@@ -59,6 +59,19 @@ Total tools specified: **227**
 | `pdf.workflow.plan` | workflow | beta | yes |
 | `pdf.workflow.run` | workflow | beta | yes |
 | `pdf.workflow.report` | workflow | beta | yes |
+| `pdf.workflow.createpdf` | workflow | beta | yes |
+| `pdf.workflow.research_deck` | workflow | beta | yes |
+| `pdf.authoring.plan` | authoring | beta | yes |
+| `pdf.storyboard.plan` | authoring | beta | yes |
+| `pdf.pages.write` | authoring | beta | yes |
+| `pdf.create.html_package` | authoring | beta | yes |
+| `pdf.qa.visual_report` | validation | beta | yes |
+| `pdf.research.plan` | research | beta | yes |
+| `pdf.research.source_cards` | research | beta | yes |
+| `pdf.research.evidence_cards` | research | beta | yes |
+| `pdf.insights.synthesize` | insights | planned | no |
+| `pdf.design.tokens` | authoring | beta | yes |
+| `pdf.pages.revise` | authoring | beta | yes |
 | `pdf.inspect.document` | inspect | stable | yes |
 | `pdf.inspect.pages` | inspect | stable | yes |
 | `pdf.inspect.permissions` | inspect | beta | yes |
@@ -87,6 +100,7 @@ Total tools specified: **227**
 | `pdf.convert.image_to_pdf` | convert_to_pdf | stable | yes |
 | `pdf.convert.markdown_to_pdf` | convert_to_pdf | stable | yes |
 | `pdf.convert.html_to_pdf` | convert_to_pdf | beta | yes |
+| `pdf.render.html_package` | render | beta | yes |
 | `pdf.convert.url_to_pdf` | convert_to_pdf | beta | yes |
 | `pdf.convert.text_to_pdf` | convert_to_pdf | stable | yes |
 | `pdf.convert.docx_to_pdf` | convert_to_pdf | beta | yes |

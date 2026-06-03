@@ -207,6 +207,143 @@ export async function runCli(
         stdout,
       );
     }
+    if (command === "createpdf" || command === "workflow-createpdf") {
+      return emitResult(
+        await client.workflowCreatePdf({
+          pdfOutputPath: takeRequiredOption(args, ["--pdf-output", "--output", "-o"]),
+          htmlOutputPath: takeOption(args, ["--html-output"]),
+          html: takeOption(args, ["--html"]),
+          htmlPath: takeOption(args, ["--html-file", "--html-path"]),
+          pageDocument: await parseOptionalObject(takeOption(args, ["--page-document"])),
+          title: takeOption(args, ["--title"]),
+          artifactDir: takeOption(args, ["--artifact-dir"]),
+          expectedPageCount: takeIntegerOption(args, ["--expected-page-count"]),
+          pages: takeOption(args, ["--pages"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "workflow-research-deck") {
+      return emitResult(
+        await client.workflowResearchDeck({
+          brief: await parseRequiredObject(takeRequiredOption(args, ["--brief"]), "--brief"),
+          evidenceCards: await parseOptionalObjectList(takeOption(args, ["--evidence", "--evidence-cards"])),
+          htmlOutputPath: takeOption(args, ["--html-output"]),
+          pdfOutputPath: takeOption(args, ["--pdf-output"]),
+          artifactDir: takeOption(args, ["--artifact-dir"]),
+          execute: takeFlag(args, ["--execute"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "authoring-plan") {
+      return emitResult(
+        await client.authoringPlan({
+          brief: await parseRequiredObject(takeRequiredOption(args, ["--brief"]), "--brief"),
+        }),
+        stdout,
+      );
+    }
+    if (command === "research-plan") {
+      return emitResult(
+        await client.researchPlan({
+          brief: await parseRequiredObject(takeRequiredOption(args, ["--brief"]), "--brief"),
+        }),
+        stdout,
+      );
+    }
+    if (command === "research-source-cards") {
+      return emitResult(
+        await client.researchSourceCards({
+          brief: await parseOptionalObject(takeOption(args, ["--brief"])),
+          sources: await parseRequiredObjectList(takeRequiredOption(args, ["--sources"])),
+        }),
+        stdout,
+      );
+    }
+    if (command === "research-evidence-cards") {
+      return emitResult(
+        await client.researchEvidenceCards({
+          sourceCards: await parseRequiredObjectList(takeRequiredOption(args, ["--source-cards"])),
+        }),
+        stdout,
+      );
+    }
+    if (command === "design-tokens") {
+      const overrideFile = (await parseOptionalObject(takeOption(args, ["--overrides"]))) ?? {};
+      const colorOverrides = parseColorOverrides(takeOptions(args, ["--color"])) ?? {};
+      return emitResult(
+        await client.designTokens({
+          theme: takeOption(args, ["--theme"]),
+          overrides: { ...overrideFile, ...colorOverrides },
+        }),
+        stdout,
+      );
+    }
+    if (command === "storyboard-plan") {
+      return emitResult(
+        await client.storyboardPlan({
+          brief: await parseRequiredObject(takeRequiredOption(args, ["--brief"]), "--brief"),
+          authoringPlan: await parseOptionalObject(takeOption(args, ["--authoring-plan"])),
+          evidenceCards: await parseOptionalObjectList(takeOption(args, ["--evidence", "--evidence-cards"])),
+        }),
+        stdout,
+      );
+    }
+    if (command === "pages-write") {
+      return emitResult(
+        await client.pagesWrite({
+          brief: await parseRequiredObject(takeRequiredOption(args, ["--brief"]), "--brief"),
+          storyboard: await parseRequiredObject(takeRequiredOption(args, ["--storyboard"]), "--storyboard"),
+          evidenceCards: await parseOptionalObjectList(takeOption(args, ["--evidence", "--evidence-cards"])),
+          designTokens: await parseOptionalObject(takeOption(args, ["--design-tokens"])),
+        }),
+        stdout,
+      );
+    }
+    if (command === "pages-revise") {
+      const revisionsFromFile = (await parseOptionalObjectList(takeOption(args, ["--revisions"]))) ?? [];
+      const inlineRevisions = await Promise.all(
+        takeOptions(args, ["--revision"]).map((raw) => parseRequiredObject(raw, "--revision")),
+      );
+      return emitResult(
+        await client.pagesRevise({
+          pageDocument: await parseRequiredObject(takeRequiredOption(args, ["--page-document"]), "--page-document"),
+          revisions: [...revisionsFromFile, ...inlineRevisions],
+          designTokens: await parseOptionalObject(takeOption(args, ["--design-tokens"])),
+        }),
+        stdout,
+      );
+    }
+    if (command === "create-html-package") {
+      const pageDocumentPath = takeOption(args, ["--page-document"]);
+      const html = takeOption(args, ["--html"]);
+      const htmlPath = takeOption(args, ["--html-file", "--html-path"]);
+      if (!pageDocumentPath && html === undefined && !htmlPath) {
+        throw new UsageError("Missing --page-document, --html, or --html-file for create-html-package.");
+      }
+      return emitResult(
+        await client.createHtmlPackage({
+          pageDocument: await parseOptionalObject(pageDocumentPath),
+          html,
+          htmlPath,
+          htmlOutputPath: takeRequiredOption(args, ["--html-output"]),
+          title: takeOption(args, ["--title"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "qa-visual-report") {
+      return emitResult(
+        await client.qaVisualReport({
+          inputPath: takeRequiredOption(args, ["--input", "--input-path"]),
+          expectedPageCount: takeIntegerOption(args, ["--expected-page-count"]),
+          htmlPackageManifestPath: takeOption(args, ["--html-package-manifest"]),
+          pages: takeOption(args, ["--pages"]),
+        }),
+        stdout,
+      );
+    }
     if (command === "context-build") {
       return emitResult(
         await client.buildContextPacket({
@@ -866,6 +1003,19 @@ export async function runCli(
       return emitResult(
         await client.htmlToPdf({
           inputPath,
+          outputPath: takeRequiredOption(args, ["--output", "-o"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "render-html-package") {
+      const packagePath = args.shift();
+      if (!packagePath) {
+        throw new UsageError("Missing HTML package path for render-html-package.");
+      }
+      return emitResult(
+        await client.renderHtmlPackage({
+          packagePath,
           outputPath: takeRequiredOption(args, ["--output", "-o"]),
         }),
         stdout,
@@ -1865,6 +2015,8 @@ export async function runCli(
           title: takeOption(args, ["--title"]),
           prompt: takeOption(args, ["--prompt"]),
           stylePack: takeOption(args, ["--style-pack"]),
+          renderer: takeOption(args, ["--renderer"]),
+          htmlOutputPath: takeOption(args, ["--html-output"]),
         }),
         stdout,
       );
@@ -2249,9 +2401,22 @@ function helpText(): string {
     "  agentpdf-node workflow-plan --goal GOAL [--input-path FILE]",
     "  agentpdf-node workflow-run --payload '{...}' [--binding KEY=VALUE] [--dry-run]",
     "  agentpdf-node workflow-report --payload '{...}' [-o report.md]",
-    "  agentpdf-node context-build --text TEXT --file FILE --item-json '{...}' -o context.packet.json",
-    "  agentpdf-node context-ingest --file FILE [-o context-item.json] [--role ROLE] [--label LABEL]",
-    "  agentpdf-node context-packet --item-json context-item.json --file FILE -o context.packet.json",
+    "  agentpdf-node createpdf --html '<main>...</main>' --pdf-output out.pdf [--html-output out.html --artifact-dir audit]",
+    "  agentpdf-node workflow-createpdf --html '<main>...</main>' --pdf-output out.pdf [--html-output out.html --artifact-dir audit]",
+    "  agentpdf-node workflow-research-deck --brief brief.json [--evidence evidence.json] [--html-output deck.html --pdf-output deck.pdf] [--execute --artifact-dir workflow-artifacts]",
+    "  agentpdf-node authoring-plan --brief brief.json",
+    "  agentpdf-node research-plan --brief brief.json",
+    "  agentpdf-node research-source-cards --sources sources.json [--brief brief.json]",
+    "  agentpdf-node research-evidence-cards --source-cards source-cards.json",
+    "  agentpdf-node design-tokens [--theme consulting] [--color primary_color=#123456]",
+    "  agentpdf-node storyboard-plan --brief brief.json [--authoring-plan route.json] [--evidence evidence.json]",
+    "  agentpdf-node pages-write --brief brief.json --storyboard storyboard.json [--evidence evidence.json] [--design-tokens tokens.json]",
+    "  agentpdf-node pages-revise --page-document pages.json [--revision '{...}' --revisions revisions.json]",
+    "  agentpdf-node create-html-package --page-document pages.json|--html '<main>...</main>'|--html-file page.html --html-output deck.html [--title TITLE]",
+    "  agentpdf-node qa-visual-report --input deck.pdf [--expected-page-count 8] [--html-package-manifest deck.html-manifest.json]",
+    "  agentpdf-node context-build --text TEXT --file FILE --link LINK --item-json '{...}' -o context.packet.json",
+    "  agentpdf-node context-ingest --file FILE|--text TEXT|--link LINK [-o context-item.json] [--role ROLE] [--label LABEL]",
+    "  agentpdf-node context-packet --item-json context-item.json --file FILE --link LINK -o context.packet.json",
     "  agentpdf-node context-classify context.packet.json [--profile technical_audit] [-o context.classification.json]",
     "  agentpdf-node code-snapshot src/service.ts [--line-start 1 --line-end 20] [-o code.context-item.json]",
     "  agentpdf-node data-profile metrics.csv [--sheet Sheet1] [-o data.context-item.json]",
@@ -2291,6 +2456,7 @@ function helpText(): string {
     "  agentpdf-node subset-fonts FILE -o OUT.pdf",
     "  agentpdf-node to-pdfa FILE -o OUT.pdf [--profile PDF/A-2b]",
     "  agentpdf-node html-to-pdf input.html -o OUT.pdf",
+    "  agentpdf-node render-html-package report.html-manifest.json -o OUT.pdf",
     "  agentpdf-node url-to-pdf https://example.com -o OUT.pdf",
     "  agentpdf-node docx-to-pdf report.docx -o OUT.pdf",
     "  agentpdf-node pptx-to-pdf deck.pptx -o OUT.pdf",
@@ -2360,7 +2526,7 @@ function helpText(): string {
     "  agentpdf-node create-validate-template-pack PACK.json [-o validation.json]",
     "  agentpdf-node create-plan-template-pack PACK.json --profile technical_audit --context-packet context.packet.json --planned-output OUT.pdf [-o plan.json]",
     "  agentpdf-node create-agent PACK.json --profile technical_audit --context-packet context.packet.json -o OUT.pdf [--plan-output plan.json] [--coverage-output coverage.json] [--context-classification-output classification.json] [--context-report-output context-report.pdf] [--bundle-output audit-bundle.zip]",
-    "  agentpdf-node create-from-template-pack PACK.json --template board_audit -o OUT.pdf [--color-scheme executive_blue] [--context-packet context.packet.json]",
+    "  agentpdf-node create-from-template-pack PACK.json --template board_audit -o OUT.pdf [--color-scheme executive_blue] [--context-packet context.packet.json] [--renderer html --html-output OUT.html]",
     "  agentpdf-node create-template-preview --template invoice -o preview.pdf",
   ].join("\n");
 }

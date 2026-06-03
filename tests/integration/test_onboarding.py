@@ -31,6 +31,23 @@ def test_doctor_reports_ready_json() -> None:
     assert payload["checks"]["python"]["ok"] is True
     assert payload["checks"]["agentpdf_import"]["ok"] is True
     assert payload["checks"]["node"]["ok"] is True
+    for check_name in [
+        "pypdf",
+        "pypdfium2",
+        "reportlab",
+        "fastapi",
+        "mcp",
+        "typer",
+        "cli_help",
+        "rest_app",
+        "mcp_server",
+    ]:
+        assert payload["checks"][check_name]["ok"] is True
+        assert payload["checks"][check_name]["required"] is True
+    assert payload["checks"]["tesseract"]["required"] is False
+    assert payload["checks"]["tesseract"]["category"] == "optional_runtime"
+    assert payload["checks"]["cjk_fonts"]["required"] is False
+    assert "optional_next_steps" in payload
 
 
 def test_smoke_script_creates_local_pdf_artifact(tmp_path: Path) -> None:

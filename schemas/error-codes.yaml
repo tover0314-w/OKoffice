@@ -7,6 +7,14 @@ error_codes:
   pdf_parse_failed: PDF could not be parsed.
   pdf_render_failed: Page rendering failed.
   output_validation_failed: Output artifact failed validation.
+  html_asset_missing: HTML package asset is missing.
+  html_invalid_package: HTML package manifest or packaged asset evidence is invalid.
+  html_render_failed: HTML package rendering failed.
+  authoring_invalid_brief: Authoring brief is invalid or incomplete.
+  authoring_invalid_storyboard: Storyboard payload is invalid or page count does not match.
+  authoring_invalid_page_document: Page document payload is invalid or cannot be rendered.
+  html_package_invalid_manifest: HTML package manifest is missing or failed local safety checks.
+  visual_qa_failed: Generated PDF failed visual QA.
   dependency_missing: Required optional dependency is missing.
   tool_not_implemented: Tool is specified but not implemented.
   unsafe_input_rejected: Input was rejected by safety checks.

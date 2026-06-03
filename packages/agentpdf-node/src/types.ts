@@ -125,6 +125,117 @@ export interface WorkflowReportInput {
   outputPath?: string;
 }
 
+export interface AuthoringBrief extends JsonObject {
+  topic?: string;
+  goal?: string;
+  audience?: string;
+  page_count?: number;
+  deliverable?: string;
+}
+
+export interface EvidenceCard extends JsonObject {
+  id?: string;
+  claim?: string;
+  evidence?: string;
+  source_title?: string;
+  source_url?: string;
+  confidence?: "high" | "medium" | "low";
+  usable_for?: string[];
+}
+
+export interface SourceCard extends JsonObject {
+  id?: string;
+  title?: string;
+  publisher?: string;
+  source_date?: string;
+  source_url?: string;
+  source_type?: string;
+  reliability?: string;
+  summary?: string;
+  key_points?: string[];
+  useful_for?: string[];
+  fetch_status?: string;
+}
+
+export interface ResearchPlanInput {
+  brief: AuthoringBrief;
+}
+
+export interface ResearchSourceCardsInput {
+  brief?: AuthoringBrief;
+  sources: JsonObject[];
+}
+
+export interface ResearchEvidenceCardsInput {
+  sourceCards: SourceCard[];
+}
+
+export interface DesignTokensInput {
+  theme?: string;
+  overrides?: JsonObject;
+}
+
+export interface WorkflowResearchDeckInput {
+  brief: AuthoringBrief;
+  evidenceCards?: EvidenceCard[];
+  htmlOutputPath?: string;
+  pdfOutputPath?: string;
+  artifactDir?: string;
+  execute?: boolean;
+}
+
+export interface WorkflowResearchDeckRequest extends WorkflowResearchDeckInput {}
+
+export interface WorkflowCreatePdfInput {
+  pdfOutputPath: string;
+  htmlOutputPath?: string;
+  html?: string;
+  htmlPath?: string;
+  pageDocument?: JsonObject;
+  title?: string;
+  artifactDir?: string;
+  expectedPageCount?: number;
+  pages?: string;
+}
+
+export interface AuthoringPlanInput {
+  brief: AuthoringBrief;
+}
+
+export interface StoryboardPlanInput {
+  brief: AuthoringBrief;
+  authoringPlan?: JsonObject;
+  evidenceCards?: EvidenceCard[];
+}
+
+export interface PagesWriteInput {
+  brief: AuthoringBrief;
+  storyboard: JsonObject;
+  evidenceCards?: EvidenceCard[];
+  designTokens?: JsonObject;
+}
+
+export interface PagesReviseInput {
+  pageDocument: JsonObject;
+  revisions?: JsonObject[];
+  designTokens?: JsonObject;
+}
+
+export interface CreateHtmlPackageInput {
+  pageDocument?: JsonObject;
+  html?: string;
+  htmlPath?: string;
+  htmlOutputPath: string;
+  title?: string;
+}
+
+export interface QaVisualReportInput {
+  inputPath: string;
+  expectedPageCount?: number;
+  htmlPackageManifestPath?: string;
+  pages?: string;
+}
+
 export interface BuildContextPacketInput {
   contextItems: JsonObject[];
   outputPath: string;
@@ -437,6 +548,11 @@ export interface HtmlToPdfInput {
   outputPath: string;
 }
 
+export interface RenderHtmlPackageInput {
+  packagePath: string;
+  outputPath: string;
+}
+
 export interface UrlToPdfInput {
   url: string;
   outputPath: string;
@@ -629,6 +745,8 @@ export interface CreateFromTemplatePackInput {
   title?: string;
   prompt?: string;
   stylePack?: string;
+  renderer?: "markdown" | "html" | string;
+  htmlOutputPath?: string;
 }
 
 export interface ValidateOutputInput {

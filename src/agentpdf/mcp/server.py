@@ -18,6 +18,7 @@ from agentpdf.tools.runner import (
     run_artifacts_manifest,
     run_artifacts_source_map,
     run_artifacts_verify_bundle,
+    run_authoring_plan,
     run_blank_page_check,
     run_booklet,
     run_build_context_packet,
@@ -40,6 +41,7 @@ from agentpdf.tools.runner import (
     run_create_agent,
     run_create_from_prompt,
     run_create_from_template_pack,
+    run_create_html_package,
     run_plan_template_pack_creation,
     run_create_template_preview,
     run_create_template_packs,
@@ -82,6 +84,9 @@ from agentpdf.tools.runner import (
     run_patch_plan,
     run_patch_preview,
     run_patch_verify,
+    run_design_tokens,
+    run_pages_write,
+    run_pages_revise,
     run_parse_charts,
     run_parse_figures,
     run_parse_formulas,
@@ -101,7 +106,12 @@ from agentpdf.tools.runner import (
     run_rag_ingest,
     run_rag_query,
     run_rag_search,
+    run_qa_visual_report,
+    run_research_evidence_cards,
+    run_research_plan,
+    run_research_source_cards,
     run_remove_pages,
+    run_render_html_package,
     run_remove_unused_objects,
     run_render,
     run_render_check,
@@ -130,6 +140,7 @@ from agentpdf.tools.runner import (
     run_select_target_profile,
     run_split,
     run_strikeout,
+    run_storyboard_plan,
     run_subset_fonts,
     run_target_profiles,
     run_underline,
@@ -142,6 +153,8 @@ from agentpdf.tools.runner import (
     run_url_to_pdf,
     run_watermark,
     run_workflow_plan,
+    run_workflow_createpdf,
+    run_workflow_research_deck,
     run_workflow_report,
     run_workflow_run,
     run_xlsx_to_pdf,
@@ -167,6 +180,18 @@ def create_mcp_server() -> FastMCP:
     server.tool(name="pdf_workflow_plan")(pdf_workflow_plan)
     server.tool(name="pdf_workflow_run")(pdf_workflow_run)
     server.tool(name="pdf_workflow_report")(pdf_workflow_report)
+    server.tool(name="pdf_workflow_createpdf")(pdf_workflow_createpdf)
+    server.tool(name="pdf_workflow_research_deck")(pdf_workflow_research_deck)
+    server.tool(name="pdf_authoring_plan")(pdf_authoring_plan)
+    server.tool(name="pdf_storyboard_plan")(pdf_storyboard_plan)
+    server.tool(name="pdf_pages_write")(pdf_pages_write)
+    server.tool(name="pdf_research_plan")(pdf_research_plan)
+    server.tool(name="pdf_research_source_cards")(pdf_research_source_cards)
+    server.tool(name="pdf_research_evidence_cards")(pdf_research_evidence_cards)
+    server.tool(name="pdf_design_tokens")(pdf_design_tokens)
+    server.tool(name="pdf_pages_revise")(pdf_pages_revise)
+    server.tool(name="pdf_create_html_package")(pdf_create_html_package)
+    server.tool(name="pdf_qa_visual_report")(pdf_qa_visual_report)
     server.tool(name="pdf_merge")(pdf_merge)
     server.tool(name="pdf_split")(pdf_split)
     server.tool(name="pdf_extract_pages")(pdf_extract_pages)
@@ -184,6 +209,7 @@ def create_mcp_server() -> FastMCP:
     server.tool(name="pdf_optimize_validate_pdfa")(pdf_optimize_validate_pdfa)
     server.tool(name="pdf_image_to_pdf")(pdf_image_to_pdf)
     server.tool(name="pdf_html_to_pdf")(pdf_html_to_pdf)
+    server.tool(name="pdf_render_html_package")(pdf_render_html_package)
     server.tool(name="pdf_url_to_pdf")(pdf_url_to_pdf)
     server.tool(name="pdf_docx_to_pdf")(pdf_docx_to_pdf)
     server.tool(name="pdf_pptx_to_pdf")(pdf_pptx_to_pdf)
@@ -408,6 +434,154 @@ def pdf_workflow_report(workflow_run: dict[str, object], output_path: str | None
     return run_workflow_report(workflow_run=workflow_run, output_path=output_path).model_dump_json()
 
 
+def pdf_workflow_createpdf(
+    pdf_output_path: str,
+    html_output_path: str | None = None,
+    html: str | None = None,
+    html_path: str | None = None,
+    page_document: dict[str, object] | None = None,
+    title: str | None = None,
+    artifact_dir: str | None = None,
+    expected_page_count: int | None = None,
+    pages: str = "all",
+) -> str:
+    """Create a validated PDF through the local HTML-first workflow."""
+    return run_workflow_createpdf(
+        pdf_output_path=pdf_output_path,
+        html_output_path=html_output_path,
+        html=html,
+        html_path=html_path,
+        page_document=page_document,
+        title=title,
+        artifact_dir=artifact_dir,
+        expected_page_count=expected_page_count,
+        pages=pages,
+    ).model_dump_json()
+
+
+def pdf_workflow_research_deck(
+    brief: dict[str, object],
+    evidence_cards: list[dict[str, object]] | None = None,
+    html_output_path: str = "<deck.html>",
+    pdf_output_path: str = "<deck.pdf>",
+    artifact_dir: str | None = None,
+    execute: bool = False,
+) -> str:
+    """Plan a local research-to-deck workflow."""
+    return run_workflow_research_deck(
+        brief=brief,
+        evidence_cards=evidence_cards,
+        html_output_path=html_output_path,
+        pdf_output_path=pdf_output_path,
+        artifact_dir=artifact_dir,
+        execute=execute,
+    ).model_dump_json()
+
+
+def pdf_authoring_plan(brief: dict[str, object]) -> str:
+    """Plan the best local authoring route before PDF creation."""
+    return run_authoring_plan(brief).model_dump_json()
+
+
+def pdf_storyboard_plan(
+    brief: dict[str, object],
+    authoring_plan: dict[str, object] | None = None,
+    evidence_cards: list[dict[str, object]] | None = None,
+) -> str:
+    """Create a deterministic page-by-page storyboard."""
+    return run_storyboard_plan(
+        brief=brief,
+        authoring_plan=authoring_plan,
+        evidence_cards=evidence_cards,
+    ).model_dump_json()
+
+
+def pdf_pages_write(
+    brief: dict[str, object],
+    storyboard: dict[str, object],
+    evidence_cards: list[dict[str, object]] | None = None,
+    design_tokens: dict[str, object] | None = None,
+) -> str:
+    """Write page JSON from storyboard and evidence cards."""
+    return run_pages_write(
+        brief=brief,
+        storyboard=storyboard,
+        evidence_cards=evidence_cards,
+        design_tokens=design_tokens,
+    ).model_dump_json()
+
+
+def pdf_research_plan(brief: dict[str, object]) -> str:
+    """Plan local source gathering without fetching or using a model."""
+    return run_research_plan(brief=brief).model_dump_json()
+
+
+def pdf_research_source_cards(
+    sources: list[dict[str, object]],
+    brief: dict[str, object] | None = None,
+) -> str:
+    """Normalize agent-supplied sources into local source cards."""
+    return run_research_source_cards(sources=sources, brief=brief).model_dump_json()
+
+
+def pdf_research_evidence_cards(source_cards: list[dict[str, object]]) -> str:
+    """Extract evidence cards from normalized source cards."""
+    return run_research_evidence_cards(source_cards=source_cards).model_dump_json()
+
+
+def pdf_design_tokens(
+    theme: str = "business_tech",
+    overrides: dict[str, object] | None = None,
+) -> str:
+    """Select safe local design tokens for authoring packages."""
+    return run_design_tokens(theme=theme, overrides=overrides).model_dump_json()
+
+
+def pdf_pages_revise(
+    page_document: dict[str, object],
+    revisions: list[dict[str, object]] | None = None,
+    design_tokens: dict[str, object] | None = None,
+) -> str:
+    """Revise generated page JSON while preserving source refs by default."""
+    return run_pages_revise(
+        page_document=page_document,
+        revisions=revisions,
+        design_tokens=design_tokens,
+    ).model_dump_json()
+
+
+def pdf_create_html_package(
+    page_document: dict[str, object] | None,
+    html_output_path: str,
+    title: str | None = None,
+    html: str | None = None,
+    html_path: str | None = None,
+) -> str:
+    """Write a local self-contained HTML/CSS source package."""
+    return run_create_html_package(
+        page_document=page_document,
+        html_output_path=html_output_path,
+        title=title,
+        html=html,
+        html_path=html_path,
+    ).model_dump_json()
+
+
+def pdf_qa_visual_report(
+    input_path: str,
+    expected_page_count: int | None = None,
+    html_package_manifest_path: str | None = None,
+    pages: str = "all",
+) -> str:
+    """Run visual QA checks over a generated PDF."""
+    return run_qa_visual_report(
+        input_path=input_path,
+        expected_page_count=expected_page_count,
+        html_package_manifest_path=html_package_manifest_path,
+        pages=pages,
+    ).model_dump_json()
+
+
 def pdf_merge(input_paths: list[str], output_path: str) -> str:
     """Merge local PDF files into a new output PDF."""
     return run_merge(input_paths, output_path).model_dump_json()
@@ -515,6 +689,11 @@ def pdf_image_to_pdf(image_paths: list[str], output_path: str) -> str:
 def pdf_html_to_pdf(input_path: str, output_path: str) -> str:
     """Convert local HTML text to a PDF."""
     return run_html_to_pdf(input_path, output_path=output_path).model_dump_json()
+
+
+def pdf_render_html_package(package_path: str, output_path: str) -> str:
+    """Validate and render an AgentPDF HTML package to PDF."""
+    return run_render_html_package(package_path, output_path=output_path).model_dump_json()
 
 
 def pdf_url_to_pdf(
@@ -840,6 +1019,8 @@ def pdf_ai_create_agent(
     title: str | None = None,
     prompt: str | None = None,
     style_pack: str | None = None,
+    renderer: str = "markdown",
+    html_output_path: str | None = None,
 ) -> str:
     """Run the local create agent: plan, create, render-check, blank-check, and coverage."""
     return run_create_agent(
@@ -859,6 +1040,8 @@ def pdf_ai_create_agent(
         title=title,
         prompt=prompt,
         style_pack=style_pack,
+        renderer=renderer,
+        html_output_path=html_output_path,
     ).model_dump_json()
 
 
@@ -873,6 +1056,8 @@ def pdf_ai_create_from_template_pack(
     title: str | None = None,
     prompt: str | None = None,
     style_pack: str | None = None,
+    renderer: str = "markdown",
+    html_output_path: str | None = None,
 ) -> str:
     """Create a validated local PDF from a template pack."""
     return run_create_from_template_pack(
@@ -886,6 +1071,8 @@ def pdf_ai_create_from_template_pack(
         title=title,
         prompt=prompt,
         style_pack=style_pack,
+        renderer=renderer,
+        html_output_path=html_output_path,
     ).model_dump_json()
 
 
@@ -1401,7 +1588,7 @@ def pdf_artifacts_manifest(
     title: str | None = None,
     metadata: dict[str, object] | None = None,
 ) -> str:
-    """Create a local artifact manifest with checksums, evidence links, and source refs."""
+    """Create a local artifact manifest with checksums, source refs, and HTML/context evidence."""
     return run_artifacts_manifest(
         artifact_paths=artifact_paths,
         output_path=output_path,
@@ -1416,7 +1603,7 @@ def pdf_artifacts_graph(
     output_path: str | None = None,
     title: str | None = None,
 ) -> str:
-    """Create a local artifact lineage graph from a manifest or artifact files."""
+    """Create a local artifact lineage graph with source-ref and HTML/context evidence."""
     return run_artifacts_graph(
         artifact_manifest_path=artifact_manifest_path,
         artifact_paths=artifact_paths or [],

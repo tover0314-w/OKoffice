@@ -28,6 +28,10 @@ def create_artifact_manifest(
     manifest_entries: list[dict[str, Any]] = []
     evidence_links: dict[str, list[str]] = {}
     source_refs: set[str] = set()
+    context_packet_refs: list[dict[str, Any]] = []
+    html_package_refs: list[dict[str, Any]] = []
+    source_graph_ids: set[str] = set()
+    context_evidence_index: dict[str, dict[str, Any]] = {}
     json_parse_warnings: list[str] = []
 
     for artifact in input_artifacts:
@@ -49,9 +53,33 @@ def create_artifact_manifest(
             source_refs.update(extracted_refs)
             if "validation" in json_payload:
                 evidence_links.setdefault("validation", []).append(path.as_posix())
+            if artifact_kind == "html_package":
+                html_package_ref = _html_package_ref(path, json_payload)
+                if html_package_ref:
+                    html_package_refs.append(html_package_ref)
+                    entry.update({key: value for key, value in html_package_ref.items() if key != "path"})
+            if artifact_kind == "context":
+                context_packet_ref = _context_packet_ref(path, json_payload)
+                if context_packet_ref:
+                    context_packet_refs.append(context_packet_ref)
+                    source_graph_id = context_packet_ref.get("source_graph_id")
+                    if source_graph_id:
+                        source_graph_ids.add(str(source_graph_id))
+                _merge_context_evidence_index(
+                    context_evidence_index,
+                    _context_evidence_records(path, json_payload),
+                )
         manifest_entries.append(entry)
 
     sorted_source_refs = sorted(source_refs)
+    sorted_context_packet_refs = sorted(
+        context_packet_refs,
+        key=lambda item: (str(item.get("context_packet_id") or ""), str(item.get("path") or "")),
+    )
+    sorted_html_package_refs = sorted(
+        html_package_refs,
+        key=lambda item: (str(item.get("html_package_id") or ""), str(item.get("path") or "")),
+    )
     artifact_manifest = {
         "manifest_version": "0.1",
         "manifest_id": f"artifact_manifest_{uuid4().hex[:16]}",
@@ -63,6 +91,12 @@ def create_artifact_manifest(
         "evidence_links": {key: sorted(paths) for key, paths in sorted(evidence_links.items())},
         "source_refs": sorted_source_refs,
         "source_ref_count": len(sorted_source_refs),
+        "context_packet_refs": sorted_context_packet_refs,
+        "context_packet_count": len(sorted_context_packet_refs),
+        "html_package_refs": sorted_html_package_refs,
+        "html_package_count": len(sorted_html_package_refs),
+        "source_graph_ids": sorted(source_graph_ids),
+        "context_evidence_index": dict(sorted(context_evidence_index.items())),
         "safety": {
             "contains_input_hashes": True,
             "mutates_inputs": False,
@@ -126,6 +160,7 @@ def build_artifact_graph(
     source_ref_index: dict[str, dict[str, Any]] = {}
     artifact_ids_by_kind: dict[str, list[str]] = {}
     artifact_node_ids_by_path: dict[str, str] = {}
+    context_evidence_index = _manifest_context_evidence_index(manifest)
 
     for index, entry in enumerate(artifact_entries, start=1):
         if not isinstance(entry, dict):
@@ -174,6 +209,9 @@ def build_artifact_graph(
             indexed["artifact_ids"].append(artifact_id)
             indexed["artifact_paths"].append(path)
             indexed["artifact_count"] = len(indexed["artifact_ids"])
+            context_record = context_evidence_index.get(source_ref)
+            if context_record:
+                _merge_graph_context_record(indexed, context_record)
             _add_edge(
                 edges,
                 artifact_id,
@@ -183,15 +221,15 @@ def build_artifact_graph(
             )
 
     for source_ref, indexed in sorted(source_ref_index.items()):
-        nodes.append(
-            {
-                "id": indexed["node_id"],
-                "type": "source_ref",
-                "label": source_ref,
-                "source_ref": source_ref,
-                "artifact_count": indexed["artifact_count"],
-            }
-        )
+        source_node = {
+            "id": indexed["node_id"],
+            "type": "source_ref",
+            "label": source_ref,
+            "source_ref": source_ref,
+            "artifact_count": indexed["artifact_count"],
+        }
+        source_node.update(_source_ref_node_context_fields(indexed))
+        nodes.append(source_node)
 
     _add_artifact_convention_edges(edges, artifact_ids_by_kind)
     evidence_link_index = _evidence_link_index(manifest, artifact_node_ids_by_path)
@@ -216,6 +254,10 @@ def build_artifact_graph(
         "edges": edges,
         "source_ref_index": source_ref_index,
         "evidence_link_index": evidence_link_index,
+        "context_evidence_index": context_evidence_index,
+        "context_packet_refs": manifest.get("context_packet_refs", []),
+        "html_package_refs": manifest.get("html_package_refs", []),
+        "source_graph_ids": manifest.get("source_graph_ids", []),
         "safety": {
             "mutates_inputs": False,
             "paths_are_resolved": True,
@@ -882,6 +924,245 @@ def _append_unique(items: list[Any], value: Any) -> None:
         items.append(text)
 
 
+def _html_package_ref(path: Path, payload: dict[str, Any]) -> dict[str, Any] | None:
+    package_id = _optional_text(payload.get("html_package_id"))
+    html_path = _optional_path_text(payload.get("html_path"))
+    renderer_contract = _optional_text(payload.get("renderer_contract"))
+    if not package_id and not html_path and not renderer_contract:
+        return None
+    record = {
+        "html_package_id": package_id or f"htmlpkg_{path.stem}",
+        "path": path.as_posix(),
+        "html_path": html_path,
+        "renderer_contract": renderer_contract,
+        "source_format": _optional_text(payload.get("source_format")),
+        "asset_count": _optional_int(payload.get("asset_count")),
+        "validation_status": _html_package_validation_status(payload),
+    }
+    return _drop_empty_values(record)
+
+
+def _html_package_validation_status(payload: dict[str, Any]) -> str | None:
+    validation = payload.get("validation")
+    if isinstance(validation, dict):
+        return _optional_text(validation.get("status"))
+    return None
+
+
+def _context_packet_ref(path: Path, payload: dict[str, Any]) -> dict[str, Any] | None:
+    packet_id = str(payload.get("context_packet_id") or "").strip()
+    items = _context_packet_items(payload)
+    if not packet_id and not items:
+        return None
+    source_graph = payload.get("source_graph")
+    source_graph_id = ""
+    if isinstance(source_graph, dict):
+        source_graph_id = str(source_graph.get("source_graph_id") or "").strip()
+    source_refs: set[str] = set()
+    for item in items:
+        source_refs.update(_collect_source_refs(item))
+    record: dict[str, Any] = {
+        "context_packet_id": packet_id or f"context_packet_{path.stem}",
+        "path": path.as_posix(),
+        "source_graph_id": source_graph_id or None,
+        "item_count": len(items),
+        "source_ref_count": len(source_refs),
+    }
+    return {key: value for key, value in record.items() if value is not None}
+
+
+def _context_evidence_records(path: Path, payload: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    packet_id = str(payload.get("context_packet_id") or "").strip()
+    records: dict[str, dict[str, Any]] = {}
+    for item in _context_packet_items(payload):
+        source_ref = str(item.get("source_ref") or "").strip()
+        if not source_ref:
+            refs = _sorted_strings(item.get("source_refs"))
+            source_ref = refs[0] if refs else ""
+        if not source_ref:
+            continue
+        evidence_kinds = _context_item_evidence_kinds(item)
+        primary_evidence_kind = evidence_kinds[0] if evidence_kinds else None
+        record: dict[str, Any] = {
+            "source_ref": source_ref,
+            "context_item_ids": _sorted_strings(item.get("context_item_id")),
+            "context_packet_ids": _sorted_strings(packet_id),
+            "context_item_type": _optional_text(item.get("type")),
+            "role": _optional_text(item.get("role")),
+            "label": _optional_text(item.get("label")),
+            "uri": _optional_text(item.get("uri")),
+            "primary_evidence_kind": primary_evidence_kind,
+            "evidence_kinds": evidence_kinds,
+            "context_artifact_paths": [path.as_posix()],
+        }
+        record.update(_context_primary_evidence_details(item, primary_evidence_kind))
+        records[source_ref] = {key: value for key, value in record.items() if value not in (None, "", [])}
+    return records
+
+
+def _context_packet_items(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    items = payload.get("items")
+    if isinstance(items, list):
+        return [item for item in items if isinstance(item, dict)]
+    if payload.get("context_item_id") or payload.get("source_ref"):
+        return [payload]
+    return []
+
+
+def _context_item_evidence_kinds(item: dict[str, Any]) -> list[str]:
+    evidence_kinds: set[str] = set()
+    metadata = item.get("metadata")
+    for container in (item, metadata):
+        if not isinstance(container, dict):
+            continue
+        for key, value in container.items():
+            if str(key).endswith("_evidence") and value not in (None, "", []):
+                evidence_kinds.add(str(key))
+    role = str(item.get("role") or "").strip()
+    if role.endswith("_evidence"):
+        evidence_kinds.add(role)
+    return sorted(evidence_kinds)
+
+
+def _context_primary_evidence_details(
+    item: dict[str, Any],
+    primary_evidence_kind: str | None,
+) -> dict[str, Any]:
+    if not primary_evidence_kind:
+        return {}
+    metadata = item.get("metadata")
+    evidence = metadata.get(primary_evidence_kind) if isinstance(metadata, dict) else None
+    if not isinstance(evidence, dict):
+        evidence = item.get(primary_evidence_kind)
+    if not isinstance(evidence, dict):
+        return {}
+    details = {}
+    for key in (
+        "analysis_method",
+        "domain",
+        "fetch_status",
+        "language",
+        "page_count",
+        "row_count",
+        "column_count",
+    ):
+        value = evidence.get(key)
+        if value not in (None, "", []):
+            details[key] = value
+    return details
+
+
+def _merge_context_evidence_index(
+    index: dict[str, dict[str, Any]],
+    records: dict[str, dict[str, Any]],
+) -> None:
+    for source_ref, record in records.items():
+        existing = index.setdefault(source_ref, {"source_ref": source_ref})
+        for field in ("context_item_ids", "context_packet_ids", "evidence_kinds", "context_artifact_paths"):
+            for value in record.get(field, []):
+                values = existing.setdefault(field, [])
+                if isinstance(values, list):
+                    _append_unique(values, value)
+        for field in (
+            "context_item_type",
+            "role",
+            "label",
+            "uri",
+            "primary_evidence_kind",
+            "analysis_method",
+            "domain",
+            "fetch_status",
+            "language",
+            "page_count",
+            "row_count",
+            "column_count",
+        ):
+            if not existing.get(field) and record.get(field) not in (None, "", []):
+                existing[field] = record[field]
+        for field in ("context_item_ids", "context_packet_ids", "evidence_kinds", "context_artifact_paths"):
+            if isinstance(existing.get(field), list):
+                existing[field].sort()
+
+
+def _manifest_context_evidence_index(manifest: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    value = manifest.get("context_evidence_index")
+    if not isinstance(value, dict):
+        return {}
+    normalized: dict[str, dict[str, Any]] = {}
+    for source_ref, record in value.items():
+        if isinstance(record, dict):
+            normalized[str(source_ref)] = record
+    return normalized
+
+
+def _merge_graph_context_record(indexed: dict[str, Any], context_record: dict[str, Any]) -> None:
+    for field in ("context_item_ids", "context_packet_ids", "evidence_kinds", "context_artifact_paths"):
+        for value in context_record.get(field, []):
+            values = indexed.setdefault(field, [])
+            if isinstance(values, list):
+                _append_unique(values, value)
+    for field in (
+        "context_item_type",
+        "role",
+        "label",
+        "uri",
+        "primary_evidence_kind",
+        "analysis_method",
+        "domain",
+        "fetch_status",
+        "language",
+        "page_count",
+        "row_count",
+        "column_count",
+    ):
+        if not indexed.get(field) and context_record.get(field) not in (None, "", []):
+            indexed[field] = context_record[field]
+    for field in ("context_item_ids", "context_packet_ids", "evidence_kinds", "context_artifact_paths"):
+        if isinstance(indexed.get(field), list):
+            indexed[field].sort()
+
+
+def _source_ref_node_context_fields(indexed: dict[str, Any]) -> dict[str, Any]:
+    fields = {}
+    for field in (
+        "context_item_type",
+        "role",
+        "label",
+        "primary_evidence_kind",
+        "context_packet_ids",
+        "evidence_kinds",
+    ):
+        value = indexed.get(field)
+        if value not in (None, "", []):
+            fields[field] = value
+    return fields
+
+
+def _optional_text(value: Any) -> str | None:
+    text = str(value).strip() if value is not None else ""
+    return text or None
+
+
+def _optional_path_text(value: Any) -> str | None:
+    text = _optional_text(value)
+    if text is None:
+        return None
+    return Path(text).expanduser().resolve().as_posix()
+
+
+def _optional_int(value: Any) -> int | None:
+    if value is None or value == "":
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _drop_empty_values(record: dict[str, Any]) -> dict[str, Any]:
+    return {key: value for key, value in record.items() if value not in (None, "", [])}
+
+
 def _load_graph_manifest(
     artifact_manifest_path: str | Path | None,
     artifact_paths: list[str | Path],
@@ -960,6 +1241,20 @@ def _add_edge(
 
 
 def _add_artifact_convention_edges(edges: list[dict[str, Any]], artifact_ids_by_kind: dict[str, list[str]]) -> None:
+    _add_kind_edges(
+        edges,
+        artifact_ids_by_kind,
+        parent_kind="html_package",
+        child_kind="html",
+        relation="describes_html_source",
+    )
+    _add_kind_edges(
+        edges,
+        artifact_ids_by_kind,
+        parent_kind="html_package",
+        child_kind="pdf",
+        relation="renders_to_pdf",
+    )
     _add_kind_edges(
         edges,
         artifact_ids_by_kind,
@@ -1050,6 +1345,9 @@ def _input_artifact(path: str | Path):
 
 def _artifact_kind(path: Path) -> str:
     name = path.name.lower()
+    suffix = path.suffix.lower()
+    if name.endswith(".html-manifest.json"):
+        return "html_package"
     if name.endswith(".composition.json"):
         return "composition"
     if name.endswith(".coverage.json"):
@@ -1064,7 +1362,9 @@ def _artifact_kind(path: Path) -> str:
         return "layers"
     if name.endswith(".context.packet.json") or name.endswith(".context-item.json"):
         return "context"
-    if path.suffix.lower() == ".pdf":
+    if suffix in {".html", ".htm"}:
+        return "html"
+    if suffix == ".pdf":
         return "pdf"
     return "file"
 

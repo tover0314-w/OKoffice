@@ -1,13 +1,23 @@
 from __future__ import annotations
 
+import hashlib
 import html
 import json
+import mimetypes
+import shutil
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 from uuid import uuid4
 
 from agentpdf.artifacts.store import build_artifact
-from agentpdf.security.paths import resolve_output_path
+from agentpdf.conversion.local import html_to_pdf
+from agentpdf.schemas.errors import AgentPDFException
+from agentpdf.schemas.models import ToolResult, ValidationCheck, ValidationReport
+from agentpdf.security.paths import resolve_input_path, resolve_output_path
+
+
+SUPPORTED_RENDERER_CONTRACTS = {"html-package-v0", "authoring-html-package-v0"}
 
 
 def write_composition_html_package(
@@ -21,15 +31,20 @@ def write_composition_html_package(
 ) -> dict[str, Any]:
     output = resolve_output_path(html_output_path)
     manifest_path = output.with_suffix(".html-manifest.json")
+    assets_dir = output.with_suffix(".assets")
     blocks = _blocks(composition_ir)
     source_refs = _source_refs(blocks, source_map)
+    assets = _package_assets(blocks, assets_dir=assets_dir, package_root=output.parent)
+    assets_by_block = _assets_by_block(assets)
     document = _html_document(
         composition_ir=composition_ir,
         source_map=source_map,
         target_profile=target_profile,
         render_plan=render_plan,
         blocks=blocks,
+        assets_by_block=assets_by_block,
     )
+    validation = _validate_html_package(assets)
     manifest = {
         "html_package_version": "0.1",
         "html_package_id": f"htmlpkg_{uuid4().hex[:16]}",
@@ -47,6 +62,10 @@ def write_composition_html_package(
         "source_refs": source_refs,
         "javascript_enabled": False,
         "remote_assets_enabled": False,
+        "assets_root": str(assets_dir.resolve()),
+        "asset_count": len(assets),
+        "assets": assets,
+        "validation": validation.model_dump(mode="json"),
         "contract": {
             "body_attribute": "data-agentpdf-document",
             "block_selector": "[data-block-id]",
@@ -71,8 +90,47 @@ def write_composition_html_package(
         "html_output_path": str(output.resolve()),
         "html_package_manifest_path": str(manifest_path.resolve()),
         "html_package_manifest": manifest,
+        "html_package_validation": validation,
         "artifacts": [html_artifact, manifest_artifact],
     }
+
+
+def render_html_package(package_path: str | Path, output_path: str | Path) -> ToolResult:
+    tool = "pdf.render.html_package"
+    manifest_path = _resolve_manifest_path(package_path)
+    manifest = _load_html_package_manifest(manifest_path)
+    html_path = _manifest_html_path(manifest)
+    html_validation = _validate_existing_html_package_manifest(manifest, manifest_path=manifest_path, html_path=html_path)
+    rendered = html_to_pdf(html_path, output_path)
+    pdf_validation = rendered.validation or ValidationReport(status="skipped", checks=[])
+    validation = _merge_validation(html_validation, pdf_validation)
+    output = Path(output_path).expanduser().resolve()
+    artifacts = [
+        build_artifact(output, source_tool=tool),
+        build_artifact(html_path, source_tool=tool),
+        build_artifact(manifest_path, source_tool=tool),
+    ]
+    return ToolResult(
+        job_id=f"job_{uuid4().hex[:16]}",
+        status="succeeded" if validation.status == "passed" else "failed",
+        tool=tool,
+        artifacts=artifacts,
+        validation=validation,
+        warnings=[*rendered.warnings, *validation.warnings],
+        usage={
+            "renderer": "local_html_package_fallback",
+            "input": str(manifest_path),
+            "html_path": str(html_path),
+            "output": str(output),
+            "html_package_manifest": manifest,
+            "html_package_validation": html_validation.model_dump(mode="json"),
+        },
+        next_recommended_tools=[
+            "pdf.validation.render_check",
+            "pdf.validation.blank_page_check",
+            "pdf.evidence.coverage_report",
+        ],
+    )
 
 
 def _html_document(
@@ -82,11 +140,12 @@ def _html_document(
     target_profile: dict[str, Any],
     render_plan: dict[str, Any],
     blocks: list[dict[str, Any]],
+    assets_by_block: dict[str, dict[str, Any]],
 ) -> str:
     title = str(render_plan.get("title") or target_profile.get("title") or target_profile.get("name") or "AgentPDF")
     profile_id = str(composition_ir.get("target_profile_id") or target_profile.get("profile_id") or "custom")
     markdown = str(render_plan.get("markdown") or render_plan.get("markdown_outline") or "")
-    block_html = "\n".join(_block_html(block) for block in blocks)
+    block_html = "\n".join(_block_html(block, assets_by_block.get(str(block.get("block_id") or ""))) for block in blocks)
     source_map_html = "\n".join(_source_map_row(mapping) for mapping in source_map)
     return "\n".join(
         [
@@ -131,25 +190,38 @@ def _html_document(
     )
 
 
-def _block_html(block: dict[str, Any]) -> str:
+def _block_html(block: dict[str, Any], asset: dict[str, Any] | None = None) -> str:
     block_id = str(block.get("block_id") or "")
     block_type = str(block.get("type") or "section")
     title = str(block.get("title") or block_type)
     target_slot = str(block.get("target_slot") or "body")
     source_refs = [str(ref) for ref in block.get("source_refs", [])]
     hints = block.get("render_hints") if isinstance(block.get("render_hints"), dict) else {}
+    data = block.get("data") if isinstance(block.get("data"), dict) else {}
+    if data and block_type == "image":
+        hints = {**data, **hints}
     return "\n".join(
         [
             f'    <article class="agentpdf-block block-{_class_token(block_type)}" data-block-id="{_attr(block_id)}" data-block-type="{_attr(block_type)}" data-slot="{_attr(target_slot)}" data-source-refs="{_attr(" ".join(source_refs))}">',
             f"      <h2>{html.escape(title)}</h2>",
             f"      <p><strong>Type:</strong> {html.escape(block_type)}</p>",
-            _render_hints_html(hints),
+            _render_hints_html(hints, asset),
             "    </article>",
         ]
     )
 
 
-def _render_hints_html(hints: dict[str, Any]) -> str:
+def _render_hints_html(hints: dict[str, Any], asset: dict[str, Any] | None = None) -> str:
+    if asset is not None:
+        caption = str(hints.get("caption") or hints.get("alt") or asset.get("source_name") or "Image evidence")
+        return "\n".join(
+            [
+                f'      <figure data-asset-id="{_attr(asset["asset_id"])}">',
+                f'        <img src="./{_attr(asset["relative_path"])}" alt="{_attr(caption)}" data-asset-id="{_attr(asset["asset_id"])}" />',
+                f"        <figcaption>{html.escape(caption)}</figcaption>",
+                "      </figure>",
+            ]
+        )
     if not hints:
         return "      <p>No render hints supplied.</p>"
     if isinstance(hints.get("columns"), list):
@@ -168,6 +240,254 @@ def _render_hints_html(hints: dict[str, Any]) -> str:
     if hints.get("language"):
         return f"      <p>Language: <code>{html.escape(str(hints['language']))}</code></p>"
     return f"      <pre>{html.escape(json.dumps(hints, indent=2, default=str))}</pre>"
+
+
+def _package_assets(
+    blocks: list[dict[str, Any]],
+    *,
+    assets_dir: Path,
+    package_root: Path,
+) -> list[dict[str, Any]]:
+    assets: list[dict[str, Any]] = []
+    for block in blocks:
+        asset_ref = _image_asset_ref(block)
+        if asset_ref is None:
+            continue
+        if _is_blocked_asset_ref(asset_ref):
+            raise AgentPDFException(
+                "unsafe_input_rejected",
+                "HTML package image assets must be local file paths.",
+                details={"html_package_error": "html_asset_blocked", "asset_ref": asset_ref},
+            )
+        source = resolve_input_path(asset_ref)
+        digest = hashlib.sha256(source.read_bytes()).hexdigest()
+        block_id = str(block.get("block_id") or "asset")
+        asset_id = f"asset_{_class_token(block_id)}_{digest[:12]}"
+        suffix = source.suffix.lower() or ".bin"
+        assets_dir.mkdir(parents=True, exist_ok=True)
+        packaged = assets_dir / f"{asset_id}{suffix}"
+        if source.resolve() != packaged.resolve():
+            shutil.copyfile(source, packaged)
+        relative_path = packaged.relative_to(package_root).as_posix()
+        assets.append(
+            {
+                "asset_id": asset_id,
+                "block_id": block_id,
+                "source_path": str(source.resolve()),
+                "source_name": source.name,
+                "packaged_path": str(packaged.resolve()),
+                "relative_path": relative_path,
+                "mime_type": mimetypes.guess_type(source.name)[0] or "application/octet-stream",
+                "size_bytes": packaged.stat().st_size,
+                "sha256": digest,
+            }
+        )
+    return assets
+
+
+def _image_asset_ref(block: dict[str, Any]) -> str | None:
+    if str(block.get("type") or "") != "image":
+        return None
+    hints = block.get("render_hints") if isinstance(block.get("render_hints"), dict) else {}
+    data = block.get("data") if isinstance(block.get("data"), dict) else {}
+    raw = (
+        hints.get("path")
+        or hints.get("image_path")
+        or block.get("path")
+        or block.get("image_path")
+        or data.get("path")
+        or data.get("image_path")
+    )
+    if raw is None:
+        return None
+    value = str(raw).strip()
+    return value or None
+
+
+def _is_blocked_asset_ref(asset_ref: str) -> bool:
+    parsed = urlparse(asset_ref)
+    return parsed.scheme in {"http", "https", "file", "ftp", "data"}
+
+
+def _assets_by_block(assets: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    return {str(asset["block_id"]): asset for asset in assets}
+
+
+def _validate_html_package(assets: list[dict[str, Any]]) -> ValidationReport:
+    checks = [
+        ValidationCheck(
+            name="html_package_manifest_valid",
+            status="passed",
+            details={"manifest_version": "0.1"},
+        ),
+        ValidationCheck(
+            name="all_assets_resolved",
+            status="passed",
+            details={"asset_count": len(assets)},
+        ),
+        ValidationCheck(
+            name="no_remote_assets",
+            status="passed",
+            details={"remote_assets_enabled": False},
+        ),
+        ValidationCheck(
+            name="no_forbidden_asset_paths",
+            status="passed",
+            details={"checked_assets": len(assets)},
+        ),
+    ]
+    return ValidationReport(status="passed", checks=checks)
+
+
+def _resolve_manifest_path(package_path: str | Path) -> Path:
+    resolved = resolve_input_path(package_path)
+    if resolved.suffix.lower() in {".html", ".htm"}:
+        return resolve_input_path(resolved.with_suffix(".html-manifest.json"))
+    return resolved
+
+
+def _load_html_package_manifest(manifest_path: Path) -> dict[str, Any]:
+    try:
+        payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise AgentPDFException(
+            "html_invalid_package",
+            "HTML package manifest is not valid JSON.",
+            details={"manifest_path": str(manifest_path)},
+        ) from exc
+    if not isinstance(payload, dict):
+        raise AgentPDFException(
+            "html_invalid_package",
+            "HTML package manifest must be a JSON object.",
+            details={"manifest_path": str(manifest_path)},
+        )
+    if payload.get("renderer_contract") not in SUPPORTED_RENDERER_CONTRACTS:
+        raise AgentPDFException(
+            "html_invalid_package",
+            "HTML package manifest has an unsupported renderer contract.",
+            details={"manifest_path": str(manifest_path), "renderer_contract": payload.get("renderer_contract")},
+        )
+    return payload
+
+
+def _manifest_html_path(manifest: dict[str, Any]) -> Path:
+    raw_path = manifest.get("html_path")
+    if not raw_path:
+        raise AgentPDFException("html_invalid_package", "HTML package manifest is missing html_path.")
+    return resolve_input_path(str(raw_path))
+
+
+def _validate_existing_html_package_manifest(
+    manifest: dict[str, Any],
+    *,
+    manifest_path: Path,
+    html_path: Path,
+) -> ValidationReport:
+    assets = manifest.get("assets", [])
+    if not isinstance(assets, list):
+        raise AgentPDFException(
+            "html_invalid_package",
+            "HTML package manifest assets must be an array.",
+            details={"manifest_path": str(manifest_path)},
+        )
+    for asset in assets:
+        if not isinstance(asset, dict):
+            raise AgentPDFException(
+                "html_invalid_package",
+                "HTML package manifest asset entries must be objects.",
+                details={"manifest_path": str(manifest_path)},
+            )
+        _validate_manifest_asset(asset, manifest_path=manifest_path)
+    remote_assets_enabled = bool(manifest.get("remote_assets_enabled", False))
+    javascript_enabled = bool(manifest.get("javascript_enabled", False))
+    checks = [
+        ValidationCheck(
+            name="html_package_manifest_valid",
+            status="passed",
+            details={
+                "manifest_path": str(manifest_path),
+                "html_path": str(html_path),
+                "renderer_contract": manifest.get("renderer_contract"),
+            },
+        ),
+        ValidationCheck(
+            name="all_assets_resolved",
+            status="passed",
+            details={"asset_count": len(assets)},
+        ),
+        ValidationCheck(
+            name="no_remote_assets",
+            status="failed" if remote_assets_enabled else "passed",
+            details={"remote_assets_enabled": remote_assets_enabled},
+            message="HTML packages must not rely on remote assets." if remote_assets_enabled else None,
+        ),
+        ValidationCheck(
+            name="no_javascript",
+            status="failed" if javascript_enabled else "passed",
+            details={"javascript_enabled": javascript_enabled},
+            message="HTML package rendering disables JavaScript." if javascript_enabled else None,
+        ),
+        ValidationCheck(
+            name="no_forbidden_asset_paths",
+            status="passed",
+            details={"checked_assets": len(assets)},
+        ),
+    ]
+    return ValidationReport(
+        status="failed" if any(check.status == "failed" for check in checks) else "passed",
+        checks=checks,
+    )
+
+
+def _validate_manifest_asset(asset: dict[str, Any], *, manifest_path: Path) -> None:
+    raw_path = str(asset.get("packaged_path") or "")
+    if not raw_path:
+        raise AgentPDFException(
+            "html_invalid_package",
+            "HTML package asset is missing packaged_path.",
+            details={"manifest_path": str(manifest_path), "asset_id": asset.get("asset_id")},
+        )
+    if _is_blocked_asset_ref(raw_path):
+        raise AgentPDFException(
+            "html_invalid_package",
+            "HTML package asset path must be local.",
+            details={"manifest_path": str(manifest_path), "asset_id": asset.get("asset_id"), "asset_ref": raw_path},
+        )
+    path = Path(raw_path).expanduser().resolve()
+    if not path.exists() or not path.is_file():
+        raise AgentPDFException(
+            "html_asset_missing",
+            "HTML package asset is missing.",
+            details={
+                "manifest_path": str(manifest_path),
+                "asset_id": asset.get("asset_id"),
+                "packaged_path": str(path),
+            },
+        )
+    expected_sha = asset.get("sha256")
+    if expected_sha and hashlib.sha256(path.read_bytes()).hexdigest() != expected_sha:
+        raise AgentPDFException(
+            "html_invalid_package",
+            "HTML package asset hash does not match the manifest.",
+            details={"manifest_path": str(manifest_path), "asset_id": asset.get("asset_id"), "packaged_path": str(path)},
+        )
+
+
+def _merge_validation(first: ValidationReport, second: ValidationReport) -> ValidationReport:
+    checks = [*first.checks, *second.checks]
+    status = "passed"
+    if any(check.status == "failed" for check in checks):
+        status = "failed"
+    elif any(check.status == "warning" for check in checks):
+        status = "warning"
+    elif checks and all(check.status == "skipped" for check in checks):
+        status = "skipped"
+    return ValidationReport(
+        status=status,
+        checks=checks,
+        page_count=second.page_count,
+        warnings=[*first.warnings, *second.warnings],
+    )
 
 
 def _source_map_row(mapping: dict[str, Any]) -> str:

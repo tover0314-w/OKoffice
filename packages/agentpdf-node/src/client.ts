@@ -1,5 +1,6 @@
 import type {
   AddMarginInput,
+  AuthoringPlanInput,
   BookletInput,
   BlankPageCheckInput,
   BuildContextPacketInput,
@@ -19,6 +20,8 @@ import type {
   ContextPacketInput,
   ContextPacketReportInput,
   CreateAgentInput,
+  CreateHtmlPackageInput,
+  DesignTokensInput,
   CreateMarkdownPdfInput,
   CreateFromPromptInput,
   CreateFromTemplatePackInput,
@@ -62,7 +65,10 @@ import type {
   MarkBboxInput,
   PageNumbersInput,
   PageCountCheckInput,
+  PagesReviseInput,
+  PagesWriteInput,
   PlanTemplatePackInput,
+  RenderHtmlPackageInput,
   PatchApplyInput,
   PatchPlanInput,
   PatchPreviewInput,
@@ -78,9 +84,13 @@ import type {
   RagIngestInput,
   RagQueryInput,
   RagSearchInput,
+  QaVisualReportInput,
   RenderCheckInput,
   ReorderPagesInput,
   ResizePagesInput,
+  ResearchEvidenceCardsInput,
+  ResearchPlanInput,
+  ResearchSourceCardsInput,
   SecurityAuthorizedPasswordInput,
   SecurityMalwareScanInput,
   SecurityPasswordInput,
@@ -113,9 +123,12 @@ import type {
   VisualDiffInput,
   VerifyBundleInput,
   WatermarkInput,
+  WorkflowCreatePdfInput,
   WorkflowPlanInput,
+  WorkflowResearchDeckInput,
   WorkflowReportInput,
   WorkflowRunInput,
+  StoryboardPlanInput,
 } from "./types.js";
 
 export type AgentPDFFetch = (input: string | URL, init?: RequestInit) => Promise<Response>;
@@ -249,6 +262,107 @@ export class AgentPDFClient {
     return this.runTool("pdf.workflow.report", {
       workflow_run: input.workflowRun,
       ...(input.outputPath ? { output_path: input.outputPath } : {}),
+    });
+  }
+
+  async workflowCreatePdf(input: WorkflowCreatePdfInput): Promise<ToolResult> {
+    return this.runTool("pdf.workflow.createpdf", {
+      pdf_output_path: input.pdfOutputPath,
+      ...(input.htmlOutputPath ? { html_output_path: input.htmlOutputPath } : {}),
+      ...(input.html ? { html: input.html } : {}),
+      ...(input.htmlPath ? { html_path: input.htmlPath } : {}),
+      ...(input.pageDocument ? { page_document: input.pageDocument } : {}),
+      ...(input.title ? { title: input.title } : {}),
+      ...(input.artifactDir ? { artifact_dir: input.artifactDir } : {}),
+      ...(input.expectedPageCount !== undefined ? { expected_page_count: input.expectedPageCount } : {}),
+      ...(input.pages ? { pages: input.pages } : {}),
+    });
+  }
+
+  async workflowResearchDeck(input: WorkflowResearchDeckInput): Promise<ToolResult> {
+    return this.runTool("pdf.workflow.research_deck", {
+      brief: input.brief,
+      ...(input.evidenceCards ? { evidence_cards: input.evidenceCards } : {}),
+      ...(input.htmlOutputPath ? { html_output_path: input.htmlOutputPath } : {}),
+      ...(input.pdfOutputPath ? { pdf_output_path: input.pdfOutputPath } : {}),
+      ...(input.artifactDir ? { artifact_dir: input.artifactDir } : {}),
+      ...(input.execute !== undefined ? { execute: input.execute } : {}),
+    });
+  }
+
+  async authoringPlan(input: AuthoringPlanInput): Promise<ToolResult> {
+    return this.runTool("pdf.authoring.plan", {
+      brief: input.brief,
+    });
+  }
+
+  async researchPlan(input: ResearchPlanInput): Promise<ToolResult> {
+    return this.runTool("pdf.research.plan", {
+      brief: input.brief,
+    });
+  }
+
+  async researchSourceCards(input: ResearchSourceCardsInput): Promise<ToolResult> {
+    return this.runTool("pdf.research.source_cards", {
+      sources: input.sources,
+      ...(input.brief ? { brief: input.brief } : {}),
+    });
+  }
+
+  async researchEvidenceCards(input: ResearchEvidenceCardsInput): Promise<ToolResult> {
+    return this.runTool("pdf.research.evidence_cards", {
+      source_cards: input.sourceCards,
+    });
+  }
+
+  async designTokens(input: DesignTokensInput): Promise<ToolResult> {
+    return this.runTool("pdf.design.tokens", {
+      ...(input.theme ? { theme: input.theme } : {}),
+      ...(input.overrides ? { overrides: input.overrides } : {}),
+    });
+  }
+
+  async storyboardPlan(input: StoryboardPlanInput): Promise<ToolResult> {
+    return this.runTool("pdf.storyboard.plan", {
+      brief: input.brief,
+      ...(input.authoringPlan ? { authoring_plan: input.authoringPlan } : {}),
+      ...(input.evidenceCards ? { evidence_cards: input.evidenceCards } : {}),
+    });
+  }
+
+  async pagesWrite(input: PagesWriteInput): Promise<ToolResult> {
+    return this.runTool("pdf.pages.write", {
+      brief: input.brief,
+      storyboard: input.storyboard,
+      ...(input.evidenceCards ? { evidence_cards: input.evidenceCards } : {}),
+      ...(input.designTokens ? { design_tokens: input.designTokens } : {}),
+    });
+  }
+
+  async pagesRevise(input: PagesReviseInput): Promise<ToolResult> {
+    return this.runTool("pdf.pages.revise", {
+      page_document: input.pageDocument,
+      ...(input.revisions ? { revisions: input.revisions } : {}),
+      ...(input.designTokens ? { design_tokens: input.designTokens } : {}),
+    });
+  }
+
+  async createHtmlPackage(input: CreateHtmlPackageInput): Promise<ToolResult> {
+    return this.runTool("pdf.create.html_package", {
+      ...(input.pageDocument ? { page_document: input.pageDocument } : {}),
+      ...(input.html ? { html: input.html } : {}),
+      ...(input.htmlPath ? { html_path: input.htmlPath } : {}),
+      html_output_path: input.htmlOutputPath,
+      ...(input.title ? { title: input.title } : {}),
+    });
+  }
+
+  async qaVisualReport(input: QaVisualReportInput): Promise<ToolResult> {
+    return this.runTool("pdf.qa.visual_report", {
+      input_path: input.inputPath,
+      ...(input.expectedPageCount !== undefined ? { expected_page_count: input.expectedPageCount } : {}),
+      ...(input.htmlPackageManifestPath ? { html_package_manifest_path: input.htmlPackageManifestPath } : {}),
+      ...(input.pages ? { pages: input.pages } : {}),
     });
   }
 
@@ -659,6 +773,13 @@ export class AgentPDFClient {
     });
   }
 
+  async renderHtmlPackage(input: RenderHtmlPackageInput): Promise<ToolResult> {
+    return this.runTool("pdf.render.html_package", {
+      package_path: input.packagePath,
+      output_path: input.outputPath,
+    });
+  }
+
   async urlToPdf(input: UrlToPdfInput): Promise<ToolResult> {
     return this.runTool("pdf.convert.url_to_pdf", {
       url: input.url,
@@ -898,6 +1019,8 @@ export class AgentPDFClient {
       ...(input.title ? { title: input.title } : {}),
       ...(input.prompt ? { prompt: input.prompt } : {}),
       ...(input.stylePack ? { style_pack: input.stylePack } : {}),
+      ...(input.renderer ? { renderer: input.renderer } : {}),
+      ...(input.htmlOutputPath ? { html_output_path: input.htmlOutputPath } : {}),
     });
   }
 

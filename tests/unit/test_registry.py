@@ -37,6 +37,7 @@ def test_registry_loads_complete_public_manifest() -> None:
     assert get_tool("pdf.convert.pdf_to_xlsx").implemented is True
     assert get_tool("pdf.convert.image_to_pdf").implemented is True
     assert get_tool("pdf.convert.html_to_pdf").implemented is True
+    assert get_tool("pdf.render.html_package").implemented is True
     assert get_tool("pdf.convert.url_to_pdf").implemented is True
     assert get_tool("pdf.convert.docx_to_pdf").implemented is True
     assert get_tool("pdf.convert.pptx_to_pdf").implemented is True
@@ -80,6 +81,12 @@ def test_registry_loads_complete_public_manifest() -> None:
     assert get_tool("pdf.workflow.plan").implemented is True
     assert get_tool("pdf.workflow.run").implemented is True
     assert get_tool("pdf.workflow.report").implemented is True
+    assert get_tool("pdf.authoring.plan").implemented is True
+    assert get_tool("pdf.storyboard.plan").implemented is True
+    assert get_tool("pdf.pages.write").implemented is True
+    assert get_tool("pdf.create.html_package").implemented is True
+    assert get_tool("pdf.qa.visual_report").implemented is True
+    assert get_tool("pdf.workflow.research_deck").implemented is True
     assert get_tool("pdf.context.build_packet").implemented is True
     assert get_tool("pdf.compose.from_context").implemented is True
     assert get_tool("pdf.target.profiles").implemented is True
@@ -92,6 +99,56 @@ def test_registry_loads_complete_public_manifest() -> None:
     assert get_tool("pdf.patch.preview").implemented is True
     assert get_tool("pdf.patch.apply").implemented is True
     assert get_tool("pdf.patch.verify").implemented is True
+
+
+def test_authoring_tools_are_in_registry() -> None:
+    manifest_path = REPO_ROOT / "schemas" / "tool-manifest.full.json"
+    raw_tools = {
+        tool["name"]: tool for tool in json.loads(manifest_path.read_text(encoding="utf-8"))["tools"]
+    }
+    expected_interfaces = {"cli", "mcp", "rest", "sdk"}
+    implemented_tools = {
+        "pdf.authoring.plan": "authoring",
+        "pdf.storyboard.plan": "authoring",
+        "pdf.pages.write": "authoring",
+        "pdf.create.html_package": "authoring",
+        "pdf.render.html_package": "render",
+        "pdf.qa.visual_report": "validation",
+        "pdf.workflow.createpdf": "workflow",
+        "pdf.workflow.research_deck": "workflow",
+        "pdf.research.plan": "research",
+        "pdf.research.source_cards": "research",
+        "pdf.research.evidence_cards": "research",
+        "pdf.design.tokens": "authoring",
+        "pdf.pages.revise": "authoring",
+    }
+    planned_tools = {
+        "pdf.insights.synthesize": ("insights", True),
+    }
+
+    for name, category in implemented_tools.items():
+        tool = get_tool(name)
+        raw_tool = raw_tools[name]
+
+        assert tool.status == "beta"
+        assert tool.category == category
+        assert set(tool.interfaces) == expected_interfaces
+        assert tool.implemented is True
+        assert raw_tool["implemented"] is True
+        assert raw_tool["oss_default"] is True
+        assert raw_tool["requires_model"] is False
+
+    for name, (category, requires_model) in planned_tools.items():
+        tool = get_tool(name)
+        raw_tool = raw_tools[name]
+
+        assert tool.status == "planned"
+        assert tool.category == category
+        assert set(tool.interfaces) == expected_interfaces
+        assert tool.implemented is False
+        assert raw_tool["implemented"] is False
+        assert raw_tool["oss_default"] is False
+        assert raw_tool["requires_model"] is requires_model
 
 
 def test_status_matrix_tools_are_discoverable_in_full_manifest() -> None:
@@ -193,6 +250,7 @@ def test_implemented_tools_are_known_names() -> None:
         "pdf.convert.pdf_to_markdown",
         "pdf.convert.image_to_pdf",
         "pdf.convert.html_to_pdf",
+        "pdf.render.html_package",
         "pdf.convert.url_to_pdf",
         "pdf.convert.docx_to_pdf",
         "pdf.convert.pptx_to_pdf",
@@ -265,6 +323,18 @@ def test_implemented_tools_are_known_names() -> None:
         "pdf.workflow.plan",
         "pdf.workflow.run",
         "pdf.workflow.report",
+        "pdf.workflow.createpdf",
+        "pdf.authoring.plan",
+        "pdf.research.plan",
+        "pdf.research.source_cards",
+        "pdf.research.evidence_cards",
+        "pdf.storyboard.plan",
+        "pdf.pages.write",
+        "pdf.design.tokens",
+        "pdf.pages.revise",
+        "pdf.create.html_package",
+        "pdf.qa.visual_report",
+        "pdf.workflow.research_deck",
         "pdf.context.ingest",
         "pdf.context.packet",
         "pdf.context.build_packet",
@@ -294,9 +364,6 @@ def test_implemented_tools_are_known_names() -> None:
         "pdf.evidence.context_packet_report",
         "pdf.artifacts.export_bundle",
         "pdf.artifacts.verify_bundle",
-        "pdf.metadata.page_info",
-        "pdf.security.remove_metadata",
-        "pdf.validation.page_count_check",
         "pdf.patch.plan",
         "pdf.patch.preview",
         "pdf.patch.apply",

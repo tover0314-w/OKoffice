@@ -119,6 +119,259 @@ def test_api_runs_workflow_plan_tool() -> None:
     assert payload["usage"]["workflow"]["steps"][0]["tool"] == "pdf.inspect.document"
 
 
+def test_api_runs_authoring_plan_tool() -> None:
+    client = TestClient(create_app())
+
+    response = client.post(
+        "/v1/tools/pdf.authoring.plan/run",
+        json={"brief": _authoring_brief()},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["tool"] == "pdf.authoring.plan"
+    assert payload["usage"]["authoring_plan"]["recommended_authoring_format"] == "html"
+
+
+def test_api_runs_storyboard_plan_tool() -> None:
+    client = TestClient(create_app())
+
+    response = client.post(
+        "/v1/tools/pdf.storyboard.plan/run",
+        json={"brief": _authoring_brief(), "evidence_cards": _evidence_cards()},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["tool"] == "pdf.storyboard.plan"
+    assert payload["usage"]["storyboard"]["page_count"] == 3
+    assert payload["usage"]["storyboard"]["pages"][0]["page_number"] == 1
+
+
+def test_api_runs_local_research_and_authoring_support_tools() -> None:
+    client = TestClient(create_app())
+
+    source_payload = {
+        "title": "State of Mobile 2026",
+        "source_type": "report",
+        "summary": "Revenue growth continues while downloads flatten.",
+        "key_points": ["Revenue growth continues while downloads flatten."],
+        "usable_for": ["market_context"],
+    }
+    plan_response = client.post("/v1/tools/pdf.research.plan/run", json={"brief": _authoring_brief()})
+    source_response = client.post(
+        "/v1/tools/pdf.research.source_cards/run",
+        json={"brief": _authoring_brief(), "sources": [source_payload]},
+    )
+    evidence_response = client.post(
+        "/v1/tools/pdf.research.evidence_cards/run",
+        json={"source_cards": source_response.json()["usage"]["source_cards"]},
+    )
+    design_response = client.post(
+        "/v1/tools/pdf.design.tokens/run",
+        json={"theme": "consulting", "overrides": {"primary_color": "#123456"}},
+    )
+
+    assert plan_response.status_code == 200
+    assert plan_response.json()["tool"] == "pdf.research.plan"
+    assert plan_response.json()["usage"]["research_plan"]["requires_network"] is False
+    assert source_response.status_code == 200
+    assert source_response.json()["tool"] == "pdf.research.source_cards"
+    assert source_response.json()["usage"]["source_cards"][0]["fetch_status"] == "not_fetched"
+    assert evidence_response.status_code == 200
+    assert evidence_response.json()["tool"] == "pdf.research.evidence_cards"
+    assert evidence_response.json()["usage"]["evidence_cards"][0]["source_title"] == "State of Mobile 2026"
+    assert design_response.status_code == 200
+    assert design_response.json()["tool"] == "pdf.design.tokens"
+    assert design_response.json()["usage"]["design_tokens"]["primary_color"] == "#123456"
+
+
+def test_api_runs_workflow_research_deck_tool(tmp_path: Path) -> None:
+    client = TestClient(create_app())
+
+    response = client.post(
+        "/v1/tools/pdf.workflow.research_deck/run",
+        json={
+            "brief": _authoring_brief(),
+            "evidence_cards": _evidence_cards(),
+            "html_output_path": str(tmp_path / "deck.html"),
+            "pdf_output_path": str(tmp_path / "deck.pdf"),
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["tool"] == "pdf.workflow.research_deck"
+    assert [step["tool"] for step in payload["usage"]["workflow"]["steps"]] == [
+        "pdf.authoring.plan",
+        "pdf.storyboard.plan",
+        "pdf.pages.write",
+        "pdf.create.html_package",
+        "pdf.render.html_package",
+        "pdf.qa.visual_report",
+    ]
+
+
+def test_api_runs_workflow_createpdf_tool(tmp_path: Path) -> None:
+    client = TestClient(create_app())
+    pdf_output = tmp_path / "api-createpdf.pdf"
+
+    response = client.post(
+        "/v1/tools/pdf.workflow.createpdf/run",
+        json={
+            "html": "<main><h1>CreatePDF</h1><p>REST workflow creates audited PDFs.</p></main>",
+            "html_output_path": str(tmp_path / "api-createpdf.html"),
+            "pdf_output_path": str(pdf_output),
+            "artifact_dir": str(tmp_path / "audit"),
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["tool"] == "pdf.workflow.createpdf"
+    assert pdf_output.exists()
+    assert Path(payload["usage"]["createpdf"]["artifact_graph_path"]).exists()
+
+
+def test_api_runs_workflow_research_deck_execute_mode(tmp_path: Path) -> None:
+    client = TestClient(create_app())
+
+    response = client.post(
+        "/v1/tools/pdf.workflow.research_deck/run",
+        json={
+            "brief": _authoring_brief(),
+            "evidence_cards": _evidence_cards(),
+            "html_output_path": str(tmp_path / "deck.html"),
+            "pdf_output_path": str(tmp_path / "deck.pdf"),
+            "artifact_dir": str(tmp_path / "workflow-artifacts"),
+            "execute": True,
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    run = payload["usage"]["workflow_run"]
+    assert payload["tool"] == "pdf.workflow.research_deck"
+    assert run["executed_steps"] == 6
+    assert Path(run["bindings"]["<final.pdf>"]).exists()
+
+
+def test_api_rejects_bad_authoring_qa_expected_page_count() -> None:
+    client = TestClient(create_app())
+
+    response = client.post(
+        "/v1/tools/pdf.qa.visual_report/run",
+        json={"input_path": "deck.pdf", "expected_page_count": "abc"},
+    )
+
+    assert response.status_code == 400
+    payload = response.json()
+    assert payload["status"] == "failed"
+    assert payload["tool"] == "pdf.qa.visual_report"
+    assert payload["error"]["code"] == "unsafe_input_rejected"
+
+
+def test_api_runs_authoring_workflow_tools(text_pdf: Path, tmp_path: Path) -> None:
+    client = TestClient(create_app())
+    brief = _authoring_brief()
+    evidence_cards = _evidence_cards()
+
+    plan_response = client.post("/v1/tools/pdf.authoring.plan/run", json={"brief": brief})
+    plan_payload = plan_response.json()
+    storyboard_response = client.post(
+        "/v1/tools/pdf.storyboard.plan/run",
+        json={
+            "brief": brief,
+            "authoring_plan": plan_payload["usage"]["authoring_plan"],
+            "evidence_cards": evidence_cards,
+        },
+    )
+    storyboard_payload = storyboard_response.json()
+    pages_response = client.post(
+        "/v1/tools/pdf.pages.write/run",
+        json={
+            "brief": brief,
+            "storyboard": storyboard_payload["usage"]["storyboard"],
+            "evidence_cards": evidence_cards,
+            "design_tokens": {"theme": "business_tech"},
+        },
+    )
+    pages_payload = pages_response.json()
+    html_response = client.post(
+        "/v1/tools/pdf.create.html_package/run",
+        json={
+            "page_document": pages_payload["usage"]["page_document"],
+            "html_output_path": str(tmp_path / "authoring.html"),
+            "title": "Independent developers going global",
+        },
+    )
+    html_payload = html_response.json()
+    qa_response = client.post(
+        "/v1/tools/pdf.qa.visual_report/run",
+        json={
+            "input_path": str(text_pdf),
+            "expected_page_count": 1,
+            "html_package_manifest_path": html_payload["usage"]["html_package_manifest_path"],
+            "pages": "1",
+        },
+    )
+    workflow_response = client.post(
+        "/v1/tools/pdf.workflow.research_deck/run",
+        json={
+            "brief": brief,
+            "evidence_cards": evidence_cards,
+            "html_output_path": str(tmp_path / "workflow.html"),
+            "pdf_output_path": str(tmp_path / "workflow.pdf"),
+        },
+    )
+
+    assert plan_response.status_code == 200
+    assert plan_payload["tool"] == "pdf.authoring.plan"
+    assert storyboard_response.status_code == 200
+    assert storyboard_payload["tool"] == "pdf.storyboard.plan"
+    assert pages_response.status_code == 200
+    assert pages_payload["tool"] == "pdf.pages.write"
+    assert html_response.status_code == 200
+    assert html_payload["tool"] == "pdf.create.html_package"
+    assert Path(html_payload["usage"]["html_package_manifest_path"]).exists()
+    assert qa_response.status_code == 200
+    assert qa_response.json()["tool"] == "pdf.qa.visual_report"
+    revise_response = client.post(
+        "/v1/tools/pdf.pages.revise/run",
+        json={
+            "page_document": pages_payload["usage"]["page_document"],
+            "revisions": [{"page_number": 2, "title": "Revised Summary"}],
+        },
+    )
+    revise_payload = revise_response.json()
+    assert revise_response.status_code == 200
+    assert revise_payload["tool"] == "pdf.pages.revise"
+    assert revise_payload["usage"]["page_document"]["pages"][1]["title"] == "Revised Summary"
+    assert workflow_response.status_code == 200
+    assert workflow_response.json()["usage"]["workflow"]["steps"][-1]["tool"] == "pdf.qa.visual_report"
+
+
+def test_api_create_html_package_accepts_raw_html(tmp_path: Path) -> None:
+    client = TestClient(create_app())
+    output = tmp_path / "raw.html"
+
+    response = client.post(
+        "/v1/tools/pdf.create.html_package/run",
+        json={
+            "html": "<main><h1>Raw HTML</h1><p>REST creation keeps the HTML package.</p></main>",
+            "html_output_path": str(output),
+            "title": "Raw HTML",
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["tool"] == "pdf.create.html_package"
+    assert payload["usage"]["source_format"] == "raw_html"
+    assert Path(payload["usage"]["html_package_manifest_path"]).exists()
+    assert output.exists()
+
+
 def test_api_runs_workflow_run_tool(text_pdf: Path) -> None:
     client = TestClient(create_app())
 
@@ -729,6 +982,30 @@ def test_api_rejects_unimplemented_tool() -> None:
 
     assert response.status_code == 400
     assert response.json()["error"]["code"] == "tool_not_implemented"
+
+
+def _authoring_brief() -> dict[str, object]:
+    return {
+        "topic": "Independent developers going global",
+        "goal": "Create a concise strategy deck",
+        "audience": "founders",
+        "page_count": 3,
+        "deliverable": "deck",
+        "research_required": True,
+        "citation_required": True,
+    }
+
+
+def _evidence_cards() -> list[dict[str, object]]:
+    return [
+        {
+            "id": "ev_market",
+            "claim": "Mobile monetization remains strong.",
+            "evidence": "Revenue growth continues while downloads flatten.",
+            "source_title": "State of Mobile 2026",
+            "source_url": "https://example.com/mobile",
+        }
+    ]
 
 
 def _fake_tesseract_tsv(

@@ -14,6 +14,7 @@ from agentpdf.context.classify import classify_context
 from agentpdf.core.pdf import BUILTIN_STYLE_PACKS, SUPPORTED_IMAGE_SUFFIXES, create_markdown_pdf
 from agentpdf.evidence.coverage import create_coverage_report
 from agentpdf.evidence.context_packet_report import create_context_packet_report
+from agentpdf.renderers.html_package import render_html_package, write_composition_html_package
 from agentpdf.schemas.errors import AgentPDFException
 from agentpdf.schemas.models import ToolResult, ValidationCheck, ValidationReport
 from agentpdf.security.paths import resolve_input_path
@@ -919,6 +920,8 @@ def create_pdf_with_agent(
     title: str | None = None,
     prompt: str | None = None,
     style_pack: str | None = None,
+    renderer: str = "markdown",
+    html_output_path: str | Path | None = None,
 ) -> ToolResult:
     tool = "pdf.ai.create.agent"
     resolved_output_path = Path(output_path).expanduser().resolve()
@@ -995,6 +998,8 @@ def create_pdf_with_agent(
         title=title,
         prompt=prompt,
         style_pack=style_pack,
+        renderer=renderer,
+        html_output_path=html_output_path,
     )
     composition_path = Path(str(create_result.usage["composition_path"])).resolve()
     layer_path = Path(str(create_result.usage["template_layer_manifest_path"])).resolve()
@@ -1214,8 +1219,11 @@ def create_pdf_from_template_pack(
     title: str | None = None,
     prompt: str | None = None,
     style_pack: str | None = None,
+    renderer: str = "markdown",
+    html_output_path: str | Path | None = None,
 ) -> ToolResult:
     tool = "pdf.ai.create.from_template_pack"
+    renderer_mode = _normalize_template_pack_renderer(renderer)
     pack = _load_template_pack(template_pack)
     validation_report = _template_pack_validation_report(pack)
     if not validation_report["is_valid"]:
@@ -1262,7 +1270,6 @@ def create_pdf_from_template_pack(
         colors=colors,
     )
     artifact_path = created.artifacts[0].path if created.artifacts else Path(output_path).resolve()
-    artifact = build_artifact(artifact_path, source_tool=tool)
     composition_path = Path(output_path).with_suffix(".composition.json").resolve()
     composition_payload = _template_pack_composition_payload(
         pack=pack,
@@ -1276,6 +1283,40 @@ def create_pdf_from_template_pack(
         color_scheme=resolved_color_scheme,
         context_packet=packet,
     )
+    html_package: dict[str, Any] | None = None
+    final_result = created
+    if renderer_mode == "html":
+        resolved_html_output = html_output_path or Path(output_path).with_suffix(".html")
+        html_package = write_composition_html_package(
+            composition_ir=composition_payload["composition_ir"],
+            source_map=composition_payload["source_map"],
+            target_profile=composition_payload["target_profile"],
+            render_plan={
+                "renderer": "html_package",
+                "fallback_renderer": "local_markdown_pdf",
+                "title": resolved_title,
+                "markdown": str(created.usage.get("generated_markdown") or ""),
+                "pack_id": str(pack.get("pack_id") or "custom_template_pack"),
+                "template_id": template_id,
+                "base_template": base_template,
+                "style_pack": resolved_style_pack,
+                "color_scheme": resolved_color_scheme,
+            },
+            html_output_path=resolved_html_output,
+            source_tool=tool,
+        )
+        final_result = render_html_package(html_package["html_package_manifest_path"], output_path)
+        artifact_path = final_result.artifacts[0].path if final_result.artifacts else Path(output_path).resolve()
+        composition_payload.update(
+            {
+                "html_output_path": html_package["html_output_path"],
+                "html_package_manifest_path": html_package["html_package_manifest_path"],
+                "html_package_manifest": html_package["html_package_manifest"],
+                "html_package_validation": html_package["html_package_validation"].model_dump(mode="json"),
+                "html_package_render_result": final_result.model_dump(mode="json"),
+            }
+        )
+    artifact = build_artifact(artifact_path, source_tool=tool)
     composition_path.write_text(json.dumps(composition_payload, indent=2), encoding="utf-8")
     composition_artifact = build_artifact(composition_path, source_tool=tool)
     layer_path = Path(output_path).with_suffix(".layers.json").resolve()
@@ -1317,15 +1358,32 @@ def create_pdf_from_template_pack(
             if packet is not None
             else [],
             "create_result": created.model_dump(mode="json"),
+            "renderer": "html_package" if html_package is not None else "markdown",
+            **(
+                {
+                    "html_output_path": html_package["html_output_path"],
+                    "html_package_manifest_path": html_package["html_package_manifest_path"],
+                    "html_package_manifest": html_package["html_package_manifest"],
+                    "html_package_validation": html_package["html_package_validation"].model_dump(mode="json"),
+                    "html_package_render_result": final_result.model_dump(mode="json"),
+                }
+                if html_package is not None
+                else {}
+            ),
         }
     )
     return ToolResult(
         job_id=f"job_{uuid4().hex[:16]}",
-        status=created.status,
+        status=final_result.status,
         tool=tool,
-        artifacts=[artifact, composition_artifact, layer_artifact],
-        validation=created.validation,
-        warnings=[*list(created.warnings), *routing_warnings],
+        artifacts=[
+            artifact,
+            composition_artifact,
+            layer_artifact,
+            *([] if html_package is None else list(html_package["artifacts"])),
+        ],
+        validation=final_result.validation,
+        warnings=[*list(created.warnings), *list(final_result.warnings), *routing_warnings],
         usage=usage,
         next_recommended_tools=[
             "pdf.validation.render_check",
@@ -1333,7 +1391,20 @@ def create_pdf_from_template_pack(
             "pdf.validation.blank_page_check",
             "pdf.target.profiles",
         ],
-        error=created.error,
+        error=final_result.error,
+    )
+
+
+def _normalize_template_pack_renderer(renderer: str | None) -> str:
+    value = str(renderer or "markdown").strip().lower()
+    if value in {"markdown", "reportlab", "local_markdown_pdf"}:
+        return "markdown"
+    if value in {"html", "html_package", "html-first", "html_first"}:
+        return "html"
+    raise AgentPDFException(
+        "invalid_input",
+        "Unsupported template pack renderer. Use 'markdown' or 'html'.",
+        details={"renderer": renderer},
     )
 
 

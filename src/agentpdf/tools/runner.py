@@ -14,6 +14,15 @@ from agentpdf.artifacts.bundle import (
     export_artifact_bundle,
     verify_artifact_bundle,
 )
+from agentpdf.authoring.design import select_design_tokens
+from agentpdf.authoring.html_deck import write_authoring_html_package, write_raw_html_package
+from agentpdf.authoring.pages import write_pages_from_storyboard
+from agentpdf.authoring.qa import visual_report
+from agentpdf.authoring.research import extract_evidence_cards, normalize_source_cards, plan_research
+from agentpdf.authoring.revise import revise_pages
+from agentpdf.authoring.router import plan_authoring_route
+from agentpdf.authoring.storyboard import plan_storyboard
+from agentpdf.authoring.workflow import plan_research_deck_workflow
 from agentpdf.compose.blocks import (
     add_appendix_to_pdf,
     add_citation_to_pdf,
@@ -88,6 +97,7 @@ from agentpdf.patch.transaction import (
     preview_patch_transaction,
     verify_patch_transaction,
 )
+from agentpdf.renderers.html_package import render_html_package
 from agentpdf.security.local import (
     decrypt_authorized_pdf,
     encrypt_pdf,
@@ -160,6 +170,7 @@ from agentpdf.validation.pdf import (
 )
 from agentpdf.workflows.planner import plan_workflow
 from agentpdf.workflows.reporter import create_workflow_report
+from agentpdf.workflows.createpdf import createpdf_html_first
 from agentpdf.workflows.runner import run_workflow
 
 
@@ -366,6 +377,13 @@ def run_html_to_pdf(input_path: str | Path, output_path: str | Path) -> ToolResu
         return html_to_pdf(input_path, output_path=output_path)
     except AgentPDFException as exc:
         return _failed("pdf.convert.html_to_pdf", exc.to_error())
+
+
+def run_render_html_package(package_path: str | Path, output_path: str | Path) -> ToolResult:
+    try:
+        return render_html_package(package_path, output_path=output_path)
+    except AgentPDFException as exc:
+        return _failed("pdf.render.html_package", exc.to_error())
 
 
 def run_url_to_pdf(
@@ -744,6 +762,8 @@ def run_create_agent(
     title: str | None = None,
     prompt: str | None = None,
     style_pack: str | None = None,
+    renderer: str = "markdown",
+    html_output_path: str | Path | None = None,
 ) -> ToolResult:
     try:
         return create_pdf_with_agent(
@@ -763,6 +783,8 @@ def run_create_agent(
             title=title,
             prompt=prompt,
             style_pack=style_pack,
+            renderer=renderer,
+            html_output_path=html_output_path,
         )
     except AgentPDFException as exc:
         return _failed("pdf.ai.create.agent", exc.to_error())
@@ -779,6 +801,8 @@ def run_create_from_template_pack(
     title: str | None = None,
     prompt: str | None = None,
     style_pack: str | None = None,
+    renderer: str = "markdown",
+    html_output_path: str | Path | None = None,
 ) -> ToolResult:
     try:
         return create_pdf_from_template_pack(
@@ -792,6 +816,8 @@ def run_create_from_template_pack(
             title=title,
             prompt=prompt,
             style_pack=style_pack,
+            renderer=renderer,
+            html_output_path=html_output_path,
         )
     except AgentPDFException as exc:
         return _failed("pdf.ai.create.from_template_pack", exc.to_error())
@@ -2260,6 +2286,200 @@ def run_workflow_report(
     output_path: str | Path | None = None,
 ) -> ToolResult:
     return create_workflow_report(workflow_run=workflow_run, output_path=output_path)
+
+
+def run_workflow_createpdf(
+    *,
+    pdf_output_path: str | Path,
+    html_output_path: str | Path | None = None,
+    html: str | None = None,
+    html_path: str | Path | None = None,
+    page_document: dict[str, object] | None = None,
+    title: str | None = None,
+    artifact_dir: str | Path | None = None,
+    expected_page_count: int | None = None,
+    pages: str = "all",
+) -> ToolResult:
+    try:
+        return createpdf_html_first(
+            pdf_output_path=pdf_output_path,
+            html_output_path=html_output_path,
+            html=html,
+            html_path=html_path,
+            page_document=page_document,
+            title=title,
+            artifact_dir=artifact_dir,
+            expected_page_count=expected_page_count,
+            pages=pages,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.workflow.createpdf", exc.to_error())
+
+
+def run_authoring_plan(brief: dict[str, object]) -> ToolResult:
+    try:
+        return plan_authoring_route(brief)
+    except AgentPDFException as exc:
+        return _failed("pdf.authoring.plan", exc.to_error())
+
+
+def run_storyboard_plan(
+    brief: dict[str, object],
+    authoring_plan: dict[str, object] | None = None,
+    evidence_cards: list[dict[str, object]] | None = None,
+) -> ToolResult:
+    try:
+        return plan_storyboard(
+            brief=brief,
+            authoring_plan=authoring_plan,
+            evidence_cards=evidence_cards,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.storyboard.plan", exc.to_error())
+
+
+def run_pages_write(
+    brief: dict[str, object],
+    storyboard: dict[str, object],
+    evidence_cards: list[dict[str, object]] | None = None,
+    design_tokens: dict[str, object] | None = None,
+) -> ToolResult:
+    try:
+        return write_pages_from_storyboard(
+            brief=brief,
+            storyboard=storyboard,
+            evidence_cards=evidence_cards,
+            design_tokens=design_tokens,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.pages.write", exc.to_error())
+
+
+def run_research_plan(brief: dict[str, object]) -> ToolResult:
+    try:
+        return plan_research(brief)
+    except AgentPDFException as exc:
+        return _failed("pdf.research.plan", exc.to_error())
+
+
+def run_research_source_cards(
+    sources: list[dict[str, object]] | None = None,
+    brief: dict[str, object] | None = None,
+) -> ToolResult:
+    try:
+        return normalize_source_cards(brief=brief, sources=sources)
+    except AgentPDFException as exc:
+        return _failed("pdf.research.source_cards", exc.to_error())
+
+
+def run_research_evidence_cards(source_cards: list[dict[str, object]] | None = None) -> ToolResult:
+    try:
+        return extract_evidence_cards(source_cards=source_cards)
+    except AgentPDFException as exc:
+        return _failed("pdf.research.evidence_cards", exc.to_error())
+
+
+def run_design_tokens(
+    theme: str = "business_tech",
+    overrides: dict[str, object] | None = None,
+) -> ToolResult:
+    return select_design_tokens(theme=theme, overrides=overrides)
+
+
+def run_pages_revise(
+    page_document: dict[str, object],
+    revisions: list[dict[str, object]] | None = None,
+    design_tokens: dict[str, object] | None = None,
+) -> ToolResult:
+    try:
+        return revise_pages(
+            page_document=page_document,
+            revisions=revisions,
+            design_tokens=design_tokens,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.pages.revise", exc.to_error())
+
+
+def run_create_html_package(
+    page_document: dict[str, object] | None,
+    html_output_path: str | Path,
+    title: str | None = None,
+    html: str | None = None,
+    html_path: str | Path | None = None,
+) -> ToolResult:
+    try:
+        if page_document:
+            return write_authoring_html_package(
+                page_document=page_document,
+                html_output_path=html_output_path,
+                title=title,
+            )
+        return write_raw_html_package(
+            html_source=html,
+            html_input_path=html_path,
+            html_output_path=html_output_path,
+            title=title,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.create.html_package", exc.to_error())
+
+
+def run_qa_visual_report(
+    input_path: str | Path,
+    expected_page_count: int | None = None,
+    html_package_manifest_path: str | Path | None = None,
+    pages: str = "all",
+) -> ToolResult:
+    try:
+        return visual_report(
+            input_path=input_path,
+            expected_page_count=expected_page_count,
+            html_package_manifest_path=html_package_manifest_path,
+            pages=pages,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.qa.visual_report", exc.to_error())
+
+
+def run_workflow_research_deck(
+    brief: dict[str, object],
+    evidence_cards: list[dict[str, object]] | None = None,
+    html_output_path: str = "<deck.html>",
+    pdf_output_path: str = "<deck.pdf>",
+    artifact_dir: str | Path | None = None,
+    execute: bool = False,
+) -> ToolResult:
+    try:
+        plan = plan_research_deck_workflow(
+            brief=brief,
+            evidence_cards=evidence_cards,
+            html_output_path=html_output_path,
+            pdf_output_path=pdf_output_path,
+        )
+        workflow = dict(plan.usage["workflow"])
+        if artifact_dir is not None:
+            workflow["artifact_dir"] = str(artifact_dir)
+        if not execute:
+            plan.usage["workflow"] = workflow
+            return plan
+        run = run_workflow(workflow)
+        return ToolResult(
+            job_id=run.job_id,
+            status=run.status,
+            tool="pdf.workflow.research_deck",
+            artifacts=run.artifacts,
+            validation=run.validation,
+            warnings=run.warnings,
+            usage={
+                "workflow": workflow,
+                "workflow_run": run.usage.get("workflow_run", {}),
+            },
+            next_recommended_tools=["pdf.workflow.report"],
+            error=run.error,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.workflow.research_deck", exc.to_error())
 
 
 def _failed(tool: str, error: AgentPDFError) -> ToolResult:

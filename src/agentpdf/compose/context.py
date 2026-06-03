@@ -11,7 +11,7 @@ from agentpdf.conversion.local import html_to_pdf
 from agentpdf.core.pdf import create_markdown_pdf, create_slide_deck_pdf
 from agentpdf.renderers.html_package import write_composition_html_package
 from agentpdf.schemas.errors import AgentPDFException
-from agentpdf.schemas.models import ToolResult
+from agentpdf.schemas.models import ToolResult, ValidationReport
 from agentpdf.validation.pdf import validate_pdf
 
 
@@ -301,6 +301,8 @@ def compose_from_context(
         )
     rendered_path = rendered.artifacts[0].path if rendered.artifacts else Path(output_path).resolve()
     validation = validate_pdf(rendered_path)
+    if html_package is not None:
+        validation = _merge_html_package_validation(validation, html_package["html_package_validation"])
     warnings = [*rendered.warnings, *validation.warnings, *_composition_warnings(packet)]
     pdf_artifact = build_artifact(rendered_path, source_tool=tool)
     ir_path = Path(output_path).with_suffix(".composition.json")
@@ -318,6 +320,7 @@ def compose_from_context(
                 "html_output_path": html_package["html_output_path"],
                 "html_package_manifest_path": html_package["html_package_manifest_path"],
                 "html_package_manifest": html_package["html_package_manifest"],
+                "html_package_validation": html_package["html_package_validation"].model_dump(mode="json"),
             }
         )
     if slides:
@@ -349,6 +352,7 @@ def compose_from_context(
                     "html_output_path": html_package["html_output_path"],
                     "html_package_manifest_path": html_package["html_package_manifest_path"],
                     "html_package_manifest": html_package["html_package_manifest"],
+                    "html_package_validation": html_package["html_package_validation"].model_dump(mode="json"),
                 }
                 if html_package is not None
                 else {}
@@ -360,6 +364,23 @@ def compose_from_context(
             "pdf.evidence.coverage_report",
             "pdf.patch.plan",
         ],
+    )
+
+
+def _merge_html_package_validation(pdf_validation: ValidationReport, html_validation: ValidationReport) -> ValidationReport:
+    checks = [*html_validation.checks, *pdf_validation.checks]
+    status = "passed"
+    if any(check.status == "failed" for check in checks):
+        status = "failed"
+    elif any(check.status == "warning" for check in checks):
+        status = "warning"
+    elif checks and all(check.status == "skipped" for check in checks):
+        status = "skipped"
+    return ValidationReport(
+        status=status,
+        checks=checks,
+        page_count=pdf_validation.page_count,
+        warnings=[*html_validation.warnings, *pdf_validation.warnings],
     )
 
 

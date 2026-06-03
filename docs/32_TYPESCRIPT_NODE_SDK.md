@@ -39,7 +39,7 @@ node packages/agentpdf-node/dist/src/cli.js create-markdown --markdown-file exam
 node packages/agentpdf-node/dist/src/cli.js create-template-packs -o .agentpdf-out/template-packs.json
 node packages/agentpdf-node/dist/src/cli.js create-validate-template-pack examples/template-packs/local-agent-starter.json -o .agentpdf-out/template-pack.validation.json
 node packages/agentpdf-node/dist/src/cli.js create-from-template-pack examples/template-packs/local-agent-starter.json --template board_audit --color-scheme executive_blue --data examples/create-data/agent-block-audit.json -o .agentpdf-out/board-audit.pdf
-node packages/agentpdf-node/dist/src/cli.js create-from-template-pack examples/template-packs/local-agent-starter.json --template board_audit --color-scheme executive_blue --context-packet .agentpdf-out/context.packet.json -o .agentpdf-out/board-audit-from-context.pdf
+node packages/agentpdf-node/dist/src/cli.js create-from-template-pack examples/template-packs/local-agent-starter.json --template board_audit --color-scheme executive_blue --context-packet .agentpdf-out/context.packet.json -o .agentpdf-out/board-audit-from-context.pdf --renderer html --html-output .agentpdf-out/board-audit-from-context.html
 node packages/agentpdf-node/dist/src/cli.js inspect-pages .agentpdf-out/node-report.pdf --pages 1 --render-check
 node packages/agentpdf-node/dist/src/cli.js reorder-pages .agentpdf-out/node-report.pdf --order 1 -o .agentpdf-out/node-report-reordered.pdf
 node packages/agentpdf-node/dist/src/cli.js insert-blank-pages .agentpdf-out/node-report-reordered.pdf --after-page 1 --count 1 -o .agentpdf-out/node-report-blank.pdf
@@ -81,17 +81,31 @@ node packages/agentpdf-node/dist/src/cli.js rag-cite-answer .agentpdf-out/node-r
 node packages/agentpdf-node/dist/src/cli.js rag-highlight-sources .agentpdf-out/node-report.index.json --answer "This report is local-first." -o .agentpdf-out/node-report-highlighted.pdf
 node packages/agentpdf-node/dist/src/cli.js rag-export-report .agentpdf-out/node-report.index.json --question "What is this report about?" --answer "This report is local-first." -o .agentpdf-out/node-report-rag.pdf
 node packages/agentpdf-node/dist/src/cli.js context-ingest --file src/agentpdf/compose/context.py --role code_evidence --label "Composer Source" -o .agentpdf-out/composer.context-item.json
+node packages/agentpdf-node/dist/src/cli.js context-ingest --link okpdf.dev/docs/context --role citation --label "Context Docs" -o .agentpdf-out/context-docs.context-item.json
 node packages/agentpdf-node/dist/src/cli.js code-snapshot src/agentpdf/compose/context.py --line-start 1 --line-end 80 --repository-root . -o .agentpdf-out/composer.snapshot.context-item.json
 node packages/agentpdf-node/dist/src/cli.js data-profile examples/create-data/metrics.csv --label "Runtime Metrics" -o .agentpdf-out/metrics.profile.context-item.json
 node packages/agentpdf-node/dist/src/cli.js context-image-analyze assets/brand/okpdf-logo.png --skip-ocr
 node packages/agentpdf-node/dist/src/cli.js context-packet --item-json .agentpdf-out/composer.context-item.json --text "Create a technical audit PDF from pre-ingested code evidence." -o .agentpdf-out/agent.context.packet.json
-node packages/agentpdf-node/dist/src/cli.js context-build --text "Create a technical audit PDF." --file README.md --item-json examples/context/media-items.json -o .agentpdf-out/context.packet.json
+node packages/agentpdf-node/dist/src/cli.js context-build --text "Create a technical audit PDF." --file README.md --link okpdf.dev/docs/context --item-json examples/context/media-items.json -o .agentpdf-out/context.packet.json
 node packages/agentpdf-node/dist/src/cli.js context-classify .agentpdf-out/context.packet.json --profile technical_audit -o .agentpdf-out/context.classification.json
 node packages/agentpdf-node/dist/src/cli.js target-profiles -o .agentpdf-out/target-profiles.json
 node packages/agentpdf-node/dist/src/cli.js target-validate --target-profile '{"profile_id":"media_learning_deck","layout_mode":"slides","accepted_block_types":["slide","audio_reference","video_reference"],"accepted_context_types":["text","audio","video"],"validation_required":["render_check","evidence_coverage_report"]}' -o .agentpdf-out/media-learning-deck.validation.json
 node packages/agentpdf-node/dist/src/cli.js compose-plan .agentpdf-out/context.packet.json --profile technical_audit -o .agentpdf-out/technical-audit.plan.json
 node packages/agentpdf-node/dist/src/cli.js compose-render-ir .agentpdf-out/technical-audit.plan.json -o .agentpdf-out/technical-audit-from-ir.pdf
 node packages/agentpdf-node/dist/src/cli.js compose-from-context .agentpdf-out/context.packet.json --profile technical_audit -o .agentpdf-out/technical-audit.pdf --renderer html --html-output .agentpdf-out/technical-audit.html
+node packages/agentpdf-node/dist/src/cli.js render-html-package .agentpdf-out/technical-audit.html-manifest.json -o .agentpdf-out/technical-audit-rendered.pdf
+node packages/agentpdf-node/dist/src/cli.js create-html-package --html "<main><h1>HTML First</h1><p>Inspectable source before PDF.</p></main>" --html-output .agentpdf-out/html-first.html --title "HTML First"
+node packages/agentpdf-node/dist/src/cli.js render-html-package .agentpdf-out/html-first.html-manifest.json -o .agentpdf-out/html-first.pdf
+node packages/agentpdf-node/dist/src/cli.js qa-visual-report --input .agentpdf-out/html-first.pdf --html-package-manifest .agentpdf-out/html-first.html-manifest.json --pages 1
+node packages/agentpdf-node/dist/src/cli.js artifact-manifest --file .agentpdf-out/html-first.pdf --file .agentpdf-out/html-first.html --file .agentpdf-out/html-first.html-manifest.json -o .agentpdf-out/html-first.artifacts.json --title "HTML First Artifacts" --metadata workflow=html-first-createpdf
+node packages/agentpdf-node/dist/src/cli.js artifact-graph --manifest .agentpdf-out/html-first.artifacts.json -o .agentpdf-out/html-first.artifact-graph.json --title "HTML First Artifact Graph"
+node packages/agentpdf-node/dist/src/cli.js createpdf --html "<main><h1>CreatePDF</h1><p>HTML-first workflow with audit evidence.</p></main>" --html-output .agentpdf-out/createpdf.html --pdf-output .agentpdf-out/createpdf.pdf --artifact-dir .agentpdf-out/createpdf-audit --title "CreatePDF"
+node packages/agentpdf-node/dist/src/cli.js authoring-plan --brief examples/research_deck_brief.json
+node packages/agentpdf-node/dist/src/cli.js research-plan --brief examples/research_deck_brief.json
+node packages/agentpdf-node/dist/src/cli.js research-source-cards --brief examples/research_deck_brief.json --sources examples/research_deck_sources.json
+node packages/agentpdf-node/dist/src/cli.js research-evidence-cards --source-cards examples/research_deck_source_cards.json
+node packages/agentpdf-node/dist/src/cli.js design-tokens --theme consulting --color primary_color=#123456
+node packages/agentpdf-node/dist/src/cli.js workflow-research-deck --brief examples/research_deck_brief.json --evidence-cards examples/research_deck_evidence.json --html-output .agentpdf-out/research-deck.html --pdf-output .agentpdf-out/research-deck.pdf --artifact-dir .agentpdf-out/research-deck-artifacts --execute
 node packages/agentpdf-node/dist/src/cli.js compose-from-context .agentpdf-out/context.packet.json --profile slide_deck -o .agentpdf-out/agent-review-deck.pdf
 node packages/agentpdf-node/dist/src/cli.js compose-add-code-block .agentpdf-out/technical-audit.pdf --title "Risk Function" --code "def risky_total(items): return sum(items)" --language python --source-ref ctx_002 --target-slot code_review -o .agentpdf-out/technical-audit.code.pdf
 node packages/agentpdf-node/dist/src/cli.js compose-add-table .agentpdf-out/technical-audit.pdf --title "Runtime Metrics" --columns metric,value --row latency_ms,42 --source-ref ctx_003 -o .agentpdf-out/technical-audit.table.pdf
@@ -109,9 +123,9 @@ node packages/agentpdf-node/dist/src/cli.js patch-plan .agentpdf-out/technical-a
 node packages/agentpdf-node/dist/src/cli.js patch-preview .agentpdf-out/technical-audit.patch.json -o .agentpdf-out/technical-audit.patch-preview.json
 node packages/agentpdf-node/dist/src/cli.js patch-apply .agentpdf-out/technical-audit.patch.json -o .agentpdf-out/technical-audit-patched.pdf
 node packages/agentpdf-node/dist/src/cli.js patch-verify .agentpdf-out/technical-audit.patch.json .agentpdf-out/technical-audit-patched.pdf
-node packages/agentpdf-node/dist/src/cli.js artifact-manifest --file .agentpdf-out/technical-audit-patched.pdf --file .agentpdf-out/technical-audit.composition.json --file .agentpdf-out/technical-audit.coverage.json --file .agentpdf-out/technical-audit.source-map.json --file .agentpdf-out/technical-audit.artifact-source-map.json --file .agentpdf-out/technical-audit.citations.json --file .agentpdf-out/technical-audit.patch.json -o .agentpdf-out/technical-audit.artifacts.json --title "Technical Audit Artifacts" --metadata workflow=context-packet-patch
+node packages/agentpdf-node/dist/src/cli.js artifact-manifest --file .agentpdf-out/technical-audit-patched.pdf --file .agentpdf-out/context.packet.json --file .agentpdf-out/technical-audit.composition.json --file .agentpdf-out/technical-audit.coverage.json --file .agentpdf-out/technical-audit.source-map.json --file .agentpdf-out/technical-audit.artifact-source-map.json --file .agentpdf-out/technical-audit.citations.json --file .agentpdf-out/technical-audit.patch.json -o .agentpdf-out/technical-audit.artifacts.json --title "Technical Audit Artifacts" --metadata workflow=context-packet-patch
 node packages/agentpdf-node/dist/src/cli.js artifact-graph --manifest .agentpdf-out/technical-audit.artifacts.json -o .agentpdf-out/technical-audit.artifact-graph.json --title "Technical Audit Artifact Graph"
-node packages/agentpdf-node/dist/src/cli.js export-bundle --file .agentpdf-out/technical-audit-patched.pdf --file .agentpdf-out/technical-audit.composition.json --file .agentpdf-out/technical-audit.coverage.json --file .agentpdf-out/technical-audit.patch.json -o .agentpdf-out/technical-audit.agentpdf-bundle.zip --title "Technical Audit Bundle" --metadata workflow=context-packet-patch
+node packages/agentpdf-node/dist/src/cli.js export-bundle --file .agentpdf-out/technical-audit-patched.pdf --file .agentpdf-out/context.packet.json --file .agentpdf-out/technical-audit.composition.json --file .agentpdf-out/technical-audit.coverage.json --file .agentpdf-out/technical-audit.patch.json -o .agentpdf-out/technical-audit.agentpdf-bundle.zip --title "Technical Audit Bundle" --metadata workflow=context-packet-patch
 ```
 
 ## SDK Example
@@ -384,6 +398,10 @@ const composedAudit = await client.composeFromContext({
   outputPath: ".agentpdf-out/technical-audit.pdf",
   renderer: "html",
   htmlOutputPath: ".agentpdf-out/technical-audit.html",
+});
+const rerenderedAudit = await client.renderHtmlPackage({
+  packagePath: ".agentpdf-out/technical-audit.html-manifest.json",
+  outputPath: ".agentpdf-out/technical-audit-rendered.pdf",
 });
 const composedDeck = await client.composeFromContext({
   contextPacketPath: ".agentpdf-out/context.packet.json",
@@ -719,6 +737,7 @@ console.log(ragReport.usage.pages_cited);
 - `composePlan({ contextPacket, contextPacketPath, targetProfile, profile, outputPath, stylePack, title })`
 - `composeRenderIr({ composition, compositionPath, outputPath, stylePack, title })`
 - `composeFromContext({ contextPacket, contextPacketPath, targetProfile, profile, outputPath, stylePack, title, renderer, htmlOutputPath })`
+- `renderHtmlPackage({ packagePath, outputPath })`
 - `composeAddCodeBlock({ inputPath, outputPath, title, code, language, sourceRefs, blockId, targetSlot, compositionPath, layerManifestPath, manifestOutputPath })`
 - `composeAddTable({ inputPath, outputPath, title, columns, rows, sourceRefs, blockId, targetSlot, compositionPath, layerManifestPath, manifestOutputPath })`
 - `composeAddFigure({ inputPath, outputPath, title, imagePath, caption, sourceRefs, blockId, targetSlot, compositionPath, layerManifestPath, manifestOutputPath })`

@@ -168,6 +168,21 @@ test("runCli exposes context ingest and packet commands", async () => {
   assert.equal(JSON.parse(output[1] ?? "{}").tool, "pdf.context.packet");
 });
 
+test("runCli help documents web link context options", async () => {
+  const output: string[] = [];
+
+  const code = await runCli(["--help"], {
+    stdout: (line) => output.push(line),
+    stderr: (line) => output.push(`ERR:${line}`),
+  });
+  const help = output.join("\n");
+
+  assert.equal(code, 0);
+  assert.match(help, /context-build .*--link LINK/);
+  assert.match(help, /context-ingest .*--link LINK/);
+  assert.match(help, /context-packet .*--link LINK/);
+});
+
 test("runCli exposes context classify command", async () => {
   const output: string[] = [];
   let postedBody: unknown;
@@ -815,6 +830,10 @@ test("runCli exposes template pack commands", async () => {
         "context.packet.json",
         "-o",
         "board-audit.pdf",
+        "--renderer",
+        "html",
+        "--html-output",
+        "board-audit.html",
       ]),
       0,
     );
@@ -867,6 +886,8 @@ test("runCli exposes template pack commands", async () => {
         output_path: "board-audit.pdf",
         color_scheme: "executive_blue",
         context_packet_path: "context.packet.json",
+        renderer: "html",
+        html_output_path: "board-audit.html",
         data: {
           title: "Agent Block Audit",
           blocks: [
@@ -879,6 +900,247 @@ test("runCli exposes template pack commands", async () => {
             },
           ],
         },
+      },
+    },
+  ]);
+});
+
+test("runCli exposes authoring workflow commands", async () => {
+  const tempDir = await mkdtemp(join(tmpdir(), "agentpdf-node-authoring-"));
+  const briefPath = join(tempDir, "brief.json");
+  const evidencePath = join(tempDir, "evidence.json");
+  const sourcesPath = join(tempDir, "sources.json");
+  const sourceCardsPath = join(tempDir, "source-cards.json");
+  const pageDocumentPath = join(tempDir, "pages.json");
+  const calls: Array<{ url: string; body: unknown }> = [];
+
+  await writeFile(
+    briefPath,
+    JSON.stringify({
+      topic: "Independent developers going global",
+      page_count: 4,
+      deliverable: "deck",
+    }),
+  );
+  await writeFile(
+    evidencePath,
+    JSON.stringify([
+      {
+        id: "ev_market",
+        claim: "Mobile monetization remains strong.",
+        evidence: "Revenue growth continues while downloads flatten.",
+        source_title: "State of Mobile 2026",
+      },
+    ]),
+  );
+  await writeFile(
+    sourcesPath,
+    JSON.stringify([
+      {
+        title: "State of Mobile 2026",
+        source_type: "report",
+        summary: "Revenue growth continues while downloads flatten.",
+      },
+    ]),
+  );
+  await writeFile(
+    sourceCardsPath,
+    JSON.stringify([
+      {
+        id: "source_001",
+        title: "State of Mobile 2026",
+        summary: "Revenue growth continues while downloads flatten.",
+        key_points: ["Revenue growth continues while downloads flatten."],
+      },
+    ]),
+  );
+  await writeFile(
+    pageDocumentPath,
+    JSON.stringify({
+      page_document_id: "pages_1",
+      page_count: 1,
+      pages: [{ page_number: 1, layout: "cover", title: "Old" }],
+    }),
+  );
+
+  async function invoke(args: string[]): Promise<number> {
+    return runCli(args, {
+      fetch: async (input, init) => {
+        calls.push({ url: String(input), body: JSON.parse(String(init?.body)) });
+        return jsonResponse({
+          job_id: "job_cli_authoring",
+          status: "succeeded",
+          tool: calls.at(-1)?.url.split("/v1/tools/")[1]?.split("/run")[0] ?? "unknown",
+          artifacts: [],
+          validation: null,
+          warnings: [],
+          usage: {},
+          next_recommended_tools: [],
+          error: null,
+        });
+      },
+      stdout: () => undefined,
+      stderr: () => undefined,
+    });
+  }
+
+  try {
+    assert.equal(await invoke(["authoring-plan", "--brief", briefPath]), 0);
+    assert.equal(await invoke(["research-plan", "--brief", briefPath]), 0);
+    assert.equal(await invoke(["research-source-cards", "--brief", briefPath, "--sources", sourcesPath]), 0);
+    assert.equal(await invoke(["research-evidence-cards", "--source-cards", sourceCardsPath]), 0);
+    assert.equal(await invoke(["design-tokens", "--theme", "consulting", "--color", "primary_color=#123456"]), 0);
+    assert.equal(await invoke(["storyboard-plan", "--brief", briefPath, "--evidence", evidencePath]), 0);
+    assert.equal(
+      await invoke(["pages-revise", "--page-document", pageDocumentPath, "--revision", '{"page_number":1,"title":"New"}']),
+      0,
+    );
+    assert.equal(
+      await invoke([
+        "create-html-package",
+        "--html",
+        "<main><h1>HTML First</h1><p>Node CLI raw HTML package.</p></main>",
+        "--html-output",
+        "raw.html",
+        "--title",
+        "HTML First",
+      ]),
+      0,
+    );
+    assert.equal(
+      await invoke([
+        "workflow-research-deck",
+        "--brief",
+        briefPath,
+        "--evidence",
+        evidencePath,
+        "--html-output",
+        "deck.html",
+        "--pdf-output",
+        "deck.pdf",
+        "--artifact-dir",
+        "workflow-artifacts",
+        "--execute",
+      ]),
+      0,
+    );
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+
+  assert.deepEqual(calls.map((call) => call.url), [
+    "http://127.0.0.1:7331/v1/tools/pdf.authoring.plan/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.research.plan/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.research.source_cards/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.research.evidence_cards/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.design.tokens/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.storyboard.plan/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.pages.revise/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.create.html_package/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.workflow.research_deck/run",
+  ]);
+  assert.deepEqual(calls[0]?.body, {
+    brief: {
+      topic: "Independent developers going global",
+      page_count: 4,
+      deliverable: "deck",
+    },
+  });
+  assert.deepEqual(calls[4]?.body, {
+    theme: "consulting",
+    overrides: { primary_color: "#123456" },
+  });
+  assert.deepEqual(calls[5]?.body, {
+    brief: {
+      topic: "Independent developers going global",
+      page_count: 4,
+      deliverable: "deck",
+    },
+    evidence_cards: [
+      {
+        id: "ev_market",
+        claim: "Mobile monetization remains strong.",
+        evidence: "Revenue growth continues while downloads flatten.",
+        source_title: "State of Mobile 2026",
+      },
+    ],
+  });
+  assert.deepEqual(calls[7]?.body, {
+    html: "<main><h1>HTML First</h1><p>Node CLI raw HTML package.</p></main>",
+    html_output_path: "raw.html",
+    title: "HTML First",
+  });
+  assert.deepEqual(calls[8]?.body, {
+    brief: {
+      topic: "Independent developers going global",
+      page_count: 4,
+      deliverable: "deck",
+    },
+    evidence_cards: [
+      {
+        id: "ev_market",
+        claim: "Mobile monetization remains strong.",
+        evidence: "Revenue growth continues while downloads flatten.",
+        source_title: "State of Mobile 2026",
+      },
+    ],
+    html_output_path: "deck.html",
+    pdf_output_path: "deck.pdf",
+    artifact_dir: "workflow-artifacts",
+    execute: true,
+  });
+});
+
+test("runCli exposes createpdf workflow command", async () => {
+  const calls: Array<{ url: string; body: unknown }> = [];
+
+  const code = await runCli(
+    [
+      "createpdf",
+      "--html",
+      "<main><h1>CreatePDF</h1><p>Node CLI wraps audited PDF creation.</p></main>",
+      "--html-output",
+      "createpdf.html",
+      "--pdf-output",
+      "createpdf.pdf",
+      "--artifact-dir",
+      "audit",
+      "--expected-page-count",
+      "1",
+      "--pages",
+      "1",
+    ],
+    {
+      fetch: async (input, init) => {
+        calls.push({ url: String(input), body: JSON.parse(String(init?.body)) });
+        return jsonResponse({
+          job_id: "job_cli_createpdf",
+          status: "succeeded",
+          tool: "pdf.workflow.createpdf",
+          artifacts: [],
+          validation: null,
+          warnings: [],
+          usage: {},
+          next_recommended_tools: [],
+          error: null,
+        });
+      },
+      stdout: () => undefined,
+      stderr: () => undefined,
+    },
+  );
+
+  assert.equal(code, 0);
+  assert.deepEqual(calls, [
+    {
+      url: "http://127.0.0.1:7331/v1/tools/pdf.workflow.createpdf/run",
+      body: {
+        html: "<main><h1>CreatePDF</h1><p>Node CLI wraps audited PDF creation.</p></main>",
+        html_output_path: "createpdf.html",
+        pdf_output_path: "createpdf.pdf",
+        artifact_dir: "audit",
+        expected_page_count: 1,
+        pages: "1",
       },
     },
   ]);
@@ -2037,6 +2299,7 @@ test("runCli exposes conversion, PDF/A, and security commands", async () => {
   assert.equal(await invoke(["subset-fonts", "report.pdf", "-o", "report.subset.pdf"]), 0);
   assert.equal(await invoke(["to-pdfa", "report.pdf", "-o", "report.pdfa.pdf", "--profile", "PDF/A-2b"]), 0);
   assert.equal(await invoke(["html-to-pdf", "page.html", "-o", "page.pdf"]), 0);
+  assert.equal(await invoke(["render-html-package", "page.html-manifest.json", "-o", "page.pdf"]), 0);
   assert.equal(
     await invoke([
       "url-to-pdf",
@@ -2118,6 +2381,7 @@ test("runCli exposes conversion, PDF/A, and security commands", async () => {
     "http://127.0.0.1:7331/v1/tools/pdf.optimize.subset_fonts/run",
     "http://127.0.0.1:7331/v1/tools/pdf.optimize.to_pdfa/run",
     "http://127.0.0.1:7331/v1/tools/pdf.convert.html_to_pdf/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.render.html_package/run",
     "http://127.0.0.1:7331/v1/tools/pdf.convert.url_to_pdf/run",
     "http://127.0.0.1:7331/v1/tools/pdf.convert.docx_to_pdf/run",
     "http://127.0.0.1:7331/v1/tools/pdf.convert.pptx_to_pdf/run",
@@ -2144,44 +2408,48 @@ test("runCli exposes conversion, PDF/A, and security commands", async () => {
     profile: "PDF/A-2b",
   });
   assert.deepEqual(calls[3]?.body, {
+    package_path: "page.html-manifest.json",
+    output_path: "page.pdf",
+  });
+  assert.deepEqual(calls[4]?.body, {
     url: "https://example.com",
     output_path: "url.pdf",
     allow_private_hosts: true,
     allow_file_urls: true,
   });
-  assert.deepEqual(calls[7]?.body, {
+  assert.deepEqual(calls[8]?.body, {
     input_path: "report.pdf",
     output_path: "report.html",
     pages: "1",
   });
-  assert.deepEqual(calls[11]?.body, {
+  assert.deepEqual(calls[12]?.body, {
     input_path: "report.pdf",
     output_path: "protected.pdf",
     password: "open",
     owner_password: "owner",
   });
-  assert.deepEqual(calls[16]?.body, {
+  assert.deepEqual(calls[17]?.body, {
     input_path: "signed.pdf",
     signature_path: "signed.pdf.signature.json",
     secret: "local-secret",
   });
-  assert.deepEqual(calls[17]?.body, {
+  assert.deepEqual(calls[18]?.body, {
     input_path: "report.pdf",
   });
-  assert.deepEqual(calls[18]?.body, {
+  assert.deepEqual(calls[19]?.body, {
     input_path: "report.pdf",
     output_path: "sanitized.pdf",
   });
-  assert.deepEqual(calls[19]?.body, {
+  assert.deepEqual(calls[20]?.body, {
     input_path: "report.pdf",
     output_path: "redacted.pdf",
     regions: [{ page: 1, bbox: [60, 700, 280, 760], label: "secret" }],
   });
-  assert.deepEqual(calls[20]?.body, {
+  assert.deepEqual(calls[21]?.body, {
     input_path: "redacted.pdf",
     search_terms: ["SECRET-CODE-123"],
   });
-  assert.deepEqual(calls[21]?.body, {
+  assert.deepEqual(calls[22]?.body, {
     input_path: "redacted.pdf",
     search_terms: ["SECRET-CODE-123"],
   });

@@ -45,22 +45,35 @@ okpdf create preview invoice -o invoice-preview.pdf --json
 okpdf create from-prompt "Create a worksheet about validating generated PDFs." -o worksheet.pdf --template worksheet --style-pack paper_ink --color primary=#4f46e5 --color accent=#f59e0b --json
 okpdf create from-prompt "Create an invoice for okpdf local template work." -o invoice.pdf --template invoice --data examples/create-data/invoice.json --json
 okpdf create from-prompt "Create a resume for an agent infrastructure engineer." -o resume.pdf --template resume --data examples/create-data/resume.json --json
+okpdf create html-package --html "<main><h1>HTML First</h1><p>Inspectable source before PDF.</p></main>" -o html-first.html --title "HTML First" --json
+okpdf render-html-package html-first.html-manifest.json -o html-first.pdf --json
+okpdf qa visual-report html-first.pdf --html-package-manifest html-first.html-manifest.json --pages 1 --json
+okpdf artifacts manifest --file html-first.pdf --file html-first.html --file html-first.html-manifest.json -o html-first.artifacts.json --title "HTML First Artifacts" --metadata workflow=html-first-createpdf --json
+okpdf artifacts graph --manifest html-first.artifacts.json -o html-first.artifact-graph.json --title "HTML First Artifact Graph" --json
+okpdf createpdf --html "<main><h1>CreatePDF</h1><p>HTML-first workflow with audit evidence.</p></main>" --html-output createpdf.html --pdf-output createpdf.pdf --artifact-dir createpdf-audit --title "CreatePDF" --json
 okpdf context ingest --file src/agentpdf/compose/context.py --role code_evidence --label "Composer Source" -o composer.context-item.json --json
 okpdf context code-snapshot src/agentpdf/compose/context.py --line-start 1 --line-end 80 --repository-root . -o composer.snapshot.context-item.json --json
 okpdf context data-profile examples/create-data/metrics.csv --label "Runtime Metrics" -o metrics.profile.context-item.json --json
 okpdf context image-analyze assets/brand/okpdf-logo.png --skip-ocr --json
 okpdf context packet --item-json composer.context-item.json --text "Create a technical audit PDF from pre-ingested code evidence." -o agent.context.packet.json --title "Agent Packet" --json
-okpdf context build --text "Create a technical audit PDF from code, metrics, visual evidence, project docs, and media context." --file src/agentpdf/compose/context.py --file examples/create-data/metrics.csv --file assets/brand/okpdf-logo.png --file examples/sample-documents/business_report.md --item-json examples/context/media-items.json -o context.packet.json --title "Audit Context" --json
+okpdf context build --text "Create a technical audit PDF from code, metrics, visual evidence, project docs, web links, and media context." --file src/agentpdf/compose/context.py --file examples/create-data/metrics.csv --file assets/brand/okpdf-logo.png --file examples/sample-documents/business_report.md --link okpdf.dev/docs/context --item-json examples/context/media-items.json -o context.packet.json --title "Audit Context" --json
 okpdf context classify context.packet.json --profile technical_audit -o context.classification.json --json
 okpdf evidence context-packet-report context.packet.json -o context-report.pdf --report-output context-report.json --json
 okpdf create plan-template-pack examples/template-packs/local-agent-starter.json --target-profile technical_audit --context-packet context.packet.json --planned-output board-audit-from-context.pdf -o board-audit-from-context.plan.json --json
 okpdf create agent examples/template-packs/local-agent-starter.json --target-profile technical_audit --context-packet context.packet.json -o board-audit-agent.pdf --plan-output board-audit-agent.plan.json --coverage-output board-audit-agent.coverage.json --context-classification-output board-audit-agent.context-classification.json --context-report-output board-audit-agent.context-report.pdf --context-report-json-output board-audit-agent.context-report.json --bundle-output board-audit-agent.agentpdf-bundle.zip --json
-okpdf create from-template-pack examples/template-packs/local-agent-starter.json --template board_audit --color-scheme executive_blue --context-packet context.packet.json -o board-audit-from-context.pdf --json
+okpdf create from-template-pack examples/template-packs/local-agent-starter.json --template board_audit --color-scheme executive_blue --context-packet context.packet.json -o board-audit-from-context.pdf --renderer html --html-output board-audit-from-context.html --json
 okpdf target profiles -o target-profiles.json --json
 okpdf target validate --profile-json examples/target-profiles/media-learning-deck.json -o media-learning-deck.validation.json --json
 okpdf compose plan context.packet.json --profile technical_audit -o technical-audit.plan.json --json
 okpdf compose render-ir technical-audit.plan.json -o technical-audit-from-ir.pdf --json
 okpdf compose from-context context.packet.json --profile technical_audit -o technical-audit.pdf --renderer html --html-output technical-audit.html --json
+okpdf render-html-package technical-audit.html-manifest.json -o technical-audit-rendered.pdf --json
+okpdf authoring plan examples/research_deck_brief.json --json
+okpdf research plan examples/research_deck_brief.json --json
+okpdf research source-cards --brief examples/research_deck_brief.json --sources examples/research_deck_sources.json --json
+okpdf research evidence-cards --source-cards examples/research_deck_source_cards.json --json
+okpdf design tokens --theme consulting --color primary_color=#123456 --json
+okpdf workflow research-deck examples/research_deck_brief.json --evidence-cards examples/research_deck_evidence.json --html-output research-deck.html --pdf-output research-deck.pdf --artifact-dir research-deck-artifacts --execute --json
 okpdf compose from-context context.packet.json --profile slide_deck -o agent-review-deck.pdf --json
 okpdf compose from-context context.packet.json --profile-json examples/target-profiles/media-learning-deck.json -o media-learning-deck.pdf --json
 okpdf compose add-code-block technical-audit.pdf --title "Risk Function" --code "def risky_total(items): return sum(items)" --language python --source-ref ctx_002 --target-slot code_review -o technical-audit.code.pdf --json
@@ -78,9 +91,9 @@ okpdf patch plan technical-audit.pdf --operations examples/patch-operations/revi
 okpdf patch preview technical-audit.patch.json -o technical-audit.patch-preview.json --json
 okpdf patch apply technical-audit.patch.json -o technical-audit-patched.pdf --json
 okpdf patch verify technical-audit.patch.json technical-audit-patched.pdf --json
-okpdf artifacts manifest --file technical-audit-patched.pdf --file technical-audit.composition.json --file technical-audit.coverage.json --file technical-audit.source-map.json --file technical-audit.artifact-source-map.json --file technical-audit.citations.json --file technical-audit.patch.json -o technical-audit.artifacts.json --title "Technical Audit Artifacts" --metadata workflow=context-packet-patch --json
+okpdf artifacts manifest --file technical-audit-patched.pdf --file context.packet.json --file technical-audit.composition.json --file technical-audit.coverage.json --file technical-audit.source-map.json --file technical-audit.artifact-source-map.json --file technical-audit.citations.json --file technical-audit.patch.json -o technical-audit.artifacts.json --title "Technical Audit Artifacts" --metadata workflow=context-packet-patch --json
 okpdf artifacts graph --manifest technical-audit.artifacts.json -o technical-audit.artifact-graph.json --title "Technical Audit Artifact Graph" --json
-okpdf artifacts export-bundle --file technical-audit-patched.pdf --file technical-audit.composition.json --file technical-audit.coverage.json --file technical-audit.patch.json -o technical-audit.agentpdf-bundle.zip --title "Technical Audit Bundle" --metadata workflow=context-packet-patch --json
+okpdf artifacts export-bundle --file technical-audit-patched.pdf --file context.packet.json --file technical-audit.composition.json --file technical-audit.coverage.json --file technical-audit.patch.json -o technical-audit.agentpdf-bundle.zip --title "Technical Audit Bundle" --metadata workflow=context-packet-patch --json
 okpdf artifacts verify-bundle technical-audit.agentpdf-bundle.zip --json
 okpdf patch plan technical-audit.pdf --operations examples/patch-operations/structured-appendix.json -o technical-audit.structured.patch.json --composition technical-audit.composition.json --reason "Append code, table, image, citation, media, and slide evidence." --json
 okpdf watermark scan.pdf --text "CONFIDENTIAL" -o scan-watermarked.pdf --json

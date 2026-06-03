@@ -22,6 +22,7 @@ from agentpdf.tools.runner import (
     run_artifacts_manifest,
     run_artifacts_source_map,
     run_artifacts_verify_bundle,
+    run_authoring_plan,
     run_blank_page_check,
     run_booklet,
     run_build_context_packet,
@@ -44,6 +45,7 @@ from agentpdf.tools.runner import (
     run_create_agent,
     run_create_from_prompt,
     run_create_from_template_pack,
+    run_create_html_package,
     run_plan_template_pack_creation,
     run_create_template_preview,
     run_create_template_packs,
@@ -86,6 +88,9 @@ from agentpdf.tools.runner import (
     run_patch_plan,
     run_patch_preview,
     run_patch_verify,
+    run_design_tokens,
+    run_pages_write,
+    run_pages_revise,
     run_parse_charts,
     run_parse_figures,
     run_parse_formulas,
@@ -105,7 +110,12 @@ from agentpdf.tools.runner import (
     run_rag_ingest,
     run_rag_query,
     run_rag_search,
+    run_qa_visual_report,
+    run_research_evidence_cards,
+    run_research_plan,
+    run_research_source_cards,
     run_remove_pages,
+    run_render_html_package,
     run_remove_unused_objects,
     run_render,
     run_render_check,
@@ -133,6 +143,7 @@ from agentpdf.tools.runner import (
     run_security_verify_signature,
     run_select_target_profile,
     run_split,
+    run_storyboard_plan,
     run_strikeout,
     run_subset_fonts,
     run_target_profiles,
@@ -146,6 +157,8 @@ from agentpdf.tools.runner import (
     run_url_to_pdf,
     run_watermark,
     run_workflow_plan,
+    run_workflow_createpdf,
+    run_workflow_research_deck,
     run_workflow_report,
     run_workflow_run,
     run_xlsx_to_pdf,
@@ -293,6 +306,97 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
             workflow_run=workflow_run if isinstance(workflow_run, dict) else {},
             output_path=payload.get("output_path"),
         )
+    if tool_name == "pdf.workflow.createpdf":
+        page_document = payload.get("page_document")
+        expected_page_count = payload.get("expected_page_count")
+        return run_workflow_createpdf(
+            pdf_output_path=str(payload.get("pdf_output_path", "createpdf.pdf")),
+            html_output_path=payload.get("html_output_path"),
+            html=str(payload["html"]) if payload.get("html") is not None else None,
+            html_path=payload.get("html_path") or payload.get("html_input_path"),
+            page_document=page_document if isinstance(page_document, dict) else None,
+            title=str(payload["title"]) if payload.get("title") is not None else None,
+            artifact_dir=payload.get("artifact_dir"),
+            expected_page_count=expected_page_count if isinstance(expected_page_count, int) else None,
+            pages=str(payload.get("pages", "all")),
+        )
+    if tool_name == "pdf.workflow.research_deck":
+        evidence_cards = payload.get("evidence_cards")
+        return run_workflow_research_deck(
+            brief=dict(payload.get("brief", {})),
+            evidence_cards=evidence_cards if isinstance(evidence_cards, list) else None,
+            html_output_path=str(payload.get("html_output_path", "<deck.html>")),
+            pdf_output_path=str(payload.get("pdf_output_path", "<deck.pdf>")),
+            artifact_dir=payload.get("artifact_dir"),
+            execute=bool(payload.get("execute", False)),
+        )
+    if tool_name == "pdf.authoring.plan":
+        return run_authoring_plan(brief=dict(payload.get("brief", {})))
+    if tool_name == "pdf.storyboard.plan":
+        authoring_plan = payload.get("authoring_plan")
+        evidence_cards = payload.get("evidence_cards")
+        return run_storyboard_plan(
+            brief=dict(payload.get("brief", {})),
+            authoring_plan=authoring_plan if isinstance(authoring_plan, dict) else None,
+            evidence_cards=evidence_cards if isinstance(evidence_cards, list) else None,
+        )
+    if tool_name == "pdf.pages.write":
+        evidence_cards = payload.get("evidence_cards")
+        design_tokens = payload.get("design_tokens")
+        return run_pages_write(
+            brief=dict(payload.get("brief", {})),
+            storyboard=dict(payload.get("storyboard", {})),
+            evidence_cards=evidence_cards if isinstance(evidence_cards, list) else None,
+            design_tokens=design_tokens if isinstance(design_tokens, dict) else None,
+        )
+    if tool_name == "pdf.research.plan":
+        return run_research_plan(brief=dict(payload.get("brief", {})))
+    if tool_name == "pdf.research.source_cards":
+        sources = payload.get("sources")
+        brief = payload.get("brief")
+        return run_research_source_cards(
+            sources=sources if isinstance(sources, list) else None,
+            brief=brief if isinstance(brief, dict) else None,
+        )
+    if tool_name == "pdf.research.evidence_cards":
+        source_cards = payload.get("source_cards")
+        return run_research_evidence_cards(source_cards=source_cards if isinstance(source_cards, list) else None)
+    if tool_name == "pdf.design.tokens":
+        overrides = payload.get("overrides")
+        return run_design_tokens(
+            theme=str(payload.get("theme", "business_tech")),
+            overrides=overrides if isinstance(overrides, dict) else None,
+        )
+    if tool_name == "pdf.pages.revise":
+        revisions = payload.get("revisions")
+        design_tokens = payload.get("design_tokens")
+        return run_pages_revise(
+            page_document=dict(payload.get("page_document", {})),
+            revisions=revisions if isinstance(revisions, list) else None,
+            design_tokens=design_tokens if isinstance(design_tokens, dict) else None,
+        )
+    if tool_name == "pdf.create.html_package":
+        page_document = payload.get("page_document")
+        return run_create_html_package(
+            page_document=page_document if isinstance(page_document, dict) else None,
+            html_output_path=str(payload.get("html_output_path", "deck.html")),
+            title=str(payload["title"]) if payload.get("title") is not None else None,
+            html=str(payload["html"]) if payload.get("html") is not None else None,
+            html_path=payload.get("html_path") or payload.get("html_input_path"),
+        )
+    if tool_name == "pdf.qa.visual_report":
+        expected_page_count, error = _coerce_optional_int(
+            payload.get("expected_page_count"),
+            field_name="expected_page_count",
+        )
+        if error is not None:
+            return _failed(tool_name, error)
+        return run_qa_visual_report(
+            input_path=str(payload.get("input_path", payload.get("path", ""))),
+            expected_page_count=expected_page_count,
+            html_package_manifest_path=payload.get("html_package_manifest_path"),
+            pages=str(payload.get("pages", "all")),
+        )
     if tool_name == "pdf.organize.merge":
         return run_merge(payload.get("input_paths", []), payload.get("output_path", ""))
     if tool_name == "pdf.organize.split":
@@ -382,6 +486,11 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
     if tool_name == "pdf.convert.html_to_pdf":
         return run_html_to_pdf(
             payload.get("input_path", ""),
+            output_path=payload.get("output_path", ""),
+        )
+    if tool_name == "pdf.render.html_package":
+        return run_render_html_package(
+            payload.get("package_path") or payload.get("input_path", ""),
             output_path=payload.get("output_path", ""),
         )
     if tool_name == "pdf.convert.url_to_pdf":
@@ -564,6 +673,8 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
             title=payload.get("title"),
             prompt=payload.get("prompt"),
             style_pack=payload.get("style_pack"),
+            renderer=str(payload.get("renderer", "markdown")),
+            html_output_path=payload.get("html_output_path") or payload.get("html_output"),
         )
     if tool_name == "pdf.ai.create.from_template_pack":
         data = payload.get("data")
@@ -579,6 +690,8 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
             title=payload.get("title"),
             prompt=payload.get("prompt"),
             style_pack=payload.get("style_pack"),
+            renderer=str(payload.get("renderer", "markdown")),
+            html_output_path=payload.get("html_output_path") or payload.get("html_output"),
         )
     if tool_name == "pdf.ai.create.template_preview":
         data = payload.get("data")
@@ -1339,6 +1452,18 @@ def _optional_int(value: object) -> int | None:
         return int(value)
     except (TypeError, ValueError):
         return None
+
+
+def _coerce_optional_int(value: object, field_name: str) -> tuple[int | None, AgentPDFError | None]:
+    if value is None:
+        return None, None
+    try:
+        return int(value), None
+    except (TypeError, ValueError):
+        return None, AgentPDFError(
+            code="unsafe_input_rejected",
+            message=f"{field_name} must be an integer.",
+        )
 
 
 def _failed(tool: str, error: AgentPDFError) -> ToolResult:

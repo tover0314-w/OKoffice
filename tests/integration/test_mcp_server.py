@@ -17,13 +17,16 @@ from agentpdf.mcp.server import (
     pdf_ai_rag_ingest,
     pdf_ai_rag_query,
     pdf_ai_rag_search,
+    pdf_authoring_plan,
     pdf_add_page_numbers,
     pdf_add_margin,
     pdf_add_shape,
     pdf_blank_page_check,
     pdf_context_image_analyze,
+    pdf_create_html_package,
     pdf_create_markdown,
     pdf_create_text,
+    pdf_design_tokens,
     pdf_extract_images,
     pdf_extract_fonts,
     pdf_extract_text,
@@ -52,6 +55,10 @@ from agentpdf.mcp.server import (
     pdf_page_count_check,
     pdf_render_pages,
     pdf_render_check,
+    pdf_research_evidence_cards,
+    pdf_research_plan,
+    pdf_research_source_cards,
+    pdf_pages_revise,
     pdf_reorder_pages,
     pdf_resize_pages,
     pdf_security_remove_metadata,
@@ -62,6 +69,8 @@ from agentpdf.mcp.server import (
     pdf_validate_output,
     pdf_watermark,
     pdf_workflow_plan,
+    pdf_workflow_createpdf,
+    pdf_workflow_research_deck,
     pdf_workflow_report,
     pdf_workflow_run,
 )
@@ -88,6 +97,7 @@ def test_mcp_server_exposes_local_pdf_tools() -> None:
     assert "pdf_extract_images" in tool_names
     assert "pdf_extract_fonts" in tool_names
     assert "pdf_extract_text" in tool_names
+    assert "pdf_render_html_package" in tool_names
     assert "pdf_metadata_read" in tool_names
     assert "pdf_metadata_page_info" in tool_names
     assert "pdf_metadata_update" in tool_names
@@ -130,8 +140,15 @@ def test_mcp_server_exposes_local_pdf_tools() -> None:
     assert "pdf_pdf_to_json" in tool_names
     assert "pdf_pdf_to_markdown" in tool_names
     assert "pdf_workflow_plan" in tool_names
+    assert "pdf_workflow_createpdf" in tool_names
     assert "pdf_workflow_run" in tool_names
     assert "pdf_workflow_report" in tool_names
+    assert "pdf_authoring_plan" in tool_names
+    assert "pdf_storyboard_plan" in tool_names
+    assert "pdf_pages_write" in tool_names
+    assert "pdf_create_html_package" in tool_names
+    assert "pdf_qa_visual_report" in tool_names
+    assert "pdf_workflow_research_deck" in tool_names
     assert "pdf_artifacts_export_bundle" in tool_names
     assert "agentpdf_tool_manifest" in tool_names
     assert "pdf_target_select_profile" in tool_names
@@ -157,6 +174,174 @@ def test_mcp_workflow_plan_returns_agent_steps() -> None:
 
     assert payload["tool"] == "pdf.workflow.plan"
     assert payload["usage"]["workflow"]["steps"][0]["tool"] == "pdf.inspect.document"
+
+
+def test_mcp_authoring_tools_are_exposed() -> None:
+    server = create_mcp_server()
+    tool_names = {tool.name for tool in asyncio.run(server.list_tools())}
+
+    assert {
+        "pdf_authoring_plan",
+        "pdf_storyboard_plan",
+        "pdf_pages_write",
+        "pdf_create_html_package",
+        "pdf_qa_visual_report",
+        "pdf_workflow_research_deck",
+        "pdf_research_plan",
+        "pdf_research_source_cards",
+        "pdf_research_evidence_cards",
+        "pdf_design_tokens",
+        "pdf_pages_revise",
+    }.issubset(tool_names)
+
+
+def test_mcp_authoring_plan_returns_route() -> None:
+    payload = json.loads(pdf_authoring_plan(_authoring_brief()))
+
+    assert payload["tool"] == "pdf.authoring.plan"
+    assert payload["usage"]["authoring_plan"]["recommended_authoring_format"] == "html"
+    assert payload["next_recommended_tools"] == ["pdf.storyboard.plan"]
+
+
+def test_mcp_local_research_design_and_pages_revise() -> None:
+    brief = _authoring_brief()
+    source_payload = [
+        {
+            "title": "State of Mobile 2026",
+            "source_type": "report",
+            "summary": "Revenue growth continues while downloads flatten.",
+            "key_points": ["Revenue growth continues while downloads flatten."],
+        }
+    ]
+    research = json.loads(pdf_research_plan(brief))
+    sources = json.loads(pdf_research_source_cards(brief=brief, sources=source_payload))
+    evidence = json.loads(pdf_research_evidence_cards(source_cards=sources["usage"]["source_cards"]))
+    design = json.loads(pdf_design_tokens(theme="consulting", overrides={"primary_color": "#123456"}))
+    revised = json.loads(
+        pdf_pages_revise(
+            page_document={
+                "page_document_id": "pages_test",
+                "page_count": 1,
+                "pages": [{"page_number": 1, "layout": "cover", "title": "Old title"}],
+            },
+            revisions=[{"page_number": 1, "title": "New title"}],
+        )
+    )
+
+    assert research["tool"] == "pdf.research.plan"
+    assert research["usage"]["research_plan"]["requires_network"] is False
+    assert sources["tool"] == "pdf.research.source_cards"
+    assert sources["usage"]["source_cards"][0]["fetch_status"] == "not_fetched"
+    assert evidence["tool"] == "pdf.research.evidence_cards"
+    assert evidence["usage"]["evidence_cards"][0]["source_title"] == "State of Mobile 2026"
+    assert design["tool"] == "pdf.design.tokens"
+    assert design["usage"]["design_tokens"]["primary_color"] == "#123456"
+    assert revised["tool"] == "pdf.pages.revise"
+    assert revised["usage"]["page_document"]["pages"][0]["title"] == "New title"
+
+
+def test_mcp_workflow_research_deck_returns_steps() -> None:
+    payload = json.loads(
+        pdf_workflow_research_deck(
+            _authoring_brief(),
+            evidence_cards=_evidence_cards(),
+            html_output_path="deck.html",
+            pdf_output_path="deck.pdf",
+        )
+    )
+
+    assert payload["tool"] == "pdf.workflow.research_deck"
+    assert [step["tool"] for step in payload["usage"]["workflow"]["steps"]] == [
+        "pdf.authoring.plan",
+        "pdf.storyboard.plan",
+        "pdf.pages.write",
+        "pdf.create.html_package",
+        "pdf.render.html_package",
+        "pdf.qa.visual_report",
+    ]
+
+
+def test_mcp_workflow_createpdf_generates_audited_pdf(tmp_path: Path) -> None:
+    pdf_output = tmp_path / "mcp-createpdf.pdf"
+    payload = json.loads(
+        pdf_workflow_createpdf(
+            pdf_output_path=str(pdf_output),
+            html_output_path=str(tmp_path / "mcp-createpdf.html"),
+            html="<main><h1>CreatePDF</h1><p>MCP workflow creates audit artifacts.</p></main>",
+            artifact_dir=str(tmp_path / "audit"),
+        )
+    )
+
+    assert payload["tool"] == "pdf.workflow.createpdf"
+    assert pdf_output.exists()
+    assert Path(payload["usage"]["createpdf"]["qa_report_path"]).exists()
+
+
+def test_mcp_create_html_package_accepts_raw_html(tmp_path: Path) -> None:
+    output = tmp_path / "raw.html"
+
+    payload = json.loads(
+        pdf_create_html_package(
+            page_document=None,
+            html_output_path=str(output),
+            title="Raw HTML",
+            html="<main><h1>Raw HTML</h1><p>MCP creation keeps the source package.</p></main>",
+        )
+    )
+
+    assert payload["tool"] == "pdf.create.html_package"
+    assert payload["usage"]["source_format"] == "raw_html"
+    assert output.exists()
+
+
+def test_mcp_workflow_research_deck_execute_mode(tmp_path: Path) -> None:
+    payload = json.loads(
+        pdf_workflow_research_deck(
+            _authoring_brief(),
+            evidence_cards=_evidence_cards(),
+            html_output_path=str(tmp_path / "deck.html"),
+            pdf_output_path=str(tmp_path / "deck.pdf"),
+            artifact_dir=str(tmp_path / "workflow-artifacts"),
+            execute=True,
+        )
+    )
+
+    run = payload["usage"]["workflow_run"]
+    assert payload["tool"] == "pdf.workflow.research_deck"
+    assert run["executed_steps"] == 6
+    assert Path(run["bindings"]["<final.pdf>"]).exists()
+
+
+def test_mcp_authoring_plan_and_research_deck_workflow() -> None:
+    brief = {
+        "topic": "Independent developers going global",
+        "goal": "Create a concise strategy deck",
+        "audience": "founders",
+        "page_count": 4,
+        "deliverable": "deck",
+    }
+
+    plan_payload = json.loads(pdf_authoring_plan(brief))
+    workflow_payload = json.loads(
+        pdf_workflow_research_deck(
+            brief,
+            evidence_cards=[
+                {
+                    "id": "ev_market",
+                    "claim": "Mobile monetization remains strong.",
+                    "evidence": "Revenue growth continues while downloads flatten.",
+                    "source_title": "State of Mobile 2026",
+                }
+            ],
+            html_output_path="deck.html",
+            pdf_output_path="deck.pdf",
+        )
+    )
+
+    assert plan_payload["tool"] == "pdf.authoring.plan"
+    assert plan_payload["usage"]["authoring_plan"]["recommended_authoring_format"] == "html"
+    assert workflow_payload["tool"] == "pdf.workflow.research_deck"
+    assert workflow_payload["usage"]["workflow"]["steps"][0]["tool"] == "pdf.authoring.plan"
 
 
 def test_mcp_workflow_run_returns_step_evidence(text_pdf: Path) -> None:
@@ -602,6 +787,27 @@ def _write_image_pdf(path: Path, image_path: Path) -> None:
     document.drawImage(str(image_path), 24, 120, width=32, height=24)
     document.showPage()
     document.save()
+
+
+def _authoring_brief() -> dict[str, object]:
+    return {
+        "topic": "Independent developers going global",
+        "goal": "Create a concise strategy deck",
+        "audience": "founders",
+        "page_count": 4,
+        "deliverable": "deck",
+    }
+
+
+def _evidence_cards() -> list[dict[str, object]]:
+    return [
+        {
+            "id": "ev_market",
+            "claim": "Mobile monetization remains strong.",
+            "evidence": "Revenue growth continues while downloads flatten.",
+            "source_title": "State of Mobile 2026",
+        }
+    ]
 
 
 def _fake_tesseract_tsv(

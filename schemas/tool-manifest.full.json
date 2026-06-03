@@ -1,6 +1,6 @@
 {
   "manifest_version": "0.1-full",
-  "tool_count": 227,
+  "tool_count": 241,
   "tools": [
     {
       "name": "agent.setup.claude_code",
@@ -374,7 +374,7 @@
     {
       "name": "pdf.compose.from_context",
       "status": "beta",
-      "description": "Compose a validated target PDF from a Context Packet and target profile with optional HTML package artifacts.",
+      "description": "Compose a validated target PDF from a Context Packet and target profile with optional HTML package artifacts, local asset manifest, and HTML package validation.",
       "category": "compose",
       "interfaces": [
         "cli",
@@ -815,6 +815,201 @@
       "requires_model": false
     },
     {
+      "name": "pdf.workflow.createpdf",
+      "status": "beta",
+      "description": "Create a validated PDF through a local HTML-first workflow with visual QA and artifact lineage reports.",
+      "category": "workflow",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.workflow.research_deck",
+      "status": "beta",
+      "description": "Plan a local research-to-deck workflow using authoring route, storyboard, page JSON, HTML package, render, and visual QA steps.",
+      "category": "workflow",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.authoring.plan",
+      "status": "beta",
+      "description": "Choose the safest local source format for a requested PDF deliverable before writing pages.",
+      "category": "authoring",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.storyboard.plan",
+      "status": "beta",
+      "description": "Create a deterministic page-by-page storyboard from an authoring brief and optional evidence cards.",
+      "category": "authoring",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.pages.write",
+      "status": "beta",
+      "description": "Convert a storyboard into page JSON blocks with source footers and design tokens.",
+      "category": "authoring",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.create.html_package",
+      "status": "beta",
+      "description": "Write a self-contained local HTML/CSS source package from page JSON for later PDF rendering.",
+      "category": "authoring",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.qa.visual_report",
+      "status": "beta",
+      "description": "Combine page-count, renderability, blank-page, and HTML package manifest checks for generated PDFs.",
+      "category": "validation",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.research.plan",
+      "status": "beta",
+      "description": "Plan a source-gathering strategy for an agent-authored PDF without performing network research in the OSS core.",
+      "category": "research",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.research.source_cards",
+      "status": "beta",
+      "description": "Normalize researched sources into structured source cards for authoring workflows.",
+      "category": "research",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.research.evidence_cards",
+      "status": "beta",
+      "description": "Turn source cards into evidence cards with claims, confidence, and usable page targets.",
+      "category": "research",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.insights.synthesize",
+      "status": "planned",
+      "description": "Synthesize source-backed insights for authoring workflows behind an explicit model-enabled boundary.",
+      "category": "insights",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": false,
+      "oss_default": false,
+      "requires_model": true
+    },
+    {
+      "name": "pdf.design.tokens",
+      "status": "beta",
+      "description": "Generate or select reusable design tokens for authoring source packages.",
+      "category": "authoring",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.pages.revise",
+      "status": "beta",
+      "description": "Revise generated page JSON while preserving source references and validation evidence.",
+      "category": "authoring",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
       "name": "pdf.inspect.document",
       "status": "stable",
       "description": "Detect page count, page sizes, rotations, encryption, metadata, text layer, forms, annotations, attachments, signatures, scanned pages, outlines.",
@@ -1224,6 +1419,21 @@
       "status": "beta",
       "description": "Convert local HTML text to a validated PDF with layout-approximation warnings in the OSS fallback converter.",
       "category": "convert_to_pdf",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.render.html_package",
+      "status": "beta",
+      "description": "Validate an AgentPDF HTML package manifest and render it to a validated PDF through the local fallback renderer.",
+      "category": "render",
       "interfaces": [
         "cli",
         "mcp",
@@ -2949,7 +3159,7 @@
     {
       "name": "pdf.ai.create.from_template_pack",
       "status": "beta",
-      "description": "Create a validated local PDF from a template pack with source and slot routing evidence.",
+      "description": "Create a validated local PDF from a template pack with source, slot routing, and optional HTML package evidence.",
       "category": "ai_create",
       "interfaces": [
         "cli",
