@@ -29,6 +29,8 @@ Use the Node CLI:
 node packages/agentpdf-node/dist/src/cli.js tools
 node packages/agentpdf-node/dist/src/cli.js agent-setup-claude-code -o .mcp.json --safe-root '${CLAUDE_PROJECT_DIR:-.}'
 node packages/agentpdf-node/dist/src/cli.js agent-setup-codex -o codex.mcp.json --safe-root .
+node packages/agentpdf-node/dist/src/cli.js agent-setup-kilo-code -o kilo-code.mcp.json --safe-root .
+node packages/agentpdf-node/dist/src/cli.js agent-setup-openclaw -o openclaw.mcp.json --safe-root .
 node packages/agentpdf-node/dist/src/cli.js workflow-plan --goal "Chat with this PDF and cite answers" --input-path .agentpdf-out/node-report.pdf
 node packages/agentpdf-node/dist/src/cli.js workflow-run --payload '{"steps":[{"step_id":"inspect","tool":"pdf.inspect.document","input":{"path":"<input.pdf>"}}],"input_path":".agentpdf-out/node-report.pdf"}' --binding '<question>=What is this report?' --dry-run
 node packages/agentpdf-node/dist/src/cli.js workflow-report --payload '{"run_id":"wfrun_node","status":"succeeded","planned_steps":1,"executed_steps":1,"failed_steps":0,"step_results":[]}' -o .agentpdf-out/node-workflow-report.md
@@ -49,6 +51,26 @@ node packages/agentpdf-node/dist/src/cli.js render-check .agentpdf-out/node-repo
 node packages/agentpdf-node/dist/src/cli.js blank-page-check .agentpdf-out/node-report-blank.pdf --pages all
 node packages/agentpdf-node/dist/src/cli.js extract-images .agentpdf-out/node-report-draft.pdf --pages all --out-dir .agentpdf-out/node-report-images
 node packages/agentpdf-node/dist/src/cli.js parse-lite .agentpdf-out/node-report-draft.pdf
+node packages/agentpdf-node/dist/src/cli.js semantic-diff .agentpdf-out/node-report-v1.pdf .agentpdf-out/node-report-v2.pdf --pages 1
+node packages/agentpdf-node/dist/src/cli.js version-report .agentpdf-out/node-report-v1.pdf .agentpdf-out/node-report-v2.pdf -o .agentpdf-out/node-report.version-report.md
+node packages/agentpdf-node/dist/src/cli.js compare-visual-diff .agentpdf-out/node-report-v1.pdf .agentpdf-out/node-report-v2.pdf --pages 1
+node packages/agentpdf-node/dist/src/cli.js visual-diff .agentpdf-out/node-report-v1.pdf .agentpdf-out/node-report-v2.pdf --max-difference-ratio 0.001
+node packages/agentpdf-node/dist/src/cli.js security-redact .agentpdf-out/sensitive.pdf -o .agentpdf-out/sensitive-redacted.pdf --region '{"page":1,"bbox":[60,700,280,760],"label":"secret"}'
+node packages/agentpdf-node/dist/src/cli.js security-verify-redaction .agentpdf-out/sensitive-redacted.pdf --search-term SECRET-CODE-123
+node packages/agentpdf-node/dist/src/cli.js redaction-check .agentpdf-out/sensitive-redacted.pdf --search-term SECRET-CODE-123
+node packages/agentpdf-node/dist/src/cli.js parse-figures .agentpdf-out/node-report-draft.pdf
+node packages/agentpdf-node/dist/src/cli.js parse-formulas .agentpdf-out/node-report-draft.pdf
+node packages/agentpdf-node/dist/src/cli.js parse-charts .agentpdf-out/node-report-draft.pdf
+node packages/agentpdf-node/dist/src/cli.js parse-references .agentpdf-out/node-report-draft.pdf
+node packages/agentpdf-node/dist/src/cli.js forms-create --field '{"name":"name","label":"Name","required":true}' -o .agentpdf-out/contact-form.pdf
+node packages/agentpdf-node/dist/src/cli.js forms-import-data .agentpdf-out/contact-form.pdf --data '{"name":"Ada"}' -o .agentpdf-out/contact-form-filled.pdf
+node packages/agentpdf-node/dist/src/cli.js forms-validate .agentpdf-out/contact-form-filled.pdf --required-field name
+node packages/agentpdf-node/dist/src/cli.js ocr-scan-to-pdf assets/brand/okpdf-logo.png -o .agentpdf-out/scan.pdf
+node packages/agentpdf-node/dist/src/cli.js ocr .agentpdf-out/scan.pdf --language eng
+node packages/agentpdf-node/dist/src/cli.js ocr-searchable-pdf .agentpdf-out/scan.pdf -o .agentpdf-out/scan-searchable.pdf --language eng
+node packages/agentpdf-node/dist/src/cli.js ocr-despeckle .agentpdf-out/scan.pdf -o .agentpdf-out/scan-despeckled.pdf
+node packages/agentpdf-node/dist/src/cli.js ocr-remove-existing .agentpdf-out/scan.pdf -o .agentpdf-out/scan-no-ocr.pdf
+node packages/agentpdf-node/dist/src/cli.js ocr-multilingual .agentpdf-out/scan.pdf --language eng --language chi_sim -o .agentpdf-out/scan-multilingual.pdf
 node packages/agentpdf-node/dist/src/cli.js pdf-to-json .agentpdf-out/node-report-draft.pdf -o .agentpdf-out/node-report.ir.json
 node packages/agentpdf-node/dist/src/cli.js pdf-to-markdown .agentpdf-out/node-report-draft.pdf -o .agentpdf-out/node-report.md
 node packages/agentpdf-node/dist/src/cli.js rag-ingest .agentpdf-out/node-report-draft.pdf --index .agentpdf-out/node-report.index.json
@@ -61,6 +83,7 @@ node packages/agentpdf-node/dist/src/cli.js rag-export-report .agentpdf-out/node
 node packages/agentpdf-node/dist/src/cli.js context-ingest --file src/agentpdf/compose/context.py --role code_evidence --label "Composer Source" -o .agentpdf-out/composer.context-item.json
 node packages/agentpdf-node/dist/src/cli.js code-snapshot src/agentpdf/compose/context.py --line-start 1 --line-end 80 --repository-root . -o .agentpdf-out/composer.snapshot.context-item.json
 node packages/agentpdf-node/dist/src/cli.js data-profile examples/create-data/metrics.csv --label "Runtime Metrics" -o .agentpdf-out/metrics.profile.context-item.json
+node packages/agentpdf-node/dist/src/cli.js context-image-analyze assets/brand/okpdf-logo.png --skip-ocr
 node packages/agentpdf-node/dist/src/cli.js context-packet --item-json .agentpdf-out/composer.context-item.json --text "Create a technical audit PDF from pre-ingested code evidence." -o .agentpdf-out/agent.context.packet.json
 node packages/agentpdf-node/dist/src/cli.js context-build --text "Create a technical audit PDF." --file README.md --item-json examples/context/media-items.json -o .agentpdf-out/context.packet.json
 node packages/agentpdf-node/dist/src/cli.js context-classify .agentpdf-out/context.packet.json --profile technical_audit -o .agentpdf-out/context.classification.json
@@ -68,7 +91,7 @@ node packages/agentpdf-node/dist/src/cli.js target-profiles -o .agentpdf-out/tar
 node packages/agentpdf-node/dist/src/cli.js target-validate --target-profile '{"profile_id":"media_learning_deck","layout_mode":"slides","accepted_block_types":["slide","audio_reference","video_reference"],"accepted_context_types":["text","audio","video"],"validation_required":["render_check","evidence_coverage_report"]}' -o .agentpdf-out/media-learning-deck.validation.json
 node packages/agentpdf-node/dist/src/cli.js compose-plan .agentpdf-out/context.packet.json --profile technical_audit -o .agentpdf-out/technical-audit.plan.json
 node packages/agentpdf-node/dist/src/cli.js compose-render-ir .agentpdf-out/technical-audit.plan.json -o .agentpdf-out/technical-audit-from-ir.pdf
-node packages/agentpdf-node/dist/src/cli.js compose-from-context .agentpdf-out/context.packet.json --profile technical_audit -o .agentpdf-out/technical-audit.pdf
+node packages/agentpdf-node/dist/src/cli.js compose-from-context .agentpdf-out/context.packet.json --profile technical_audit -o .agentpdf-out/technical-audit.pdf --renderer html --html-output .agentpdf-out/technical-audit.html
 node packages/agentpdf-node/dist/src/cli.js compose-from-context .agentpdf-out/context.packet.json --profile slide_deck -o .agentpdf-out/agent-review-deck.pdf
 node packages/agentpdf-node/dist/src/cli.js compose-add-code-block .agentpdf-out/technical-audit.pdf --title "Risk Function" --code "def risky_total(items): return sum(items)" --language python --source-ref ctx_002 --target-slot code_review -o .agentpdf-out/technical-audit.code.pdf
 node packages/agentpdf-node/dist/src/cli.js compose-add-table .agentpdf-out/technical-audit.pdf --title "Runtime Metrics" --columns metric,value --row latency_ms,42 --source-ref ctx_003 -o .agentpdf-out/technical-audit.table.pdf
@@ -80,10 +103,14 @@ node packages/agentpdf-node/dist/src/cli.js compose-add-slide .agentpdf-out/tech
 node packages/agentpdf-node/dist/src/cli.js evidence-context-packet-report .agentpdf-out/context.packet.json -o .agentpdf-out/context-report.pdf --report-output .agentpdf-out/context-report.json
 node packages/agentpdf-node/dist/src/cli.js evidence-coverage-report .agentpdf-out/technical-audit.composition.json -o .agentpdf-out/technical-audit.coverage.json
 node packages/agentpdf-node/dist/src/cli.js evidence-map-sources .agentpdf-out/technical-audit.composition.json --context-packet .agentpdf-out/context.packet.json -o .agentpdf-out/technical-audit.source-map.json
+node packages/agentpdf-node/dist/src/cli.js artifact-source-map --composition .agentpdf-out/technical-audit.composition.json --context-packet .agentpdf-out/context.packet.json -o .agentpdf-out/technical-audit.artifact-source-map.json --title "Technical Audit Artifact Source Map"
+node packages/agentpdf-node/dist/src/cli.js evidence-cite-claims --claims .agentpdf-out/claims.json --source-map .agentpdf-out/technical-audit.source-map.json -o .agentpdf-out/technical-audit.citations.json
 node packages/agentpdf-node/dist/src/cli.js patch-plan .agentpdf-out/technical-audit.pdf --operations '[{"op":"append_table","title":"Runtime Metrics","columns":["metric","value"],"rows":[["latency_ms","42"]],"source_refs":["ctx_002"],"target_slot":"findings"}]' -o .agentpdf-out/technical-audit.patch.json --composition .agentpdf-out/technical-audit.composition.json --layers .agentpdf-out/technical-audit.layers.json
 node packages/agentpdf-node/dist/src/cli.js patch-preview .agentpdf-out/technical-audit.patch.json -o .agentpdf-out/technical-audit.patch-preview.json
 node packages/agentpdf-node/dist/src/cli.js patch-apply .agentpdf-out/technical-audit.patch.json -o .agentpdf-out/technical-audit-patched.pdf
 node packages/agentpdf-node/dist/src/cli.js patch-verify .agentpdf-out/technical-audit.patch.json .agentpdf-out/technical-audit-patched.pdf
+node packages/agentpdf-node/dist/src/cli.js artifact-manifest --file .agentpdf-out/technical-audit-patched.pdf --file .agentpdf-out/technical-audit.composition.json --file .agentpdf-out/technical-audit.coverage.json --file .agentpdf-out/technical-audit.source-map.json --file .agentpdf-out/technical-audit.artifact-source-map.json --file .agentpdf-out/technical-audit.citations.json --file .agentpdf-out/technical-audit.patch.json -o .agentpdf-out/technical-audit.artifacts.json --title "Technical Audit Artifacts" --metadata workflow=context-packet-patch
+node packages/agentpdf-node/dist/src/cli.js artifact-graph --manifest .agentpdf-out/technical-audit.artifacts.json -o .agentpdf-out/technical-audit.artifact-graph.json --title "Technical Audit Artifact Graph"
 node packages/agentpdf-node/dist/src/cli.js export-bundle --file .agentpdf-out/technical-audit-patched.pdf --file .agentpdf-out/technical-audit.composition.json --file .agentpdf-out/technical-audit.coverage.json --file .agentpdf-out/technical-audit.patch.json -o .agentpdf-out/technical-audit.agentpdf-bundle.zip --title "Technical Audit Bundle" --metadata workflow=context-packet-patch
 ```
 
@@ -99,6 +126,14 @@ const claude = await client.setupClaudeCode({
   outputPath: ".mcp.json",
   safeRoot: "${CLAUDE_PROJECT_DIR:-.}",
 });
+const kilo = await client.setupKiloCode({
+  outputPath: "kilo-code.mcp.json",
+  safeRoot: ".",
+});
+const openclaw = await client.setupOpenClaw({
+  outputPath: "openclaw.mcp.json",
+  safeRoot: ".",
+});
 const created = await client.createMarkdownPdf({
   markdown: "# Agent Report\n\n- Local-first\n- Node-ready",
   outputPath: ".agentpdf-out/report.pdf",
@@ -108,6 +143,60 @@ const pages = await client.inspectPages({
   inputPath: ".agentpdf-out/report.pdf",
   pages: "1",
   renderCheck: true,
+});
+const renderedDiff = await client.visualDiff({
+  beforePath: ".agentpdf-out/report-v1.pdf",
+  afterPath: ".agentpdf-out/report-v2.pdf",
+  pages: "1",
+});
+const visualValidation = await client.validationVisualDiff({
+  beforePath: ".agentpdf-out/report-v1.pdf",
+  afterPath: ".agentpdf-out/report-v2.pdf",
+  maxDifferenceRatio: 0.001,
+});
+const redacted = await client.securityRedact({
+  inputPath: ".agentpdf-out/sensitive.pdf",
+  outputPath: ".agentpdf-out/sensitive-redacted.pdf",
+  regions: [{ page: 1, bbox: [60, 700, 280, 760], label: "secret" }],
+});
+const redactionVerified = await client.securityVerifyRedaction({
+  inputPath: ".agentpdf-out/sensitive-redacted.pdf",
+  searchTerms: ["SECRET-CODE-123"],
+});
+const redactionCheck = await client.validationRedactionCheck({
+  inputPath: ".agentpdf-out/sensitive-redacted.pdf",
+  searchTerms: ["SECRET-CODE-123"],
+});
+const form = await client.formsCreate({
+  outputPath: ".agentpdf-out/contact-form.pdf",
+  fields: [{ name: "name", label: "Name", required: true }],
+});
+const filledForm = await client.formsImportData({
+  inputPath: ".agentpdf-out/contact-form.pdf",
+  data: { name: "Ada" },
+  outputPath: ".agentpdf-out/contact-form-filled.pdf",
+});
+const formValidation = await client.formsValidate({
+  inputPath: ".agentpdf-out/contact-form-filled.pdf",
+  requiredFields: ["name"],
+});
+const scan = await client.ocrScanToPdf({
+  imagePaths: ["assets/brand/okpdf-logo.png"],
+  outputPath: ".agentpdf-out/scan.pdf",
+});
+const ocrText = await client.ocr({
+  inputPath: ".agentpdf-out/scan.pdf",
+  languages: ["eng"],
+});
+const searchableScan = await client.ocrSearchablePdf({
+  inputPath: ".agentpdf-out/scan.pdf",
+  outputPath: ".agentpdf-out/scan-searchable.pdf",
+  languages: ["eng"],
+});
+const preparedScan = await client.ocrMultilingual({
+  inputPath: ".agentpdf-out/scan.pdf",
+  outputPath: ".agentpdf-out/scan-multilingual.pdf",
+  languages: ["eng", "chi_sim"],
 });
 const plan = await client.workflowPlan({
   goal: "Chat with this PDF and cite answers",
@@ -293,6 +382,8 @@ const composedAudit = await client.composeFromContext({
   contextPacketPath: ".agentpdf-out/context.packet.json",
   profile: "technical_audit",
   outputPath: ".agentpdf-out/technical-audit.pdf",
+  renderer: "html",
+  htmlOutputPath: ".agentpdf-out/technical-audit.html",
 });
 const composedDeck = await client.composeFromContext({
   contextPacketPath: ".agentpdf-out/context.packet.json",
@@ -375,6 +466,23 @@ const sourceMap = await client.evidenceMapSources({
   contextPacketPath: ".agentpdf-out/context.packet.json",
   outputPath: ".agentpdf-out/technical-audit.source-map.json",
 });
+const artifactSourceMap = await client.artifactSourceMap({
+  compositionPath: ".agentpdf-out/technical-audit.composition.json",
+  contextPacketPath: ".agentpdf-out/context.packet.json",
+  outputPath: ".agentpdf-out/technical-audit.artifact-source-map.json",
+  title: "Technical Audit Artifact Source Map",
+});
+const citations = await client.evidenceCiteClaims({
+  claims: [
+    {
+      claim_id: "claim_latency",
+      text: "Runtime metrics include latency evidence.",
+      source_refs: ["ctx_002"],
+    },
+  ],
+  sourceMapPath: ".agentpdf-out/technical-audit.source-map.json",
+  outputPath: ".agentpdf-out/technical-audit.citations.json",
+});
 const patch = await client.patchPlan({
   inputPath: ".agentpdf-out/technical-audit.pdf",
   operations: [
@@ -414,6 +522,25 @@ await client.patchApply({
 await client.patchVerify({
   patchManifestPath: ".agentpdf-out/technical-audit.patch.json",
   patchedPath: ".agentpdf-out/technical-audit-patched.pdf",
+});
+const artifactManifest = await client.artifactManifest({
+  artifactPaths: [
+    ".agentpdf-out/technical-audit-patched.pdf",
+    ".agentpdf-out/technical-audit.composition.json",
+    ".agentpdf-out/technical-audit.coverage.json",
+    ".agentpdf-out/technical-audit.source-map.json",
+    ".agentpdf-out/technical-audit.artifact-source-map.json",
+    ".agentpdf-out/technical-audit.citations.json",
+    ".agentpdf-out/technical-audit.patch.json",
+  ],
+  outputPath: ".agentpdf-out/technical-audit.artifacts.json",
+  title: "Technical Audit Artifacts",
+  metadata: { workflow: "context-packet-patch", agent: "node" },
+});
+const artifactGraph = await client.artifactGraph({
+  artifactManifestPath: ".agentpdf-out/technical-audit.artifacts.json",
+  outputPath: ".agentpdf-out/technical-audit.artifact-graph.json",
+  title: "Technical Audit Artifact Graph",
 });
 await client.patchPlan({
   inputPath: ".agentpdf-out/board-audit.pdf",
@@ -553,6 +680,10 @@ console.log(ragReport.usage.pages_cited);
 - `listTools()`
 - `getTool(name)`
 - `runTool(name, payload)`
+- `setupClaudeCode({ outputPath, safeRoot, command, argsPrefix, serverName, scope })`
+- `setupCodex({ outputPath, safeRoot, command, argsPrefix, serverName })`
+- `setupKiloCode({ outputPath, safeRoot, command, argsPrefix, serverName })`
+- `setupOpenClaw({ outputPath, safeRoot, command, argsPrefix, serverName })`
 - `inspectDocument({ path })`
 - `inspectPages({ inputPath, pages, renderCheck })`
 - `workflowPlan({ goal, inputPath })`
@@ -584,9 +715,10 @@ console.log(ragReport.usage.pages_cited);
 - `validateTargetProfile({ targetProfile, targetProfilePath, outputPath })`
 - `codeSnapshot({ path, outputPath, label, role, contextItemId, lineStart, lineEnd, repositoryRoot, includeDependencies })`
 - `dataProfile({ path, outputPath, label, role, contextItemId, sheet, maxRows })`
+- `contextImageAnalyze({ inputPath, languages, runOcr, engine, psm })`
 - `composePlan({ contextPacket, contextPacketPath, targetProfile, profile, outputPath, stylePack, title })`
 - `composeRenderIr({ composition, compositionPath, outputPath, stylePack, title })`
-- `composeFromContext({ contextPacket, contextPacketPath, targetProfile, profile, outputPath, stylePack, title })`
+- `composeFromContext({ contextPacket, contextPacketPath, targetProfile, profile, outputPath, stylePack, title, renderer, htmlOutputPath })`
 - `composeAddCodeBlock({ inputPath, outputPath, title, code, language, sourceRefs, blockId, targetSlot, compositionPath, layerManifestPath, manifestOutputPath })`
 - `composeAddTable({ inputPath, outputPath, title, columns, rows, sourceRefs, blockId, targetSlot, compositionPath, layerManifestPath, manifestOutputPath })`
 - `composeAddFigure({ inputPath, outputPath, title, imagePath, caption, sourceRefs, blockId, targetSlot, compositionPath, layerManifestPath, manifestOutputPath })`
@@ -596,6 +728,10 @@ console.log(ragReport.usage.pages_cited);
 - `composeAddSlide({ inputPath, outputPath, title, body, subtitle, code, table, imagePath, sourceRefs, blockId, targetSlot, compositionPath, layerManifestPath, manifestOutputPath })`
 - `evidenceCoverageReport({ composition, compositionPath, outputPath })`
 - `evidenceMapSources({ composition, compositionPath, blocks, claims, contextPacket, contextPacketPath, outputPath })`
+- `evidenceCiteClaims({ claims, composition, compositionPath, sourceMap, sourceMapPath, contextPacket, contextPacketPath, outputPath })`
+- `artifactSourceMap({ composition, compositionPath, sourceMap, sourceMapPath, contextPacket, contextPacketPath, artifactManifestPath, artifactPaths, outputPath, title })`
+- `artifactManifest({ artifactPaths, outputPath, title, metadata })`
+- `artifactGraph({ artifactManifestPath, artifactPaths, outputPath, title })`
 - `patchPlan({ inputPath, operations, outputPath, compositionPath, layerManifestPath, reason })`
 - `patchPreview({ patchManifest, patchManifestPath, outputPath })`
 - `patchApply({ patchManifest, patchManifestPath, outputPath })`
@@ -606,10 +742,21 @@ console.log(ragReport.usage.pages_cited);
 - `pageCountCheck({ path, expectedPages })`
 - `metadataPageInfo({ inputPath, pages })`
 - `securityRemoveMetadata({ inputPath, outputPath })`
+- `securityRedact({ inputPath, outputPath, regions, fillColor, renderScale })`
+- `securityVerifyRedaction({ inputPath, searchTerms })`
+- `validationRedactionCheck({ inputPath, searchTerms })`
 - `renderCheck({ path, pages })`
 - `blankPageCheck({ path, pages })`
 - `extractImages({ inputPath, pages, outDir })`
 - `parseLite({ inputPath, pages })`
+- `semanticDiff({ beforePath, afterPath, pages })`
+- `compareSemanticDiff({ beforePath, afterPath, pages })`
+- `versionReport({ beforePath, afterPath, outputPath, pages })`
+- `compareVersionReport({ beforePath, afterPath, outputPath, pages })`
+- `parseFigures({ inputPath, pages })`
+- `parseFormulas({ inputPath, pages })`
+- `parseCharts({ inputPath, pages })`
+- `parseReferences({ inputPath, pages })`
 - `pdfToJson({ inputPath, outputPath, pages })`
 - `pdfToMarkdown({ inputPath, outputPath, pages })`
 - `ragIngest({ inputPath, indexPath, pages, maxChars, overlapChars })`

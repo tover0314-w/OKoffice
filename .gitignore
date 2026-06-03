@@ -34,6 +34,7 @@ coverage.xml
 # Local AgentPDF outputs
 .agentpdf-out/
 renders/
+/output/
 /outputs/
 /artifacts/
 /artifact-bundles/
@@ -54,6 +55,7 @@ renders/
 .claude/
 .cursor/
 codex.local.toml
+docs/superpowers/
 
 # Editors and OS files
 .idea/

@@ -38,6 +38,42 @@ def test_api_shows_single_tool() -> None:
     assert payload["implemented"] is True
 
 
+def test_api_runs_ocr_tool(monkeypatch, tmp_path: Path) -> None:
+    client = TestClient(create_app())
+    image = tmp_path / "scan.png"
+    Image.new("RGB", (160, 80), color=(255, 255, 255)).save(image)
+    monkeypatch.setattr("agentpdf.ocr_scan.local._run_tesseract_tsv", _fake_tesseract_tsv)
+
+    response = client.post(
+        "/v1/tools/pdf.ocr_scan.ocr/run",
+        json={"input_path": str(image), "languages": ["eng"]},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["tool"] == "pdf.ocr_scan.ocr"
+    assert payload["usage"]["text"] == "Hello OCR"
+    assert payload["usage"]["pages"][0]["regions"][0]["confidence"] == 96.0
+
+
+def test_api_runs_image_analyze_tool(monkeypatch, tmp_path: Path) -> None:
+    client = TestClient(create_app())
+    image = tmp_path / "scan.png"
+    Image.new("RGB", (160, 80), color=(255, 255, 255)).save(image)
+    monkeypatch.setattr("agentpdf.ocr_scan.local._run_tesseract_tsv", _fake_tesseract_tsv)
+
+    response = client.post(
+        "/v1/tools/pdf.context.image_analyze/run",
+        json={"input_path": str(image), "languages": ["eng"]},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["tool"] == "pdf.context.image_analyze"
+    assert payload["usage"]["image"]["width"] == 160
+    assert payload["usage"]["ocr"]["text"] == "Hello OCR"
+
+
 def test_api_runs_inspect_tool(simple_pdf: Path) -> None:
     client = TestClient(create_app())
 
@@ -244,11 +280,23 @@ def test_api_runs_reorder_and_insert_blank_pages(two_page_pdf: Path, tmp_path: P
             "output_path": str(with_blank),
         },
     )
+    n_up = client.post(
+        "/v1/tools/pdf.organize.n_up/run",
+        json={"input_path": str(with_blank), "per_sheet": 2, "output_path": str(tmp_path / "n-up.pdf")},
+    )
+    booklet = client.post(
+        "/v1/tools/pdf.organize.booklet/run",
+        json={"input_path": str(with_blank), "output_path": str(tmp_path / "booklet.pdf")},
+    )
 
     assert reorder.status_code == 200
     assert reorder.json()["tool"] == "pdf.organize.reorder_pages"
     assert insert_blank.status_code == 200
     assert insert_blank.json()["artifacts"][0]["page_count"] == 3
+    assert n_up.status_code == 200
+    assert n_up.json()["tool"] == "pdf.organize.n_up"
+    assert booklet.status_code == 200
+    assert booklet.json()["tool"] == "pdf.organize.booklet"
 
 
 def test_api_runs_optimize_compress_and_repair(two_page_pdf: Path, tmp_path: Path) -> None:
@@ -262,11 +310,23 @@ def test_api_runs_optimize_compress_and_repair(two_page_pdf: Path, tmp_path: Pat
         "/v1/tools/pdf.optimize.repair/run",
         json={"input_path": str(two_page_pdf), "output_path": str(tmp_path / "repaired.pdf")},
     )
+    remove_unused = client.post(
+        "/v1/tools/pdf.optimize.remove_unused_objects/run",
+        json={"input_path": str(two_page_pdf), "output_path": str(tmp_path / "optimized.pdf")},
+    )
+    validate_pdfa = client.post(
+        "/v1/tools/pdf.optimize.validate_pdfa/run",
+        json={"input_path": str(two_page_pdf)},
+    )
 
     assert compress.status_code == 200
     assert compress.json()["tool"] == "pdf.optimize.compress"
     assert repair.status_code == 200
     assert repair.json()["tool"] == "pdf.optimize.repair"
+    assert remove_unused.status_code == 200
+    assert remove_unused.json()["tool"] == "pdf.optimize.remove_unused_objects"
+    assert validate_pdfa.status_code == 200
+    assert validate_pdfa.json()["tool"] == "pdf.optimize.validate_pdfa"
 
 
 def test_api_runs_render_tool(simple_pdf: Path, tmp_path: Path) -> None:
@@ -314,6 +374,10 @@ def test_api_runs_text_and_metadata_tools(text_pdf: Path, metadata_pdf: Path, tm
         "/v1/tools/pdf.convert.pdf_to_text/run",
         json={"input_path": str(text_pdf), "pages": "1"},
     )
+    fonts = client.post(
+        "/v1/tools/pdf.convert.extract_fonts/run",
+        json={"input_path": str(text_pdf), "pages": "1"},
+    )
     read = client.post("/v1/tools/pdf.metadata.read/run", json={"input_path": str(metadata_pdf)})
     page_info = client.post(
         "/v1/tools/pdf.metadata.page_info/run",
@@ -327,6 +391,14 @@ def test_api_runs_text_and_metadata_tools(text_pdf: Path, metadata_pdf: Path, tm
             "output_path": str(tmp_path / "updated.pdf"),
         },
     )
+    outline = client.post(
+        "/v1/tools/pdf.metadata.update_outline/run",
+        json={
+            "input_path": str(metadata_pdf),
+            "outline": [{"title": "Page One", "page": 1}],
+            "output_path": str(tmp_path / "outlined.pdf"),
+        },
+    )
     remove = client.post(
         "/v1/tools/pdf.metadata.remove/run",
         json={"input_path": str(metadata_pdf), "output_path": str(tmp_path / "clean.pdf")},
@@ -338,12 +410,16 @@ def test_api_runs_text_and_metadata_tools(text_pdf: Path, metadata_pdf: Path, tm
 
     assert text.status_code == 200
     assert "AgentPDF local text layer" in text.json()["usage"]["text"]
+    assert fonts.status_code == 200
+    assert fonts.json()["tool"] == "pdf.convert.extract_fonts"
     assert read.status_code == 200
     assert read.json()["usage"]["metadata"]["Title"] == "Original Title"
     assert page_info.status_code == 200
     assert page_info.json()["tool"] == "pdf.metadata.page_info"
     assert update.status_code == 200
     assert update.json()["tool"] == "pdf.metadata.update"
+    assert outline.status_code == 200
+    assert outline.json()["tool"] == "pdf.metadata.update_outline"
     assert remove.status_code == 200
     assert remove.json()["tool"] == "pdf.metadata.remove"
     assert security_remove.status_code == 200
@@ -438,6 +514,13 @@ def test_api_runs_image_watermark_page_numbers_and_validate(tmp_path: Path) -> N
     image_pdf = tmp_path / "cover.pdf"
     watermarked = tmp_path / "watermarked.pdf"
     numbered = tmp_path / "numbered.pdf"
+    shaped = tmp_path / "shaped.pdf"
+    underlined = tmp_path / "underlined.pdf"
+    struck = tmp_path / "struck.pdf"
+    drawn = tmp_path / "drawn.pdf"
+    resized = tmp_path / "resized.pdf"
+    margined = tmp_path / "margined.pdf"
+    underlaid = tmp_path / "underlaid.pdf"
     Image.new("RGB", (160, 90), color=(80, 40, 120)).save(image)
 
     image_result = client.post(
@@ -452,21 +535,63 @@ def test_api_runs_image_watermark_page_numbers_and_validate(tmp_path: Path) -> N
         "/v1/tools/pdf.edit.page_numbers/run",
         json={"input_path": str(watermarked), "output_path": str(numbered)},
     )
+    shape = client.post(
+        "/v1/tools/pdf.edit.add_shape/run",
+        json={
+            "input_path": str(numbered),
+            "output_path": str(shaped),
+            "shape": "rectangle",
+            "page": 1,
+            "x": 12,
+            "y": 12,
+            "width": 48,
+            "height": 32,
+        },
+    )
+    underline = client.post(
+        "/v1/tools/pdf.edit.underline/run",
+        json={"input_path": str(shaped), "output_path": str(underlined), "page": 1, "bbox": [10, 10, 80, 24]},
+    )
+    strikeout = client.post(
+        "/v1/tools/pdf.edit.strikeout/run",
+        json={"input_path": str(underlined), "output_path": str(struck), "page": 1, "bbox": [10, 10, 80, 24]},
+    )
+    draw = client.post(
+        "/v1/tools/pdf.edit.freehand_draw/run",
+        json={
+            "input_path": str(struck),
+            "output_path": str(drawn),
+            "page": 1,
+            "points": [[10, 10], [30, 40], [60, 20]],
+        },
+    )
+    resize = client.post(
+        "/v1/tools/pdf.edit.resize_pages/run",
+        json={"input_path": str(drawn), "output_path": str(resized), "width": 200, "height": 200},
+    )
+    margin = client.post(
+        "/v1/tools/pdf.edit.add_margin/run",
+        json={"input_path": str(resized), "output_path": str(margined), "margin": 12},
+    )
+    underlay = client.post(
+        "/v1/tools/pdf.edit.underlay/run",
+        json={"input_path": str(margined), "output_path": str(underlaid), "text": "DRAFT"},
+    )
     validate = client.post(
         "/v1/tools/pdf.validation.validate_output/run",
-        json={"path": str(numbered), "expected_pages": 1},
+        json={"path": str(underlaid), "expected_pages": 1},
     )
     page_count = client.post(
         "/v1/tools/pdf.validation.page_count_check/run",
-        json={"path": str(numbered), "expected_pages": 1},
+        json={"path": str(underlaid), "expected_pages": 1},
     )
     render_check = client.post(
         "/v1/tools/pdf.validation.render_check/run",
-        json={"path": str(numbered), "pages": "1"},
+        json={"path": str(underlaid), "pages": "1"},
     )
     blank_check = client.post(
         "/v1/tools/pdf.validation.blank_page_check/run",
-        json={"path": str(numbered), "pages": "1"},
+        json={"path": str(underlaid), "pages": "1"},
     )
 
     assert image_result.status_code == 200
@@ -475,6 +600,20 @@ def test_api_runs_image_watermark_page_numbers_and_validate(tmp_path: Path) -> N
     assert watermark.json()["tool"] == "pdf.edit.watermark"
     assert page_numbers.status_code == 200
     assert page_numbers.json()["tool"] == "pdf.edit.page_numbers"
+    assert shape.status_code == 200
+    assert shape.json()["tool"] == "pdf.edit.add_shape"
+    assert underline.status_code == 200
+    assert underline.json()["tool"] == "pdf.edit.underline"
+    assert strikeout.status_code == 200
+    assert strikeout.json()["tool"] == "pdf.edit.strikeout"
+    assert draw.status_code == 200
+    assert draw.json()["tool"] == "pdf.edit.freehand_draw"
+    assert resize.status_code == 200
+    assert resize.json()["tool"] == "pdf.edit.resize_pages"
+    assert margin.status_code == 200
+    assert margin.json()["tool"] == "pdf.edit.add_margin"
+    assert underlay.status_code == 200
+    assert underlay.json()["tool"] == "pdf.edit.underlay"
     assert validate.status_code == 200
     assert page_count.status_code == 200
     assert page_count.json()["tool"] == "pdf.validation.page_count_check"
@@ -590,6 +729,23 @@ def test_api_rejects_unimplemented_tool() -> None:
 
     assert response.status_code == 400
     assert response.json()["error"]["code"] == "tool_not_implemented"
+
+
+def _fake_tesseract_tsv(
+    image_path: Path,
+    languages: list[str],
+    engine: str,
+    psm: int,
+) -> str:
+    assert image_path.exists()
+    assert languages == ["eng"]
+    assert engine == "tesseract"
+    assert psm == 6
+    return (
+        "level\tpage_num\tblock_num\tpar_num\tline_num\tword_num\tleft\ttop\twidth\theight\tconf\ttext\n"
+        "5\t1\t1\t1\t1\t1\t10\t20\t40\t12\t96\tHello\n"
+        "5\t1\t1\t1\t1\t2\t56\t20\t28\t12\t91\tOCR\n"
+    )
 
 
 def _write_image_pdf(path: Path, image_path: Path) -> None:

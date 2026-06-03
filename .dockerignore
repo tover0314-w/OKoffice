@@ -1,6 +1,7 @@
 .git
 .github
 .agentpdf-out
+output
 outputs
 artifacts
 artifact-bundles
@@ -34,6 +35,7 @@ coverage.xml
 .mcp.json
 .claude
 .cursor
+docs/superpowers
 tmp
 temp
 *.tmp

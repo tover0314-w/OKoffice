@@ -153,3 +153,84 @@ def test_codex_setup_rest_and_mcp_are_exposed(tmp_path: Path) -> None:
     tool_names = {tool.name for tool in asyncio.run(create_mcp_server().list_tools())}
     assert "agent_setup_codex" in tool_names
     assert get_tool("agent.setup.codex").implemented is True
+
+
+def test_kilo_code_setup_cli_writes_mcp_config(tmp_path: Path) -> None:
+    output_path = tmp_path / "kilo-code.mcp.json"
+
+    result = runner.invoke(
+        app,
+        [
+            "agent",
+            "setup",
+            "kilo-code",
+            "--output",
+            str(output_path),
+            "--safe-root",
+            ".",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    config = json.loads(output_path.read_text(encoding="utf-8"))
+    server = config["mcpServers"]["agentpdf"]
+
+    assert payload["tool"] == "agent.setup.kilo_code"
+    assert payload["usage"]["agent"] == "kilo-code"
+    assert payload["usage"]["mcp_config"] == config
+    assert server["command"] == "okpdf"
+    assert server["args"] == ["serve", "--mcp", "--safe-root", "."]
+    assert "pdf_context_build_packet" in payload["usage"]["recommended_mcp_tools"]
+    assert "kilo-code.mcp.json" in payload["usage"]["recommended_config_files"]
+
+
+def test_openclaw_setup_cli_rest_and_mcp_are_exposed(tmp_path: Path) -> None:
+    output_path = tmp_path / "openclaw.mcp.json"
+    client = TestClient(create_app())
+
+    cli = runner.invoke(
+        app,
+        [
+            "agent",
+            "setup",
+            "openclaw",
+            "--output",
+            str(output_path),
+            "--safe-root",
+            ".",
+            "--json",
+        ],
+    )
+    response = client.post(
+        "/v1/tools/agent.setup.openclaw/run",
+        json={
+            "output_path": str(tmp_path / "openclaw.api.json"),
+            "safe_root": ".",
+            "command": "python",
+            "args_prefix": ["-m", "agentpdf.cli"],
+        },
+    )
+
+    assert cli.exit_code == 0
+    assert json.loads(cli.stdout)["tool"] == "agent.setup.openclaw"
+    assert response.status_code == 200
+    payload = response.json()
+    config = json.loads((tmp_path / "openclaw.api.json").read_text(encoding="utf-8"))
+    assert payload["tool"] == "agent.setup.openclaw"
+    assert config["mcpServers"]["agentpdf"]["command"] == "python"
+    assert config["mcpServers"]["agentpdf"]["args"] == [
+        "-m",
+        "agentpdf.cli",
+        "serve",
+        "--mcp",
+        "--safe-root",
+        ".",
+    ]
+
+    tool_names = {tool.name for tool in asyncio.run(create_mcp_server().list_tools())}
+    assert "agent_setup_kilo_code" in tool_names
+    assert "agent_setup_openclaw" in tool_names
+    assert get_tool("agent.setup.kilo_code").implemented is True
+    assert get_tool("agent.setup.openclaw").implemented is True

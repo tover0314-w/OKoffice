@@ -71,9 +71,23 @@ Use the same stdio MCP command from any agent runtime that supports MCP:
 }
 ```
 
+## Kilo Code / OpenClaw Style Configs
+
+Generate local MCP configs for Kilo Code or OpenClaw-style agent runtimes:
+
+```bash
+okpdf agent setup kilo-code -o kilo-code.mcp.json --safe-root . --json
+okpdf agent setup openclaw -o openclaw.mcp.json --safe-root . --json
+```
+
+The same setup tools are exposed as REST tools `agent.setup.kilo_code` and `agent.setup.openclaw`, MCP tools `agent_setup_kilo_code` and `agent_setup_openclaw`, and Node commands `agentpdf-node agent-setup-kilo-code` and `agentpdf-node agent-setup-openclaw`.
+
 ## Exposed Local Tools
 
 - `agent_setup_claude_code`
+- `agent_setup_codex`
+- `agent_setup_kilo_code`
+- `agent_setup_openclaw`
 - `agentpdf_tool_manifest`
 - `pdf_inspect_document`
 - `pdf_inspect_pages`
@@ -117,6 +131,8 @@ Use the same stdio MCP command from any agent runtime that supports MCP:
 - `pdf_target_profiles`
 - `pdf_target_validate_profile`
 - `pdf_evidence_coverage_report`
+- `pdf_evidence_map_sources`
+- `pdf_evidence_cite_claims`
 - `pdf_evidence_context_packet_report`
 - `pdf_artifacts_export_bundle`
 - `pdf_artifacts_verify_bundle`
@@ -173,6 +189,18 @@ curl -X POST http://127.0.0.1:7331/v1/tools/agent.setup.claude_code/run \
     "output_path": ".mcp.json",
     "safe_root": "${CLAUDE_PROJECT_DIR:-.}"
   }'
+```
+
+Example Kilo Code and OpenClaw setup requests:
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/agent.setup.kilo_code/run \
+  -H 'Content-Type: application/json' \
+  -d '{"output_path": "kilo-code.mcp.json", "safe_root": "."}'
+
+curl -X POST http://127.0.0.1:7331/v1/tools/agent.setup.openclaw/run \
+  -H 'Content-Type: application/json' \
+  -d '{"output_path": "openclaw.mcp.json", "safe_root": "."}'
 ```
 
 Example inspect request:
@@ -368,7 +396,7 @@ curl -X POST http://127.0.0.1:7331/v1/tools/pdf.target.validate_profile/run \
 
 curl -X POST http://127.0.0.1:7331/v1/tools/pdf.compose.from_context/run \
   -H 'Content-Type: application/json' \
-  -d '{"context_packet_path": "context.packet.json", "profile": "technical_audit", "output_path": "technical-audit.pdf"}'
+  -d '{"context_packet_path": "context.packet.json", "profile": "technical_audit", "output_path": "technical-audit.pdf", "renderer": "html", "html_output_path": "technical-audit.html"}'
 
 curl -X POST http://127.0.0.1:7331/v1/tools/pdf.evidence.context_packet_report/run \
   -H 'Content-Type: application/json' \
@@ -379,7 +407,7 @@ curl -X POST http://127.0.0.1:7331/v1/tools/pdf.compose.from_context/run \
   -d '{"context_packet_path": "context.packet.json", "profile": "slide_deck", "output_path": "agent-review-deck.pdf"}'
 ```
 
-For context-to-PDF composition, agents should build a context packet, inspect the returned `source_graph`, run `pdf.context.classify` to get deterministic local block and target-slot routing hints, optionally run `pdf.evidence.context_packet_report` to create a validated PDF/JSON audit appendix for the packet, call `pdf.target.profiles` to inspect available target slots and accepted block/context types, optionally call `pdf.target.validate_profile` for a custom profile, then compose. The local baseline now accepts text, files, links, inline table JSON, and audio/video media files with optional agent-provided transcripts, chapters, and keyframes. Code files become `code` blocks, CSV/inline tables become `table` blocks, image files become embedded `image` blocks, PDFs become `pdf_reference` blocks, and media files become `audio_reference` or `video_reference` blocks in `composition_ir`. The context packet report records source refs, source graph nodes, checksums, primary evidence kinds, media transcript excerpts, and explicit local limitations such as no default web fetching, OCR, or vision-model interpretation. The `slide_deck` profile renders one slide-like PDF page per deck slide and stores `slide` blocks with slide numbers and source refs. The result includes a PDF artifact, a `.composition.json` artifact, `composition_ir`, `source_map`, and `evidence_coverage`.
+For context-to-PDF composition, agents should build a context packet, inspect the returned `source_graph`, run `pdf.context.classify` to get deterministic local block and target-slot routing hints, optionally run `pdf.evidence.context_packet_report` to create a validated PDF/JSON audit appendix for the packet, call `pdf.target.profiles` to inspect available target slots and accepted block/context types, optionally call `pdf.target.validate_profile` for a custom profile, then compose. Document-style runs can pass `renderer=html` and `html_output_path` to write an inspectable HTML package plus `.html-manifest.json` before the final PDF conversion; the current OSS converter keeps this evidence contract while using a lightweight layout approximation until a browser renderer worker is available. The local baseline now accepts text, files, links, inline table JSON, and audio/video media files with optional agent-provided transcripts, chapters, and keyframes. Code files become `code` blocks, CSV/inline tables become `table` blocks, image files become embedded `image` blocks, PDFs become `pdf_reference` blocks, and media files become `audio_reference` or `video_reference` blocks in `composition_ir`. The context packet report records source refs, source graph nodes, checksums, primary evidence kinds, media transcript excerpts, and explicit local limitations such as no default web fetching, OCR, or vision-model interpretation. The `slide_deck` profile renders one slide-like PDF page per deck slide and stores `slide` blocks with slide numbers and source refs. The result includes a PDF artifact, a `.composition.json` artifact, optional HTML package artifacts, `composition_ir`, `source_map`, and `evidence_coverage`.
 
 For quick agent edits after a PDF already exists, `pdf.compose.add_code_block`, `pdf.compose.add_table`, `pdf.compose.add_figure`, `pdf.compose.add_appendix`, `pdf.compose.add_citation`, `pdf.compose.add_media_reference`, and `pdf.compose.add_slide` provide a one-step append-only composition layer. Each call writes a new PDF, a `.compose-block.json` manifest, patch evidence, rollback metadata, validation, and an `input_unchanged` proof. Citation append records local citation metadata with `fetch_status=not_fetched` by default; media-reference append records local file metadata, MIME type, size, SHA-256, and provided transcript excerpts without transcribing audio/video by default. Agents can pass `source_refs`, `block_id`, `target_slot`, `composition_path`, and `layer_manifest_path`; when those evidence files are present, the same source-ref and layer edit-policy checks used by patch transactions are enforced. These tools are meant for safe block insertion and evidence appendices, not layout-preserving in-place body edits.
 

@@ -13,6 +13,7 @@ from agentpdf.api.app import create_app
 from agentpdf.cli.main import app
 from agentpdf.compose.context import compose_from_context, plan_composition, render_composition_ir
 from agentpdf.context.packet import build_context_packet
+from agentpdf.context.image import analyze_image
 from agentpdf.core.pdf import create_text_pdf, inspect_pdf_pages
 from agentpdf.evidence.context_packet_report import create_context_packet_report
 from agentpdf.mcp.server import (
@@ -219,6 +220,22 @@ def test_build_context_packet_adds_local_image_visual_evidence(tmp_path: Path) -
     assert "Visual evidence: non-white ratio 0.5" in result.usage["generated_markdown"]
 
 
+def test_image_analyze_returns_local_metadata_and_ocr_regions(monkeypatch, tmp_path: Path) -> None:
+    image_path = tmp_path / "scan.png"
+    Image.new("RGB", (160, 80), color=(255, 255, 255)).save(image_path)
+    monkeypatch.setattr("agentpdf.ocr_scan.local._run_tesseract_tsv", _fake_tesseract_tsv)
+
+    result = analyze_image(image_path, languages=["eng"])
+
+    assert result.status == "succeeded"
+    assert result.tool == "pdf.context.image_analyze"
+    assert result.usage["image"]["width"] == 160
+    assert result.usage["image"]["height"] == 80
+    assert result.usage["ocr"]["text"] == "Hello OCR"
+    assert result.usage["ocr"]["regions"][0]["image_bbox"] == [10, 20, 50, 32]
+    assert "No vision model was used." in result.usage["limitations"]
+
+
 def test_build_context_packet_adds_pdf_page_text_evidence(tmp_path: Path) -> None:
     source_pdf = tmp_path / "source.pdf"
     create_text_pdf(
@@ -363,6 +380,56 @@ def test_compose_from_context_creates_pdf_with_source_map_and_coverage(tmp_path:
     assert "Source Map" in text
 
 
+def test_compose_from_context_html_renderer_writes_html_package_pdf_and_manifest(tmp_path: Path) -> None:
+    csv = tmp_path / "metrics.csv"
+    csv.write_text("metric,value\nlatency_ms,42\n", encoding="utf-8")
+    packet = build_context_packet(
+        [
+            {"text": "Create an HTML-first technical audit.", "role": "brief", "label": "Brief"},
+            {"path": str(csv), "role": "data_evidence", "label": "Runtime Metrics"},
+        ],
+        output_path=tmp_path / "html.context.packet.json",
+        title="HTML Context",
+    ).usage["context_packet"]
+    output_pdf = tmp_path / "html-audit.pdf"
+    html_output = tmp_path / "html-audit.html"
+    manifest_path = html_output.with_suffix(".html-manifest.json")
+
+    result = compose_from_context(
+        packet,
+        target_profile="technical_audit",
+        output_path=output_pdf,
+        renderer="html",
+        html_output_path=html_output,
+        title="HTML First Audit",
+    )
+
+    assert result.status == "succeeded"
+    assert result.tool == "pdf.compose.from_context"
+    assert result.validation is not None
+    assert result.validation.status == "passed"
+    assert output_pdf.exists()
+    assert html_output.exists()
+    assert manifest_path.exists()
+    assert result.usage["renderer"] == "html_package"
+    assert result.usage["html_output_path"] == str(html_output.resolve())
+    assert result.usage["html_package_manifest_path"] == str(manifest_path.resolve())
+    assert result.usage["html_package_manifest"]["block_count"] == len(result.usage["composition_ir"]["blocks"])
+    assert result.usage["html_package_manifest"]["source_ref_count"] == 2
+    assert any(artifact.mime_type == "text/html" for artifact in result.artifacts)
+    assert any(str(artifact.path).endswith(".html-manifest.json") for artifact in result.artifacts)
+
+    html_text = html_output.read_text(encoding="utf-8")
+    assert "<body data-agentpdf-document" in html_text
+    assert 'data-agentpdf-renderer="html-package-v0"' in html_text
+    assert 'data-block-id="summary"' in html_text
+    assert 'data-source-refs="ctx_001 ctx_002"' in html_text
+    assert "latency_ms" in html_text
+    pdf_text = "\n".join(page.extract_text() or "" for page in PdfReader(output_pdf).pages)
+    assert "HTML First Audit" in pdf_text
+    assert "latency_ms" in pdf_text
+
+
 def test_compose_plan_and_render_ir_create_replayable_pdf(tmp_path: Path) -> None:
     code = tmp_path / "service.py"
     code.write_text("def risky_total(items):\n    return sum(items)\n", encoding="utf-8")
@@ -493,6 +560,77 @@ def test_compose_plan_and_render_ir_are_exposed_to_cli_rest_mcp(tmp_path: Path) 
     assert mcp_render["tool"] == "pdf.compose.render_ir"
     assert mcp_render["validation"]["status"] == "passed"
     assert mcp_pdf.exists()
+
+
+def test_compose_from_context_html_renderer_is_exposed_to_cli_rest_mcp(tmp_path: Path) -> None:
+    packet_path = tmp_path / "html.context.packet.json"
+    build_context_packet(
+        [{"text": "Create an HTML package and PDF.", "role": "brief", "label": "Brief"}],
+        output_path=packet_path,
+        title="HTML Interface Context",
+    )
+    cli_pdf = tmp_path / "cli-html.pdf"
+    cli_html = tmp_path / "cli-html.html"
+    api_pdf = tmp_path / "api-html.pdf"
+    api_html = tmp_path / "api-html.html"
+    mcp_pdf = tmp_path / "mcp-html.pdf"
+    mcp_html = tmp_path / "mcp-html.html"
+
+    cli_result = runner.invoke(
+        app,
+        [
+            "compose",
+            "from-context",
+            str(packet_path),
+            "--profile",
+            "research_brief",
+            "-o",
+            str(cli_pdf),
+            "--renderer",
+            "html",
+            "--html-output",
+            str(cli_html),
+            "--json",
+        ],
+    )
+    client = TestClient(create_app())
+    api_response = client.post(
+        "/v1/tools/pdf.compose.from_context/run",
+        json={
+            "context_packet_path": str(packet_path),
+            "profile": "research_brief",
+            "output_path": str(api_pdf),
+            "renderer": "html",
+            "html_output_path": str(api_html),
+        },
+    )
+    mcp_payload = json.loads(
+        pdf_compose_from_context(
+            str(packet_path),
+            str(mcp_pdf),
+            target_profile="research_brief",
+            renderer="html",
+            html_output_path=str(mcp_html),
+        )
+    )
+
+    assert cli_result.exit_code == 0
+    cli_payload = json.loads(cli_result.stdout)
+    assert cli_payload["tool"] == "pdf.compose.from_context"
+    assert cli_payload["usage"]["renderer"] == "html_package"
+    assert cli_pdf.exists()
+    assert cli_html.exists()
+    assert cli_html.with_suffix(".html-manifest.json").exists()
+    assert api_response.status_code == 200
+    assert api_response.json()["usage"]["renderer"] == "html_package"
+    assert api_pdf.exists()
+    assert api_html.exists()
+    assert api_html.with_suffix(".html-manifest.json").exists()
+    assert mcp_payload["tool"] == "pdf.compose.from_context"
+    assert mcp_payload["usage"]["renderer"] == "html_package"
+    assert mcp_pdf.exists()
+    assert mcp_html.exists()
+    assert mcp_html.with_suffix(".html-manifest.json").exists()
 
 
 def test_inline_table_context_composes_as_table_block(tmp_path: Path) -> None:
@@ -968,3 +1106,20 @@ def _write_minimal_docx(path: Path, paragraphs: list[str]) -> None:
             ),
         )
         archive.writestr("word/document.xml", document_xml)
+
+
+def _fake_tesseract_tsv(
+    image_path: Path,
+    languages: list[str],
+    engine: str,
+    psm: int,
+) -> str:
+    assert image_path.exists()
+    assert languages == ["eng"]
+    assert engine == "tesseract"
+    assert psm == 6
+    return (
+        "level\tpage_num\tblock_num\tpar_num\tline_num\tword_num\tleft\ttop\twidth\theight\tconf\ttext\n"
+        "5\t1\t1\t1\t1\t1\t10\t20\t40\t12\t96\tHello\n"
+        "5\t1\t1\t1\t1\t2\t56\t20\t28\t12\t91\tOCR\n"
+    )

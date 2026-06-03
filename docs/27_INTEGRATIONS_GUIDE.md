@@ -4,7 +4,7 @@
 
 1. Claude Code / Claude Desktop via MCP.
 2. Codex and Cursor through AGENTS.md, CLI, REST, and MCP examples.
-3. KiloCode, OpenCode/OpenClaw-style skill ecosystems, OpenAI Agents, LangChain, LlamaIndex, and workflow automation platforms.
+3. Kilo Code, OpenCode/OpenClaw-style skill ecosystems, OpenAI Agents, LangChain, LlamaIndex, and workflow automation platforms.
 4. Hosted API integrations after the local agent contract is stable.
 
 ## Claude Desktop / Claude Code
@@ -34,6 +34,17 @@ okpdf agent setup codex -o codex.mcp.json --safe-root . --json
 ```
 
 The same setup is available as REST tool `agent.setup.codex`, MCP tool `agent_setup_codex`, and Node command `agentpdf-node agent-setup-codex`.
+
+## Kilo Code / OpenClaw
+
+Generate local MCP configs for Kilo Code or OpenClaw-style runtimes:
+
+```bash
+okpdf agent setup kilo-code -o kilo-code.mcp.json --safe-root . --json
+okpdf agent setup openclaw -o openclaw.mcp.json --safe-root . --json
+```
+
+The same setup is available as REST tools `agent.setup.kilo_code` and `agent.setup.openclaw`, MCP tools `agent_setup_kilo_code` and `agent_setup_openclaw`, and Node commands `agentpdf-node agent-setup-kilo-code` and `agentpdf-node agent-setup-openclaw`.
 
 ## LangChain
 

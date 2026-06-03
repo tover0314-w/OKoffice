@@ -34,8 +34,8 @@
     },
     {
       "name": "agent.setup.kilo_code",
-      "status": "planned",
-      "description": "Generate Kilo Code integration config.",
+      "status": "beta",
+      "description": "Generate a Kilo Code MCP config for local AgentPDF tools.",
       "category": "agent",
       "interfaces": [
         "cli",
@@ -43,14 +43,14 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
     {
       "name": "agent.setup.openclaw",
-      "status": "planned",
-      "description": "Generate OpenClaw integration config.",
+      "status": "beta",
+      "description": "Generate an OpenClaw MCP config for local AgentPDF tools.",
       "category": "agent",
       "interfaces": [
         "cli",
@@ -58,7 +58,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -124,17 +124,18 @@
     },
     {
       "name": "pdf.context.image_analyze",
-      "status": "cloud_only",
-      "description": "OCR/caption/image-region analysis for images and screenshots.",
+      "status": "beta",
+      "description": "Analyze local images with metadata and optional OCR text-region evidence.",
       "category": "context",
       "interfaces": [
+        "cli",
+        "mcp",
         "rest",
-        "sdk",
-        "mcp"
+        "sdk"
       ],
-      "implemented": false,
-      "oss_default": false,
-      "requires_model": true
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
     },
     {
       "name": "pdf.context.video_transcribe",
@@ -292,7 +293,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -373,7 +374,7 @@
     {
       "name": "pdf.compose.from_context",
       "status": "beta",
-      "description": "Compose a validated target PDF from a Context Packet and target profile.",
+      "description": "Compose a validated target PDF from a Context Packet and target profile with optional HTML package artifacts.",
       "category": "compose",
       "interfaces": [
         "cli",
@@ -704,7 +705,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -719,7 +720,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -734,7 +735,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -869,7 +870,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -1010,8 +1011,8 @@
     },
     {
       "name": "pdf.organize.n_up",
-      "status": "planned",
-      "description": "Place multiple source pages on one output page.",
+      "status": "beta",
+      "description": "Place multiple source pages on one output page with local n-up imposition.",
       "category": "organize",
       "interfaces": [
         "cli",
@@ -1019,14 +1020,14 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
     {
       "name": "pdf.organize.booklet",
-      "status": "planned",
-      "description": "Create booklet imposition.",
+      "status": "beta",
+      "description": "Create local two-up booklet imposition with blank-page padding.",
       "category": "organize",
       "interfaces": [
         "cli",
@@ -1034,7 +1035,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -1130,8 +1131,8 @@
     },
     {
       "name": "pdf.optimize.remove_unused_objects",
-      "status": "planned",
-      "description": "Remove unreachable or unused objects.",
+      "status": "beta",
+      "description": "Rewrite reachable PDF page-tree objects into a new optimized artifact.",
       "category": "optimize",
       "interfaces": [
         "cli",
@@ -1139,14 +1140,14 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
     {
       "name": "pdf.optimize.subset_fonts",
-      "status": "planned",
-      "description": "Subset fonts when safe.",
+      "status": "beta",
+      "description": "Rewrite PDF and return local font-subset audit evidence.",
       "category": "optimize",
       "interfaces": [
         "cli",
@@ -1154,14 +1155,14 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
     {
       "name": "pdf.optimize.to_pdfa",
-      "status": "planned",
-      "description": "Convert to PDF/A when possible.",
+      "status": "beta",
+      "description": "Create a best-effort local PDF/A-tagged copy and validation report.",
       "category": "optimize",
       "interfaces": [
         "cli",
@@ -1169,14 +1170,14 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
     {
       "name": "pdf.optimize.validate_pdfa",
-      "status": "planned",
-      "description": "Validate PDF/A compliance.",
+      "status": "beta",
+      "description": "Run local heuristic PDF/A checks with metadata, output intent, and font evidence.",
       "category": "optimize",
       "interfaces": [
         "cli",
@@ -1184,7 +1185,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -1221,7 +1222,7 @@
     {
       "name": "pdf.convert.html_to_pdf",
       "status": "beta",
-      "description": "Render HTML/CSS to PDF.",
+      "description": "Convert local HTML text to a validated PDF with layout-approximation warnings in the OSS fallback converter.",
       "category": "convert_to_pdf",
       "interfaces": [
         "cli",
@@ -1229,14 +1230,14 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
     {
       "name": "pdf.convert.url_to_pdf",
-      "status": "planned",
-      "description": "Render URL to PDF with SSRF-safe fetch.",
+      "status": "beta",
+      "description": "Fetch a URL with safety checks and convert HTML text to PDF.",
       "category": "convert_to_pdf",
       "interfaces": [
         "cli",
@@ -1244,7 +1245,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -1265,8 +1266,8 @@
     },
     {
       "name": "pdf.convert.docx_to_pdf",
-      "status": "planned",
-      "description": "Convert DOCX to PDF.",
+      "status": "beta",
+      "description": "Convert DOCX text to a local PDF.",
       "category": "convert_to_pdf",
       "interfaces": [
         "cli",
@@ -1274,14 +1275,14 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
     {
       "name": "pdf.convert.pptx_to_pdf",
-      "status": "planned",
-      "description": "Convert PPTX to PDF.",
+      "status": "beta",
+      "description": "Convert PPTX slide text to a local PDF.",
       "category": "convert_to_pdf",
       "interfaces": [
         "cli",
@@ -1289,14 +1290,14 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
     {
       "name": "pdf.convert.xlsx_to_pdf",
-      "status": "planned",
-      "description": "Convert XLSX to PDF.",
+      "status": "beta",
+      "description": "Convert XLSX sheet rows to a local PDF.",
       "category": "convert_to_pdf",
       "interfaces": [
         "cli",
@@ -1304,7 +1305,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -1370,8 +1371,8 @@
     },
     {
       "name": "pdf.convert.pdf_to_html",
-      "status": "planned",
-      "description": "Convert PDF to HTML approximation.",
+      "status": "beta",
+      "description": "Export PDF text to a simple HTML document.",
       "category": "convert_from_pdf",
       "interfaces": [
         "cli",
@@ -1379,14 +1380,14 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
     {
       "name": "pdf.convert.pdf_to_docx",
-      "status": "planned",
-      "description": "Convert PDF to DOCX.",
+      "status": "beta",
+      "description": "Export PDF text to a minimal DOCX package.",
       "category": "convert_from_pdf",
       "interfaces": [
         "cli",
@@ -1394,14 +1395,14 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
     {
       "name": "pdf.convert.pdf_to_pptx",
-      "status": "planned",
-      "description": "Convert PDF to PPTX.",
+      "status": "beta",
+      "description": "Export PDF pages to simple text slides.",
       "category": "convert_from_pdf",
       "interfaces": [
         "cli",
@@ -1409,14 +1410,14 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
     {
       "name": "pdf.convert.pdf_to_xlsx",
-      "status": "planned",
-      "description": "Extract tables to XLSX.",
+      "status": "beta",
+      "description": "Export PDF page text rows to a minimal XLSX workbook.",
       "category": "convert_from_pdf",
       "interfaces": [
         "cli",
@@ -1424,7 +1425,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -1445,8 +1446,8 @@
     },
     {
       "name": "pdf.convert.extract_fonts",
-      "status": "planned",
-      "description": "Extract or list embedded fonts.",
+      "status": "beta",
+      "description": "List page fonts with embedding evidence.",
       "category": "convert_from_pdf",
       "interfaces": [
         "cli",
@@ -1454,7 +1455,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -1505,8 +1506,8 @@
     },
     {
       "name": "pdf.edit.add_shape",
-      "status": "planned",
-      "description": "Add vector shapes.",
+      "status": "beta",
+      "description": "Add local vector shape overlays to selected PDF pages.",
       "category": "edit",
       "interfaces": [
         "cli",
@@ -1514,7 +1515,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -1565,8 +1566,8 @@
     },
     {
       "name": "pdf.edit.underline",
-      "status": "planned",
-      "description": "Underline text spans or coordinates.",
+      "status": "beta",
+      "description": "Underline coordinate spans on PDF pages.",
       "category": "edit",
       "interfaces": [
         "cli",
@@ -1574,14 +1575,14 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
     {
       "name": "pdf.edit.strikeout",
-      "status": "planned",
-      "description": "Strike out text spans or coordinates.",
+      "status": "beta",
+      "description": "Strike out coordinate spans on PDF pages.",
       "category": "edit",
       "interfaces": [
         "cli",
@@ -1589,14 +1590,14 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
     {
       "name": "pdf.edit.freehand_draw",
-      "status": "planned",
-      "description": "Add freehand drawing.",
+      "status": "beta",
+      "description": "Add local freehand drawing paths to PDF pages.",
       "category": "edit",
       "interfaces": [
         "cli",
@@ -1604,7 +1605,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -1625,8 +1626,8 @@
     },
     {
       "name": "pdf.edit.resize_pages",
-      "status": "planned",
-      "description": "Resize pages.",
+      "status": "beta",
+      "description": "Resize selected PDF pages and scale content to fit.",
       "category": "edit",
       "interfaces": [
         "cli",
@@ -1634,14 +1635,14 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
     {
       "name": "pdf.edit.add_margin",
-      "status": "planned",
-      "description": "Add margins.",
+      "status": "beta",
+      "description": "Add margins by placing selected pages onto larger pages.",
       "category": "edit",
       "interfaces": [
         "cli",
@@ -1649,7 +1650,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -1730,8 +1731,8 @@
     },
     {
       "name": "pdf.edit.underlay",
-      "status": "planned",
-      "description": "Underlay PDF or page content.",
+      "status": "beta",
+      "description": "Add local text underlays below existing page content.",
       "category": "edit",
       "interfaces": [
         "cli",
@@ -1739,7 +1740,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -1805,8 +1806,8 @@
     },
     {
       "name": "pdf.forms.import_data",
-      "status": "planned",
-      "description": "Import form data.",
+      "status": "beta",
+      "description": "Import local JSON field data into a PDF AcroForm.",
       "category": "forms",
       "interfaces": [
         "cli",
@@ -1814,7 +1815,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -1835,8 +1836,8 @@
     },
     {
       "name": "pdf.forms.create",
-      "status": "planned",
-      "description": "Create form fields.",
+      "status": "beta",
+      "description": "Create a local PDF with text AcroForm fields.",
       "category": "forms",
       "interfaces": [
         "cli",
@@ -1844,14 +1845,14 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
     {
       "name": "pdf.forms.validate",
-      "status": "planned",
-      "description": "Validate required fields and formats.",
+      "status": "beta",
+      "description": "Validate required PDF form fields and return structured evidence.",
       "category": "forms",
       "interfaces": [
         "cli",
@@ -1859,14 +1860,14 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
     {
       "name": "pdf.security.protect",
-      "status": "planned",
-      "description": "Encrypt/protect PDF with password.",
+      "status": "beta",
+      "description": "Protect a PDF with local password encryption.",
       "category": "security",
       "interfaces": [
         "cli",
@@ -1874,14 +1875,14 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
     {
       "name": "pdf.security.unlock_authorized",
-      "status": "planned",
-      "description": "Decrypt with valid password only.",
+      "status": "beta",
+      "description": "Unlock a PDF only with a supplied authorized password.",
       "category": "security",
       "interfaces": [
         "cli",
@@ -1889,14 +1890,14 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
     {
       "name": "pdf.security.encrypt",
-      "status": "planned",
-      "description": "Encrypt PDF.",
+      "status": "beta",
+      "description": "Encrypt a PDF with a local password.",
       "category": "security",
       "interfaces": [
         "cli",
@@ -1904,14 +1905,14 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
     {
       "name": "pdf.security.decrypt_authorized",
-      "status": "planned",
-      "description": "Decrypt authorized PDF.",
+      "status": "beta",
+      "description": "Decrypt a PDF only with a supplied authorized password.",
       "category": "security",
       "interfaces": [
         "cli",
@@ -1919,7 +1920,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -1941,7 +1942,7 @@
     {
       "name": "pdf.security.redact",
       "status": "beta",
-      "description": "True redaction.",
+      "description": "Rasterize local pages and mask explicit redaction regions.",
       "category": "security",
       "interfaces": [
         "cli",
@@ -1949,14 +1950,14 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
     {
       "name": "pdf.security.verify_redaction",
       "status": "beta",
-      "description": "Verify redacted content is removed.",
+      "description": "Verify supplied terms are absent from redacted PDF text and bytes.",
       "category": "security",
       "interfaces": [
         "cli",
@@ -1964,14 +1965,14 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
     {
       "name": "pdf.security.sign",
-      "status": "planned",
-      "description": "Digitally sign PDF.",
+      "status": "beta",
+      "description": "Create a detached local integrity signature manifest.",
       "category": "security",
       "interfaces": [
         "cli",
@@ -1979,14 +1980,14 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
     {
       "name": "pdf.security.verify_signature",
-      "status": "planned",
-      "description": "Verify digital signatures.",
+      "status": "beta",
+      "description": "Verify a detached local integrity signature manifest.",
       "category": "security",
       "interfaces": [
         "cli",
@@ -1994,7 +1995,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -2024,14 +2025,14 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
     {
       "name": "pdf.security.malware_scan",
-      "status": "planned",
-      "description": "Integrate malware scan worker.",
+      "status": "beta",
+      "description": "Run a local static PDF risk marker scan.",
       "category": "security",
       "interfaces": [
         "cli",
@@ -2039,14 +2040,14 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
     {
       "name": "pdf.ocr_scan.ocr",
       "status": "beta",
-      "description": "Add OCR text layer.",
+      "description": "Run local OCR and return text regions with page numbers, bboxes, confidence, and language metadata.",
       "category": "ocr_scan",
       "interfaces": [
         "cli",
@@ -2054,14 +2055,14 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
     {
       "name": "pdf.ocr_scan.searchable_pdf",
       "status": "beta",
-      "description": "Generate searchable PDF.",
+      "description": "Generate a searchable PDF by adding a local OCR text layer.",
       "category": "ocr_scan",
       "interfaces": [
         "cli",
@@ -2069,7 +2070,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -2090,8 +2091,8 @@
     },
     {
       "name": "pdf.ocr_scan.despeckle",
-      "status": "planned",
-      "description": "Remove speckles/noise.",
+      "status": "beta",
+      "description": "Despeckle rendered scan pages and rebuild a PDF.",
       "category": "ocr_scan",
       "interfaces": [
         "cli",
@@ -2099,7 +2100,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -2120,8 +2121,8 @@
     },
     {
       "name": "pdf.ocr_scan.remove_existing_ocr",
-      "status": "planned",
-      "description": "Remove existing OCR layer.",
+      "status": "beta",
+      "description": "Rasterize and rebuild a PDF to remove existing OCR/text layers.",
       "category": "ocr_scan",
       "interfaces": [
         "cli",
@@ -2129,14 +2130,14 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
     {
       "name": "pdf.ocr_scan.scan_to_pdf",
-      "status": "planned",
-      "description": "Images/scans to OCR PDF.",
+      "status": "beta",
+      "description": "Create an image-only PDF from local scan images.",
       "category": "ocr_scan",
       "interfaces": [
         "cli",
@@ -2144,14 +2145,14 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
     {
       "name": "pdf.ocr_scan.multilingual_ocr",
-      "status": "planned",
-      "description": "Multi-language OCR.",
+      "status": "beta",
+      "description": "Record a multilingual OCR request and validate the output PDF artifact.",
       "category": "ocr_scan",
       "interfaces": [
         "cli",
@@ -2159,7 +2160,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -2189,14 +2190,14 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
     {
       "name": "pdf.compare.semantic_diff",
-      "status": "planned",
-      "description": "AI-assisted semantic diff.",
+      "status": "beta",
+      "description": "Local text-layer semantic diff with heuristic change evidence.",
       "category": "compare",
       "interfaces": [
         "cli",
@@ -2204,14 +2205,14 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
     {
       "name": "pdf.compare.version_report",
-      "status": "planned",
-      "description": "Create version comparison report.",
+      "status": "beta",
+      "description": "Create a local Markdown version report from PDF text-layer changes.",
       "category": "compare",
       "interfaces": [
         "cli",
@@ -2219,7 +2220,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -2285,8 +2286,8 @@
     },
     {
       "name": "pdf.metadata.update_outline",
-      "status": "planned",
-      "description": "Update bookmarks/outline.",
+      "status": "beta",
+      "description": "Update PDF bookmarks/outline from a local JSON array.",
       "category": "metadata",
       "interfaces": [
         "cli",
@@ -2294,7 +2295,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -2429,14 +2430,14 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
     {
       "name": "pdf.validation.redaction_check",
       "status": "beta",
-      "description": "Verify redaction.",
+      "description": "Validation-grade redaction leak check for supplied terms.",
       "category": "validation",
       "interfaces": [
         "cli",
@@ -2444,7 +2445,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -2509,8 +2510,8 @@
     },
     {
       "name": "pdf.ai.parse.figures",
-      "status": "planned",
-      "description": "Figure detection and captions.",
+      "status": "beta",
+      "description": "Detect figure captions and page image hints from a local PDF.",
       "category": "ai_parse",
       "interfaces": [
         "cli",
@@ -2518,14 +2519,14 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
     {
       "name": "pdf.ai.parse.formulas",
-      "status": "planned",
-      "description": "Formula extraction.",
+      "status": "beta",
+      "description": "Extract formula-like text lines from a local PDF.",
       "category": "ai_parse",
       "interfaces": [
         "cli",
@@ -2533,14 +2534,14 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
     {
       "name": "pdf.ai.parse.charts",
-      "status": "planned",
-      "description": "Chart understanding.",
+      "status": "beta",
+      "description": "Detect chart captions from a local PDF text layer.",
       "category": "ai_parse",
       "interfaces": [
         "cli",
@@ -2548,14 +2549,14 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
     {
       "name": "pdf.ai.parse.references",
-      "status": "planned",
-      "description": "Research references extraction.",
+      "status": "beta",
+      "description": "Extract reference lines, URLs, and DOI-like citations from a local PDF.",
       "category": "ai_parse",
       "interfaces": [
         "cli",
@@ -2563,7 +2564,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },

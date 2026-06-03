@@ -10,11 +10,20 @@ from agentpdf.schemas.errors import AgentPDFException
 from agentpdf.schemas.models import AgentPDFError, ToolResult
 from agentpdf.tools.registry import get_tool, load_tool_manifest
 from agentpdf.tools.runner import (
+    run_add_margin,
+    run_add_shape,
+    run_underlay,
     run_agent_setup_claude_code,
     run_agent_setup_codex,
+    run_agent_setup_kilo_code,
+    run_agent_setup_openclaw,
     run_artifacts_export_bundle,
+    run_artifacts_graph,
+    run_artifacts_manifest,
+    run_artifacts_source_map,
     run_artifacts_verify_bundle,
     run_blank_page_check,
+    run_booklet,
     run_build_context_packet,
     run_compose_add_appendix,
     run_compose_add_citation,
@@ -27,6 +36,9 @@ from agentpdf.tools.runner import (
     run_compose_plan,
     run_compose_render_ir,
     run_compress,
+    run_compare_semantic_diff,
+    run_compare_visual_diff,
+    run_compare_version_report,
     run_create_markdown,
     run_create_text,
     run_create_agent,
@@ -40,31 +52,52 @@ from agentpdf.tools.runner import (
     run_context_classify,
     run_context_code_snapshot,
     run_context_data_profile,
+    run_context_image_analyze,
     run_context_ingest,
     run_context_packet,
     run_validate_template_pack,
+    run_evidence_cite_claims,
     run_evidence_coverage_report,
     run_evidence_map_sources,
+    run_docx_to_pdf,
+    run_extract_fonts,
     run_extract_images,
     run_extract_pages,
     run_extract_text,
+    run_forms_create,
+    run_forms_import_data,
+    run_forms_validate,
+    run_freehand_draw,
+    run_html_to_pdf,
     run_image_to_pdf,
     run_inspect,
+    run_inspect_health,
     run_inspect_pages,
     run_insert_blank_pages,
     run_metadata_read,
     run_metadata_page_info,
     run_metadata_remove,
     run_metadata_update,
+    run_metadata_update_outline,
     run_merge,
+    run_n_up,
     run_page_numbers,
     run_patch_apply,
     run_patch_plan,
     run_patch_preview,
     run_patch_verify,
+    run_parse_charts,
+    run_parse_figures,
+    run_parse_formulas,
     run_parse_lite,
+    run_parse_references,
+    run_pdf_to_docx,
+    run_pdf_to_html,
     run_pdf_to_markdown,
+    run_pdf_to_pptx,
+    run_pdf_to_xlsx,
     run_pdf_to_json,
+    run_pptx_to_pdf,
     run_rag_chat,
     run_rag_cite_answer,
     run_rag_export_report,
@@ -73,22 +106,49 @@ from agentpdf.tools.runner import (
     run_rag_query,
     run_rag_search,
     run_remove_pages,
+    run_remove_unused_objects,
     run_render,
     run_render_check,
     run_repair,
     run_reorder_pages,
+    run_resize_pages,
     run_rotate_pages,
     run_page_count_check,
+    run_ocr_despeckle,
+    run_ocr,
+    run_ocr_multilingual,
+    run_ocr_remove_existing,
+    run_ocr_scan_to_pdf,
+    run_ocr_searchable_pdf,
+    run_security_decrypt_authorized,
+    run_security_encrypt,
+    run_security_malware_scan,
     run_security_remove_metadata,
+    run_security_protect,
+    run_security_redact,
+    run_security_sanitize,
+    run_security_sign,
+    run_security_unlock_authorized,
+    run_security_verify_redaction,
+    run_security_verify_signature,
     run_select_target_profile,
     run_split,
+    run_strikeout,
+    run_subset_fonts,
     run_target_profiles,
+    run_underline,
     run_validate_output,
+    run_validate_pdfa,
     run_validate_target_profile,
+    run_validation_redaction_check,
+    run_validation_visual_diff,
+    run_to_pdfa,
+    run_url_to_pdf,
     run_watermark,
     run_workflow_plan,
     run_workflow_report,
     run_workflow_run,
+    run_xlsx_to_pdf,
 )
 
 
@@ -188,6 +248,24 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
             args_prefix=[str(arg) for arg in args_prefix] if isinstance(args_prefix, list) else None,
             server_name=str(payload.get("server_name", "agentpdf")),
         )
+    if tool_name == "agent.setup.kilo_code":
+        args_prefix = payload.get("args_prefix")
+        return run_agent_setup_kilo_code(
+            output_path=payload.get("output_path"),
+            safe_root=str(payload.get("safe_root", ".")),
+            command=str(payload.get("command", "okpdf")),
+            args_prefix=[str(arg) for arg in args_prefix] if isinstance(args_prefix, list) else None,
+            server_name=str(payload.get("server_name", "agentpdf")),
+        )
+    if tool_name == "agent.setup.openclaw":
+        args_prefix = payload.get("args_prefix")
+        return run_agent_setup_openclaw(
+            output_path=payload.get("output_path"),
+            safe_root=str(payload.get("safe_root", ".")),
+            command=str(payload.get("command", "okpdf")),
+            args_prefix=[str(arg) for arg in args_prefix] if isinstance(args_prefix, list) else None,
+            server_name=str(payload.get("server_name", "agentpdf")),
+        )
     if tool_name == "pdf.inspect.document":
         return run_inspect(payload.get("path", ""))
     if tool_name == "pdf.inspect.pages":
@@ -196,6 +274,8 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
             pages=str(payload.get("pages", "all")),
             render_check=bool(payload.get("render_check", False)),
         )
+    if tool_name == "pdf.inspect.health":
+        return run_inspect_health(payload.get("input_path", payload.get("path", "")))
     if tool_name == "pdf.workflow.plan":
         return run_workflow_plan(
             goal=str(payload.get("goal", "")),
@@ -253,6 +333,19 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
             count=int(payload.get("count", 1)),
             output_path=payload.get("output_path", ""),
         )
+    if tool_name == "pdf.organize.n_up":
+        return run_n_up(
+            payload.get("input_path", ""),
+            output_path=payload.get("output_path", ""),
+            pages=str(payload.get("pages", "all")),
+            per_sheet=int(payload.get("per_sheet", 2)),
+        )
+    if tool_name == "pdf.organize.booklet":
+        return run_booklet(
+            payload.get("input_path", ""),
+            output_path=payload.get("output_path", ""),
+            pages=str(payload.get("pages", "all")),
+        )
     if tool_name == "pdf.optimize.compress":
         return run_compress(
             payload.get("input_path", ""),
@@ -263,9 +356,54 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
             payload.get("input_path", ""),
             output_path=payload.get("output_path", ""),
         )
+    if tool_name == "pdf.optimize.remove_unused_objects":
+        return run_remove_unused_objects(
+            payload.get("input_path", ""),
+            output_path=payload.get("output_path", ""),
+        )
+    if tool_name == "pdf.optimize.subset_fonts":
+        return run_subset_fonts(
+            payload.get("input_path", ""),
+            output_path=payload.get("output_path", ""),
+        )
+    if tool_name == "pdf.optimize.to_pdfa":
+        return run_to_pdfa(
+            payload.get("input_path", ""),
+            output_path=payload.get("output_path", ""),
+            profile=str(payload.get("profile", "PDF/A-2B")),
+        )
+    if tool_name == "pdf.optimize.validate_pdfa":
+        return run_validate_pdfa(payload.get("input_path", ""))
     if tool_name == "pdf.convert.image_to_pdf":
         return run_image_to_pdf(
             payload.get("image_paths", []),
+            output_path=payload.get("output_path", ""),
+        )
+    if tool_name == "pdf.convert.html_to_pdf":
+        return run_html_to_pdf(
+            payload.get("input_path", ""),
+            output_path=payload.get("output_path", ""),
+        )
+    if tool_name == "pdf.convert.url_to_pdf":
+        return run_url_to_pdf(
+            str(payload.get("url", "")),
+            output_path=payload.get("output_path", ""),
+            allow_private_hosts=bool(payload.get("allow_private_hosts", False)),
+            allow_file_urls=bool(payload.get("allow_file_urls", False)),
+        )
+    if tool_name == "pdf.convert.docx_to_pdf":
+        return run_docx_to_pdf(
+            payload.get("input_path", ""),
+            output_path=payload.get("output_path", ""),
+        )
+    if tool_name == "pdf.convert.pptx_to_pdf":
+        return run_pptx_to_pdf(
+            payload.get("input_path", ""),
+            output_path=payload.get("output_path", ""),
+        )
+    if tool_name == "pdf.convert.xlsx_to_pdf":
+        return run_xlsx_to_pdf(
+            payload.get("input_path", ""),
             output_path=payload.get("output_path", ""),
         )
     if tool_name == "pdf.edit.watermark":
@@ -285,6 +423,79 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
             pages=str(payload.get("pages", "all")),
             template=str(payload.get("template", "{page}")),
             font_size=int(payload.get("font_size", 10)),
+        )
+    if tool_name == "pdf.edit.add_shape":
+        return run_add_shape(
+            payload.get("input_path", ""),
+            output_path=payload.get("output_path", ""),
+            shape=str(payload.get("shape", "rectangle")),
+            page=int(payload.get("page", 1)),
+            x=float(payload.get("x", 0)),
+            y=float(payload.get("y", 0)),
+            width=float(payload.get("width", 0)),
+            height=float(payload.get("height", 0)),
+            stroke_color=str(payload.get("stroke_color", "#2563eb")),
+            fill_color=payload.get("fill_color"),
+            line_width=float(payload.get("line_width", 1.5)),
+            opacity=float(payload.get("opacity", 1.0)),
+        )
+    if tool_name == "pdf.edit.underline":
+        return run_underline(
+            payload.get("input_path", ""),
+            output_path=payload.get("output_path", ""),
+            page=int(payload.get("page", 1)),
+            bbox=_float_list(payload.get("bbox")),
+            color=str(payload.get("color", "#2563eb")),
+            line_width=float(payload.get("line_width", 1.0)),
+        )
+    if tool_name == "pdf.edit.strikeout":
+        return run_strikeout(
+            payload.get("input_path", ""),
+            output_path=payload.get("output_path", ""),
+            page=int(payload.get("page", 1)),
+            bbox=_float_list(payload.get("bbox")),
+            color=str(payload.get("color", "#dc2626")),
+            line_width=float(payload.get("line_width", 1.0)),
+        )
+    if tool_name == "pdf.edit.freehand_draw":
+        return run_freehand_draw(
+            payload.get("input_path", ""),
+            output_path=payload.get("output_path", ""),
+            page=int(payload.get("page", 1)),
+            points=_point_list(payload.get("points")),
+            stroke_color=str(payload.get("stroke_color", "#2563eb")),
+            line_width=float(payload.get("line_width", 1.5)),
+            opacity=float(payload.get("opacity", 1.0)),
+        )
+    if tool_name == "pdf.edit.resize_pages":
+        return run_resize_pages(
+            payload.get("input_path", ""),
+            output_path=payload.get("output_path", ""),
+            width=float(payload.get("width", 0)),
+            height=float(payload.get("height", 0)),
+            pages=str(payload.get("pages", "all")),
+        )
+    if tool_name == "pdf.edit.add_margin":
+        return run_add_margin(
+            payload.get("input_path", ""),
+            output_path=payload.get("output_path", ""),
+            margin=float(payload.get("margin", 0)),
+            pages=str(payload.get("pages", "all")),
+            top=_optional_float(payload.get("top")),
+            right=_optional_float(payload.get("right")),
+            bottom=_optional_float(payload.get("bottom")),
+            left=_optional_float(payload.get("left")),
+        )
+    if tool_name == "pdf.edit.underlay":
+        return run_underlay(
+            payload.get("input_path", ""),
+            output_path=payload.get("output_path", ""),
+            text=str(payload.get("text", "")),
+            pages=str(payload.get("pages", "all")),
+            font_size=int(payload.get("font_size", 72)),
+            opacity=float(payload.get("opacity", 0.12)),
+            angle=int(payload.get("angle", 45)),
+            color=str(payload.get("color", "#64748b")),
         )
     if tool_name == "pdf.convert.text_to_pdf":
         return run_create_text(
@@ -439,6 +650,14 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
             sheet=payload.get("sheet"),
             max_rows=_optional_int(payload.get("max_rows")) or 100,
         )
+    if tool_name == "pdf.context.image_analyze":
+        return run_context_image_analyze(
+            input_path=payload.get("input_path", payload.get("path", "")),
+            languages=_string_list(payload.get("languages")),
+            run_ocr=bool(payload.get("run_ocr", True)),
+            engine=str(payload.get("engine", "tesseract")),
+            psm=int(payload.get("psm", 6)),
+        )
     if tool_name == "pdf.compose.plan":
         context_packet = payload.get("context_packet") or payload.get("context_packet_path", "")
         target_profile = payload.get("target_profile") or payload.get("profile") or "research_brief"
@@ -466,6 +685,8 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
             output_path=payload.get("output_path", ""),
             style_pack=payload.get("style_pack"),
             title=payload.get("title"),
+            renderer=str(payload.get("renderer", "markdown")),
+            html_output_path=payload.get("html_output_path") or payload.get("html_output"),
         )
     if tool_name == "pdf.compose.add_code_block":
         return run_compose_add_code_block(
@@ -604,6 +825,15 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
             context_packet=context_packet if isinstance(context_packet, dict) else payload.get("context_packet_path"),
             output_path=payload.get("output_path"),
         )
+    if tool_name == "pdf.evidence.cite_claims":
+        context_packet = payload.get("context_packet")
+        return run_evidence_cite_claims(
+            claims=_object_list(payload.get("claims")) or [],
+            composition=payload.get("composition") or payload.get("composition_path"),
+            source_map=payload.get("source_map") or payload.get("source_map_path"),
+            context_packet=context_packet if isinstance(context_packet, dict) else payload.get("context_packet_path"),
+            output_path=payload.get("output_path"),
+        )
     if tool_name == "pdf.evidence.context_packet_report":
         context_packet = payload.get("context_packet") or payload.get("context_packet_path", "")
         return run_context_packet_report(
@@ -621,6 +851,38 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
             output_path=payload.get("output_path", ""),
             title=payload.get("title"),
             metadata=metadata if isinstance(metadata, dict) else None,
+        )
+    if tool_name == "pdf.artifacts.manifest":
+        artifact_paths = payload.get("artifact_paths") or payload.get("files") or []
+        metadata = payload.get("metadata")
+        return run_artifacts_manifest(
+            artifact_paths=artifact_paths if isinstance(artifact_paths, list) else [],
+            output_path=payload.get("output_path"),
+            title=payload.get("title"),
+            metadata=metadata if isinstance(metadata, dict) else None,
+        )
+    if tool_name == "pdf.artifacts.graph":
+        artifact_paths = payload.get("artifact_paths") or payload.get("files") or []
+        return run_artifacts_graph(
+            artifact_manifest_path=payload.get("artifact_manifest_path") or payload.get("manifest_path"),
+            artifact_paths=artifact_paths if isinstance(artifact_paths, list) else [],
+            output_path=payload.get("output_path"),
+            title=payload.get("title"),
+        )
+    if tool_name == "pdf.artifacts.source_map":
+        artifact_paths = payload.get("artifact_paths") or payload.get("files") or []
+        context_packet = payload.get("context_packet")
+        return run_artifacts_source_map(
+            composition=payload.get("composition"),
+            composition_path=payload.get("composition_path"),
+            source_map=payload.get("source_map"),
+            source_map_path=payload.get("source_map_path"),
+            context_packet=context_packet if isinstance(context_packet, dict) else None,
+            context_packet_path=payload.get("context_packet_path"),
+            artifact_manifest_path=payload.get("artifact_manifest_path") or payload.get("manifest_path"),
+            artifact_paths=artifact_paths if isinstance(artifact_paths, list) else [],
+            output_path=payload.get("output_path"),
+            title=payload.get("title"),
         )
     if tool_name == "pdf.artifacts.verify_bundle":
         return run_artifacts_verify_bundle(payload.get("bundle_path") or payload.get("input_path", ""))
@@ -667,6 +929,11 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
             payload.get("input_path", ""),
             pages=str(payload.get("pages", "all")),
         )
+    if tool_name == "pdf.convert.extract_fonts":
+        return run_extract_fonts(
+            payload.get("input_path", ""),
+            pages=str(payload.get("pages", "all")),
+        )
     if tool_name == "pdf.convert.pdf_to_json":
         return run_pdf_to_json(
             payload.get("input_path", ""),
@@ -675,6 +942,30 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
         )
     if tool_name == "pdf.convert.pdf_to_markdown":
         return run_pdf_to_markdown(
+            payload.get("input_path", ""),
+            output_path=payload.get("output_path", ""),
+            pages=str(payload.get("pages", "all")),
+        )
+    if tool_name == "pdf.convert.pdf_to_html":
+        return run_pdf_to_html(
+            payload.get("input_path", ""),
+            output_path=payload.get("output_path", ""),
+            pages=str(payload.get("pages", "all")),
+        )
+    if tool_name == "pdf.convert.pdf_to_docx":
+        return run_pdf_to_docx(
+            payload.get("input_path", ""),
+            output_path=payload.get("output_path", ""),
+            pages=str(payload.get("pages", "all")),
+        )
+    if tool_name == "pdf.convert.pdf_to_pptx":
+        return run_pdf_to_pptx(
+            payload.get("input_path", ""),
+            output_path=payload.get("output_path", ""),
+            pages=str(payload.get("pages", "all")),
+        )
+    if tool_name == "pdf.convert.pdf_to_xlsx":
+        return run_pdf_to_xlsx(
             payload.get("input_path", ""),
             output_path=payload.get("output_path", ""),
             pages=str(payload.get("pages", "all")),
@@ -692,6 +983,12 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
             metadata=payload.get("metadata", {}),
             output_path=payload.get("output_path", ""),
         )
+    if tool_name == "pdf.metadata.update_outline":
+        return run_metadata_update_outline(
+            payload.get("input_path", ""),
+            outline=_object_list(payload.get("outline")) or [],
+            output_path=payload.get("output_path", ""),
+        )
     if tool_name == "pdf.metadata.remove":
         return run_metadata_remove(
             payload.get("input_path", ""),
@@ -701,6 +998,82 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
         return run_security_remove_metadata(
             payload.get("input_path", ""),
             output_path=payload.get("output_path", ""),
+        )
+    if tool_name == "pdf.security.protect":
+        return run_security_protect(
+            payload.get("input_path", ""),
+            output_path=payload.get("output_path", ""),
+            password=str(payload.get("password", "")),
+            owner_password=payload.get("owner_password"),
+        )
+    if tool_name == "pdf.security.encrypt":
+        return run_security_encrypt(
+            payload.get("input_path", ""),
+            output_path=payload.get("output_path", ""),
+            password=str(payload.get("password", "")),
+            owner_password=payload.get("owner_password"),
+        )
+    if tool_name == "pdf.security.unlock_authorized":
+        return run_security_unlock_authorized(
+            payload.get("input_path", ""),
+            output_path=payload.get("output_path", ""),
+            password=str(payload.get("password", "")),
+        )
+    if tool_name == "pdf.security.decrypt_authorized":
+        return run_security_decrypt_authorized(
+            payload.get("input_path", ""),
+            output_path=payload.get("output_path", ""),
+            password=str(payload.get("password", "")),
+        )
+    if tool_name == "pdf.security.sign":
+        return run_security_sign(
+            payload.get("input_path", ""),
+            output_path=payload.get("output_path", ""),
+            secret=payload.get("secret"),
+        )
+    if tool_name == "pdf.security.verify_signature":
+        return run_security_verify_signature(
+            payload.get("input_path", ""),
+            signature_path=payload.get("signature_path", ""),
+            secret=payload.get("secret"),
+        )
+    if tool_name == "pdf.security.malware_scan":
+        return run_security_malware_scan(payload.get("input_path", ""))
+    if tool_name == "pdf.security.sanitize":
+        return run_security_sanitize(
+            payload.get("input_path", ""),
+            output_path=payload.get("output_path", ""),
+            remove_metadata=bool(payload.get("remove_metadata", True)),
+        )
+    if tool_name == "pdf.security.redact":
+        return run_security_redact(
+            payload.get("input_path", ""),
+            output_path=payload.get("output_path", ""),
+            regions=_object_list(payload.get("regions")) or [],
+            fill_color=str(payload.get("fill_color", "#000000")),
+            render_scale=float(payload.get("render_scale", 2.0)),
+        )
+    if tool_name == "pdf.security.verify_redaction":
+        return run_security_verify_redaction(
+            payload.get("input_path", ""),
+            search_terms=_string_list(payload.get("search_terms")),
+        )
+    if tool_name == "pdf.forms.create":
+        return run_forms_create(
+            output_path=payload.get("output_path", ""),
+            fields=_object_list(payload.get("fields")) or [],
+        )
+    if tool_name == "pdf.forms.import_data":
+        data = payload.get("data")
+        return run_forms_import_data(
+            payload.get("input_path", ""),
+            data=data if isinstance(data, dict) else {},
+            output_path=payload.get("output_path", ""),
+        )
+    if tool_name == "pdf.forms.validate":
+        return run_forms_validate(
+            payload.get("input_path", ""),
+            required_fields=_string_list(payload.get("required_fields")),
         )
     if tool_name == "pdf.validation.validate_output":
         expected_pages = payload.get("expected_pages")
@@ -723,10 +1096,104 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
             payload.get("path", ""),
             pages=str(payload.get("pages", "all")),
         )
+    if tool_name == "pdf.validation.visual_diff":
+        return run_validation_visual_diff(
+            payload.get("before_path", payload.get("left_path", "")),
+            payload.get("after_path", payload.get("right_path", "")),
+            pages=str(payload.get("pages", "all")),
+            max_difference_ratio=float(payload.get("max_difference_ratio", 0.001)),
+            render_scale=float(payload.get("render_scale", 0.5)),
+        )
+    if tool_name == "pdf.validation.redaction_check":
+        return run_validation_redaction_check(
+            payload.get("input_path", ""),
+            search_terms=_string_list(payload.get("search_terms")),
+        )
+    if tool_name == "pdf.compare.semantic_diff":
+        return run_compare_semantic_diff(
+            payload.get("before_path", payload.get("left_path", "")),
+            payload.get("after_path", payload.get("right_path", "")),
+            pages=str(payload.get("pages", "all")),
+        )
+    if tool_name == "pdf.compare.visual_diff":
+        return run_compare_visual_diff(
+            payload.get("before_path", payload.get("left_path", "")),
+            payload.get("after_path", payload.get("right_path", "")),
+            pages=str(payload.get("pages", "all")),
+            max_difference_ratio=float(payload.get("max_difference_ratio", 0.001)),
+            render_scale=float(payload.get("render_scale", 0.5)),
+        )
+    if tool_name == "pdf.compare.version_report":
+        return run_compare_version_report(
+            payload.get("before_path", payload.get("left_path", "")),
+            payload.get("after_path", payload.get("right_path", "")),
+            output_path=payload.get("output_path"),
+            pages=str(payload.get("pages", "all")),
+        )
     if tool_name == "pdf.ai.parse.lite":
         return run_parse_lite(
             payload.get("input_path", ""),
             pages=str(payload.get("pages", "all")),
+        )
+    if tool_name == "pdf.ai.parse.figures":
+        return run_parse_figures(
+            payload.get("input_path", payload.get("path", "")),
+            pages=str(payload.get("pages", "all")),
+        )
+    if tool_name == "pdf.ai.parse.formulas":
+        return run_parse_formulas(
+            payload.get("input_path", payload.get("path", "")),
+            pages=str(payload.get("pages", "all")),
+        )
+    if tool_name == "pdf.ai.parse.charts":
+        return run_parse_charts(
+            payload.get("input_path", payload.get("path", "")),
+            pages=str(payload.get("pages", "all")),
+        )
+    if tool_name == "pdf.ai.parse.references":
+        return run_parse_references(
+            payload.get("input_path", payload.get("path", "")),
+            pages=str(payload.get("pages", "all")),
+        )
+    if tool_name == "pdf.ocr_scan.scan_to_pdf":
+        return run_ocr_scan_to_pdf(
+            payload.get("image_paths", []),
+            output_path=payload.get("output_path", ""),
+        )
+    if tool_name == "pdf.ocr_scan.ocr":
+        return run_ocr(
+            payload.get("input_path", payload.get("path", "")),
+            pages=str(payload.get("pages", "all")),
+            languages=_string_list(payload.get("languages")),
+            dpi=int(payload.get("dpi", 200)),
+            engine=str(payload.get("engine", "tesseract")),
+            psm=int(payload.get("psm", 6)),
+        )
+    if tool_name == "pdf.ocr_scan.searchable_pdf":
+        return run_ocr_searchable_pdf(
+            payload.get("input_path", ""),
+            output_path=payload.get("output_path", ""),
+            pages=str(payload.get("pages", "all")),
+            languages=_string_list(payload.get("languages")),
+            dpi=int(payload.get("dpi", 200)),
+            engine=str(payload.get("engine", "tesseract")),
+            psm=int(payload.get("psm", 6)),
+        )
+    if tool_name == "pdf.ocr_scan.despeckle":
+        return run_ocr_despeckle(
+            payload.get("input_path", ""),
+            output_path=payload.get("output_path", ""),
+        )
+    if tool_name == "pdf.ocr_scan.remove_existing_ocr":
+        return run_ocr_remove_existing(
+            payload.get("input_path", ""),
+            output_path=payload.get("output_path", ""),
+        )
+    if tool_name == "pdf.ocr_scan.multilingual_ocr":
+        return run_ocr_multilingual(
+            payload.get("input_path", ""),
+            output_path=payload.get("output_path", ""),
+            languages=_string_list(payload.get("languages")),
         )
     if tool_name == "pdf.ai.rag.ingest":
         return run_rag_ingest(
@@ -827,6 +1294,42 @@ def _object_list(value: object) -> list[dict[str, object]] | None:
     if isinstance(value, list) and all(isinstance(item, dict) for item in value):
         return value
     return None
+
+
+def _float_list(value: object) -> list[float]:
+    if isinstance(value, str):
+        parts = [part.strip() for part in value.split(",") if part.strip()]
+    elif isinstance(value, list):
+        parts = value
+    else:
+        return []
+    try:
+        return [float(part) for part in parts]
+    except (TypeError, ValueError):
+        return []
+
+
+def _point_list(value: object) -> list[list[float]]:
+    if not isinstance(value, list):
+        return []
+    points = []
+    for point in value:
+        if not isinstance(point, list) or len(point) != 2:
+            return []
+        try:
+            points.append([float(point[0]), float(point[1])])
+        except (TypeError, ValueError):
+            return []
+    return points
+
+
+def _optional_float(value: object) -> float | None:
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def _optional_int(value: object) -> int | None:

@@ -221,7 +221,7 @@ test("runCli exposes code snapshot and data profile commands", async () => {
         return jsonResponse({
           job_id: "job_context_profile_cli",
           status: "succeeded",
-          tool: calls.length === 1 ? "pdf.context.code_snapshot" : "pdf.context.data_profile",
+          tool: calls.at(-1)?.url.split("/v1/tools/")[1]?.split("/run")[0] ?? "unknown",
           artifacts: [],
           validation: null,
           warnings: [],
@@ -264,6 +264,20 @@ test("runCli exposes code snapshot and data profile commands", async () => {
     ]),
     0,
   );
+  assert.equal(
+    await invoke([
+      "context-image-analyze",
+      "scan.png",
+      "--language",
+      "eng",
+      "--skip-ocr",
+      "--engine",
+      "tesseract",
+      "--psm",
+      "6",
+    ]),
+    0,
+  );
 
   assert.deepEqual(calls, [
     {
@@ -286,9 +300,20 @@ test("runCli exposes code snapshot and data profile commands", async () => {
         max_rows: 50,
       },
     },
+    {
+      url: "http://127.0.0.1:7331/v1/tools/pdf.context.image_analyze/run",
+      body: {
+        input_path: "scan.png",
+        languages: ["eng"],
+        run_ocr: false,
+        engine: "tesseract",
+        psm: 6,
+      },
+    },
   ]);
   assert.equal(JSON.parse(output[0] ?? "{}").tool, "pdf.context.code_snapshot");
   assert.equal(JSON.parse(output[1] ?? "{}").tool, "pdf.context.data_profile");
+  assert.equal(JSON.parse(output[2] ?? "{}").tool, "pdf.context.image_analyze");
 });
 
 test("runCli exposes target profile commands", async () => {
@@ -908,6 +933,156 @@ test("runCli exposes artifact bundle export command", async () => {
   });
 });
 
+test("runCli exposes artifact manifest command", async () => {
+  const output: string[] = [];
+  let postedBody: unknown;
+
+  const code = await runCli(
+    [
+      "artifact-manifest",
+      "--file",
+      "report.pdf",
+      "--file",
+      "report.composition.json",
+      "--file",
+      "report.coverage.json",
+      "-o",
+      "report.artifacts.json",
+      "--title",
+      "Report Artifact Manifest",
+      "--metadata",
+      "agent=codex",
+    ],
+    {
+      fetch: async (input, init) => {
+        assert.equal(String(input), "http://127.0.0.1:7331/v1/tools/pdf.artifacts.manifest/run");
+        postedBody = JSON.parse(String(init?.body));
+        return jsonResponse({
+          job_id: "job_artifact_manifest_cli",
+          status: "succeeded",
+          tool: "pdf.artifacts.manifest",
+          artifacts: [],
+          validation: null,
+          warnings: [],
+          usage: {},
+          next_recommended_tools: [],
+          error: null,
+        });
+      },
+      stdout: (line) => output.push(line),
+      stderr: (line) => output.push(`ERR:${line}`),
+    },
+  );
+
+  assert.equal(code, 0);
+  assert.equal(JSON.parse(output[0] ?? "{}").tool, "pdf.artifacts.manifest");
+  assert.deepEqual(postedBody, {
+    artifact_paths: ["report.pdf", "report.composition.json", "report.coverage.json"],
+    output_path: "report.artifacts.json",
+    title: "Report Artifact Manifest",
+    metadata: { agent: "codex" },
+  });
+});
+
+test("runCli exposes artifact graph command", async () => {
+  const output: string[] = [];
+  let postedBody: unknown;
+
+  const code = await runCli(
+    [
+      "artifact-graph",
+      "--manifest",
+      "report.artifacts.json",
+      "--file",
+      "report.pdf",
+      "--file",
+      "report.composition.json",
+      "-o",
+      "report.artifact-graph.json",
+      "--title",
+      "Report Artifact Graph",
+    ],
+    {
+      fetch: async (input, init) => {
+        assert.equal(String(input), "http://127.0.0.1:7331/v1/tools/pdf.artifacts.graph/run");
+        postedBody = JSON.parse(String(init?.body));
+        return jsonResponse({
+          job_id: "job_artifact_graph_cli",
+          status: "succeeded",
+          tool: "pdf.artifacts.graph",
+          artifacts: [],
+          validation: null,
+          warnings: [],
+          usage: {},
+          next_recommended_tools: [],
+          error: null,
+        });
+      },
+      stdout: (line) => output.push(line),
+      stderr: (line) => output.push(`ERR:${line}`),
+    },
+  );
+
+  assert.equal(code, 0);
+  assert.equal(JSON.parse(output[0] ?? "{}").tool, "pdf.artifacts.graph");
+  assert.deepEqual(postedBody, {
+    artifact_manifest_path: "report.artifacts.json",
+    artifact_paths: ["report.pdf", "report.composition.json"],
+    output_path: "report.artifact-graph.json",
+    title: "Report Artifact Graph",
+  });
+});
+
+test("runCli exposes artifact source map command", async () => {
+  const output: string[] = [];
+  let postedBody: unknown;
+
+  const code = await runCli(
+    [
+      "artifact-source-map",
+      "--composition",
+      "report.composition.json",
+      "--context-packet",
+      "context.packet.json",
+      "--manifest",
+      "report.artifacts.json",
+      "-o",
+      "report.artifact-source-map.json",
+      "--title",
+      "Report Artifact Source Map",
+    ],
+    {
+      fetch: async (input, init) => {
+        assert.equal(String(input), "http://127.0.0.1:7331/v1/tools/pdf.artifacts.source_map/run");
+        postedBody = JSON.parse(String(init?.body));
+        return jsonResponse({
+          job_id: "job_artifact_source_map_cli",
+          status: "succeeded",
+          tool: "pdf.artifacts.source_map",
+          artifacts: [],
+          validation: null,
+          warnings: [],
+          usage: {},
+          next_recommended_tools: [],
+          error: null,
+        });
+      },
+      stdout: (line) => output.push(line),
+      stderr: (line) => output.push(`ERR:${line}`),
+    },
+  );
+
+  assert.equal(code, 0);
+  assert.equal(JSON.parse(output[0] ?? "{}").tool, "pdf.artifacts.source_map");
+  assert.deepEqual(postedBody, {
+    composition_path: "report.composition.json",
+    context_packet_path: "context.packet.json",
+    artifact_manifest_path: "report.artifacts.json",
+    output_path: "report.artifact-source-map.json",
+    title: "Report Artifact Source Map",
+  });
+});
+
 test("runCli exposes artifact bundle verify command", async () => {
   const output: string[] = [];
   let postedBody: unknown;
@@ -1043,6 +1218,82 @@ test("runCli exposes Codex agent setup command", async () => {
   });
 });
 
+test("runCli exposes Kilo Code and OpenClaw agent setup commands", async () => {
+  const output: string[] = [];
+  const calls: Array<{ url: string; body: unknown }> = [];
+
+  async function invoke(args: string[]): Promise<number> {
+    return runCli(args, {
+      fetch: async (input, init) => {
+        const body = JSON.parse(String(init?.body));
+        calls.push({ url: String(input), body });
+        return jsonResponse({
+          job_id: "job_agent_setup",
+          status: "succeeded",
+          tool: String(input).includes("kilo_code")
+            ? "agent.setup.kilo_code"
+            : "agent.setup.openclaw",
+          artifacts: [],
+          validation: null,
+          warnings: [],
+          usage: {},
+          next_recommended_tools: [],
+          error: null,
+        });
+      },
+      stdout: (line) => output.push(line),
+      stderr: (line) => output.push(`ERR:${line}`),
+    });
+  }
+
+  assert.equal(
+    await invoke([
+      "agent-setup-kilo-code",
+      "-o",
+      "kilo-code.mcp.json",
+      "--safe-root",
+      ".",
+      "--command",
+      "python",
+      "--arg-prefix",
+      "-m",
+      "--arg-prefix",
+      "agentpdf.cli",
+    ]),
+    0,
+  );
+  assert.equal(
+    await invoke([
+      "agent-setup-openclaw",
+      "-o",
+      "openclaw.mcp.json",
+      "--safe-root",
+      ".",
+      "--server-name",
+      "agentpdf",
+    ]),
+    0,
+  );
+
+  assert.deepEqual(calls.map((call) => call.url), [
+    "http://127.0.0.1:7331/v1/tools/agent.setup.kilo_code/run",
+    "http://127.0.0.1:7331/v1/tools/agent.setup.openclaw/run",
+  ]);
+  assert.deepEqual(calls[0]?.body, {
+    output_path: "kilo-code.mcp.json",
+    safe_root: ".",
+    command: "python",
+    args_prefix: ["-m", "agentpdf.cli"],
+  });
+  assert.deepEqual(calls[1]?.body, {
+    output_path: "openclaw.mcp.json",
+    safe_root: ".",
+    server_name: "agentpdf",
+  });
+  assert.equal(JSON.parse(output[0] ?? "{}").tool, "agent.setup.kilo_code");
+  assert.equal(JSON.parse(output[1] ?? "{}").tool, "agent.setup.openclaw");
+});
+
 test("runCli exposes high-frequency PDF utility commands", async () => {
   const calls: Array<{ url: string; body: unknown }> = [];
 
@@ -1171,6 +1422,10 @@ test("runCli exposes high-frequency PDF utility commands", async () => {
       "technical_audit",
       "-o",
       "technical-audit.pdf",
+      "--renderer",
+      "html",
+      "--html-output",
+      "technical-audit.html",
     ]),
     0,
   );
@@ -1191,6 +1446,18 @@ test("runCli exposes high-frequency PDF utility commands", async () => {
       "context.packet.json",
       "-o",
       "technical-audit.source-map.json",
+    ]),
+    0,
+  );
+  assert.equal(
+    await invoke([
+      "evidence-cite-claims",
+      "--claims",
+      "[{\"claim_id\":\"claim_cli\",\"text\":\"Runtime metrics include latency evidence.\",\"source_refs\":[\"ctx_002\"]}]",
+      "--source-map",
+      "technical-audit.source-map.json",
+      "-o",
+      "technical-audit.citations.json",
     ]),
     0,
   );
@@ -1234,6 +1501,7 @@ test("runCli exposes high-frequency PDF utility commands", async () => {
   );
   assert.equal(await invoke(["patch-verify", "technical-audit.patch.json", "technical-audit-patched.pdf"]), 0);
   assert.equal(await invoke(["extract-images", "numbered.pdf", "--pages", "1", "--out-dir", "images"]), 0);
+  assert.equal(await invoke(["inspect-health", "cover.pdf"]), 0);
 
   assert.deepEqual(calls.map((call) => call.url), [
     "http://127.0.0.1:7331/v1/tools/pdf.inspect.pages/run",
@@ -1257,12 +1525,14 @@ test("runCli exposes high-frequency PDF utility commands", async () => {
     "http://127.0.0.1:7331/v1/tools/pdf.compose.from_context/run",
     "http://127.0.0.1:7331/v1/tools/pdf.evidence.coverage_report/run",
     "http://127.0.0.1:7331/v1/tools/pdf.evidence.map_sources/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.evidence.cite_claims/run",
     "http://127.0.0.1:7331/v1/tools/pdf.evidence.context_packet_report/run",
     "http://127.0.0.1:7331/v1/tools/pdf.patch.plan/run",
     "http://127.0.0.1:7331/v1/tools/pdf.patch.preview/run",
     "http://127.0.0.1:7331/v1/tools/pdf.patch.apply/run",
     "http://127.0.0.1:7331/v1/tools/pdf.patch.verify/run",
     "http://127.0.0.1:7331/v1/tools/pdf.convert.extract_images/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.inspect.health/run",
   ]);
   assert.deepEqual(calls[0]?.body, {
     input_path: "cover.pdf",
@@ -1375,6 +1645,8 @@ test("runCli exposes high-frequency PDF utility commands", async () => {
     context_packet_path: "context.packet.json",
     profile: "technical_audit",
     output_path: "technical-audit.pdf",
+    renderer: "html",
+    html_output_path: "technical-audit.html",
   });
   assert.deepEqual(calls[19]?.body, {
     composition_path: "technical-audit.composition.json",
@@ -1386,12 +1658,23 @@ test("runCli exposes high-frequency PDF utility commands", async () => {
     output_path: "technical-audit.source-map.json",
   });
   assert.deepEqual(calls[21]?.body, {
+    claims: [
+      {
+        claim_id: "claim_cli",
+        text: "Runtime metrics include latency evidence.",
+        source_refs: ["ctx_002"],
+      },
+    ],
+    source_map_path: "technical-audit.source-map.json",
+    output_path: "technical-audit.citations.json",
+  });
+  assert.deepEqual(calls[22]?.body, {
     context_packet_path: "context.packet.json",
     output_path: "context-report.pdf",
     report_output_path: "context-report.json",
     title: "Context Report",
   });
-  assert.deepEqual(calls[22]?.body, {
+  assert.deepEqual(calls[23]?.body, {
     input_path: "technical-audit.pdf",
     operations: [
       {
@@ -1407,22 +1690,500 @@ test("runCli exposes high-frequency PDF utility commands", async () => {
     layer_manifest_path: "technical-audit.layers.json",
     reason: "Append structured evidence.",
   });
-  assert.deepEqual(calls[23]?.body, {
+  assert.deepEqual(calls[24]?.body, {
     patch_manifest_path: "technical-audit.patch.json",
     output_path: "technical-audit.patch-preview.json",
   });
-  assert.deepEqual(calls[24]?.body, {
+  assert.deepEqual(calls[25]?.body, {
     patch_manifest_path: "technical-audit.patch.json",
     output_path: "technical-audit-patched.pdf",
   });
-  assert.deepEqual(calls[25]?.body, {
+  assert.deepEqual(calls[26]?.body, {
     patch_manifest_path: "technical-audit.patch.json",
     patched_path: "technical-audit-patched.pdf",
   });
-  assert.deepEqual(calls[26]?.body, {
+  assert.deepEqual(calls[27]?.body, {
     input_path: "numbered.pdf",
     pages: "1",
     out_dir: "images",
+  });
+});
+
+test("runCli exposes optimization, font, and edit commands", async () => {
+  const calls: Array<{ url: string; body: unknown }> = [];
+
+  async function invoke(args: string[]): Promise<number> {
+    return runCli(args, {
+      fetch: async (input, init) => {
+        calls.push({ url: String(input), body: JSON.parse(String(init?.body)) });
+        return jsonResponse({
+          job_id: "job_cli_pdf_edit",
+          status: "succeeded",
+          tool: calls.at(-1)?.url.split("/v1/tools/")[1]?.split("/run")[0] ?? "unknown",
+          artifacts: [],
+          validation: null,
+          warnings: [],
+          usage: {},
+          next_recommended_tools: [],
+          error: null,
+        });
+      },
+      stdout: () => undefined,
+      stderr: () => undefined,
+    });
+  }
+
+  assert.equal(await invoke(["remove-unused-objects", "report.pdf", "-o", "report.optimized.pdf"]), 0);
+  assert.equal(await invoke(["validate-pdfa", "report.pdf"]), 0);
+  assert.equal(await invoke(["extract-fonts", "report.pdf", "--pages", "1"]), 0);
+  assert.equal(
+    await invoke([
+      "add-shape",
+      "report.pdf",
+      "-o",
+      "report.shape.pdf",
+      "--shape",
+      "rectangle",
+      "--page",
+      "1",
+      "--x",
+      "72",
+      "--y",
+      "640",
+      "--width",
+      "120",
+      "--height",
+      "40",
+      "--stroke-color",
+      "#2563eb",
+    ]),
+    0,
+  );
+  assert.equal(
+    await invoke(["underline", "report.shape.pdf", "-o", "report.underline.pdf", "--page", "1", "--bbox", "72,640,180,656"]),
+    0,
+  );
+  assert.equal(
+    await invoke(["strikeout", "report.underline.pdf", "-o", "report.strikeout.pdf", "--page", "1", "--bbox", "72,640,180,656"]),
+    0,
+  );
+  assert.equal(
+    await invoke(["freehand-draw", "report.strikeout.pdf", "-o", "report.drawn.pdf", "--page", "1", "--points", "[[72,680],[120,700]]"]),
+    0,
+  );
+  assert.equal(
+    await invoke(["resize-pages", "report.drawn.pdf", "-o", "report.resized.pdf", "--width", "300", "--height", "400"]),
+    0,
+  );
+  assert.equal(await invoke(["add-margin", "report.resized.pdf", "-o", "report.margin.pdf", "--margin", "36"]), 0);
+  assert.equal(await invoke(["underlay", "report.margin.pdf", "-o", "report.underlay.pdf", "--text", "DRAFT"]), 0);
+
+  assert.deepEqual(calls.map((call) => call.url), [
+    "http://127.0.0.1:7331/v1/tools/pdf.optimize.remove_unused_objects/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.optimize.validate_pdfa/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.convert.extract_fonts/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.edit.add_shape/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.edit.underline/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.edit.strikeout/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.edit.freehand_draw/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.edit.resize_pages/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.edit.add_margin/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.edit.underlay/run",
+  ]);
+  assert.deepEqual(calls[0]?.body, {
+    input_path: "report.pdf",
+    output_path: "report.optimized.pdf",
+  });
+  assert.deepEqual(calls[1]?.body, { input_path: "report.pdf" });
+  assert.deepEqual(calls[2]?.body, { input_path: "report.pdf", pages: "1" });
+  assert.deepEqual(calls[4]?.body, {
+    input_path: "report.shape.pdf",
+    output_path: "report.underline.pdf",
+    page: 1,
+    bbox: [72, 640, 180, 656],
+  });
+  assert.deepEqual(calls[9]?.body, {
+    input_path: "report.margin.pdf",
+    output_path: "report.underlay.pdf",
+    text: "DRAFT",
+  });
+});
+
+test("runCli exposes compare and semantic parse commands", async () => {
+  const calls: Array<{ url: string; body: unknown }> = [];
+
+  async function invoke(args: string[]): Promise<number> {
+    return runCli(args, {
+      fetch: async (input, init) => {
+        calls.push({ url: String(input), body: JSON.parse(String(init?.body)) });
+        return jsonResponse({
+          job_id: "job_cli_compare_parse",
+          status: "succeeded",
+          tool: calls.at(-1)?.url.split("/v1/tools/")[1]?.split("/run")[0] ?? "unknown",
+          artifacts: [],
+          validation: null,
+          warnings: [],
+          usage: {},
+          next_recommended_tools: [],
+          error: null,
+        });
+      },
+      stdout: () => undefined,
+      stderr: () => undefined,
+    });
+  }
+
+  assert.equal(await invoke(["semantic-diff", "before.pdf", "after.pdf", "--pages", "1"]), 0);
+  assert.equal(
+    await invoke(["version-report", "before.pdf", "after.pdf", "-o", "version-report.md"]),
+    0,
+  );
+  assert.equal(await invoke(["compare-visual-diff", "before.pdf", "after.pdf", "--pages", "1"]), 0);
+  assert.equal(
+    await invoke([
+      "visual-diff",
+      "before.pdf",
+      "after.pdf",
+      "--pages",
+      "1",
+      "--max-difference-ratio",
+      "0",
+    ]),
+    0,
+  );
+  assert.equal(await invoke(["parse-figures", "report.pdf", "--pages", "1"]), 0);
+  assert.equal(await invoke(["parse-formulas", "report.pdf"]), 0);
+  assert.equal(await invoke(["parse-charts", "report.pdf"]), 0);
+  assert.equal(await invoke(["parse-references", "report.pdf"]), 0);
+
+  assert.deepEqual(calls.map((call) => call.url), [
+    "http://127.0.0.1:7331/v1/tools/pdf.compare.semantic_diff/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.compare.version_report/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.compare.visual_diff/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.validation.visual_diff/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.ai.parse.figures/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.ai.parse.formulas/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.ai.parse.charts/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.ai.parse.references/run",
+  ]);
+  assert.deepEqual(calls[0]?.body, {
+    before_path: "before.pdf",
+    after_path: "after.pdf",
+    pages: "1",
+  });
+  assert.deepEqual(calls[1]?.body, {
+    before_path: "before.pdf",
+    after_path: "after.pdf",
+    output_path: "version-report.md",
+  });
+  assert.deepEqual(calls[2]?.body, {
+    before_path: "before.pdf",
+    after_path: "after.pdf",
+    pages: "1",
+  });
+  assert.deepEqual(calls[3]?.body, {
+    before_path: "before.pdf",
+    after_path: "after.pdf",
+    pages: "1",
+    max_difference_ratio: 0,
+  });
+  assert.deepEqual(calls[4]?.body, {
+    input_path: "report.pdf",
+    pages: "1",
+  });
+  assert.deepEqual(calls[7]?.body, {
+    input_path: "report.pdf",
+  });
+});
+
+test("runCli exposes forms and OCR commands", async () => {
+  const calls: Array<{ url: string; body: unknown }> = [];
+
+  async function invoke(args: string[]): Promise<number> {
+    return runCli(args, {
+      fetch: async (input, init) => {
+        calls.push({ url: String(input), body: JSON.parse(String(init?.body)) });
+        return jsonResponse({
+          job_id: "job_cli_forms_ocr",
+          status: "succeeded",
+          tool: calls.at(-1)?.url.split("/v1/tools/")[1]?.split("/run")[0] ?? "unknown",
+          artifacts: [],
+          validation: null,
+          warnings: [],
+          usage: {},
+          next_recommended_tools: [],
+          error: null,
+        });
+      },
+      stdout: () => undefined,
+      stderr: () => undefined,
+    });
+  }
+
+  assert.equal(
+    await invoke([
+      "forms-create",
+      "-o",
+      "form.pdf",
+      "--field",
+      '{"name":"name","label":"Name","required":true}',
+    ]),
+    0,
+  );
+  assert.equal(
+    await invoke(["forms-import-data", "form.pdf", "--data", '{"name":"Ada"}', "-o", "filled.pdf"]),
+    0,
+  );
+  assert.equal(await invoke(["forms-validate", "filled.pdf", "--required-field", "name"]), 0);
+  assert.equal(await invoke(["ocr", "scan.png", "--language", "eng", "--psm", "6"]), 0);
+  assert.equal(
+    await invoke([
+      "ocr-searchable-pdf",
+      "scan.pdf",
+      "-o",
+      "searchable.pdf",
+      "--pages",
+      "1",
+      "--language",
+      "eng",
+      "--dpi",
+      "250",
+    ]),
+    0,
+  );
+  assert.equal(await invoke(["ocr-scan-to-pdf", "scan.png", "-o", "scan.pdf"]), 0);
+  assert.equal(await invoke(["ocr-despeckle", "scan.pdf", "-o", "despeckled.pdf"]), 0);
+  assert.equal(await invoke(["ocr-remove-existing", "scan.pdf", "-o", "no-ocr.pdf"]), 0);
+  assert.equal(
+    await invoke([
+      "ocr-multilingual",
+      "scan.pdf",
+      "-o",
+      "multi-ocr.pdf",
+      "--language",
+      "eng",
+      "--language",
+      "chi_sim",
+    ]),
+    0,
+  );
+
+  assert.deepEqual(calls.map((call) => call.url), [
+    "http://127.0.0.1:7331/v1/tools/pdf.forms.create/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.forms.import_data/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.forms.validate/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.ocr_scan.ocr/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.ocr_scan.searchable_pdf/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.ocr_scan.scan_to_pdf/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.ocr_scan.despeckle/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.ocr_scan.remove_existing_ocr/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.ocr_scan.multilingual_ocr/run",
+  ]);
+  assert.deepEqual(calls[0]?.body, {
+    output_path: "form.pdf",
+    fields: [{ name: "name", label: "Name", required: true }],
+  });
+  assert.deepEqual(calls[2]?.body, {
+    input_path: "filled.pdf",
+    required_fields: ["name"],
+  });
+  assert.deepEqual(calls[3]?.body, {
+    input_path: "scan.png",
+    languages: ["eng"],
+    psm: 6,
+  });
+  assert.deepEqual(calls[4]?.body, {
+    input_path: "scan.pdf",
+    output_path: "searchable.pdf",
+    pages: "1",
+    languages: ["eng"],
+    dpi: 250,
+  });
+  assert.deepEqual(calls[5]?.body, {
+    image_paths: ["scan.png"],
+    output_path: "scan.pdf",
+  });
+  assert.deepEqual(calls[8]?.body, {
+    input_path: "scan.pdf",
+    output_path: "multi-ocr.pdf",
+    languages: ["eng", "chi_sim"],
+  });
+});
+
+test("runCli exposes conversion, PDF/A, and security commands", async () => {
+  const calls: Array<{ url: string; body: unknown }> = [];
+
+  async function invoke(args: string[]): Promise<number> {
+    return runCli(args, {
+      fetch: async (input, init) => {
+        calls.push({ url: String(input), body: JSON.parse(String(init?.body)) });
+        return jsonResponse({
+          job_id: "job_cli_conversion_security",
+          status: "succeeded",
+          tool: calls.at(-1)?.url.split("/v1/tools/")[1]?.split("/run")[0] ?? "unknown",
+          artifacts: [],
+          validation: null,
+          warnings: [],
+          usage: {},
+          next_recommended_tools: [],
+          error: null,
+        });
+      },
+      stdout: () => undefined,
+      stderr: () => undefined,
+    });
+  }
+
+  assert.equal(await invoke(["subset-fonts", "report.pdf", "-o", "report.subset.pdf"]), 0);
+  assert.equal(await invoke(["to-pdfa", "report.pdf", "-o", "report.pdfa.pdf", "--profile", "PDF/A-2b"]), 0);
+  assert.equal(await invoke(["html-to-pdf", "page.html", "-o", "page.pdf"]), 0);
+  assert.equal(
+    await invoke([
+      "url-to-pdf",
+      "https://example.com",
+      "-o",
+      "url.pdf",
+      "--allow-private-hosts",
+      "--allow-file-urls",
+    ]),
+    0,
+  );
+  assert.equal(await invoke(["docx-to-pdf", "report.docx", "-o", "report.pdf"]), 0);
+  assert.equal(await invoke(["pptx-to-pdf", "deck.pptx", "-o", "deck.pdf"]), 0);
+  assert.equal(await invoke(["xlsx-to-pdf", "metrics.xlsx", "-o", "metrics.pdf"]), 0);
+  assert.equal(await invoke(["pdf-to-html", "report.pdf", "-o", "report.html", "--pages", "1"]), 0);
+  assert.equal(await invoke(["pdf-to-docx", "report.pdf", "-o", "report.docx"]), 0);
+  assert.equal(await invoke(["pdf-to-pptx", "report.pdf", "-o", "report.pptx"]), 0);
+  assert.equal(await invoke(["pdf-to-xlsx", "report.pdf", "-o", "report.xlsx"]), 0);
+  assert.equal(
+    await invoke([
+      "security-protect",
+      "report.pdf",
+      "-o",
+      "protected.pdf",
+      "--password",
+      "open",
+      "--owner-password",
+      "owner",
+    ]),
+    0,
+  );
+  assert.equal(
+    await invoke(["security-encrypt", "report.pdf", "-o", "encrypted.pdf", "--password", "open"]),
+    0,
+  );
+  assert.equal(
+    await invoke(["security-unlock-authorized", "protected.pdf", "-o", "unlocked.pdf", "--password", "open"]),
+    0,
+  );
+  assert.equal(
+    await invoke(["security-decrypt-authorized", "encrypted.pdf", "-o", "decrypted.pdf", "--password", "open"]),
+    0,
+  );
+  assert.equal(
+    await invoke(["security-sign", "report.pdf", "-o", "signed.pdf", "--secret", "local-secret"]),
+    0,
+  );
+  assert.equal(
+    await invoke([
+      "security-verify-signature",
+      "signed.pdf",
+      "--signature",
+      "signed.pdf.signature.json",
+      "--secret",
+      "local-secret",
+    ]),
+    0,
+  );
+  assert.equal(await invoke(["security-malware-scan", "report.pdf"]), 0);
+  assert.equal(await invoke(["security-sanitize", "report.pdf", "-o", "sanitized.pdf"]), 0);
+  assert.equal(
+    await invoke([
+      "security-redact",
+      "report.pdf",
+      "-o",
+      "redacted.pdf",
+      "--region",
+      '{"page":1,"bbox":[60,700,280,760],"label":"secret"}',
+    ]),
+    0,
+  );
+  assert.equal(
+    await invoke(["security-verify-redaction", "redacted.pdf", "--search-term", "SECRET-CODE-123"]),
+    0,
+  );
+  assert.equal(await invoke(["redaction-check", "redacted.pdf", "--search-term", "SECRET-CODE-123"]), 0);
+
+  assert.deepEqual(calls.map((call) => call.url), [
+    "http://127.0.0.1:7331/v1/tools/pdf.optimize.subset_fonts/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.optimize.to_pdfa/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.convert.html_to_pdf/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.convert.url_to_pdf/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.convert.docx_to_pdf/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.convert.pptx_to_pdf/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.convert.xlsx_to_pdf/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.convert.pdf_to_html/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.convert.pdf_to_docx/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.convert.pdf_to_pptx/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.convert.pdf_to_xlsx/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.security.protect/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.security.encrypt/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.security.unlock_authorized/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.security.decrypt_authorized/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.security.sign/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.security.verify_signature/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.security.malware_scan/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.security.sanitize/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.security.redact/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.security.verify_redaction/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.validation.redaction_check/run",
+  ]);
+  assert.deepEqual(calls[1]?.body, {
+    input_path: "report.pdf",
+    output_path: "report.pdfa.pdf",
+    profile: "PDF/A-2b",
+  });
+  assert.deepEqual(calls[3]?.body, {
+    url: "https://example.com",
+    output_path: "url.pdf",
+    allow_private_hosts: true,
+    allow_file_urls: true,
+  });
+  assert.deepEqual(calls[7]?.body, {
+    input_path: "report.pdf",
+    output_path: "report.html",
+    pages: "1",
+  });
+  assert.deepEqual(calls[11]?.body, {
+    input_path: "report.pdf",
+    output_path: "protected.pdf",
+    password: "open",
+    owner_password: "owner",
+  });
+  assert.deepEqual(calls[16]?.body, {
+    input_path: "signed.pdf",
+    signature_path: "signed.pdf.signature.json",
+    secret: "local-secret",
+  });
+  assert.deepEqual(calls[17]?.body, {
+    input_path: "report.pdf",
+  });
+  assert.deepEqual(calls[18]?.body, {
+    input_path: "report.pdf",
+    output_path: "sanitized.pdf",
+  });
+  assert.deepEqual(calls[19]?.body, {
+    input_path: "report.pdf",
+    output_path: "redacted.pdf",
+    regions: [{ page: 1, bbox: [60, 700, 280, 760], label: "secret" }],
+  });
+  assert.deepEqual(calls[20]?.body, {
+    input_path: "redacted.pdf",
+    search_terms: ["SECRET-CODE-123"],
+  });
+  assert.deepEqual(calls[21]?.body, {
+    input_path: "redacted.pdf",
+    search_terms: ["SECRET-CODE-123"],
   });
 });
 

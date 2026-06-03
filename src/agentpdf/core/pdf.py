@@ -1,18 +1,22 @@
 from __future__ import annotations
 
 import json
+import os
+from copy import deepcopy
 from io import BytesIO
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
 from reportlab.lib import colors as rl_colors
-from pypdf import PdfReader, PdfWriter
+from pypdf import PdfReader, PdfWriter, Transformation
 from reportlab.lib.colors import HexColor
 from reportlab.lib.pagesizes import A4, landscape, letter
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.cidfonts import UnicodeCIDFont
+from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
 from reportlab.platypus import (
     Image as RLImage,
@@ -34,6 +38,20 @@ from agentpdf.security.paths import resolve_input_path, resolve_output_path
 from agentpdf.validation.pdf import validate_pdf
 
 SUPPORTED_IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff"}
+CJK_FONT_PATH_ENV = "AGENTPDF_CJK_FONT_PATH"
+CJK_CID_FONT = "STSong-Light"
+CJK_FONT_CANDIDATES = (
+    Path("C:/Windows/Fonts/NotoSansSC-VF.ttf"),
+    Path("C:/Windows/Fonts/simhei.ttf"),
+    Path("C:/Windows/Fonts/msyh.ttc"),
+    Path("/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"),
+    Path("/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.otf"),
+    Path("/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc"),
+    Path("/usr/share/fonts/truetype/noto/NotoSansSC-Regular.otf"),
+    Path("/System/Library/Fonts/PingFang.ttc"),
+    Path("/Library/Fonts/Arial Unicode.ttf"),
+)
+_REGISTERED_CJK_FONTS: tuple[str, str] | None = None
 BUILTIN_STYLE_PACKS: dict[str, dict[str, Any]] = {
     "plain_report": {
         "style_id": "plain_report",
@@ -435,6 +453,124 @@ def insert_blank_pages_pdf(
     )
 
 
+def n_up_pdf(
+    input_path: str | Path,
+    output_path: str | Path,
+    pages: str = "all",
+    per_sheet: int = 2,
+) -> ToolResult:
+    tool = "pdf.organize.n_up"
+    if per_sheet not in {2, 4}:
+        raise AgentPDFException(
+            "invalid_input",
+            "n-up per_sheet must be 2 or 4 in the local OSS implementation.",
+            details={"per_sheet": per_sheet},
+        )
+    resolved = resolve_input_path(input_path)
+    reader = _reader_for_operation(resolved)
+    selected_pages = parse_page_range(pages, total_pages=len(reader.pages))
+    if not selected_pages:
+        raise AgentPDFException("invalid_page_range", "n-up requires at least one source page.")
+
+    first_page = reader.pages[selected_pages[0]]
+    width = float(first_page.mediabox.width)
+    height = float(first_page.mediabox.height)
+    columns, rows = (2, 1) if per_sheet == 2 else (2, 2)
+    writer = PdfWriter()
+    for chunk_start in range(0, len(selected_pages), per_sheet):
+        sheet = writer.add_blank_page(width=width, height=height)
+        for slot, page_index in enumerate(selected_pages[chunk_start : chunk_start + per_sheet]):
+            _merge_page_into_n_up_slot(
+                sheet,
+                reader.pages[page_index],
+                slot=slot,
+                columns=columns,
+                rows=rows,
+                output_width=width,
+                output_height=height,
+            )
+
+    output_pages = (len(selected_pages) + per_sheet - 1) // per_sheet
+    return _write_writer_output(
+        tool=tool,
+        writer=writer,
+        output_path=output_path,
+        expected_pages=output_pages,
+        usage={
+            "input": str(resolved),
+            "page_range": pages,
+            "source_pages": [page + 1 for page in selected_pages],
+            "per_sheet": per_sheet,
+            "layout": {"columns": columns, "rows": rows},
+            "output_pages": output_pages,
+            "page_size": {"width": width, "height": height},
+        },
+        next_recommended_tools=["pdf.validation.render_check", "pdf.validation.page_count_check"],
+    )
+
+
+def booklet_pdf(
+    input_path: str | Path,
+    output_path: str | Path,
+    pages: str = "all",
+) -> ToolResult:
+    tool = "pdf.organize.booklet"
+    resolved = resolve_input_path(input_path)
+    reader = _reader_for_operation(resolved)
+    selected_pages = parse_page_range(pages, total_pages=len(reader.pages))
+    if not selected_pages:
+        raise AgentPDFException("invalid_page_range", "Booklet imposition requires at least one page.")
+
+    padded: list[int | None] = list(selected_pages)
+    while len(padded) % 4 != 0:
+        padded.append(None)
+    signature_order: list[int | None] = []
+    left = 0
+    right = len(padded) - 1
+    while left < right:
+        signature_order.extend([padded[right], padded[left], padded[left + 1], padded[right - 1]])
+        left += 2
+        right -= 2
+
+    first_page = reader.pages[selected_pages[0]]
+    width = float(first_page.mediabox.width)
+    height = float(first_page.mediabox.height)
+    writer = PdfWriter()
+    for chunk_start in range(0, len(signature_order), 2):
+        sheet = writer.add_blank_page(width=width, height=height)
+        for slot, page_index in enumerate(signature_order[chunk_start : chunk_start + 2]):
+            if page_index is None:
+                continue
+            _merge_page_into_n_up_slot(
+                sheet,
+                reader.pages[page_index],
+                slot=slot,
+                columns=2,
+                rows=1,
+                output_width=width,
+                output_height=height,
+            )
+
+    output_pages = len(signature_order) // 2
+    return _write_writer_output(
+        tool=tool,
+        writer=writer,
+        output_path=output_path,
+        expected_pages=output_pages,
+        usage={
+            "input": str(resolved),
+            "page_range": pages,
+            "source_pages": [page + 1 for page in selected_pages],
+            "padded_page_count": len(padded),
+            "signature_order": [page + 1 if page is not None else None for page in signature_order],
+            "output_pages": output_pages,
+            "layout": {"columns": 2, "rows": 1},
+            "page_size": {"width": width, "height": height},
+        },
+        next_recommended_tools=["pdf.validation.render_check", "pdf.validation.page_count_check"],
+    )
+
+
 def compress_pdf(input_path: str | Path, output_path: str | Path) -> ToolResult:
     tool = "pdf.optimize.compress"
     resolved = resolve_input_path(input_path)
@@ -497,6 +633,100 @@ def repair_pdf(input_path: str | Path, output_path: str | Path) -> ToolResult:
             "repair_strategy": "pypdf_read_rewrite",
             "page_count": len(reader.pages),
         },
+    )
+
+
+def remove_unused_objects_pdf(input_path: str | Path, output_path: str | Path) -> ToolResult:
+    tool = "pdf.optimize.remove_unused_objects"
+    resolved = resolve_input_path(input_path)
+    reader = _reader_for_operation(resolved)
+    writer = _writer_from_reader_pages(reader)
+    if reader.metadata:
+        writer.add_metadata(_metadata_to_pdf_dict(_metadata_to_public_dict(reader.metadata)))
+
+    output = resolve_output_path(output_path)
+    with output.open("wb") as handle:
+        writer.write(handle)
+
+    artifact = build_artifact(output, source_tool=tool)
+    validation = validate_pdf(output, expected_pages=len(reader.pages))
+    return ToolResult(
+        job_id=_job_id(),
+        status="succeeded" if validation.status == "passed" else "failed",
+        tool=tool,
+        artifacts=[artifact],
+        validation=validation,
+        usage={
+            "input": str(resolved),
+            "rewrite_strategy": "pypdf_reachable_page_tree",
+            "page_count": len(reader.pages),
+            "original_size_bytes": resolved.stat().st_size,
+            "output_size_bytes": artifact.size_bytes,
+            "estimated_original_object_count": _estimate_pdf_object_count(reader),
+            "note": "The local implementation rewrites the reachable page tree; it does not run qpdf object-stream optimization.",
+        },
+        next_recommended_tools=["pdf.optimize.compress", "pdf.validation.render_check"],
+    )
+
+
+def validate_pdfa_pdf(input_path: str | Path) -> ToolResult:
+    tool = "pdf.optimize.validate_pdfa"
+    resolved = resolve_input_path(input_path)
+    reader = _reader_for_operation(resolved)
+    raw = resolved.read_bytes()
+    lower_raw = raw.lower()
+    has_pdfa_marker = b"pdfaid:part" in lower_raw or b"pdfaid:conformance" in lower_raw
+    output_intents = reader.trailer.get("/Root", {}).get("/OutputIntents")
+    has_output_intent = bool(output_intents)
+    fonts = _collect_font_records(reader, list(range(len(reader.pages))))
+    unembedded_fonts = [font for font in fonts if not font["embedded"]]
+    profile = _detect_pdfa_profile(raw)
+    checks = [
+        ValidationCheck(
+            name="pdfa_metadata_marker",
+            status="passed" if has_pdfa_marker else "warning",
+            details={"profile": profile},
+            message=None if has_pdfa_marker else "No PDF/A XMP identification marker was found.",
+        ),
+        ValidationCheck(
+            name="pdfa_output_intent",
+            status="passed" if has_output_intent else "warning",
+            details={"output_intent_count": len(output_intents) if output_intents else 0},
+            message=None if has_output_intent else "No PDF/A output intent was found.",
+        ),
+        ValidationCheck(
+            name="pdfa_font_embedding_heuristic",
+            status="passed" if not unembedded_fonts else "warning",
+            details={
+                "font_count": len(fonts),
+                "unembedded_fonts": [font["base_font"] for font in unembedded_fonts],
+            },
+            message=None if not unembedded_fonts else "Some fonts appear unembedded.",
+        ),
+    ]
+    compliant = all(check.status == "passed" for check in checks)
+    validation = ValidationReport(
+        status="passed" if compliant else "warning",
+        checks=checks,
+        page_count=len(reader.pages),
+        warnings=[] if compliant else ["Local PDF/A validation is heuristic; use veraPDF for certification."],
+    )
+    return ToolResult(
+        job_id=_job_id(),
+        status="succeeded",
+        tool=tool,
+        validation=validation,
+        warnings=validation.warnings,
+        usage={
+            "input": str(resolved),
+            "pdfa_compliant": compliant,
+            "profile": profile,
+            "page_count": len(reader.pages),
+            "font_count": len(fonts),
+            "unembedded_font_count": len(unembedded_fonts),
+            "validator": "agentpdf_local_pdfa_heuristic",
+        },
+        next_recommended_tools=["pdf.optimize.to_pdfa", "pdf.convert.extract_fonts"],
     )
 
 
@@ -620,6 +850,335 @@ def add_page_numbers_pdf(
     )
 
 
+def extract_fonts_pdf(input_path: str | Path, pages: str = "all") -> ToolResult:
+    tool = "pdf.convert.extract_fonts"
+    resolved = resolve_input_path(input_path)
+    reader = _reader_for_operation(resolved)
+    selected_pages = parse_page_range(pages, total_pages=len(reader.pages))
+    fonts = _collect_font_records(reader, selected_pages)
+    warnings = []
+    if not fonts:
+        warnings.append("No page fonts were found in selected pages.")
+    if any(not font["embedded"] for font in fonts):
+        warnings.append("Some fonts appear to be referenced by base name rather than embedded.")
+    return ToolResult(
+        job_id=_job_id(),
+        status="succeeded",
+        tool=tool,
+        warnings=warnings,
+        usage={
+            "input": str(resolved),
+            "page_range": pages,
+            "selected_pages": [page + 1 for page in selected_pages],
+            "font_count": len(fonts),
+            "fonts": fonts,
+        },
+        next_recommended_tools=["pdf.optimize.validate_pdfa", "pdf.optimize.subset_fonts"],
+    )
+
+
+def add_shape_pdf(
+    input_path: str | Path,
+    output_path: str | Path,
+    shape: str,
+    page: int,
+    x: float,
+    y: float,
+    width: float,
+    height: float,
+    stroke_color: str = "#2563eb",
+    fill_color: str | None = None,
+    line_width: float = 1.5,
+    opacity: float = 1.0,
+) -> ToolResult:
+    tool = "pdf.edit.add_shape"
+    normalized_shape = shape.lower().strip()
+    if normalized_shape not in {"rectangle", "line", "circle", "ellipse"}:
+        raise AgentPDFException(
+            "invalid_input",
+            "shape must be one of rectangle, line, circle, or ellipse.",
+            details={"shape": shape},
+        )
+    resolved = resolve_input_path(input_path)
+    reader = _reader_for_operation(resolved)
+    page_index = _validate_one_based_page(page, len(reader.pages))
+    writer = PdfWriter(clone_from=resolved)
+    target_page = writer.pages[page_index]
+    overlay = _shape_overlay_page(
+        shape=normalized_shape,
+        page_width=float(target_page.mediabox.width),
+        page_height=float(target_page.mediabox.height),
+        x=float(x),
+        y=float(y),
+        width=float(width),
+        height=float(height),
+        stroke_color=stroke_color,
+        fill_color=fill_color,
+        line_width=float(line_width),
+        opacity=float(opacity),
+    )
+    target_page.merge_page(overlay)
+    return _write_writer_output(
+        tool=tool,
+        writer=writer,
+        output_path=output_path,
+        expected_pages=len(reader.pages),
+        usage={
+            "input": str(resolved),
+            "page": page,
+            "shape": normalized_shape,
+            "bbox": [float(x), float(y), float(x) + float(width), float(y) + float(height)],
+            "stroke_color": stroke_color,
+            "fill_color": fill_color,
+            "line_width": float(line_width),
+            "opacity": max(0.0, min(float(opacity), 1.0)),
+        },
+    )
+
+
+def underline_pdf(
+    input_path: str | Path,
+    output_path: str | Path,
+    page: int,
+    bbox: list[float] | tuple[float, float, float, float],
+    color: str = "#2563eb",
+    line_width: float = 1.0,
+) -> ToolResult:
+    return _mark_bbox_line_pdf(
+        tool="pdf.edit.underline",
+        input_path=input_path,
+        output_path=output_path,
+        page=page,
+        bbox=bbox,
+        color=color,
+        line_width=line_width,
+        line_position="underline",
+    )
+
+
+def strikeout_pdf(
+    input_path: str | Path,
+    output_path: str | Path,
+    page: int,
+    bbox: list[float] | tuple[float, float, float, float],
+    color: str = "#dc2626",
+    line_width: float = 1.0,
+) -> ToolResult:
+    return _mark_bbox_line_pdf(
+        tool="pdf.edit.strikeout",
+        input_path=input_path,
+        output_path=output_path,
+        page=page,
+        bbox=bbox,
+        color=color,
+        line_width=line_width,
+        line_position="middle",
+    )
+
+
+def freehand_draw_pdf(
+    input_path: str | Path,
+    output_path: str | Path,
+    page: int,
+    points: list[list[float]] | list[tuple[float, float]],
+    stroke_color: str = "#2563eb",
+    line_width: float = 1.5,
+    opacity: float = 1.0,
+) -> ToolResult:
+    tool = "pdf.edit.freehand_draw"
+    normalized_points = _normalize_points(points)
+    if len(normalized_points) < 2:
+        raise AgentPDFException("invalid_input", "freehand drawing requires at least two points.")
+    resolved = resolve_input_path(input_path)
+    reader = _reader_for_operation(resolved)
+    page_index = _validate_one_based_page(page, len(reader.pages))
+    writer = PdfWriter(clone_from=resolved)
+    target_page = writer.pages[page_index]
+    overlay = _freehand_overlay_page(
+        page_width=float(target_page.mediabox.width),
+        page_height=float(target_page.mediabox.height),
+        points=normalized_points,
+        stroke_color=stroke_color,
+        line_width=float(line_width),
+        opacity=float(opacity),
+    )
+    target_page.merge_page(overlay)
+    return _write_writer_output(
+        tool=tool,
+        writer=writer,
+        output_path=output_path,
+        expected_pages=len(reader.pages),
+        usage={
+            "input": str(resolved),
+            "page": page,
+            "point_count": len(normalized_points),
+            "points": normalized_points,
+            "stroke_color": stroke_color,
+            "line_width": float(line_width),
+            "opacity": max(0.0, min(float(opacity), 1.0)),
+        },
+    )
+
+
+def resize_pages_pdf(
+    input_path: str | Path,
+    output_path: str | Path,
+    width: float,
+    height: float,
+    pages: str = "all",
+) -> ToolResult:
+    tool = "pdf.edit.resize_pages"
+    if width <= 0 or height <= 0:
+        raise AgentPDFException("invalid_input", "width and height must be positive.")
+    resolved = resolve_input_path(input_path)
+    reader = _reader_for_operation(resolved)
+    selected_pages = set(parse_page_range(pages, total_pages=len(reader.pages)))
+    writer = PdfWriter()
+    scale_records = []
+    for index, source_page in enumerate(reader.pages):
+        if index not in selected_pages:
+            writer.add_page(source_page)
+            continue
+        source_width = float(source_page.mediabox.width)
+        source_height = float(source_page.mediabox.height)
+        scale = min(float(width) / source_width, float(height) / source_height)
+        tx = (float(width) - source_width * scale) / 2
+        ty = (float(height) - source_height * scale) / 2
+        resized = writer.add_blank_page(width=float(width), height=float(height))
+        resized.merge_transformed_page(deepcopy(source_page), Transformation().scale(scale).translate(tx, ty))
+        scale_records.append({"page": index + 1, "scale": scale, "translate": [tx, ty]})
+    if reader.metadata:
+        writer.add_metadata(_metadata_to_pdf_dict(_metadata_to_public_dict(reader.metadata)))
+    return _write_writer_output(
+        tool=tool,
+        writer=writer,
+        output_path=output_path,
+        expected_pages=len(reader.pages),
+        usage={
+            "input": str(resolved),
+            "page_range": pages,
+            "resized_pages": [page + 1 for page in sorted(selected_pages)],
+            "target_size": {"width": float(width), "height": float(height)},
+            "placements": scale_records,
+        },
+    )
+
+
+def add_margin_pdf(
+    input_path: str | Path,
+    output_path: str | Path,
+    margin: float = 0,
+    pages: str = "all",
+    top: float | None = None,
+    right: float | None = None,
+    bottom: float | None = None,
+    left: float | None = None,
+) -> ToolResult:
+    tool = "pdf.edit.add_margin"
+    margins = {
+        "top": float(margin if top is None else top),
+        "right": float(margin if right is None else right),
+        "bottom": float(margin if bottom is None else bottom),
+        "left": float(margin if left is None else left),
+    }
+    if any(value < 0 for value in margins.values()):
+        raise AgentPDFException("invalid_input", "Margins must be zero or positive.")
+    resolved = resolve_input_path(input_path)
+    reader = _reader_for_operation(resolved)
+    selected_pages = set(parse_page_range(pages, total_pages=len(reader.pages)))
+    writer = PdfWriter()
+    page_sizes = []
+    for index, source_page in enumerate(reader.pages):
+        if index not in selected_pages:
+            writer.add_page(source_page)
+            continue
+        source_width = float(source_page.mediabox.width)
+        source_height = float(source_page.mediabox.height)
+        new_width = source_width + margins["left"] + margins["right"]
+        new_height = source_height + margins["top"] + margins["bottom"]
+        target = writer.add_blank_page(width=new_width, height=new_height)
+        target.merge_transformed_page(
+            deepcopy(source_page),
+            Transformation().translate(margins["left"], margins["bottom"]),
+        )
+        page_sizes.append(
+            {
+                "page": index + 1,
+                "source_size": {"width": source_width, "height": source_height},
+                "output_size": {"width": new_width, "height": new_height},
+            }
+        )
+    if reader.metadata:
+        writer.add_metadata(_metadata_to_pdf_dict(_metadata_to_public_dict(reader.metadata)))
+    return _write_writer_output(
+        tool=tool,
+        writer=writer,
+        output_path=output_path,
+        expected_pages=len(reader.pages),
+        usage={
+            "input": str(resolved),
+            "page_range": pages,
+            "margins": margins,
+            "pages": page_sizes,
+        },
+    )
+
+
+def add_underlay_pdf(
+    input_path: str | Path,
+    output_path: str | Path,
+    text: str,
+    pages: str = "all",
+    font_size: int = 72,
+    opacity: float = 0.12,
+    angle: int = 45,
+    color: str = "#64748b",
+) -> ToolResult:
+    tool = "pdf.edit.underlay"
+    if not text:
+        raise AgentPDFException("invalid_input", "underlay text must not be empty.")
+    resolved = resolve_input_path(input_path)
+    reader = _reader_for_operation(resolved)
+    selected_pages = set(parse_page_range(pages, total_pages=len(reader.pages)))
+    writer = PdfWriter()
+    for index, source_page in enumerate(reader.pages):
+        if index not in selected_pages:
+            writer.add_page(source_page)
+            continue
+        width = float(source_page.mediabox.width)
+        height = float(source_page.mediabox.height)
+        underlay = _text_mark_overlay_page(
+            text=text,
+            width=width,
+            height=height,
+            font_size=font_size,
+            opacity=opacity,
+            angle=angle,
+            color=color,
+        )
+        underlay.merge_page(deepcopy(source_page))
+        writer.add_page(underlay)
+    if reader.metadata:
+        writer.add_metadata(_metadata_to_pdf_dict(_metadata_to_public_dict(reader.metadata)))
+    return _write_writer_output(
+        tool=tool,
+        writer=writer,
+        output_path=output_path,
+        expected_pages=len(reader.pages),
+        usage={
+            "input": str(resolved),
+            "page_range": pages,
+            "pages": [page + 1 for page in sorted(selected_pages)],
+            "text": text,
+            "font_size": font_size,
+            "opacity": max(0.0, min(float(opacity), 1.0)),
+            "angle": angle,
+            "color": color,
+        },
+        next_recommended_tools=["pdf.validation.render_check", "pdf.inspect.pages"],
+    )
+
+
 def _watermark_overlay_page(
     text: str,
     width: float,
@@ -658,6 +1217,164 @@ def _page_number_overlay_page(label: str, width: float, height: float, font_size
     return PdfReader(buffer).pages[0]
 
 
+def _shape_overlay_page(
+    shape: str,
+    page_width: float,
+    page_height: float,
+    x: float,
+    y: float,
+    width: float,
+    height: float,
+    stroke_color: str,
+    fill_color: str | None,
+    line_width: float,
+    opacity: float,
+) -> Any:
+    buffer = BytesIO()
+    overlay = canvas.Canvas(buffer, pagesize=(page_width, page_height))
+    overlay.saveState()
+    _apply_canvas_alpha(overlay, opacity)
+    overlay.setStrokeColor(_hex_color(stroke_color))
+    overlay.setLineWidth(max(line_width, 0.1))
+    if fill_color:
+        overlay.setFillColor(_hex_color(fill_color))
+    else:
+        overlay.setFillColor(rl_colors.transparent)
+    if shape == "rectangle":
+        overlay.rect(x, y, width, height, fill=1 if fill_color else 0, stroke=1)
+    elif shape == "line":
+        overlay.line(x, y, x + width, y + height)
+    elif shape == "circle":
+        radius = min(abs(width), abs(height)) / 2
+        overlay.circle(x + width / 2, y + height / 2, radius, fill=1 if fill_color else 0, stroke=1)
+    else:
+        overlay.ellipse(x, y, x + width, y + height, fill=1 if fill_color else 0, stroke=1)
+    overlay.restoreState()
+    overlay.showPage()
+    overlay.save()
+    buffer.seek(0)
+    return PdfReader(buffer).pages[0]
+
+
+def _bbox_line_overlay_page(
+    page_width: float,
+    page_height: float,
+    bbox: list[float],
+    color: str,
+    line_width: float,
+    line_position: str,
+) -> Any:
+    x0, y0, x1, y1 = bbox
+    y = y0 if line_position == "underline" else y0 + (y1 - y0) * 0.55
+    buffer = BytesIO()
+    overlay = canvas.Canvas(buffer, pagesize=(page_width, page_height))
+    overlay.setStrokeColor(_hex_color(color))
+    overlay.setLineWidth(max(line_width, 0.1))
+    overlay.line(x0, y, x1, y)
+    overlay.showPage()
+    overlay.save()
+    buffer.seek(0)
+    return PdfReader(buffer).pages[0]
+
+
+def _freehand_overlay_page(
+    page_width: float,
+    page_height: float,
+    points: list[list[float]],
+    stroke_color: str,
+    line_width: float,
+    opacity: float,
+) -> Any:
+    buffer = BytesIO()
+    overlay = canvas.Canvas(buffer, pagesize=(page_width, page_height))
+    overlay.saveState()
+    _apply_canvas_alpha(overlay, opacity)
+    overlay.setStrokeColor(_hex_color(stroke_color))
+    overlay.setLineWidth(max(line_width, 0.1))
+    path = overlay.beginPath()
+    path.moveTo(points[0][0], points[0][1])
+    for x, y in points[1:]:
+        path.lineTo(x, y)
+    overlay.drawPath(path, stroke=1, fill=0)
+    overlay.restoreState()
+    overlay.showPage()
+    overlay.save()
+    buffer.seek(0)
+    return PdfReader(buffer).pages[0]
+
+
+def _text_mark_overlay_page(
+    text: str,
+    width: float,
+    height: float,
+    font_size: int,
+    opacity: float,
+    angle: int,
+    color: str,
+) -> Any:
+    buffer = BytesIO()
+    overlay = canvas.Canvas(buffer, pagesize=(width, height))
+    overlay.saveState()
+    _apply_canvas_alpha(overlay, opacity)
+    overlay.setFillColor(_hex_color(color))
+    overlay.setFont("Helvetica-Bold", font_size)
+    overlay.translate(width / 2, height / 2)
+    overlay.rotate(angle)
+    overlay.drawCentredString(0, 0, text)
+    overlay.restoreState()
+    overlay.showPage()
+    overlay.save()
+    buffer.seek(0)
+    return PdfReader(buffer).pages[0]
+
+
+def _mark_bbox_line_pdf(
+    tool: str,
+    input_path: str | Path,
+    output_path: str | Path,
+    page: int,
+    bbox: list[float] | tuple[float, float, float, float],
+    color: str,
+    line_width: float,
+    line_position: str,
+) -> ToolResult:
+    resolved = resolve_input_path(input_path)
+    reader = _reader_for_operation(resolved)
+    page_index = _validate_one_based_page(page, len(reader.pages))
+    normalized_bbox = _normalize_bbox(bbox)
+    writer = PdfWriter(clone_from=resolved)
+    target_page = writer.pages[page_index]
+    overlay = _bbox_line_overlay_page(
+        page_width=float(target_page.mediabox.width),
+        page_height=float(target_page.mediabox.height),
+        bbox=normalized_bbox,
+        color=color,
+        line_width=float(line_width),
+        line_position=line_position,
+    )
+    target_page.merge_page(overlay)
+    return _write_writer_output(
+        tool=tool,
+        writer=writer,
+        output_path=output_path,
+        expected_pages=len(reader.pages),
+        usage={
+            "input": str(resolved),
+            "page": page,
+            "bbox": normalized_bbox,
+            "color": color,
+            "line_width": float(line_width),
+        },
+    )
+
+
+def _apply_canvas_alpha(document: canvas.Canvas, opacity: float) -> None:
+    if hasattr(document, "setFillAlpha"):
+        bounded = max(0.0, min(float(opacity), 1.0))
+        document.setFillAlpha(bounded)
+        document.setStrokeAlpha(bounded)
+
+
 def _write_selected_pages(
     tool: str,
     input_path: str | Path,
@@ -684,6 +1401,31 @@ def _write_selected_pages(
 def _add_blank_pages(writer: PdfWriter, count: int, width: float, height: float) -> None:
     for _ in range(count):
         writer.add_blank_page(width=width, height=height)
+
+
+def _merge_page_into_n_up_slot(
+    sheet: Any,
+    source_page: Any,
+    slot: int,
+    columns: int,
+    rows: int,
+    output_width: float,
+    output_height: float,
+) -> None:
+    cell_width = output_width / columns
+    cell_height = output_height / rows
+    source_width = float(source_page.mediabox.width)
+    source_height = float(source_page.mediabox.height)
+    scale = min(cell_width / source_width, cell_height / source_height)
+    scaled_width = source_width * scale
+    scaled_height = source_height * scale
+    column = slot % columns
+    row = slot // columns
+    x = column * cell_width + (cell_width - scaled_width) / 2
+    y = output_height - ((row + 1) * cell_height) + (cell_height - scaled_height) / 2
+    page = deepcopy(source_page)
+    transform = Transformation().scale(scale).translate(x, y)
+    sheet.merge_transformed_page(page, transform)
 
 
 def _write_pages_by_index(
@@ -922,6 +1664,34 @@ def update_metadata_pdf(
     )
 
 
+def update_outline_pdf(
+    input_path: str | Path,
+    outline: list[dict[str, Any]],
+    output_path: str | Path,
+) -> ToolResult:
+    tool = "pdf.metadata.update_outline"
+    if not outline:
+        raise AgentPDFException("invalid_input", "outline must include at least one item.")
+    resolved = resolve_input_path(input_path)
+    reader = _reader_for_operation(resolved)
+    writer = _writer_from_reader_pages(reader)
+    if reader.metadata:
+        writer.add_metadata(_metadata_to_pdf_dict(_metadata_to_public_dict(reader.metadata)))
+    item_count = _add_outline_items(writer, outline, page_count=len(reader.pages))
+    return _write_writer_output(
+        tool=tool,
+        writer=writer,
+        output_path=output_path,
+        expected_pages=len(reader.pages),
+        usage={
+            "input": str(resolved),
+            "outline_item_count": item_count,
+            "outline": outline,
+        },
+        next_recommended_tools=["pdf.metadata.read", "pdf.validation.render_check"],
+    )
+
+
 def remove_metadata_pdf(
     input_path: str | Path,
     output_path: str | Path,
@@ -944,6 +1714,8 @@ def create_text_pdf(text: str, output_path: str | Path, title: str | None = None
     tool = "pdf.convert.text_to_pdf"
     output = resolve_output_path(output_path)
     styles = getSampleStyleSheet()
+    requires_cjk = _requires_cjk_font(text, title)
+    _apply_cjk_to_basic_styles(styles, requires_cjk=requires_cjk)
     story = []
     if title:
         story.append(Paragraph(_escape_paragraph(title), styles["Title"]))
@@ -955,8 +1727,9 @@ def create_text_pdf(text: str, output_path: str | Path, title: str | None = None
     return _result_for_created_pdf(
         tool=tool,
         output=output,
-        usage={"text_length": len(text), "title": title},
+        usage={"text_length": len(text), "title": title, "requires_cjk_font": requires_cjk},
         next_tools=["pdf.inspect.document", "pdf.convert.pdf_to_text"],
+        source_text=f"{title or ''}\n{text}",
     )
 
 
@@ -970,7 +1743,8 @@ def create_markdown_pdf(
     output = resolve_output_path(output_path)
     resolved_style = _resolve_style_pack(style_pack)
     styles = getSampleStyleSheet()
-    _apply_style_pack(styles, resolved_style["pack"])
+    requires_cjk = _requires_cjk_font(markdown, title)
+    _apply_style_pack(styles, resolved_style["pack"], requires_cjk=requires_cjk)
     story = _markdown_to_story(markdown, styles)
     page_size = _style_page_size(resolved_style["pack"])
     margins = _style_margins(resolved_style["pack"])
@@ -993,8 +1767,10 @@ def create_markdown_pdf(
             "page": resolved_style["pack"].get("page", {}),
             "colors": resolved_style["pack"].get("colors", {}),
             "components": resolved_style["pack"].get("components", []),
+            "requires_cjk_font": requires_cjk,
         },
         next_tools=["pdf.inspect.document", "pdf.convert.pdf_to_text"],
+        source_text=f"{title or ''}\n{markdown}",
     )
 
 
@@ -1010,6 +1786,10 @@ def create_slide_deck_pdf(
     output = resolve_output_path(output_path)
     resolved_style = _resolve_style_pack(style_pack)
     pack = resolved_style["pack"]
+    deck_text = _slide_deck_text(slides, title)
+    requires_cjk = _requires_cjk_font(deck_text)
+    body_font, heading_font = _canvas_font_pair(requires_cjk=requires_cjk)
+    code_font = body_font if requires_cjk else "Courier"
     colors = pack.get("colors", {})
     primary = _hex_color(str(colors.get("primary", "#20314f")))
     accent = _hex_color(str(colors.get("accent", "#2f7d6d")))
@@ -1023,7 +1803,7 @@ def create_slide_deck_pdf(
         document.setFillColor(HexColor("#ffffff"))
         document.rect(0, 0, width, height, fill=1, stroke=0)
         document.setFillColor(primary)
-        document.setFont("Helvetica-Bold", 25)
+        document.setFont(heading_font, 25)
         document.drawString(42, height - 54, str(slide.get("title") or f"Slide {index}"))
         document.setStrokeColor(accent)
         document.setLineWidth(2)
@@ -1033,27 +1813,37 @@ def create_slide_deck_pdf(
         subtitle = str(slide.get("subtitle") or "")
         if subtitle:
             document.setFillColor(accent)
-            document.setFont("Helvetica", 12)
-            y = _draw_wrapped_lines(document, subtitle, 42, y, width - 84, 15, "Helvetica", 12)
+            document.setFont(body_font, 12)
+            y = _draw_wrapped_lines(document, subtitle, 42, y, width - 84, 15, body_font, 12)
             y -= 8
         body = slide.get("body")
         if isinstance(body, list):
             document.setFillColor(text_color)
-            document.setFont("Helvetica", 13)
+            document.setFont(body_font, 13)
             for item in body[:9]:
-                y = _draw_wrapped_lines(document, f"- {item}", 52, y, width - 104, 16, "Helvetica", 13)
+                y = _draw_wrapped_lines(document, f"- {item}", 52, y, width - 104, 16, body_font, 13)
                 y -= 3
         elif isinstance(body, str) and body:
             document.setFillColor(text_color)
-            y = _draw_wrapped_lines(document, body, 42, y, width - 84, 16, "Helvetica", 13)
+            y = _draw_wrapped_lines(document, body, 42, y, width - 84, 16, body_font, 13)
 
         table = slide.get("table")
         if isinstance(table, dict):
-            y = _draw_slide_table(document, table, 42, y - 8, width - 84, text_color, accent)
+            y = _draw_slide_table(
+                document,
+                table,
+                42,
+                y - 8,
+                width - 84,
+                text_color,
+                accent,
+                body_font=body_font,
+                heading_font=heading_font,
+            )
 
         code = str(slide.get("code") or "")
         if code:
-            y = _draw_slide_code(document, code, 42, y - 6, width - 84)
+            y = _draw_slide_code(document, code, 42, y - 6, width - 84, font_name=code_font)
 
         image_path = slide.get("image_path")
         if image_path:
@@ -1061,7 +1851,7 @@ def create_slide_deck_pdf(
 
         refs = ", ".join(str(ref) for ref in slide.get("source_refs", []) if ref)
         document.setFillColor(HexColor("#64748b"))
-        document.setFont("Helvetica", 8)
+        document.setFont(body_font, 8)
         document.drawString(42, 28, f"Slide {index} / {len(slides)}")
         if refs:
             document.drawRightString(width - 42, 28, f"Sources: {refs}")
@@ -1075,8 +1865,10 @@ def create_slide_deck_pdf(
             "title": title,
             "style_pack": pack["style_id"],
             "style_pack_source": resolved_style["source"],
+            "requires_cjk_font": requires_cjk,
         },
         next_tools=["pdf.inspect.document", "pdf.validation.render_check"],
+        source_text=deck_text,
     )
 
 
@@ -1122,6 +1914,8 @@ def _draw_slide_table(
     width: float,
     text_color: HexColor,
     accent: HexColor,
+    body_font: str = "Helvetica",
+    heading_font: str = "Helvetica-Bold",
 ) -> float:
     columns = [str(column) for column in table.get("columns", [])]
     rows = [[str(cell) for cell in row] for row in table.get("rows", [])]
@@ -1134,11 +1928,11 @@ def _draw_slide_table(
     document.setStrokeColor(accent)
     document.setLineWidth(0.7)
     document.setFillColor(text_color)
-    document.setFont("Helvetica-Bold", 10)
+    document.setFont(heading_font, 10)
     for col_index, column in enumerate(columns):
         document.drawString(x + col_index * column_width + 6, y - 10, column[:28])
     y -= row_height
-    document.setFont("Helvetica", 10)
+    document.setFont(body_font, 10)
     for row in rows[:7]:
         document.line(x, y + 4, x + width, y + 4)
         for col_index, cell in enumerate(row[: len(columns)]):
@@ -1147,14 +1941,21 @@ def _draw_slide_table(
     return y
 
 
-def _draw_slide_code(document: canvas.Canvas, code: str, x: float, y: float, width: float) -> float:
+def _draw_slide_code(
+    document: canvas.Canvas,
+    code: str,
+    x: float,
+    y: float,
+    width: float,
+    font_name: str = "Courier",
+) -> float:
     lines = code.splitlines()[:12]
     line_height = 12
     box_height = max(len(lines), 1) * line_height + 18
     document.setFillColor(HexColor("#f8fafc"))
     document.rect(x, y - box_height + 6, width, box_height, fill=1, stroke=0)
     document.setFillColor(HexColor("#0f172a"))
-    document.setFont("Courier", 8.5)
+    document.setFont(font_name, 8.5)
     cursor = y - 10
     for line in lines:
         document.drawString(x + 10, cursor, line[:110])
@@ -1382,11 +2183,15 @@ def _normalize_style_pack(raw: dict[str, Any]) -> dict[str, Any]:
     return normalized
 
 
-def _apply_style_pack(styles: Any, pack: dict[str, Any]) -> None:
+def _apply_style_pack(styles: Any, pack: dict[str, Any], requires_cjk: bool = False) -> None:
     typography = pack.get("typography", {})
     colors = pack.get("colors", {})
-    body_font = _font_name(str(typography.get("body_font", "system-sans")), bold=False)
-    heading_font = _font_name(str(typography.get("heading_font", "system-sans")), bold=True)
+    body_font = _font_name(str(typography.get("body_font", "system-sans")), bold=False, requires_cjk=requires_cjk)
+    heading_font = _font_name(
+        str(typography.get("heading_font", "system-sans")),
+        bold=True,
+        requires_cjk=requires_cjk,
+    )
     base_size = float(typography.get("base_size", 10))
     text_color = _hex_color(str(colors.get("text", "#111827")))
     primary_color = _hex_color(str(colors.get("primary", "#111827")))
@@ -1413,10 +2218,18 @@ def _apply_style_pack(styles: Any, pack: dict[str, Any]) -> None:
     styles["Heading3"].leading = base_size * 1.35
     styles["Heading3"].textColor = accent_color
 
-    styles["Code"].fontName = "Courier"
+    styles["Code"].fontName = body_font if requires_cjk else "Courier"
     styles["Code"].fontSize = max(base_size * 0.9, 8)
     styles["Code"].leading = max(base_size * 1.25, 10)
     styles["Code"].textColor = text_color
+
+
+def _apply_cjk_to_basic_styles(styles: Any, requires_cjk: bool) -> None:
+    if not requires_cjk:
+        return
+    body_font, heading_font = _register_cjk_fonts()
+    styles["BodyText"].fontName = body_font
+    styles["Title"].fontName = heading_font
 
 
 def _style_page_size(pack: dict[str, Any]) -> tuple[float, float]:
@@ -1440,13 +2253,104 @@ def _style_margins(pack: dict[str, Any]) -> dict[str, float]:
     }
 
 
-def _font_name(value: str, bold: bool) -> str:
+def _font_name(value: str, bold: bool, requires_cjk: bool = False) -> str:
     normalized = value.lower()
+    if requires_cjk and normalized not in {"mono", "monospace", "courier"}:
+        body_font, heading_font = _register_cjk_fonts()
+        return heading_font if bold else body_font
     if normalized in {"serif", "system-serif", "times"}:
         return "Times-Bold" if bold else "Times-Roman"
     if normalized in {"mono", "monospace", "courier"}:
         return "Courier-Bold" if bold else "Courier"
     return "Helvetica-Bold" if bold else "Helvetica"
+
+
+def _canvas_font_pair(requires_cjk: bool) -> tuple[str, str]:
+    if requires_cjk:
+        return _register_cjk_fonts()
+    return "Helvetica", "Helvetica-Bold"
+
+
+def _requires_cjk_font(*values: Any) -> bool:
+    return any(_contains_cjk(str(value)) for value in values if value is not None)
+
+
+def _contains_cjk(text: str) -> bool:
+    return any(_is_cjk_codepoint(ord(char)) for char in text)
+
+
+def _is_cjk_codepoint(codepoint: int) -> bool:
+    return (
+        0x2E80 <= codepoint <= 0x2EFF
+        or 0x3000 <= codepoint <= 0x303F
+        or 0x3040 <= codepoint <= 0x30FF
+        or 0x31F0 <= codepoint <= 0x31FF
+        or 0x3400 <= codepoint <= 0x4DBF
+        or 0x4E00 <= codepoint <= 0x9FFF
+        or 0xAC00 <= codepoint <= 0xD7AF
+        or 0xF900 <= codepoint <= 0xFAFF
+        or 0xFF00 <= codepoint <= 0xFFEF
+        or 0x20000 <= codepoint <= 0x2FA1F
+    )
+
+
+def _register_cjk_fonts() -> tuple[str, str]:
+    global _REGISTERED_CJK_FONTS
+    if _REGISTERED_CJK_FONTS is not None:
+        return _REGISTERED_CJK_FONTS
+
+    for index, font_path in enumerate(_iter_cjk_font_paths()):
+        if not font_path.exists():
+            continue
+        regular_name = f"AgentPDF-CJK-{index}"
+        bold_name = f"AgentPDF-CJK-Bold-{index}"
+        try:
+            pdfmetrics.registerFont(TTFont(regular_name, str(font_path)))
+            pdfmetrics.registerFont(TTFont(bold_name, str(font_path)))
+        except Exception:
+            continue
+        _REGISTERED_CJK_FONTS = (regular_name, bold_name)
+        return _REGISTERED_CJK_FONTS
+
+    try:
+        pdfmetrics.registerFont(UnicodeCIDFont(CJK_CID_FONT))
+    except Exception as exc:
+        raise AgentPDFException(
+            "dependency_missing",
+            "Unable to register a CJK-capable PDF font. Set AGENTPDF_CJK_FONT_PATH to a local TTF/TTC font.",
+        ) from exc
+    _REGISTERED_CJK_FONTS = (CJK_CID_FONT, CJK_CID_FONT)
+    return _REGISTERED_CJK_FONTS
+
+
+def _iter_cjk_font_paths() -> list[Path]:
+    paths: list[Path] = []
+    env_value = os.environ.get(CJK_FONT_PATH_ENV, "")
+    for raw_path in env_value.split(os.pathsep):
+        if raw_path.strip():
+            paths.append(Path(raw_path.strip()))
+    paths.extend(CJK_FONT_CANDIDATES)
+    return paths
+
+
+def _slide_deck_text(slides: list[dict[str, Any]], title: str | None) -> str:
+    parts: list[str] = [title or ""]
+    for slide in slides:
+        parts.append(str(slide.get("title") or ""))
+        parts.append(str(slide.get("subtitle") or ""))
+        body = slide.get("body")
+        if isinstance(body, list):
+            parts.extend(str(item) for item in body)
+        elif body:
+            parts.append(str(body))
+        table = slide.get("table")
+        if isinstance(table, dict):
+            parts.extend(str(column) for column in table.get("columns", []))
+            for row in table.get("rows", []):
+                if isinstance(row, list):
+                    parts.extend(str(cell) for cell in row)
+        parts.append(str(slide.get("code") or ""))
+    return "\n".join(part for part in parts if part)
 
 
 def _hex_color(value: str) -> HexColor:
@@ -1481,9 +2385,11 @@ def _result_for_created_pdf(
     output: Path,
     usage: dict[str, Any],
     next_tools: list[str],
+    source_text: str | None = None,
 ) -> ToolResult:
     artifact = build_artifact(output, source_tool=tool)
     validation = validate_pdf(output, expected_pages=artifact.page_count)
+    validation = _append_text_glyph_validation(validation, output, source_text)
     return ToolResult(
         job_id=_job_id(),
         status="succeeded" if validation.status == "passed" else "failed",
@@ -1493,6 +2399,77 @@ def _result_for_created_pdf(
         usage=usage,
         next_recommended_tools=next_tools,
     )
+
+
+def _append_text_glyph_validation(
+    validation: ValidationReport,
+    output: Path,
+    source_text: str | None,
+) -> ValidationReport:
+    if not source_text or not _contains_cjk(source_text):
+        return validation
+
+    expected_chars = _unique_cjk_chars(source_text, limit=64)
+    try:
+        reader = PdfReader(output)
+        extracted = "\n".join(page.extract_text() or "" for page in reader.pages)
+        tofu_count = extracted.count("\u25a0") + extracted.count("\ufffd")
+        matched_count = sum(1 for char in expected_chars if char in extracted)
+        required_matches = min(3, len(expected_chars))
+        passed = tofu_count == 0 and matched_count >= required_matches
+        check = ValidationCheck(
+            name="text_glyph_coverage",
+            status="passed" if passed else "failed",
+            details={
+                "script": "cjk",
+                "expected_unique_chars": len(expected_chars),
+                "matched_unique_chars": matched_count,
+                "required_matches": required_matches,
+                "replacement_glyph_count": tofu_count,
+            },
+            message=None if passed else "Generated PDF text appears to contain missing CJK glyphs.",
+        )
+    except Exception as exc:
+        check = ValidationCheck(
+            name="text_glyph_coverage",
+            status="failed",
+            details={"script": "cjk"},
+            message=str(exc),
+        )
+
+    checks = [*validation.checks, check]
+    warnings = list(validation.warnings)
+    if check.status != "passed":
+        warnings.append("Generated PDF may contain missing CJK glyphs.")
+    return ValidationReport(
+        status=_created_pdf_validation_status(checks),
+        checks=checks,
+        page_count=validation.page_count,
+        warnings=warnings,
+    )
+
+
+def _unique_cjk_chars(text: str, limit: int) -> list[str]:
+    chars: list[str] = []
+    seen: set[str] = set()
+    for char in text:
+        if char in seen or not _is_cjk_codepoint(ord(char)):
+            continue
+        seen.add(char)
+        chars.append(char)
+        if len(chars) >= limit:
+            break
+    return chars
+
+
+def _created_pdf_validation_status(checks: list[ValidationCheck]) -> str:
+    if any(check.status == "failed" for check in checks):
+        return "failed"
+    if any(check.status == "warning" for check in checks):
+        return "warning"
+    if any(check.status == "skipped" for check in checks):
+        return "skipped"
+    return "passed"
 
 
 def _split_paragraphs(text: str) -> list[str]:
@@ -1526,6 +2503,7 @@ def _write_writer_output(
     output_path: str | Path,
     expected_pages: int,
     usage: dict[str, Any],
+    next_recommended_tools: list[str] | None = None,
 ) -> ToolResult:
     output = resolve_output_path(output_path)
     with output.open("wb") as handle:
@@ -1539,8 +2517,180 @@ def _write_writer_output(
         artifacts=[artifact],
         validation=validation,
         usage=usage,
-        next_recommended_tools=["pdf.inspect.document", "pdf.validation.validate_output"],
+        next_recommended_tools=next_recommended_tools
+        or ["pdf.inspect.document", "pdf.validation.validate_output"],
     )
+
+
+def _add_outline_items(
+    writer: PdfWriter,
+    outline: list[dict[str, Any]],
+    page_count: int,
+    parent: Any | None = None,
+) -> int:
+    count = 0
+    for item in outline:
+        if not isinstance(item, dict):
+            raise AgentPDFException("invalid_input", "Each outline item must be an object.")
+        title = str(item.get("title") or "").strip()
+        if not title:
+            raise AgentPDFException("invalid_input", "Each outline item must include a title.")
+        page_number = int(item.get("page", 1))
+        if page_number < 1 or page_number > page_count:
+            raise AgentPDFException(
+                "invalid_page_range",
+                f"Outline page must be between 1 and {page_count}.",
+                details={"title": title, "page": page_number, "page_count": page_count},
+            )
+        outline_ref = writer.add_outline_item(title, page_number - 1, parent=parent)
+        count += 1
+        children = item.get("children")
+        if isinstance(children, list):
+            count += _add_outline_items(writer, children, page_count=page_count, parent=outline_ref)
+    return count
+
+
+def _validate_one_based_page(page: int, page_count: int) -> int:
+    if page < 1 or page > page_count:
+        raise AgentPDFException(
+            "invalid_page_range",
+            f"page must be between 1 and {page_count}.",
+            details={"page": page, "page_count": page_count},
+        )
+    return page - 1
+
+
+def _normalize_bbox(bbox: list[float] | tuple[float, float, float, float]) -> list[float]:
+    if len(bbox) != 4:
+        raise AgentPDFException("invalid_input", "bbox must contain [x0, y0, x1, y1].")
+    x0, y0, x1, y1 = [float(value) for value in bbox]
+    if x1 <= x0 or y1 <= y0:
+        raise AgentPDFException("invalid_input", "bbox must have positive width and height.")
+    return [x0, y0, x1, y1]
+
+
+def _normalize_points(points: list[list[float]] | list[tuple[float, float]]) -> list[list[float]]:
+    normalized = []
+    for point in points:
+        if len(point) != 2:
+            raise AgentPDFException("invalid_input", "Each freehand point must be [x, y].")
+        normalized.append([float(point[0]), float(point[1])])
+    return normalized
+
+
+def _estimate_pdf_object_count(reader: PdfReader) -> int | None:
+    xref = getattr(reader, "xref", None)
+    if not isinstance(xref, dict):
+        return None
+    count = 0
+    for section in xref.values():
+        if isinstance(section, dict):
+            count += len(section)
+    return count or None
+
+
+def _detect_pdfa_profile(raw: bytes) -> str | None:
+    text = raw.decode("latin-1", errors="ignore")
+    lowered = text.lower()
+    part_marker = "pdfaid:part"
+    if part_marker not in lowered:
+        return None
+    part = _extract_xmlish_value(text, "pdfaid:part")
+    conformance = _extract_xmlish_value(text, "pdfaid:conformance")
+    if not part:
+        return None
+    return f"PDF/A-{part}{conformance or ''}"
+
+
+def _extract_xmlish_value(text: str, tag: str) -> str | None:
+    lower = text.lower()
+    tag_lower = tag.lower()
+    start_tag = f"<{tag_lower}>"
+    end_tag = f"</{tag_lower}>"
+    start = lower.find(start_tag)
+    end = lower.find(end_tag)
+    if start >= 0 and end > start:
+        return text[start + len(start_tag) : end].strip()
+    attr = f"{tag_lower}="
+    attr_start = lower.find(attr)
+    if attr_start < 0:
+        return None
+    value_start = attr_start + len(attr)
+    quote = text[value_start : value_start + 1]
+    if quote not in {"'", '"'}:
+        return None
+    value_end = text.find(quote, value_start + 1)
+    if value_end < 0:
+        return None
+    return text[value_start + 1 : value_end].strip()
+
+
+def _collect_font_records(reader: PdfReader, selected_pages: list[int]) -> list[dict[str, Any]]:
+    by_key: dict[tuple[str, str, str, bool], dict[str, Any]] = {}
+    for page_index in selected_pages:
+        page = reader.pages[page_index]
+        resources = page.get("/Resources") or {}
+        try:
+            resolved_resources = resources.get_object() if hasattr(resources, "get_object") else resources
+            fonts = resolved_resources.get("/Font", {}) or {}
+            resolved_fonts = fonts.get_object() if hasattr(fonts, "get_object") else fonts
+        except Exception:
+            continue
+        for resource_name, raw_font in resolved_fonts.items():
+            try:
+                font = raw_font.get_object() if hasattr(raw_font, "get_object") else raw_font
+                record = _font_record_from_pdf_font(font)
+            except Exception:
+                continue
+            key = (
+                record["base_font"],
+                record["subtype"],
+                record["encoding"],
+                bool(record["embedded"]),
+            )
+            existing = by_key.setdefault(
+                key,
+                {
+                    **record,
+                    "resource_names": [],
+                    "page_numbers": [],
+                },
+            )
+            resource_name_str = str(resource_name)
+            if resource_name_str not in existing["resource_names"]:
+                existing["resource_names"].append(resource_name_str)
+            page_number = page_index + 1
+            if page_number not in existing["page_numbers"]:
+                existing["page_numbers"].append(page_number)
+    return sorted(by_key.values(), key=lambda item: (item["base_font"], item["subtype"]))
+
+
+def _font_record_from_pdf_font(font: Any) -> dict[str, Any]:
+    subtype = str(font.get("/Subtype", "")).lstrip("/")
+    base_font = str(font.get("/BaseFont") or font.get("/Name") or "").lstrip("/")
+    encoding = str(font.get("/Encoding", "")).lstrip("/")
+    descriptor = font.get("/FontDescriptor")
+    if descriptor and hasattr(descriptor, "get_object"):
+        descriptor = descriptor.get_object()
+    descendant_fonts = font.get("/DescendantFonts")
+    if descendant_fonts:
+        try:
+            descendant = descendant_fonts[0].get_object()
+            base_font = str(descendant.get("/BaseFont") or base_font).lstrip("/")
+            descendant_descriptor = descendant.get("/FontDescriptor")
+            if descendant_descriptor and hasattr(descendant_descriptor, "get_object"):
+                descriptor = descendant_descriptor.get_object()
+        except Exception:
+            pass
+    embedded = False
+    if descriptor:
+        embedded = any(descriptor.get(key) is not None for key in ("/FontFile", "/FontFile2", "/FontFile3"))
+    return {
+        "base_font": base_font or "unknown",
+        "subtype": subtype or "unknown",
+        "encoding": encoding or "default",
+        "embedded": embedded,
+    }
 
 
 def _metadata_to_public_dict(metadata: Any) -> dict[str, str]:

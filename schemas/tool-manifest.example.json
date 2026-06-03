@@ -507,7 +507,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -678,7 +678,7 @@
     },
     {
       "name": "pdf.security.protect",
-      "status": "planned",
+      "status": "beta",
       "description": "Encrypt/protect PDF with password.",
       "category": "security",
       "interfaces": [
@@ -687,13 +687,13 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
     {
       "name": "pdf.security.unlock_authorized",
-      "status": "planned",
+      "status": "beta",
       "description": "Decrypt with valid password only.",
       "category": "security",
       "interfaces": [
@@ -702,14 +702,14 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
     {
       "name": "pdf.security.redact",
       "status": "beta",
-      "description": "True redaction.",
+      "description": "Rasterize local pages and mask explicit redaction regions.",
       "category": "security",
       "interfaces": [
         "cli",
@@ -717,7 +717,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -739,7 +739,7 @@
     {
       "name": "pdf.ocr_scan.ocr",
       "status": "beta",
-      "description": "Add OCR text layer.",
+      "description": "Run local OCR and return text regions with page numbers, bboxes, confidence, and language metadata.",
       "category": "ocr_scan",
       "interfaces": [
         "cli",
@@ -747,7 +747,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -777,7 +777,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },

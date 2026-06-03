@@ -1,4 +1,6 @@
 import type {
+  AddMarginInput,
+  BookletInput,
   BlankPageCheckInput,
   BuildContextPacketInput,
   ClassifyContextInput,
@@ -13,6 +15,7 @@ import type {
   ComposeFromContextInput,
   ComposePlanInput,
   ComposeRenderIrInput,
+  ContextImageAnalyzeInput,
   ContextPacketInput,
   ContextPacketReportInput,
   CreateAgentInput,
@@ -24,18 +27,39 @@ import type {
   CreateTextPdfInput,
   DataProfileInput,
   EvidenceCoverageReportInput,
+  EvidenceCiteClaimsInput,
   EvidenceMapSourcesInput,
+  ArtifactGraphInput,
+  ArtifactManifestInput,
+  ArtifactSourceMapInput,
   ExportBundleInput,
+  ExtractFontsInput,
   ExtractImagesInput,
+  AddShapeInput,
+  FormsCreateInput,
+  FormsImportDataInput,
+  FormsValidateInput,
+  FreehandDrawInput,
+  HtmlToPdfInput,
   ImageToPdfInput,
   InsertBlankPagesInput,
   IngestContextInput,
+  InspectHealthInput,
   InspectDocumentInput,
   InspectPagesInput,
   JsonObject,
   MergePdfInput,
   MetadataPageInfoInput,
+  MetadataUpdateOutlineInput,
+  NUpInput,
+  OcrInput,
+  OcrMultilingualInput,
+  OcrPdfRewriteInput,
+  OcrSearchablePdfInput,
+  OcrScanToPdfInput,
+  OfficeToPdfInput,
   OptimizePdfInput,
+  MarkBboxInput,
   PageNumbersInput,
   PageCountCheckInput,
   PlanTemplatePackInput,
@@ -45,6 +69,7 @@ import type {
   PatchVerifyInput,
   PdfToMarkdownInput,
   PdfToJsonInput,
+  PdfToStructuredInput,
   ParseLiteInput,
   RagChatInput,
   RagCiteAnswerInput,
@@ -55,17 +80,37 @@ import type {
   RagSearchInput,
   RenderCheckInput,
   ReorderPagesInput,
+  ResizePagesInput,
+  SecurityAuthorizedPasswordInput,
+  SecurityMalwareScanInput,
+  SecurityPasswordInput,
+  SecurityRedactInput,
   SecurityRemoveMetadataInput,
+  SecuritySanitizeInput,
+  SecuritySignInput,
+  SecurityVerifyRedactionInput,
+  SecurityVerifySignatureInput,
+  SemanticDiffInput,
+  SemanticParseInput,
   SelectTargetProfileInput,
   SetupClaudeCodeInput,
   SetupCodexInput,
+  SetupKiloCodeInput,
+  SetupOpenClawInput,
   TargetProfilesInput,
   ToolManifest,
   ToolResult,
   ToolSpec,
+  ToPdfaInput,
+  UnderlayInput,
+  UrlToPdfInput,
   ValidateOutputInput,
+  ValidatePdfaInput,
   ValidateTemplatePackInput,
   ValidateTargetProfileInput,
+  ValidationRedactionCheckInput,
+  VersionReportInput,
+  VisualDiffInput,
   VerifyBundleInput,
   WatermarkInput,
   WorkflowPlanInput,
@@ -152,11 +197,37 @@ export class AgentPDFClient {
     });
   }
 
+  async setupKiloCode(input: SetupKiloCodeInput = {}): Promise<ToolResult> {
+    return this.runTool("agent.setup.kilo_code", {
+      ...(input.outputPath ? { output_path: input.outputPath } : {}),
+      ...(input.safeRoot ? { safe_root: input.safeRoot } : {}),
+      ...(input.command ? { command: input.command } : {}),
+      ...(input.argsPrefix && input.argsPrefix.length > 0 ? { args_prefix: input.argsPrefix } : {}),
+      ...(input.serverName ? { server_name: input.serverName } : {}),
+    });
+  }
+
+  async setupOpenClaw(input: SetupOpenClawInput = {}): Promise<ToolResult> {
+    return this.runTool("agent.setup.openclaw", {
+      ...(input.outputPath ? { output_path: input.outputPath } : {}),
+      ...(input.safeRoot ? { safe_root: input.safeRoot } : {}),
+      ...(input.command ? { command: input.command } : {}),
+      ...(input.argsPrefix && input.argsPrefix.length > 0 ? { args_prefix: input.argsPrefix } : {}),
+      ...(input.serverName ? { server_name: input.serverName } : {}),
+    });
+  }
+
   async inspectPages(input: InspectPagesInput): Promise<ToolResult> {
     return this.runTool("pdf.inspect.pages", {
       input_path: input.inputPath,
       ...(input.pages ? { pages: input.pages } : {}),
       ...(input.renderCheck !== undefined ? { render_check: input.renderCheck } : {}),
+    });
+  }
+
+  async inspectHealth(input: InspectHealthInput): Promise<ToolResult> {
+    return this.runTool("pdf.inspect.health", {
+      input_path: input.inputPath,
     });
   }
 
@@ -216,6 +287,16 @@ export class AgentPDFClient {
     });
   }
 
+  async contextImageAnalyze(input: ContextImageAnalyzeInput): Promise<ToolResult> {
+    return this.runTool("pdf.context.image_analyze", {
+      input_path: input.inputPath,
+      ...(input.languages && input.languages.length > 0 ? { languages: input.languages } : {}),
+      ...(input.runOcr !== undefined ? { run_ocr: input.runOcr } : {}),
+      ...(input.engine ? { engine: input.engine } : {}),
+      ...(input.psm !== undefined ? { psm: input.psm } : {}),
+    });
+  }
+
   async codeSnapshot(input: CodeSnapshotInput): Promise<ToolResult> {
     return this.runTool("pdf.context.code_snapshot", {
       path: input.path,
@@ -251,6 +332,8 @@ export class AgentPDFClient {
       output_path: input.outputPath,
       ...(input.stylePack ? { style_pack: input.stylePack } : {}),
       ...(input.title ? { title: input.title } : {}),
+      ...(input.renderer ? { renderer: input.renderer } : {}),
+      ...(input.htmlOutputPath ? { html_output_path: input.htmlOutputPath } : {}),
     });
   }
 
@@ -273,6 +356,8 @@ export class AgentPDFClient {
       output_path: input.outputPath,
       ...(input.stylePack ? { style_pack: input.stylePack } : {}),
       ...(input.title ? { title: input.title } : {}),
+      ...(input.renderer ? { renderer: input.renderer } : {}),
+      ...(input.htmlOutputPath ? { html_output_path: input.htmlOutputPath } : {}),
     });
   }
 
@@ -377,6 +462,19 @@ export class AgentPDFClient {
     });
   }
 
+  async evidenceCiteClaims(input: EvidenceCiteClaimsInput): Promise<ToolResult> {
+    return this.runTool("pdf.evidence.cite_claims", {
+      claims: input.claims,
+      ...(input.composition ? { composition: input.composition } : {}),
+      ...(input.compositionPath ? { composition_path: input.compositionPath } : {}),
+      ...(input.sourceMap ? { source_map: input.sourceMap } : {}),
+      ...(input.sourceMapPath ? { source_map_path: input.sourceMapPath } : {}),
+      ...(input.contextPacket ? { context_packet: input.contextPacket } : {}),
+      ...(input.contextPacketPath ? { context_packet_path: input.contextPacketPath } : {}),
+      ...(input.outputPath ? { output_path: input.outputPath } : {}),
+    });
+  }
+
   async contextPacketReport(input: ContextPacketReportInput): Promise<ToolResult> {
     return this.runTool("pdf.evidence.context_packet_report", {
       ...(input.contextPacket ? { context_packet: input.contextPacket } : {}),
@@ -394,6 +492,39 @@ export class AgentPDFClient {
       output_path: input.outputPath,
       ...(input.title ? { title: input.title } : {}),
       ...(input.metadata ? { metadata: input.metadata } : {}),
+    });
+  }
+
+  async artifactManifest(input: ArtifactManifestInput): Promise<ToolResult> {
+    return this.runTool("pdf.artifacts.manifest", {
+      artifact_paths: input.artifactPaths,
+      ...(input.outputPath ? { output_path: input.outputPath } : {}),
+      ...(input.title ? { title: input.title } : {}),
+      ...(input.metadata ? { metadata: input.metadata } : {}),
+    });
+  }
+
+  async artifactGraph(input: ArtifactGraphInput): Promise<ToolResult> {
+    return this.runTool("pdf.artifacts.graph", {
+      ...(input.artifactManifestPath ? { artifact_manifest_path: input.artifactManifestPath } : {}),
+      ...(input.artifactPaths ? { artifact_paths: input.artifactPaths } : {}),
+      ...(input.outputPath ? { output_path: input.outputPath } : {}),
+      ...(input.title ? { title: input.title } : {}),
+    });
+  }
+
+  async artifactSourceMap(input: ArtifactSourceMapInput): Promise<ToolResult> {
+    return this.runTool("pdf.artifacts.source_map", {
+      ...(input.composition ? { composition: input.composition } : {}),
+      ...(input.compositionPath ? { composition_path: input.compositionPath } : {}),
+      ...(input.sourceMap ? { source_map: input.sourceMap } : {}),
+      ...(input.sourceMapPath ? { source_map_path: input.sourceMapPath } : {}),
+      ...(input.contextPacket ? { context_packet: input.contextPacket } : {}),
+      ...(input.contextPacketPath ? { context_packet_path: input.contextPacketPath } : {}),
+      ...(input.artifactManifestPath ? { artifact_manifest_path: input.artifactManifestPath } : {}),
+      ...(input.artifactPaths ? { artifact_paths: input.artifactPaths } : {}),
+      ...(input.outputPath ? { output_path: input.outputPath } : {}),
+      ...(input.title ? { title: input.title } : {}),
     });
   }
 
@@ -462,6 +593,23 @@ export class AgentPDFClient {
     });
   }
 
+  async nUp(input: NUpInput): Promise<ToolResult> {
+    return this.runTool("pdf.organize.n_up", {
+      input_path: input.inputPath,
+      output_path: input.outputPath,
+      ...(input.pages ? { pages: input.pages } : {}),
+      ...(input.perSheet !== undefined ? { per_sheet: input.perSheet } : {}),
+    });
+  }
+
+  async booklet(input: BookletInput): Promise<ToolResult> {
+    return this.runTool("pdf.organize.booklet", {
+      input_path: input.inputPath,
+      output_path: input.outputPath,
+      ...(input.pages ? { pages: input.pages } : {}),
+    });
+  }
+
   async compress(input: OptimizePdfInput): Promise<ToolResult> {
     return this.runTool("pdf.optimize.compress", {
       input_path: input.inputPath,
@@ -474,6 +622,80 @@ export class AgentPDFClient {
       input_path: input.inputPath,
       output_path: input.outputPath,
     });
+  }
+
+  async removeUnusedObjects(input: OptimizePdfInput): Promise<ToolResult> {
+    return this.runTool("pdf.optimize.remove_unused_objects", {
+      input_path: input.inputPath,
+      output_path: input.outputPath,
+    });
+  }
+
+  async subsetFonts(input: OptimizePdfInput): Promise<ToolResult> {
+    return this.runTool("pdf.optimize.subset_fonts", {
+      input_path: input.inputPath,
+      output_path: input.outputPath,
+    });
+  }
+
+  async validatePdfa(input: ValidatePdfaInput): Promise<ToolResult> {
+    return this.runTool("pdf.optimize.validate_pdfa", {
+      input_path: input.inputPath,
+    });
+  }
+
+  async toPdfa(input: ToPdfaInput): Promise<ToolResult> {
+    return this.runTool("pdf.optimize.to_pdfa", {
+      input_path: input.inputPath,
+      output_path: input.outputPath,
+      ...(input.profile ? { profile: input.profile } : {}),
+    });
+  }
+
+  async htmlToPdf(input: HtmlToPdfInput): Promise<ToolResult> {
+    return this.runTool("pdf.convert.html_to_pdf", {
+      input_path: input.inputPath,
+      output_path: input.outputPath,
+    });
+  }
+
+  async urlToPdf(input: UrlToPdfInput): Promise<ToolResult> {
+    return this.runTool("pdf.convert.url_to_pdf", {
+      url: input.url,
+      output_path: input.outputPath,
+      ...(input.allowPrivateHosts !== undefined
+        ? { allow_private_hosts: input.allowPrivateHosts }
+        : {}),
+      ...(input.allowFileUrls !== undefined ? { allow_file_urls: input.allowFileUrls } : {}),
+    });
+  }
+
+  async docxToPdf(input: OfficeToPdfInput): Promise<ToolResult> {
+    return this.runTool("pdf.convert.docx_to_pdf", officeToPdfPayload(input));
+  }
+
+  async pptxToPdf(input: OfficeToPdfInput): Promise<ToolResult> {
+    return this.runTool("pdf.convert.pptx_to_pdf", officeToPdfPayload(input));
+  }
+
+  async xlsxToPdf(input: OfficeToPdfInput): Promise<ToolResult> {
+    return this.runTool("pdf.convert.xlsx_to_pdf", officeToPdfPayload(input));
+  }
+
+  async pdfToHtml(input: PdfToStructuredInput): Promise<ToolResult> {
+    return this.runTool("pdf.convert.pdf_to_html", pdfToStructuredPayload(input));
+  }
+
+  async pdfToDocx(input: PdfToStructuredInput): Promise<ToolResult> {
+    return this.runTool("pdf.convert.pdf_to_docx", pdfToStructuredPayload(input));
+  }
+
+  async pdfToPptx(input: PdfToStructuredInput): Promise<ToolResult> {
+    return this.runTool("pdf.convert.pdf_to_pptx", pdfToStructuredPayload(input));
+  }
+
+  async pdfToXlsx(input: PdfToStructuredInput): Promise<ToolResult> {
+    return this.runTool("pdf.convert.pdf_to_xlsx", pdfToStructuredPayload(input));
   }
 
   async imageToPdf(input: ImageToPdfInput): Promise<ToolResult> {
@@ -502,6 +724,79 @@ export class AgentPDFClient {
       ...(input.pages ? { pages: input.pages } : {}),
       ...(input.template ? { template: input.template } : {}),
       ...(input.fontSize !== undefined ? { font_size: input.fontSize } : {}),
+    });
+  }
+
+  async addShape(input: AddShapeInput): Promise<ToolResult> {
+    return this.runTool("pdf.edit.add_shape", {
+      input_path: input.inputPath,
+      output_path: input.outputPath,
+      shape: input.shape,
+      page: input.page,
+      x: input.x,
+      y: input.y,
+      width: input.width,
+      height: input.height,
+      ...(input.strokeColor ? { stroke_color: input.strokeColor } : {}),
+      ...(input.fillColor ? { fill_color: input.fillColor } : {}),
+      ...(input.lineWidth !== undefined ? { line_width: input.lineWidth } : {}),
+      ...(input.opacity !== undefined ? { opacity: input.opacity } : {}),
+    });
+  }
+
+  async underline(input: MarkBboxInput): Promise<ToolResult> {
+    return this.runTool("pdf.edit.underline", markBboxPayload(input));
+  }
+
+  async strikeout(input: MarkBboxInput): Promise<ToolResult> {
+    return this.runTool("pdf.edit.strikeout", markBboxPayload(input));
+  }
+
+  async freehandDraw(input: FreehandDrawInput): Promise<ToolResult> {
+    return this.runTool("pdf.edit.freehand_draw", {
+      input_path: input.inputPath,
+      output_path: input.outputPath,
+      page: input.page,
+      points: input.points,
+      ...(input.strokeColor ? { stroke_color: input.strokeColor } : {}),
+      ...(input.lineWidth !== undefined ? { line_width: input.lineWidth } : {}),
+      ...(input.opacity !== undefined ? { opacity: input.opacity } : {}),
+    });
+  }
+
+  async resizePages(input: ResizePagesInput): Promise<ToolResult> {
+    return this.runTool("pdf.edit.resize_pages", {
+      input_path: input.inputPath,
+      output_path: input.outputPath,
+      width: input.width,
+      height: input.height,
+      ...(input.pages ? { pages: input.pages } : {}),
+    });
+  }
+
+  async addMargin(input: AddMarginInput): Promise<ToolResult> {
+    return this.runTool("pdf.edit.add_margin", {
+      input_path: input.inputPath,
+      output_path: input.outputPath,
+      ...(input.margin !== undefined ? { margin: input.margin } : {}),
+      ...(input.pages ? { pages: input.pages } : {}),
+      ...(input.top !== undefined ? { top: input.top } : {}),
+      ...(input.right !== undefined ? { right: input.right } : {}),
+      ...(input.bottom !== undefined ? { bottom: input.bottom } : {}),
+      ...(input.left !== undefined ? { left: input.left } : {}),
+    });
+  }
+
+  async underlay(input: UnderlayInput): Promise<ToolResult> {
+    return this.runTool("pdf.edit.underlay", {
+      input_path: input.inputPath,
+      output_path: input.outputPath,
+      text: input.text,
+      ...(input.pages ? { pages: input.pages } : {}),
+      ...(input.fontSize !== undefined ? { font_size: input.fontSize } : {}),
+      ...(input.opacity !== undefined ? { opacity: input.opacity } : {}),
+      ...(input.angle !== undefined ? { angle: input.angle } : {}),
+      ...(input.color ? { color: input.color } : {}),
     });
   }
 
@@ -637,10 +932,100 @@ export class AgentPDFClient {
     });
   }
 
+  async metadataUpdateOutline(input: MetadataUpdateOutlineInput): Promise<ToolResult> {
+    return this.runTool("pdf.metadata.update_outline", {
+      input_path: input.inputPath,
+      outline: input.outline,
+      output_path: input.outputPath,
+    });
+  }
+
   async securityRemoveMetadata(input: SecurityRemoveMetadataInput): Promise<ToolResult> {
     return this.runTool("pdf.security.remove_metadata", {
       input_path: input.inputPath,
       output_path: input.outputPath,
+    });
+  }
+
+  async securitySanitize(input: SecuritySanitizeInput): Promise<ToolResult> {
+    return this.runTool("pdf.security.sanitize", {
+      input_path: input.inputPath,
+      output_path: input.outputPath,
+      ...(input.removeMetadata !== undefined ? { remove_metadata: input.removeMetadata } : {}),
+    });
+  }
+
+  async securityProtect(input: SecurityPasswordInput): Promise<ToolResult> {
+    return this.runTool("pdf.security.protect", securityPasswordPayload(input));
+  }
+
+  async securityEncrypt(input: SecurityPasswordInput): Promise<ToolResult> {
+    return this.runTool("pdf.security.encrypt", securityPasswordPayload(input));
+  }
+
+  async securityUnlockAuthorized(input: SecurityAuthorizedPasswordInput): Promise<ToolResult> {
+    return this.runTool("pdf.security.unlock_authorized", {
+      input_path: input.inputPath,
+      output_path: input.outputPath,
+      password: input.password,
+    });
+  }
+
+  async securityDecryptAuthorized(input: SecurityAuthorizedPasswordInput): Promise<ToolResult> {
+    return this.runTool("pdf.security.decrypt_authorized", {
+      input_path: input.inputPath,
+      output_path: input.outputPath,
+      password: input.password,
+    });
+  }
+
+  async securitySign(input: SecuritySignInput): Promise<ToolResult> {
+    return this.runTool("pdf.security.sign", {
+      input_path: input.inputPath,
+      output_path: input.outputPath,
+      ...(input.secret ? { secret: input.secret } : {}),
+    });
+  }
+
+  async securityVerifySignature(input: SecurityVerifySignatureInput): Promise<ToolResult> {
+    return this.runTool("pdf.security.verify_signature", {
+      input_path: input.inputPath,
+      signature_path: input.signaturePath,
+      ...(input.secret ? { secret: input.secret } : {}),
+    });
+  }
+
+  async securityMalwareScan(input: SecurityMalwareScanInput): Promise<ToolResult> {
+    return this.runTool("pdf.security.malware_scan", {
+      input_path: input.inputPath,
+    });
+  }
+
+  async securityRedact(input: SecurityRedactInput): Promise<ToolResult> {
+    return this.runTool("pdf.security.redact", {
+      input_path: input.inputPath,
+      output_path: input.outputPath,
+      regions: input.regions,
+      ...(input.fillColor ? { fill_color: input.fillColor } : {}),
+      ...(input.renderScale !== undefined ? { render_scale: input.renderScale } : {}),
+    });
+  }
+
+  async securityVerifyRedaction(input: SecurityVerifyRedactionInput): Promise<ToolResult> {
+    return this.runTool("pdf.security.verify_redaction", {
+      input_path: input.inputPath,
+      ...(input.searchTerms && input.searchTerms.length > 0
+        ? { search_terms: input.searchTerms }
+        : {}),
+    });
+  }
+
+  async validationRedactionCheck(input: ValidationRedactionCheckInput): Promise<ToolResult> {
+    return this.runTool("pdf.validation.redaction_check", {
+      input_path: input.inputPath,
+      ...(input.searchTerms && input.searchTerms.length > 0
+        ? { search_terms: input.searchTerms }
+        : {}),
     });
   }
 
@@ -659,6 +1044,13 @@ export class AgentPDFClient {
     });
   }
 
+  async extractFonts(input: ExtractFontsInput): Promise<ToolResult> {
+    return this.runTool("pdf.convert.extract_fonts", {
+      input_path: input.inputPath,
+      ...(input.pages ? { pages: input.pages } : {}),
+    });
+  }
+
   async blankPageCheck(input: BlankPageCheckInput): Promise<ToolResult> {
     return this.runTool("pdf.validation.blank_page_check", {
       path: input.path,
@@ -670,6 +1062,135 @@ export class AgentPDFClient {
     return this.runTool("pdf.ai.parse.lite", {
       input_path: input.inputPath,
       ...(input.pages ? { pages: input.pages } : {}),
+    });
+  }
+
+  async semanticDiff(input: SemanticDiffInput): Promise<ToolResult> {
+    return this.runTool("pdf.compare.semantic_diff", {
+      before_path: input.beforePath,
+      after_path: input.afterPath,
+      ...(input.pages ? { pages: input.pages } : {}),
+    });
+  }
+
+  async compareSemanticDiff(input: SemanticDiffInput): Promise<ToolResult> {
+    return this.semanticDiff(input);
+  }
+
+  async versionReport(input: VersionReportInput): Promise<ToolResult> {
+    return this.runTool("pdf.compare.version_report", {
+      before_path: input.beforePath,
+      after_path: input.afterPath,
+      ...(input.outputPath ? { output_path: input.outputPath } : {}),
+      ...(input.pages ? { pages: input.pages } : {}),
+    });
+  }
+
+  async compareVersionReport(input: VersionReportInput): Promise<ToolResult> {
+    return this.versionReport(input);
+  }
+
+  async visualDiff(input: VisualDiffInput): Promise<ToolResult> {
+    return this.runTool("pdf.compare.visual_diff", visualDiffPayload(input));
+  }
+
+  async compareVisualDiff(input: VisualDiffInput): Promise<ToolResult> {
+    return this.visualDiff(input);
+  }
+
+  async validationVisualDiff(input: VisualDiffInput): Promise<ToolResult> {
+    return this.runTool("pdf.validation.visual_diff", visualDiffPayload(input));
+  }
+
+  async parseFigures(input: SemanticParseInput): Promise<ToolResult> {
+    return this.semanticParse("pdf.ai.parse.figures", input);
+  }
+
+  async parseFormulas(input: SemanticParseInput): Promise<ToolResult> {
+    return this.semanticParse("pdf.ai.parse.formulas", input);
+  }
+
+  async parseCharts(input: SemanticParseInput): Promise<ToolResult> {
+    return this.semanticParse("pdf.ai.parse.charts", input);
+  }
+
+  async parseReferences(input: SemanticParseInput): Promise<ToolResult> {
+    return this.semanticParse("pdf.ai.parse.references", input);
+  }
+
+  async formsCreate(input: FormsCreateInput): Promise<ToolResult> {
+    return this.runTool("pdf.forms.create", {
+      output_path: input.outputPath,
+      fields: input.fields,
+    });
+  }
+
+  async formsImportData(input: FormsImportDataInput): Promise<ToolResult> {
+    return this.runTool("pdf.forms.import_data", {
+      input_path: input.inputPath,
+      data: input.data,
+      output_path: input.outputPath,
+    });
+  }
+
+  async formsValidate(input: FormsValidateInput): Promise<ToolResult> {
+    return this.runTool("pdf.forms.validate", {
+      input_path: input.inputPath,
+      ...(input.requiredFields && input.requiredFields.length > 0
+        ? { required_fields: input.requiredFields }
+        : {}),
+    });
+  }
+
+  async ocrScanToPdf(input: OcrScanToPdfInput): Promise<ToolResult> {
+    return this.runTool("pdf.ocr_scan.scan_to_pdf", {
+      image_paths: input.imagePaths,
+      output_path: input.outputPath,
+    });
+  }
+
+  async ocr(input: OcrInput): Promise<ToolResult> {
+    return this.runTool("pdf.ocr_scan.ocr", {
+      input_path: input.inputPath,
+      ...(input.pages ? { pages: input.pages } : {}),
+      ...(input.languages && input.languages.length > 0 ? { languages: input.languages } : {}),
+      ...(input.dpi !== undefined ? { dpi: input.dpi } : {}),
+      ...(input.engine ? { engine: input.engine } : {}),
+      ...(input.psm !== undefined ? { psm: input.psm } : {}),
+    });
+  }
+
+  async ocrSearchablePdf(input: OcrSearchablePdfInput): Promise<ToolResult> {
+    return this.runTool("pdf.ocr_scan.searchable_pdf", {
+      input_path: input.inputPath,
+      output_path: input.outputPath,
+      ...(input.pages ? { pages: input.pages } : {}),
+      ...(input.languages && input.languages.length > 0 ? { languages: input.languages } : {}),
+      ...(input.dpi !== undefined ? { dpi: input.dpi } : {}),
+      ...(input.engine ? { engine: input.engine } : {}),
+      ...(input.psm !== undefined ? { psm: input.psm } : {}),
+    });
+  }
+
+  async ocrDespeckle(input: OcrPdfRewriteInput): Promise<ToolResult> {
+    return this.runTool("pdf.ocr_scan.despeckle", {
+      input_path: input.inputPath,
+      output_path: input.outputPath,
+    });
+  }
+
+  async ocrRemoveExistingOcr(input: OcrPdfRewriteInput): Promise<ToolResult> {
+    return this.runTool("pdf.ocr_scan.remove_existing_ocr", {
+      input_path: input.inputPath,
+      output_path: input.outputPath,
+    });
+  }
+
+  async ocrMultilingual(input: OcrMultilingualInput): Promise<ToolResult> {
+    return this.runTool("pdf.ocr_scan.multilingual_ocr", {
+      input_path: input.inputPath,
+      output_path: input.outputPath,
+      ...(input.languages && input.languages.length > 0 ? { languages: input.languages } : {}),
     });
   }
 
@@ -785,6 +1306,13 @@ export class AgentPDFClient {
   private url(path: string): string {
     return `${this.baseUrl}${path}`;
   }
+
+  private async semanticParse(toolName: string, input: SemanticParseInput): Promise<ToolResult> {
+    return this.runTool(toolName, {
+      input_path: input.inputPath,
+      ...(input.pages ? { pages: input.pages } : {}),
+    });
+  }
 }
 
 function composeBlockPayload(
@@ -812,6 +1340,53 @@ function composeBlockPayload(
     ...(input.compositionPath ? { composition_path: input.compositionPath } : {}),
     ...(input.layerManifestPath ? { layer_manifest_path: input.layerManifestPath } : {}),
     ...(input.manifestOutputPath ? { manifest_output_path: input.manifestOutputPath } : {}),
+  };
+}
+
+function markBboxPayload(input: MarkBboxInput): JsonObject {
+  return {
+    input_path: input.inputPath,
+    output_path: input.outputPath,
+    page: input.page,
+    bbox: input.bbox,
+    ...(input.color ? { color: input.color } : {}),
+    ...(input.lineWidth !== undefined ? { line_width: input.lineWidth } : {}),
+  };
+}
+
+function officeToPdfPayload(input: OfficeToPdfInput): JsonObject {
+  return {
+    input_path: input.inputPath,
+    output_path: input.outputPath,
+  };
+}
+
+function pdfToStructuredPayload(input: PdfToStructuredInput): JsonObject {
+  return {
+    input_path: input.inputPath,
+    output_path: input.outputPath,
+    ...(input.pages ? { pages: input.pages } : {}),
+  };
+}
+
+function securityPasswordPayload(input: SecurityPasswordInput): JsonObject {
+  return {
+    input_path: input.inputPath,
+    output_path: input.outputPath,
+    password: input.password,
+    ...(input.ownerPassword ? { owner_password: input.ownerPassword } : {}),
+  };
+}
+
+function visualDiffPayload(input: VisualDiffInput): JsonObject {
+  return {
+    before_path: input.beforePath,
+    after_path: input.afterPath,
+    ...(input.pages ? { pages: input.pages } : {}),
+    ...(input.maxDifferenceRatio !== undefined
+      ? { max_difference_ratio: input.maxDifferenceRatio }
+      : {}),
+    ...(input.renderScale !== undefined ? { render_scale: input.renderScale } : {}),
   };
 }
 

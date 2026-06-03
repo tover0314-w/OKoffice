@@ -7,7 +7,9 @@ from typing import Any
 from uuid import uuid4
 
 from agentpdf.artifacts.store import build_artifact
+from agentpdf.conversion.local import html_to_pdf
 from agentpdf.core.pdf import create_markdown_pdf, create_slide_deck_pdf
+from agentpdf.renderers.html_package import write_composition_html_package
 from agentpdf.schemas.errors import AgentPDFException
 from agentpdf.schemas.models import ToolResult
 from agentpdf.validation.pdf import validate_pdf
@@ -245,10 +247,13 @@ def compose_from_context(
     output_path: str | Path,
     style_pack: str | None = None,
     title: str | None = None,
+    renderer: str = "markdown",
+    html_output_path: str | Path | None = None,
 ) -> ToolResult:
     tool = "pdf.compose.from_context"
     packet = _load_context_packet(context_packet)
     profile = _resolve_target_profile(target_profile)
+    renderer_mode = _normalize_renderer(renderer)
     if style_pack:
         profile["style_pack"] = style_pack
     if title:
@@ -257,6 +262,30 @@ def compose_from_context(
         slides, composition_ir, source_map, coverage = _compose_slides(packet, profile)
         markdown = _slides_to_outline(slides)
         render_plan = _render_plan(profile, markdown=markdown, slides=slides)
+    else:
+        markdown, composition_ir, source_map, coverage = _compose_markdown(packet, profile)
+        slides = []
+        render_plan = _render_plan(profile, markdown=markdown, slides=slides)
+
+    html_package: dict[str, Any] | None = None
+    if renderer_mode == "html":
+        resolved_html_output = html_output_path or Path(output_path).with_suffix(".html")
+        render_plan = {
+            **render_plan,
+            "renderer": "html_package",
+            "html_output_path": str(Path(resolved_html_output).expanduser().resolve()),
+            "fallback_renderer": "local_markdown_pdf",
+        }
+        html_package = write_composition_html_package(
+            composition_ir=composition_ir,
+            source_map=source_map,
+            target_profile=profile,
+            render_plan=render_plan,
+            html_output_path=resolved_html_output,
+            source_tool=tool,
+        )
+        rendered = html_to_pdf(html_package["html_output_path"], output_path)
+    elif profile.get("layout_mode") == "slides":
         rendered = create_slide_deck_pdf(
             slides,
             output_path=output_path,
@@ -264,9 +293,6 @@ def compose_from_context(
             style_pack=str(profile.get("style_pack") or "paper_ink"),
         )
     else:
-        markdown, composition_ir, source_map, coverage = _compose_markdown(packet, profile)
-        slides = []
-        render_plan = _render_plan(profile, markdown=markdown, slides=slides)
         rendered = create_markdown_pdf(
             markdown,
             output_path=output_path,
@@ -275,7 +301,7 @@ def compose_from_context(
         )
     rendered_path = rendered.artifacts[0].path if rendered.artifacts else Path(output_path).resolve()
     validation = validate_pdf(rendered_path)
-    warnings = [*validation.warnings, *_composition_warnings(packet)]
+    warnings = [*rendered.warnings, *validation.warnings, *_composition_warnings(packet)]
     pdf_artifact = build_artifact(rendered_path, source_tool=tool)
     ir_path = Path(output_path).with_suffix(".composition.json")
     ir_payload = {
@@ -286,26 +312,47 @@ def compose_from_context(
         "context_packet_id": packet["context_packet_id"],
         "render_plan": render_plan,
     }
+    if html_package is not None:
+        ir_payload.update(
+            {
+                "html_output_path": html_package["html_output_path"],
+                "html_package_manifest_path": html_package["html_package_manifest_path"],
+                "html_package_manifest": html_package["html_package_manifest"],
+            }
+        )
     if slides:
         ir_payload["slides"] = slides
     ir_path.write_text(json.dumps(ir_payload, indent=2), encoding="utf-8")
     ir_artifact = build_artifact(ir_path, source_tool=tool)
+    artifacts = [pdf_artifact, ir_artifact]
+    if html_package is not None:
+        artifacts.extend(html_package["artifacts"])
 
     return ToolResult(
         job_id=f"job_{uuid4().hex[:16]}",
         status="succeeded" if validation.status == "passed" else "failed",
         tool=tool,
-        artifacts=[pdf_artifact, ir_artifact],
+        artifacts=artifacts,
         validation=validation,
         warnings=warnings,
         usage={
             "context_packet_id": packet["context_packet_id"],
             "target_profile": profile,
+            "renderer": "html_package" if html_package is not None else render_plan["renderer"],
             "composition_ir": composition_ir,
             "source_map": source_map,
             "evidence_coverage": coverage,
             "render_plan": render_plan,
             "generated_markdown": markdown,
+            **(
+                {
+                    "html_output_path": html_package["html_output_path"],
+                    "html_package_manifest_path": html_package["html_package_manifest_path"],
+                    "html_package_manifest": html_package["html_package_manifest"],
+                }
+                if html_package is not None
+                else {}
+            ),
             **({"slides": slides, "slide_count": len(slides)} if slides else {}),
         },
         next_recommended_tools=[
@@ -577,6 +624,19 @@ def _render_plan(profile: dict[str, Any], markdown: str, slides: list[dict[str, 
     else:
         plan["markdown"] = markdown
     return plan
+
+
+def _normalize_renderer(renderer: str | None) -> str:
+    value = str(renderer or "markdown").strip().lower()
+    if value in {"markdown", "local_markdown_pdf", "reportlab"}:
+        return "markdown"
+    if value in {"html", "html_package", "html-first", "html_first"}:
+        return "html"
+    raise AgentPDFException(
+        "invalid_input",
+        "Unsupported compose renderer. Use 'markdown' or 'html'.",
+        details={"renderer": renderer},
+    )
 
 
 def _load_composition_payload(composition: dict[str, Any] | str | Path) -> dict[str, Any]:

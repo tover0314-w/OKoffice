@@ -191,6 +191,55 @@ curl -X POST http://127.0.0.1:7331/v1/tools/pdf.inspect.pages/run \
   }'
 ```
 
+## Forms and OCR scan
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.forms.create/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "output_path": ".agentpdf-out/contact-form.pdf",
+    "fields": [{"name": "name", "label": "Name", "required": true}]
+  }'
+```
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.forms.import_data/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "input_path": ".agentpdf-out/contact-form.pdf",
+    "data": {"name": "Ada"},
+    "output_path": ".agentpdf-out/contact-form-filled.pdf"
+  }'
+```
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.forms.validate/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "input_path": ".agentpdf-out/contact-form-filled.pdf",
+    "required_fields": ["name"]
+  }'
+```
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.ocr_scan.scan_to_pdf/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "image_paths": ["assets/brand/okpdf-logo.png"],
+    "output_path": ".agentpdf-out/scan.pdf"
+  }'
+```
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.ocr_scan.multilingual_ocr/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "input_path": ".agentpdf-out/scan.pdf",
+    "output_path": ".agentpdf-out/scan-multilingual.pdf",
+    "languages": ["eng", "chi_sim"]
+  }'
+```
+
 ## Plan an agent workflow
 
 ```bash
@@ -445,7 +494,9 @@ curl -X POST http://127.0.0.1:7331/v1/tools/pdf.compose.from_context/run \
   -d '{
     "context_packet_path": ".agentpdf-out/context.packet.json",
     "profile": "technical_audit",
-    "output_path": ".agentpdf-out/technical-audit.pdf"
+    "output_path": ".agentpdf-out/technical-audit.pdf",
+    "renderer": "html",
+    "html_output_path": ".agentpdf-out/technical-audit.html"
   }'
 ```
 
@@ -591,6 +642,33 @@ curl -X POST http://127.0.0.1:7331/v1/tools/pdf.evidence.map_sources/run \
 ```
 
 ```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.artifacts.source_map/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "composition_path": ".agentpdf-out/technical-audit.composition.json",
+    "context_packet_path": ".agentpdf-out/context.packet.json",
+    "output_path": ".agentpdf-out/technical-audit.artifact-source-map.json",
+    "title": "Technical Audit Artifact Source Map"
+  }'
+```
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.evidence.cite_claims/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "claims": [
+      {
+        "claim_id": "claim_latency",
+        "text": "Runtime metrics include latency evidence.",
+        "source_refs": ["ctx_002"]
+      }
+    ],
+    "source_map_path": ".agentpdf-out/technical-audit.source-map.json",
+    "output_path": ".agentpdf-out/technical-audit.citations.json"
+  }'
+```
+
+```bash
 curl -X POST http://127.0.0.1:7331/v1/tools/pdf.patch.plan/run \
   -H 'Content-Type: application/json' \
   -d '{
@@ -695,6 +773,35 @@ curl -X POST http://127.0.0.1:7331/v1/tools/pdf.patch.verify/run \
   -d '{
     "patch_manifest_path": ".agentpdf-out/technical-audit.patch.json",
     "patched_path": ".agentpdf-out/technical-audit-patched.pdf"
+  }'
+```
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.artifacts.manifest/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "artifact_paths": [
+      ".agentpdf-out/technical-audit-patched.pdf",
+      ".agentpdf-out/technical-audit.composition.json",
+      ".agentpdf-out/technical-audit.coverage.json",
+      ".agentpdf-out/technical-audit.source-map.json",
+      ".agentpdf-out/technical-audit.artifact-source-map.json",
+      ".agentpdf-out/technical-audit.citations.json",
+      ".agentpdf-out/technical-audit.patch.json"
+    ],
+    "output_path": ".agentpdf-out/technical-audit.artifacts.json",
+    "title": "Technical Audit Artifacts",
+    "metadata": {"workflow": "context-packet-patch", "agent": "codex"}
+  }'
+```
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.artifacts.graph/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "artifact_manifest_path": ".agentpdf-out/technical-audit.artifacts.json",
+    "output_path": ".agentpdf-out/technical-audit.artifact-graph.json",
+    "title": "Technical Audit Artifact Graph"
   }'
 ```
 
@@ -963,6 +1070,92 @@ curl -X POST http://127.0.0.1:7331/v1/tools/pdf.validation.blank_page_check/run 
 
 ```bash
 curl -X POST http://127.0.0.1:7331/v1/tools/pdf.ai.parse.lite/run \
+  -H 'Content-Type: application/json' \
+  -d '{"input_path": ".agentpdf-out/scan-numbered.pdf"}'
+```
+
+## Local semantic diff
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.compare.semantic_diff/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "before_path": ".agentpdf-out/scan-v1.pdf",
+    "after_path": ".agentpdf-out/scan-v2.pdf",
+    "pages": "1"
+  }'
+```
+
+## Version report
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.compare.version_report/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "before_path": ".agentpdf-out/scan-v1.pdf",
+    "after_path": ".agentpdf-out/scan-v2.pdf",
+    "output_path": ".agentpdf-out/scan.version-report.md"
+  }'
+```
+
+## Visual diff
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.compare.visual_diff/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "before_path": ".agentpdf-out/scan-v1.pdf",
+    "after_path": ".agentpdf-out/scan-v2.pdf",
+    "pages": "1"
+  }'
+```
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.validation.visual_diff/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "before_path": ".agentpdf-out/scan-v1.pdf",
+    "after_path": ".agentpdf-out/scan-v2.pdf",
+    "max_difference_ratio": 0.001
+  }'
+```
+
+## Redaction
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.security.redact/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "input_path": ".agentpdf-out/sensitive.pdf",
+    "output_path": ".agentpdf-out/sensitive-redacted.pdf",
+    "regions": [{"page": 1, "bbox": [60, 700, 280, 760], "label": "secret"}]
+  }'
+```
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.security.verify_redaction/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "input_path": ".agentpdf-out/sensitive-redacted.pdf",
+    "search_terms": ["SECRET-CODE-123"]
+  }'
+
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.validation.redaction_check/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "input_path": ".agentpdf-out/sensitive-redacted.pdf",
+    "search_terms": ["SECRET-CODE-123"]
+  }'
+```
+
+## Semantic parse hints
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.ai.parse.figures/run \
+  -H 'Content-Type: application/json' \
+  -d '{"input_path": ".agentpdf-out/scan-numbered.pdf"}'
+
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.ai.parse.references/run \
   -H 'Content-Type: application/json' \
   -d '{"input_path": ".agentpdf-out/scan-numbered.pdf"}'
 ```

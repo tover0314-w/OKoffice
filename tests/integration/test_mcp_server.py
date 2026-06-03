@@ -18,30 +18,47 @@ from agentpdf.mcp.server import (
     pdf_ai_rag_query,
     pdf_ai_rag_search,
     pdf_add_page_numbers,
+    pdf_add_margin,
+    pdf_add_shape,
     pdf_blank_page_check,
+    pdf_context_image_analyze,
     pdf_create_markdown,
     pdf_create_text,
     pdf_extract_images,
+    pdf_extract_fonts,
     pdf_extract_text,
     pdf_extract_pages,
+    pdf_freehand_draw,
     pdf_image_to_pdf,
     pdf_inspect_document,
     pdf_inspect_pages,
+    pdf_booklet,
     pdf_merge,
+    pdf_n_up,
+    pdf_evidence_cite_claims,
     pdf_evidence_map_sources,
     pdf_metadata_page_info,
     pdf_metadata_read,
+    pdf_metadata_update_outline,
+    pdf_ocr,
+    pdf_ocr_searchable_pdf,
     pdf_pdf_to_markdown,
     pdf_pdf_to_json,
     pdf_insert_blank_pages,
     pdf_optimize_compress,
+    pdf_optimize_remove_unused_objects,
     pdf_optimize_repair,
+    pdf_optimize_validate_pdfa,
     pdf_page_count_check,
     pdf_render_pages,
     pdf_render_check,
     pdf_reorder_pages,
+    pdf_resize_pages,
     pdf_security_remove_metadata,
+    pdf_strikeout,
     pdf_target_select_profile,
+    pdf_underlay,
+    pdf_underline,
     pdf_validate_output,
     pdf_watermark,
     pdf_workflow_plan,
@@ -65,8 +82,11 @@ def test_mcp_server_exposes_local_pdf_tools() -> None:
     assert "pdf_insert_blank_pages" in tool_names
     assert "pdf_optimize_compress" in tool_names
     assert "pdf_optimize_repair" in tool_names
+    assert "pdf_optimize_remove_unused_objects" in tool_names
+    assert "pdf_optimize_validate_pdfa" in tool_names
     assert "pdf_render_pages" in tool_names
     assert "pdf_extract_images" in tool_names
+    assert "pdf_extract_fonts" in tool_names
     assert "pdf_extract_text" in tool_names
     assert "pdf_metadata_read" in tool_names
     assert "pdf_metadata_page_info" in tool_names
@@ -76,8 +96,18 @@ def test_mcp_server_exposes_local_pdf_tools() -> None:
     assert "pdf_create_text" in tool_names
     assert "pdf_create_markdown" in tool_names
     assert "pdf_image_to_pdf" in tool_names
+    assert "pdf_context_image_analyze" in tool_names
+    assert "pdf_ocr" in tool_names
+    assert "pdf_ocr_searchable_pdf" in tool_names
     assert "pdf_watermark" in tool_names
     assert "pdf_add_page_numbers" in tool_names
+    assert "pdf_add_shape" in tool_names
+    assert "pdf_underline" in tool_names
+    assert "pdf_strikeout" in tool_names
+    assert "pdf_freehand_draw" in tool_names
+    assert "pdf_resize_pages" in tool_names
+    assert "pdf_add_margin" in tool_names
+    assert "pdf_underlay" in tool_names
     assert "pdf_validate_output" in tool_names
     assert "pdf_page_count_check" in tool_names
     assert "pdf_render_check" in tool_names
@@ -106,6 +136,7 @@ def test_mcp_server_exposes_local_pdf_tools() -> None:
     assert "agentpdf_tool_manifest" in tool_names
     assert "pdf_target_select_profile" in tool_names
     assert "pdf_evidence_map_sources" in tool_names
+    assert "pdf_evidence_cite_claims" in tool_names
 
 
 def test_static_mcp_catalog_matches_server_tools() -> None:
@@ -196,6 +227,16 @@ def test_mcp_merge_returns_artifact(simple_pdf: Path, two_page_pdf: Path, tmp_pa
     assert payload["artifacts"][0]["page_count"] == 3
 
 
+def test_mcp_n_up_and_booklet_return_artifacts(two_page_pdf: Path, tmp_path: Path) -> None:
+    n_up = json.loads(pdf_n_up(str(two_page_pdf), str(tmp_path / "n-up.pdf"), per_sheet=2))
+    booklet = json.loads(pdf_booklet(str(two_page_pdf), str(tmp_path / "booklet.pdf")))
+
+    assert n_up["tool"] == "pdf.organize.n_up"
+    assert n_up["artifacts"][0]["page_count"] == 1
+    assert booklet["tool"] == "pdf.organize.booklet"
+    assert booklet["usage"]["padded_page_count"] == 4
+
+
 def test_mcp_render_pages_returns_image_artifact(simple_pdf: Path, tmp_path: Path) -> None:
     payload = json.loads(pdf_render_pages(str(simple_pdf), pages="1", image_format="png", out_dir=str(tmp_path)))
 
@@ -214,6 +255,38 @@ def test_mcp_extract_images_returns_artifacts(tmp_path: Path) -> None:
     assert payload["tool"] == "pdf.convert.extract_images"
     assert payload["usage"]["image_count"] == 1
     assert payload["artifacts"][0]["mime_type"] == "image/png"
+
+
+def test_mcp_ocr_returns_regions(monkeypatch, tmp_path: Path) -> None:
+    image = tmp_path / "scan.png"
+    output = tmp_path / "searchable.pdf"
+    image_pdf = tmp_path / "scan.pdf"
+    Image.new("RGB", (160, 80), color=(255, 255, 255)).save(image)
+    _write_image_pdf(image_pdf, image)
+    monkeypatch.setattr("agentpdf.ocr_scan.local._run_tesseract_tsv", _fake_tesseract_tsv)
+
+    ocr_payload = json.loads(pdf_ocr(str(image), languages=["eng"]))
+    searchable_payload = json.loads(
+        pdf_ocr_searchable_pdf(str(image_pdf), str(output), languages=["eng"])
+    )
+
+    assert ocr_payload["tool"] == "pdf.ocr_scan.ocr"
+    assert ocr_payload["usage"]["text"] == "Hello OCR"
+    assert searchable_payload["tool"] == "pdf.ocr_scan.searchable_pdf"
+    assert searchable_payload["status"] == "succeeded"
+    assert output.exists()
+
+
+def test_mcp_image_analyze_returns_ocr_evidence(monkeypatch, tmp_path: Path) -> None:
+    image = tmp_path / "scan.png"
+    Image.new("RGB", (160, 80), color=(255, 255, 255)).save(image)
+    monkeypatch.setattr("agentpdf.ocr_scan.local._run_tesseract_tsv", _fake_tesseract_tsv)
+
+    payload = json.loads(pdf_context_image_analyze(str(image), languages=["eng"]))
+
+    assert payload["tool"] == "pdf.context.image_analyze"
+    assert payload["usage"]["image"]["height"] == 80
+    assert payload["usage"]["ocr"]["text"] == "Hello OCR"
 
 
 def test_mcp_extract_pages_returns_artifact(two_page_pdf: Path, tmp_path: Path) -> None:
@@ -242,26 +315,44 @@ def test_mcp_reorder_and_insert_blank_pages(two_page_pdf: Path, tmp_path: Path) 
 def test_mcp_optimize_compress_and_repair(two_page_pdf: Path, tmp_path: Path) -> None:
     compressed = tmp_path / "compressed.pdf"
     repaired = tmp_path / "repaired.pdf"
+    optimized = tmp_path / "optimized.pdf"
 
     compress = json.loads(pdf_optimize_compress(str(two_page_pdf), output_path=str(compressed)))
     repair = json.loads(pdf_optimize_repair(str(two_page_pdf), output_path=str(repaired)))
+    remove_unused = json.loads(
+        pdf_optimize_remove_unused_objects(str(two_page_pdf), output_path=str(optimized))
+    )
+    validate_pdfa = json.loads(pdf_optimize_validate_pdfa(str(two_page_pdf)))
 
     assert compress["tool"] == "pdf.optimize.compress"
     assert repair["tool"] == "pdf.optimize.repair"
+    assert remove_unused["tool"] == "pdf.optimize.remove_unused_objects"
+    assert validate_pdfa["tool"] == "pdf.optimize.validate_pdfa"
     assert compressed.exists()
     assert repaired.exists()
+    assert optimized.exists()
 
 
 def test_mcp_text_and_metadata_tools(text_pdf: Path, metadata_pdf: Path) -> None:
     text = json.loads(pdf_extract_text(str(text_pdf), pages="1"))
+    fonts = json.loads(pdf_extract_fonts(str(text_pdf), pages="1"))
     metadata = json.loads(pdf_metadata_read(str(metadata_pdf)))
     page_info = json.loads(pdf_metadata_page_info(str(text_pdf), pages="1"))
+    outlined = json.loads(
+        pdf_metadata_update_outline(
+            str(metadata_pdf),
+            outline=[{"title": "Page One", "page": 1}],
+            output_path=str(metadata_pdf.parent / "mcp-outlined.pdf"),
+        )
+    )
 
     assert text["tool"] == "pdf.convert.pdf_to_text"
     assert "AgentPDF local text layer" in text["usage"]["text"]
+    assert fonts["tool"] == "pdf.convert.extract_fonts"
     assert metadata["usage"]["metadata"]["Title"] == "Original Title"
     assert page_info["tool"] == "pdf.metadata.page_info"
     assert page_info["usage"]["selected_pages"] == [1]
+    assert outlined["tool"] == "pdf.metadata.update_outline"
 
 
 def test_mcp_target_page_count_and_security_helpers(metadata_pdf: Path, tmp_path: Path) -> None:
@@ -285,6 +376,18 @@ def test_mcp_target_page_count_and_security_helpers(metadata_pdf: Path, tmp_path
             },
         )
     )
+    cited = json.loads(
+        pdf_evidence_cite_claims(
+            claims=[
+                {
+                    "claim_id": "claim_mcp",
+                    "text": "MCP source note is cited.",
+                    "source_refs": ["ctx_001"],
+                }
+            ],
+            source_map=mapped["usage"]["source_map"],
+        )
+    )
     page_count = json.loads(pdf_page_count_check(str(metadata_pdf), expected_pages=1))
     cleaned = tmp_path / "security-clean.pdf"
     security = json.loads(pdf_security_remove_metadata(str(metadata_pdf), str(cleaned)))
@@ -293,6 +396,8 @@ def test_mcp_target_page_count_and_security_helpers(metadata_pdf: Path, tmp_path
     assert selected["usage"]["selected_profile_id"] == "slide_deck"
     assert mapped["tool"] == "pdf.evidence.map_sources"
     assert mapped["usage"]["source_map"][0]["source_match_status"] == "matched"
+    assert cited["tool"] == "pdf.evidence.cite_claims"
+    assert cited["usage"]["citations"][0]["source_ref"] == "ctx_001"
     assert page_count["tool"] == "pdf.validation.page_count_check"
     assert page_count["usage"]["actual_pages"] == 1
     assert security["tool"] == "pdf.security.remove_metadata"
@@ -368,18 +473,61 @@ def test_mcp_image_watermark_page_numbers_and_validate(tmp_path: Path) -> None:
     image_pdf = tmp_path / "cover.pdf"
     watermarked = tmp_path / "watermarked.pdf"
     numbered = tmp_path / "numbered.pdf"
+    shaped = tmp_path / "shaped.pdf"
+    underlined = tmp_path / "underlined.pdf"
+    struck = tmp_path / "struck.pdf"
+    drawn = tmp_path / "drawn.pdf"
+    resized = tmp_path / "resized.pdf"
+    margined = tmp_path / "margined.pdf"
+    underlaid = tmp_path / "underlaid.pdf"
     Image.new("RGB", (120, 80), color=(120, 40, 80)).save(image)
 
     image_result = json.loads(pdf_image_to_pdf([str(image)], str(image_pdf)))
     watermark = json.loads(pdf_watermark(str(image_pdf), "CONFIDENTIAL", str(watermarked)))
     page_numbers = json.loads(pdf_add_page_numbers(str(watermarked), str(numbered)))
-    validate = json.loads(pdf_validate_output(str(numbered), expected_pages=1))
-    render_check = json.loads(pdf_render_check(str(numbered), pages="1"))
-    blank_check = json.loads(pdf_blank_page_check(str(numbered), pages="1"))
+    shape = json.loads(
+        pdf_add_shape(
+            str(numbered),
+            str(shaped),
+            shape="rectangle",
+            page=1,
+            x=12,
+            y=12,
+            width=48,
+            height=32,
+        )
+    )
+    underline = json.loads(
+        pdf_underline(str(shaped), str(underlined), page=1, bbox=[10, 10, 80, 24])
+    )
+    strikeout = json.loads(
+        pdf_strikeout(str(underlined), str(struck), page=1, bbox=[10, 10, 80, 24])
+    )
+    draw = json.loads(
+        pdf_freehand_draw(
+            str(struck),
+            str(drawn),
+            page=1,
+            points=[[10, 10], [30, 40], [60, 20]],
+        )
+    )
+    resize = json.loads(pdf_resize_pages(str(drawn), str(resized), width=200, height=200))
+    margin = json.loads(pdf_add_margin(str(resized), str(margined), margin=12))
+    underlay = json.loads(pdf_underlay(str(margined), str(underlaid), text="DRAFT"))
+    validate = json.loads(pdf_validate_output(str(underlaid), expected_pages=1))
+    render_check = json.loads(pdf_render_check(str(underlaid), pages="1"))
+    blank_check = json.loads(pdf_blank_page_check(str(underlaid), pages="1"))
 
     assert image_result["tool"] == "pdf.convert.image_to_pdf"
     assert watermark["tool"] == "pdf.edit.watermark"
     assert page_numbers["tool"] == "pdf.edit.page_numbers"
+    assert shape["tool"] == "pdf.edit.add_shape"
+    assert underline["tool"] == "pdf.edit.underline"
+    assert strikeout["tool"] == "pdf.edit.strikeout"
+    assert draw["tool"] == "pdf.edit.freehand_draw"
+    assert resize["tool"] == "pdf.edit.resize_pages"
+    assert margin["tool"] == "pdf.edit.add_margin"
+    assert underlay["tool"] == "pdf.edit.underlay"
     assert validate["status"] == "succeeded"
     assert render_check["tool"] == "pdf.validation.render_check"
     assert blank_check["tool"] == "pdf.validation.blank_page_check"
@@ -454,3 +602,20 @@ def _write_image_pdf(path: Path, image_path: Path) -> None:
     document.drawImage(str(image_path), 24, 120, width=32, height=24)
     document.showPage()
     document.save()
+
+
+def _fake_tesseract_tsv(
+    image_path: Path,
+    languages: list[str],
+    engine: str,
+    psm: int,
+) -> str:
+    assert image_path.exists()
+    assert languages == ["eng"]
+    assert engine == "tesseract"
+    assert psm == 6
+    return (
+        "level\tpage_num\tblock_num\tpar_num\tline_num\tword_num\tleft\ttop\twidth\theight\tconf\ttext\n"
+        "5\t1\t1\t1\t1\t1\t10\t20\t40\t12\t96\tHello\n"
+        "5\t1\t1\t1\t1\t2\t56\t20\t28\t12\t91\tOCR\n"
+    )

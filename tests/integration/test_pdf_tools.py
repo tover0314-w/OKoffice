@@ -7,28 +7,41 @@ from reportlab.pdfgen import canvas
 from agentpdf.artifacts.store import build_artifact
 from agentpdf.core.pdf import (
     add_page_numbers_pdf,
+    add_margin_pdf,
+    add_shape_pdf,
     add_text_watermark_pdf,
+    add_underlay_pdf,
     compress_pdf,
     create_markdown_pdf,
     create_text_pdf,
+    extract_fonts_pdf,
     extract_images_pdf,
     extract_pages_pdf,
     extract_text_pdf,
+    freehand_draw_pdf,
     image_to_pdf,
     inspect_pdf,
     inspect_pdf_pages,
     merge_pdfs,
+    n_up_pdf,
     page_info_pdf,
     read_metadata_pdf,
     remove_pages_pdf,
     remove_metadata_pdf,
+    remove_unused_objects_pdf,
     repair_pdf,
+    resize_pages_pdf,
     insert_blank_pages_pdf,
     reorder_pages_pdf,
     render_pdf,
     rotate_pages_pdf,
     split_pdf,
+    strikeout_pdf,
+    underline_pdf,
     update_metadata_pdf,
+    booklet_pdf,
+    update_outline_pdf,
+    validate_pdfa_pdf,
 )
 from agentpdf.tools.runner import run_page_count_check, run_security_remove_metadata
 from agentpdf.validation.pdf import blank_page_check_pdf, render_check_pdf, validate_pdf
@@ -204,6 +217,38 @@ def test_insert_blank_pages_pdf_adds_blank_pages_after_target(tmp_path: Path) ->
     assert "Second page" in (reader.pages[3].extract_text() or "")
 
 
+def test_n_up_pdf_places_multiple_pages_on_one_output_page(tmp_path: Path) -> None:
+    source = tmp_path / "n-up-source.pdf"
+    output = tmp_path / "n-up.pdf"
+    _write_labeled_pages(source, ["First page", "Second page", "Third page", "Fourth page"])
+
+    result = n_up_pdf(source, output_path=output, per_sheet=2)
+
+    assert result.status == "succeeded"
+    assert result.tool == "pdf.organize.n_up"
+    assert result.artifacts[0].page_count == 2
+    assert result.usage["source_pages"] == [1, 2, 3, 4]
+    assert result.usage["per_sheet"] == 2
+    assert result.usage["output_pages"] == 2
+    assert len(PdfReader(output).pages) == 2
+
+
+def test_booklet_pdf_imposes_signature_order_with_blank_padding(tmp_path: Path) -> None:
+    source = tmp_path / "booklet-source.pdf"
+    output = tmp_path / "booklet.pdf"
+    _write_labeled_pages(source, ["First page", "Second page", "Third page"])
+
+    result = booklet_pdf(source, output_path=output)
+
+    assert result.status == "succeeded"
+    assert result.tool == "pdf.organize.booklet"
+    assert result.artifacts[0].page_count == 2
+    assert result.usage["source_pages"] == [1, 2, 3]
+    assert result.usage["padded_page_count"] == 4
+    assert result.usage["signature_order"] == [None, 1, 2, 3]
+    assert len(PdfReader(output).pages) == 2
+
+
 def test_compress_pdf_rewrites_streams_and_reports_savings(tmp_path: Path) -> None:
     source = tmp_path / "uncompressed.pdf"
     output = tmp_path / "compressed.pdf"
@@ -234,6 +279,34 @@ def test_repair_pdf_rewrites_parseable_output(tmp_path: Path) -> None:
     assert result.usage["input"] == str(source.resolve())
     assert result.usage["repair_strategy"] == "pypdf_read_rewrite"
     assert "Repairable PDF" in (PdfReader(output).pages[0].extract_text() or "")
+
+
+def test_remove_unused_objects_pdf_rewrites_pdf_with_validation(tmp_path: Path) -> None:
+    source = tmp_path / "source.pdf"
+    output = tmp_path / "optimized.pdf"
+    _write_labeled_pages(source, ["Optimization source"])
+
+    result = remove_unused_objects_pdf(source, output_path=output)
+
+    assert result.status == "succeeded"
+    assert result.tool == "pdf.optimize.remove_unused_objects"
+    assert result.artifacts[0].page_count == 1
+    assert result.validation is not None
+    assert result.validation.status == "passed"
+    assert result.usage["rewrite_strategy"] == "pypdf_reachable_page_tree"
+    assert "Optimization source" in (PdfReader(output).pages[0].extract_text() or "")
+
+
+def test_validate_pdfa_pdf_returns_agent_readable_report(simple_pdf: Path) -> None:
+    result = validate_pdfa_pdf(simple_pdf)
+
+    assert result.status == "succeeded"
+    assert result.tool == "pdf.optimize.validate_pdfa"
+    assert result.validation is not None
+    assert result.validation.status == "warning"
+    assert result.usage["pdfa_compliant"] is False
+    assert result.usage["profile"] is None
+    assert any(check.name == "pdfa_metadata_marker" for check in result.validation.checks)
 
 
 def test_render_pdf_writes_png_artifact(simple_pdf: Path, tmp_path: Path) -> None:
@@ -275,6 +348,15 @@ def test_extract_text_pdf_returns_page_text(text_pdf: Path) -> None:
     assert result.usage["pages"][0]["page_number"] == 1
 
 
+def test_extract_fonts_pdf_lists_page_fonts(text_pdf: Path) -> None:
+    result = extract_fonts_pdf(text_pdf, pages="1")
+
+    assert result.status == "succeeded"
+    assert result.tool == "pdf.convert.extract_fonts"
+    assert result.usage["font_count"] >= 1
+    assert any("Helvetica" in font["base_font"] for font in result.usage["fonts"])
+
+
 def test_read_metadata_pdf_returns_document_info(metadata_pdf: Path) -> None:
     result = read_metadata_pdf(metadata_pdf)
 
@@ -294,6 +376,27 @@ def test_update_metadata_pdf_writes_new_validated_output(metadata_pdf: Path, tmp
     assert result.artifacts[0].page_count == 1
     assert read_metadata_pdf(output).usage["metadata"]["Title"] == "Updated Title"
     assert read_metadata_pdf(metadata_pdf).usage["metadata"]["Title"] == "Original Title"
+
+
+def test_update_outline_pdf_writes_bookmarks_without_mutating_input(two_page_pdf: Path, tmp_path: Path) -> None:
+    output = tmp_path / "outlined.pdf"
+
+    result = update_outline_pdf(
+        two_page_pdf,
+        outline=[
+            {"title": "Opening", "page": 1},
+            {"title": "Details", "page": 2},
+        ],
+        output_path=output,
+    )
+
+    assert result.status == "succeeded"
+    assert result.tool == "pdf.metadata.update_outline"
+    assert result.artifacts[0].page_count == 2
+    assert result.usage["outline_item_count"] == 2
+    reader = PdfReader(output)
+    assert len(reader.outline) == 2
+    assert PdfReader(two_page_pdf).outline == []
 
 
 def test_remove_metadata_pdf_removes_custom_document_info(metadata_pdf: Path, tmp_path: Path) -> None:
@@ -355,6 +458,35 @@ def test_create_markdown_pdf_writes_headings_and_bullets(tmp_path: Path) -> None
     extracted = extract_text_pdf(output).usage["text"]
     assert "Agent Report" in extracted
     assert "Local first" in extracted
+
+
+def test_create_markdown_pdf_uses_cjk_font_for_cjk_content(tmp_path: Path) -> None:
+    output = tmp_path / "cjk-report.pdf"
+    title = "\u72ec\u7acb\u5f00\u53d1\u80052026\u51fa\u6d77\u8c03\u7814\u62a5\u544a"
+    markdown = (
+        f"# {title}\n\n"
+        "## \u6458\u8981\n\n"
+        "- \u672c\u5730\u751f\u6210\u7684 PDF \u5e94\u8be5\u4fdd\u7559\u4e2d\u6587\u5b57\u5f62\n\n"
+        "| \u5e02\u573a | \u673a\u4f1a |\n"
+        "| --- | --- |\n"
+        "| \u65e5\u672c | SaaS \u5de5\u5177 |\n"
+    )
+
+    result = create_markdown_pdf(markdown, output, title=title)
+
+    extracted = extract_text_pdf(output).usage["text"]
+    assert "\u72ec\u7acb\u5f00\u53d1\u8005" in extracted
+    assert "\u25a0" not in extracted
+    fonts = extract_fonts_pdf(output).usage["fonts"]
+    base_fonts = {font["base_font"] for font in fonts}
+    assert any(
+        "NotoSansSC" in base_font or "STSong" in base_font or "SimHei" in base_font
+        for base_font in base_fonts
+    )
+    assert result.validation is not None
+    glyph_checks = [check for check in result.validation.checks if check.name == "text_glyph_coverage"]
+    assert glyph_checks
+    assert glyph_checks[0].status == "passed"
 
 
 def test_create_markdown_pdf_applies_builtin_style_pack_page_and_palette(tmp_path: Path) -> None:
@@ -451,6 +583,83 @@ def test_add_page_numbers_writes_page_labels(tmp_path: Path) -> None:
     assert result.tool == "pdf.edit.page_numbers"
     extracted = extract_text_pdf(output).usage["text"]
     assert "Page 1 of" in extracted
+
+
+def test_add_shape_pdf_writes_vector_overlay(tmp_path: Path) -> None:
+    source = tmp_path / "source.pdf"
+    output = tmp_path / "shape.pdf"
+    create_text_pdf("Shape source", source)
+
+    result = add_shape_pdf(
+        source,
+        output_path=output,
+        shape="rectangle",
+        page=1,
+        x=72,
+        y=640,
+        width=120,
+        height=40,
+        stroke_color="#2563eb",
+        fill_color="#dbeafe",
+    )
+
+    assert result.status == "succeeded"
+    assert result.tool == "pdf.edit.add_shape"
+    assert result.artifacts[0].page_count == 1
+    assert result.usage["shape"] == "rectangle"
+    assert "Shape source" in (PdfReader(output).pages[0].extract_text() or "")
+
+
+def test_underline_and_strikeout_write_coordinate_marks(tmp_path: Path) -> None:
+    source = tmp_path / "source.pdf"
+    underlined = tmp_path / "underlined.pdf"
+    struck = tmp_path / "struck.pdf"
+    create_text_pdf("Mark this text", source)
+
+    underline = underline_pdf(source, output_path=underlined, page=1, bbox=[70, 700, 190, 715])
+    strikeout = strikeout_pdf(source, output_path=struck, page=1, bbox=[70, 700, 190, 715])
+
+    assert underline.status == "succeeded"
+    assert underline.tool == "pdf.edit.underline"
+    assert underline.usage["bbox"] == [70.0, 700.0, 190.0, 715.0]
+    assert strikeout.status == "succeeded"
+    assert strikeout.tool == "pdf.edit.strikeout"
+
+
+def test_freehand_resize_margin_and_underlay_tools(tmp_path: Path) -> None:
+    source = tmp_path / "source.pdf"
+    drawn = tmp_path / "drawn.pdf"
+    resized = tmp_path / "resized.pdf"
+    margined = tmp_path / "margined.pdf"
+    underlaid = tmp_path / "underlaid.pdf"
+    create_text_pdf("Editable source", source)
+
+    drawing = freehand_draw_pdf(
+        source,
+        output_path=drawn,
+        page=1,
+        points=[[72, 680], [100, 700], [140, 690]],
+        stroke_color="#dc2626",
+    )
+    resize = resize_pages_pdf(source, output_path=resized, width=300, height=400)
+    margin = add_margin_pdf(source, output_path=margined, margin=36)
+    underlay = add_underlay_pdf(source, output_path=underlaid, text="DRAFT", opacity=0.2)
+
+    assert drawing.status == "succeeded"
+    assert drawing.tool == "pdf.edit.freehand_draw"
+    assert drawing.usage["point_count"] == 3
+    assert resize.status == "succeeded"
+    assert resize.tool == "pdf.edit.resize_pages"
+    resized_page = PdfReader(resized).pages[0]
+    assert round(float(resized_page.mediabox.width)) == 300
+    assert round(float(resized_page.mediabox.height)) == 400
+    assert margin.status == "succeeded"
+    margined_page = PdfReader(margined).pages[0]
+    assert round(float(margined_page.mediabox.width)) == 684
+    assert round(float(margined_page.mediabox.height)) == 864
+    assert underlay.status == "succeeded"
+    assert underlay.tool == "pdf.edit.underlay"
+    assert "Editable source" in (PdfReader(underlaid).pages[0].extract_text() or "")
 
 
 def _write_labeled_pages(path: Path, labels: list[str]) -> None:

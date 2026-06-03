@@ -5,7 +5,15 @@ from uuid import uuid4
 
 from agentpdf.agents.claude_code import setup_claude_code
 from agentpdf.agents.codex import setup_codex
-from agentpdf.artifacts.bundle import export_artifact_bundle, verify_artifact_bundle
+from agentpdf.agents.kilo_code import setup_kilo_code
+from agentpdf.agents.openclaw import setup_openclaw
+from agentpdf.artifacts.bundle import (
+    build_artifact_graph,
+    build_artifact_source_map,
+    create_artifact_manifest,
+    export_artifact_bundle,
+    verify_artifact_bundle,
+)
 from agentpdf.compose.blocks import (
     add_appendix_to_pdf,
     add_citation_to_pdf,
@@ -23,7 +31,20 @@ from agentpdf.compose.context import (
     select_target_profile,
     validate_target_profile,
 )
+from agentpdf.compare.local import semantic_diff_pdf, version_report_pdf, visual_diff_pdf
+from agentpdf.conversion.local import (
+    docx_to_pdf,
+    html_to_pdf,
+    pdf_to_docx,
+    pdf_to_html,
+    pdf_to_pptx,
+    pdf_to_xlsx,
+    pptx_to_pdf,
+    url_to_pdf,
+    xlsx_to_pdf,
+)
 from agentpdf.context.classify import classify_context
+from agentpdf.context.image import analyze_image
 from agentpdf.context.packet import (
     build_context_packet,
     build_reusable_context_packet,
@@ -41,39 +62,83 @@ from agentpdf.creation.agent import (
     plan_template_pack_creation,
     validate_template_pack,
 )
+from agentpdf.evidence.citations import cite_claims
 from agentpdf.evidence.coverage import create_coverage_report
 from agentpdf.evidence.context_packet_report import create_context_packet_report
 from agentpdf.evidence.source_map import map_sources
+from agentpdf.forms.local import create_form_pdf, import_form_data_pdf, validate_form_pdf
+from agentpdf.ir.semantic import (
+    parse_charts_pdf,
+    parse_figures_pdf,
+    parse_formulas_pdf,
+    parse_references_pdf,
+)
+from agentpdf.ocr_scan.local import (
+    despeckle_pdf,
+    multilingual_ocr_pdf,
+    ocr_pdf,
+    remove_existing_ocr_pdf,
+    searchable_pdf,
+    scan_to_pdf,
+)
+from agentpdf.optimize.local import subset_fonts_pdf, to_pdfa_pdf
 from agentpdf.patch.transaction import (
     apply_patch_transaction,
     plan_patch_transaction,
     preview_patch_transaction,
     verify_patch_transaction,
 )
+from agentpdf.security.local import (
+    decrypt_authorized_pdf,
+    encrypt_pdf,
+    inspect_health_pdf,
+    malware_scan_pdf,
+    protect_pdf,
+    redact_pdf,
+    redaction_check_pdf,
+    sanitize_pdf,
+    sign_pdf,
+    unlock_authorized_pdf,
+    verify_redaction_pdf,
+    verify_signature_pdf,
+)
 from agentpdf.core.pdf import (
+    add_margin_pdf,
     add_page_numbers_pdf,
+    add_shape_pdf,
     add_text_watermark_pdf,
+    add_underlay_pdf,
+    booklet_pdf,
     compress_pdf,
     create_markdown_pdf,
     create_text_pdf,
+    extract_fonts_pdf,
     extract_images_pdf,
     extract_pages_pdf,
     extract_text_pdf,
+    freehand_draw_pdf,
     image_to_pdf,
     inspect_pdf,
     inspect_pdf_pages,
     insert_blank_pages_pdf,
     merge_pdfs,
+    n_up_pdf,
     page_info_pdf,
     read_metadata_pdf,
     remove_pages_pdf,
     remove_metadata_pdf,
+    remove_unused_objects_pdf,
     repair_pdf,
+    resize_pages_pdf,
     render_pdf,
     reorder_pages_pdf,
     rotate_pages_pdf,
     split_pdf,
+    strikeout_pdf,
+    underline_pdf,
     update_metadata_pdf,
+    update_outline_pdf,
+    validate_pdfa_pdf,
 )
 from agentpdf.ir.lite import parse_lite_pdf, write_document_ir_json, write_document_ir_markdown
 from agentpdf.rag.local import (
@@ -87,7 +152,12 @@ from agentpdf.rag.local import (
 )
 from agentpdf.schemas.errors import AgentPDFException
 from agentpdf.schemas.models import AgentPDFError, ToolResult
-from agentpdf.validation.pdf import blank_page_check_pdf, render_check_pdf, validate_pdf
+from agentpdf.validation.pdf import (
+    blank_page_check_pdf,
+    render_check_pdf,
+    validate_pdf,
+    visual_diff_check_pdf,
+)
 from agentpdf.workflows.planner import plan_workflow
 from agentpdf.workflows.reporter import create_workflow_report
 from agentpdf.workflows.runner import run_workflow
@@ -146,6 +216,13 @@ def run_inspect_pages(
         )
     except AgentPDFException as exc:
         return _failed(tool, exc.to_error())
+
+
+def run_inspect_health(input_path: str | Path) -> ToolResult:
+    try:
+        return inspect_health_pdf(input_path)
+    except AgentPDFException as exc:
+        return _failed("pdf.inspect.health", exc.to_error())
 
 
 def run_merge(input_paths: list[str | Path], output_path: str | Path) -> ToolResult:
@@ -212,6 +289,25 @@ def run_insert_blank_pages(
         return _failed("pdf.organize.insert_blank_pages", exc.to_error())
 
 
+def run_n_up(
+    input_path: str | Path,
+    output_path: str | Path,
+    pages: str = "all",
+    per_sheet: int = 2,
+) -> ToolResult:
+    try:
+        return n_up_pdf(input_path, output_path=output_path, pages=pages, per_sheet=per_sheet)
+    except AgentPDFException as exc:
+        return _failed("pdf.organize.n_up", exc.to_error())
+
+
+def run_booklet(input_path: str | Path, output_path: str | Path, pages: str = "all") -> ToolResult:
+    try:
+        return booklet_pdf(input_path, output_path=output_path, pages=pages)
+    except AgentPDFException as exc:
+        return _failed("pdf.organize.booklet", exc.to_error())
+
+
 def run_compress(input_path: str | Path, output_path: str | Path) -> ToolResult:
     try:
         return compress_pdf(input_path, output_path=output_path)
@@ -226,11 +322,88 @@ def run_repair(input_path: str | Path, output_path: str | Path) -> ToolResult:
         return _failed("pdf.optimize.repair", exc.to_error())
 
 
+def run_remove_unused_objects(input_path: str | Path, output_path: str | Path) -> ToolResult:
+    try:
+        return remove_unused_objects_pdf(input_path, output_path=output_path)
+    except AgentPDFException as exc:
+        return _failed("pdf.optimize.remove_unused_objects", exc.to_error())
+
+
+def run_validate_pdfa(input_path: str | Path) -> ToolResult:
+    try:
+        return validate_pdfa_pdf(input_path)
+    except AgentPDFException as exc:
+        return _failed("pdf.optimize.validate_pdfa", exc.to_error())
+
+
+def run_subset_fonts(input_path: str | Path, output_path: str | Path) -> ToolResult:
+    try:
+        return subset_fonts_pdf(input_path, output_path=output_path)
+    except AgentPDFException as exc:
+        return _failed("pdf.optimize.subset_fonts", exc.to_error())
+
+
+def run_to_pdfa(
+    input_path: str | Path,
+    output_path: str | Path,
+    profile: str = "PDF/A-2B",
+) -> ToolResult:
+    try:
+        return to_pdfa_pdf(input_path, output_path=output_path, profile=profile)
+    except AgentPDFException as exc:
+        return _failed("pdf.optimize.to_pdfa", exc.to_error())
+
+
 def run_image_to_pdf(image_paths: list[str | Path], output_path: str | Path) -> ToolResult:
     try:
         return image_to_pdf(image_paths, output_path=output_path)
     except AgentPDFException as exc:
         return _failed("pdf.convert.image_to_pdf", exc.to_error())
+
+
+def run_html_to_pdf(input_path: str | Path, output_path: str | Path) -> ToolResult:
+    try:
+        return html_to_pdf(input_path, output_path=output_path)
+    except AgentPDFException as exc:
+        return _failed("pdf.convert.html_to_pdf", exc.to_error())
+
+
+def run_url_to_pdf(
+    url: str,
+    output_path: str | Path,
+    allow_private_hosts: bool = False,
+    allow_file_urls: bool = False,
+) -> ToolResult:
+    try:
+        return url_to_pdf(
+            url,
+            output_path=output_path,
+            allow_private_hosts=allow_private_hosts,
+            allow_file_urls=allow_file_urls,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.convert.url_to_pdf", exc.to_error())
+
+
+def run_docx_to_pdf(input_path: str | Path, output_path: str | Path) -> ToolResult:
+    try:
+        return docx_to_pdf(input_path, output_path=output_path)
+    except AgentPDFException as exc:
+        return _failed("pdf.convert.docx_to_pdf", exc.to_error())
+
+
+def run_pptx_to_pdf(input_path: str | Path, output_path: str | Path) -> ToolResult:
+    try:
+        return pptx_to_pdf(input_path, output_path=output_path)
+    except AgentPDFException as exc:
+        return _failed("pdf.convert.pptx_to_pdf", exc.to_error())
+
+
+def run_xlsx_to_pdf(input_path: str | Path, output_path: str | Path) -> ToolResult:
+    try:
+        return xlsx_to_pdf(input_path, output_path=output_path)
+    except AgentPDFException as exc:
+        return _failed("pdf.convert.xlsx_to_pdf", exc.to_error())
 
 
 def run_watermark(
@@ -273,6 +446,173 @@ def run_page_numbers(
         )
     except AgentPDFException as exc:
         return _failed("pdf.edit.page_numbers", exc.to_error())
+
+
+def run_add_shape(
+    input_path: str | Path,
+    output_path: str | Path,
+    shape: str,
+    page: int,
+    x: float,
+    y: float,
+    width: float,
+    height: float,
+    stroke_color: str = "#2563eb",
+    fill_color: str | None = None,
+    line_width: float = 1.5,
+    opacity: float = 1.0,
+) -> ToolResult:
+    try:
+        return add_shape_pdf(
+            input_path,
+            output_path=output_path,
+            shape=shape,
+            page=page,
+            x=x,
+            y=y,
+            width=width,
+            height=height,
+            stroke_color=stroke_color,
+            fill_color=fill_color,
+            line_width=line_width,
+            opacity=opacity,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.edit.add_shape", exc.to_error())
+
+
+def run_underline(
+    input_path: str | Path,
+    output_path: str | Path,
+    page: int,
+    bbox: list[float],
+    color: str = "#2563eb",
+    line_width: float = 1.0,
+) -> ToolResult:
+    try:
+        return underline_pdf(
+            input_path,
+            output_path=output_path,
+            page=page,
+            bbox=bbox,
+            color=color,
+            line_width=line_width,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.edit.underline", exc.to_error())
+
+
+def run_strikeout(
+    input_path: str | Path,
+    output_path: str | Path,
+    page: int,
+    bbox: list[float],
+    color: str = "#dc2626",
+    line_width: float = 1.0,
+) -> ToolResult:
+    try:
+        return strikeout_pdf(
+            input_path,
+            output_path=output_path,
+            page=page,
+            bbox=bbox,
+            color=color,
+            line_width=line_width,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.edit.strikeout", exc.to_error())
+
+
+def run_freehand_draw(
+    input_path: str | Path,
+    output_path: str | Path,
+    page: int,
+    points: list[list[float]],
+    stroke_color: str = "#2563eb",
+    line_width: float = 1.5,
+    opacity: float = 1.0,
+) -> ToolResult:
+    try:
+        return freehand_draw_pdf(
+            input_path,
+            output_path=output_path,
+            page=page,
+            points=points,
+            stroke_color=stroke_color,
+            line_width=line_width,
+            opacity=opacity,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.edit.freehand_draw", exc.to_error())
+
+
+def run_resize_pages(
+    input_path: str | Path,
+    output_path: str | Path,
+    width: float,
+    height: float,
+    pages: str = "all",
+) -> ToolResult:
+    try:
+        return resize_pages_pdf(
+            input_path,
+            output_path=output_path,
+            width=width,
+            height=height,
+            pages=pages,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.edit.resize_pages", exc.to_error())
+
+
+def run_add_margin(
+    input_path: str | Path,
+    output_path: str | Path,
+    margin: float = 0,
+    pages: str = "all",
+    top: float | None = None,
+    right: float | None = None,
+    bottom: float | None = None,
+    left: float | None = None,
+) -> ToolResult:
+    try:
+        return add_margin_pdf(
+            input_path,
+            output_path=output_path,
+            margin=margin,
+            pages=pages,
+            top=top,
+            right=right,
+            bottom=bottom,
+            left=left,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.edit.add_margin", exc.to_error())
+
+
+def run_underlay(
+    input_path: str | Path,
+    output_path: str | Path,
+    text: str,
+    pages: str = "all",
+    font_size: int = 72,
+    opacity: float = 0.12,
+    angle: int = 45,
+    color: str = "#64748b",
+) -> ToolResult:
+    try:
+        return add_underlay_pdf(
+            input_path,
+            output_path=output_path,
+            text=text,
+            pages=pages,
+            font_size=font_size,
+            opacity=opacity,
+            angle=angle,
+            color=color,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.edit.underlay", exc.to_error())
 
 
 def run_create_text(text: str, output_path: str | Path, title: str | None = None) -> ToolResult:
@@ -569,12 +909,33 @@ def run_context_data_profile(
         return _failed("pdf.context.data_profile", exc.to_error())
 
 
+def run_context_image_analyze(
+    input_path: str | Path,
+    languages: list[str] | None = None,
+    run_ocr: bool = True,
+    engine: str = "tesseract",
+    psm: int = 6,
+) -> ToolResult:
+    try:
+        return analyze_image(
+            input_path,
+            languages=languages,
+            run_ocr=run_ocr,
+            engine=engine,
+            psm=psm,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.context.image_analyze", exc.to_error())
+
+
 def run_compose_from_context(
     context_packet: dict[str, object] | str | Path,
     target_profile: dict[str, object] | str,
     output_path: str | Path,
     style_pack: str | None = None,
     title: str | None = None,
+    renderer: str = "markdown",
+    html_output_path: str | Path | None = None,
 ) -> ToolResult:
     try:
         return compose_from_context(
@@ -583,6 +944,8 @@ def run_compose_from_context(
             output_path=output_path,
             style_pack=style_pack,
             title=title,
+            renderer=renderer,
+            html_output_path=html_output_path,
         )
     except AgentPDFException as exc:
         return _failed("pdf.compose.from_context", exc.to_error())
@@ -929,6 +1292,44 @@ def run_agent_setup_codex(
         return _failed("agent.setup.codex", exc.to_error())
 
 
+def run_agent_setup_kilo_code(
+    output_path: str | Path | None = None,
+    safe_root: str = ".",
+    command: str = "okpdf",
+    args_prefix: list[str] | None = None,
+    server_name: str = "agentpdf",
+) -> ToolResult:
+    try:
+        return setup_kilo_code(
+            output_path=output_path,
+            safe_root=safe_root,
+            command=command,
+            args_prefix=args_prefix,
+            server_name=server_name,
+        )
+    except AgentPDFException as exc:
+        return _failed("agent.setup.kilo_code", exc.to_error())
+
+
+def run_agent_setup_openclaw(
+    output_path: str | Path | None = None,
+    safe_root: str = ".",
+    command: str = "okpdf",
+    args_prefix: list[str] | None = None,
+    server_name: str = "agentpdf",
+) -> ToolResult:
+    try:
+        return setup_openclaw(
+            output_path=output_path,
+            safe_root=safe_root,
+            command=command,
+            args_prefix=args_prefix,
+            server_name=server_name,
+        )
+    except AgentPDFException as exc:
+        return _failed("agent.setup.openclaw", exc.to_error())
+
+
 def run_evidence_coverage_report(
     composition: dict[str, object] | str | Path,
     output_path: str | Path | None = None,
@@ -958,6 +1359,25 @@ def run_evidence_map_sources(
         return _failed("pdf.evidence.map_sources", exc.to_error())
 
 
+def run_evidence_cite_claims(
+    claims: list[dict[str, object]],
+    composition: dict[str, object] | str | Path | None = None,
+    source_map: dict[str, object] | list[dict[str, object]] | str | Path | None = None,
+    context_packet: dict[str, object] | str | Path | None = None,
+    output_path: str | Path | None = None,
+) -> ToolResult:
+    try:
+        return cite_claims(
+            claims=claims,
+            composition=composition,
+            source_map=source_map,
+            context_packet=context_packet,
+            output_path=output_path,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.evidence.cite_claims", exc.to_error())
+
+
 def run_context_packet_report(
     context_packet: dict[str, object] | str | Path,
     output_path: str | Path,
@@ -975,6 +1395,69 @@ def run_context_packet_report(
         )
     except AgentPDFException as exc:
         return _failed("pdf.evidence.context_packet_report", exc.to_error())
+
+
+def run_artifacts_manifest(
+    artifact_paths: list[str | Path],
+    output_path: str | Path | None = None,
+    title: str | None = None,
+    metadata: dict[str, object] | None = None,
+) -> ToolResult:
+    try:
+        return create_artifact_manifest(
+            artifact_paths=artifact_paths,
+            output_path=output_path,
+            title=title,
+            metadata=metadata,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.artifacts.manifest", exc.to_error())
+
+
+def run_artifacts_graph(
+    artifact_manifest_path: str | Path | None = None,
+    artifact_paths: list[str | Path] | None = None,
+    output_path: str | Path | None = None,
+    title: str | None = None,
+) -> ToolResult:
+    try:
+        return build_artifact_graph(
+            artifact_manifest_path=artifact_manifest_path,
+            artifact_paths=artifact_paths,
+            output_path=output_path,
+            title=title,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.artifacts.graph", exc.to_error())
+
+
+def run_artifacts_source_map(
+    composition: dict[str, object] | str | Path | None = None,
+    composition_path: str | Path | None = None,
+    source_map: dict[str, object] | list[dict[str, object]] | str | Path | None = None,
+    source_map_path: str | Path | None = None,
+    context_packet: dict[str, object] | str | Path | None = None,
+    context_packet_path: str | Path | None = None,
+    artifact_manifest_path: str | Path | None = None,
+    artifact_paths: list[str | Path] | None = None,
+    output_path: str | Path | None = None,
+    title: str | None = None,
+) -> ToolResult:
+    try:
+        return build_artifact_source_map(
+            composition=composition,
+            composition_path=composition_path,
+            source_map=source_map,
+            source_map_path=source_map_path,
+            context_packet=context_packet,
+            context_packet_path=context_packet_path,
+            artifact_manifest_path=artifact_manifest_path,
+            artifact_paths=artifact_paths,
+            output_path=output_path,
+            title=title,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.artifacts.source_map", exc.to_error())
 
 
 def run_artifacts_export_bundle(
@@ -1091,6 +1574,13 @@ def run_extract_text(input_path: str | Path, pages: str = "all") -> ToolResult:
         return _failed("pdf.convert.pdf_to_text", exc.to_error())
 
 
+def run_extract_fonts(input_path: str | Path, pages: str = "all") -> ToolResult:
+    try:
+        return extract_fonts_pdf(input_path, pages=pages)
+    except AgentPDFException as exc:
+        return _failed("pdf.convert.extract_fonts", exc.to_error())
+
+
 def run_pdf_to_json(
     input_path: str | Path,
     output_path: str | Path,
@@ -1111,6 +1601,50 @@ def run_pdf_to_markdown(
         return write_document_ir_markdown(input_path, output_path=output_path, pages=pages)
     except AgentPDFException as exc:
         return _failed("pdf.convert.pdf_to_markdown", exc.to_error())
+
+
+def run_pdf_to_html(
+    input_path: str | Path,
+    output_path: str | Path,
+    pages: str = "all",
+) -> ToolResult:
+    try:
+        return pdf_to_html(input_path, output_path=output_path, pages=pages)
+    except AgentPDFException as exc:
+        return _failed("pdf.convert.pdf_to_html", exc.to_error())
+
+
+def run_pdf_to_docx(
+    input_path: str | Path,
+    output_path: str | Path,
+    pages: str = "all",
+) -> ToolResult:
+    try:
+        return pdf_to_docx(input_path, output_path=output_path, pages=pages)
+    except AgentPDFException as exc:
+        return _failed("pdf.convert.pdf_to_docx", exc.to_error())
+
+
+def run_pdf_to_pptx(
+    input_path: str | Path,
+    output_path: str | Path,
+    pages: str = "all",
+) -> ToolResult:
+    try:
+        return pdf_to_pptx(input_path, output_path=output_path, pages=pages)
+    except AgentPDFException as exc:
+        return _failed("pdf.convert.pdf_to_pptx", exc.to_error())
+
+
+def run_pdf_to_xlsx(
+    input_path: str | Path,
+    output_path: str | Path,
+    pages: str = "all",
+) -> ToolResult:
+    try:
+        return pdf_to_xlsx(input_path, output_path=output_path, pages=pages)
+    except AgentPDFException as exc:
+        return _failed("pdf.convert.pdf_to_xlsx", exc.to_error())
 
 
 def run_metadata_read(input_path: str | Path) -> ToolResult:
@@ -1138,6 +1672,17 @@ def run_metadata_update(
         return _failed("pdf.metadata.update", exc.to_error())
 
 
+def run_metadata_update_outline(
+    input_path: str | Path,
+    outline: list[dict[str, object]],
+    output_path: str | Path,
+) -> ToolResult:
+    try:
+        return update_outline_pdf(input_path, outline=outline, output_path=output_path)
+    except AgentPDFException as exc:
+        return _failed("pdf.metadata.update_outline", exc.to_error())
+
+
 def run_metadata_remove(input_path: str | Path, output_path: str | Path) -> ToolResult:
     try:
         return remove_metadata_pdf(input_path, output_path=output_path)
@@ -1161,6 +1706,159 @@ def run_security_remove_metadata(input_path: str | Path, output_path: str | Path
         usage={**result.usage, "security_action": "remove_metadata"},
         next_recommended_tools=["pdf.metadata.read", "pdf.validation.validate_output"],
     )
+
+
+def run_security_protect(
+    input_path: str | Path,
+    output_path: str | Path,
+    password: str,
+    owner_password: str | None = None,
+) -> ToolResult:
+    try:
+        return protect_pdf(
+            input_path,
+            output_path=output_path,
+            password=password,
+            owner_password=owner_password,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.security.protect", exc.to_error())
+
+
+def run_security_encrypt(
+    input_path: str | Path,
+    output_path: str | Path,
+    password: str,
+    owner_password: str | None = None,
+) -> ToolResult:
+    try:
+        return encrypt_pdf(
+            input_path,
+            output_path=output_path,
+            password=password,
+            owner_password=owner_password,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.security.encrypt", exc.to_error())
+
+
+def run_security_unlock_authorized(
+    input_path: str | Path,
+    output_path: str | Path,
+    password: str,
+) -> ToolResult:
+    try:
+        return unlock_authorized_pdf(input_path, output_path=output_path, password=password)
+    except AgentPDFException as exc:
+        return _failed("pdf.security.unlock_authorized", exc.to_error())
+
+
+def run_security_decrypt_authorized(
+    input_path: str | Path,
+    output_path: str | Path,
+    password: str,
+) -> ToolResult:
+    try:
+        return decrypt_authorized_pdf(input_path, output_path=output_path, password=password)
+    except AgentPDFException as exc:
+        return _failed("pdf.security.decrypt_authorized", exc.to_error())
+
+
+def run_security_sign(
+    input_path: str | Path,
+    output_path: str | Path,
+    secret: str | None = None,
+) -> ToolResult:
+    try:
+        return sign_pdf(input_path, output_path=output_path, secret=secret)
+    except AgentPDFException as exc:
+        return _failed("pdf.security.sign", exc.to_error())
+
+
+def run_security_verify_signature(
+    input_path: str | Path,
+    signature_path: str | Path,
+    secret: str | None = None,
+) -> ToolResult:
+    try:
+        return verify_signature_pdf(input_path, signature_path=signature_path, secret=secret)
+    except AgentPDFException as exc:
+        return _failed("pdf.security.verify_signature", exc.to_error())
+
+
+def run_security_malware_scan(input_path: str | Path) -> ToolResult:
+    try:
+        return malware_scan_pdf(input_path)
+    except AgentPDFException as exc:
+        return _failed("pdf.security.malware_scan", exc.to_error())
+
+
+def run_security_sanitize(
+    input_path: str | Path,
+    output_path: str | Path,
+    remove_metadata: bool = True,
+) -> ToolResult:
+    try:
+        return sanitize_pdf(input_path, output_path=output_path, remove_metadata=remove_metadata)
+    except AgentPDFException as exc:
+        return _failed("pdf.security.sanitize", exc.to_error())
+
+
+def run_security_redact(
+    input_path: str | Path,
+    output_path: str | Path,
+    regions: list[dict[str, object]],
+    fill_color: str = "#000000",
+    render_scale: float = 2.0,
+) -> ToolResult:
+    try:
+        return redact_pdf(
+            input_path,
+            output_path=output_path,
+            regions=regions,
+            fill_color=fill_color,
+            render_scale=render_scale,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.security.redact", exc.to_error())
+
+
+def run_security_verify_redaction(
+    input_path: str | Path,
+    search_terms: list[str] | None = None,
+) -> ToolResult:
+    try:
+        return verify_redaction_pdf(input_path, search_terms=search_terms)
+    except AgentPDFException as exc:
+        return _failed("pdf.security.verify_redaction", exc.to_error())
+
+
+def run_forms_create(output_path: str | Path, fields: list[dict[str, object]]) -> ToolResult:
+    try:
+        return create_form_pdf(output_path=output_path, fields=fields)
+    except AgentPDFException as exc:
+        return _failed("pdf.forms.create", exc.to_error())
+
+
+def run_forms_import_data(
+    input_path: str | Path,
+    data: dict[str, object],
+    output_path: str | Path,
+) -> ToolResult:
+    try:
+        return import_form_data_pdf(input_path, data=data, output_path=output_path)
+    except AgentPDFException as exc:
+        return _failed("pdf.forms.import_data", exc.to_error())
+
+
+def run_forms_validate(
+    input_path: str | Path,
+    required_fields: list[str] | None = None,
+) -> ToolResult:
+    try:
+        return validate_form_pdf(input_path, required_fields=required_fields)
+    except AgentPDFException as exc:
+        return _failed("pdf.forms.validate", exc.to_error())
 
 
 def run_validate_output(path: str | Path, expected_pages: int | None = None) -> ToolResult:
@@ -1235,11 +1933,201 @@ def run_blank_page_check(path: str | Path, pages: str = "all") -> ToolResult:
     )
 
 
+def run_validation_visual_diff(
+    before_path: str | Path,
+    after_path: str | Path,
+    pages: str = "all",
+    max_difference_ratio: float = 0.001,
+    render_scale: float = 0.5,
+) -> ToolResult:
+    tool = "pdf.validation.visual_diff"
+    try:
+        report, usage = visual_diff_check_pdf(
+            before_path,
+            after_path,
+            pages=pages,
+            max_difference_ratio=max_difference_ratio,
+            render_scale=render_scale,
+        )
+    except AgentPDFException as exc:
+        return _failed(tool, exc.to_error())
+    return ToolResult(
+        job_id=_job_id(),
+        status="failed" if report.status == "failed" else "succeeded",
+        tool=tool,
+        validation=report,
+        warnings=report.warnings,
+        usage=usage,
+        next_recommended_tools=["pdf.compare.semantic_diff", "pdf.evidence.coverage_report"],
+    )
+
+
+def run_validation_redaction_check(
+    input_path: str | Path,
+    search_terms: list[str] | None = None,
+) -> ToolResult:
+    try:
+        return redaction_check_pdf(input_path, search_terms=search_terms)
+    except AgentPDFException as exc:
+        return _failed("pdf.validation.redaction_check", exc.to_error())
+
+
 def run_parse_lite(input_path: str | Path, pages: str = "all") -> ToolResult:
     try:
         return parse_lite_pdf(input_path, pages=pages)
     except AgentPDFException as exc:
         return _failed("pdf.ai.parse.lite", exc.to_error())
+
+
+def run_compare_semantic_diff(
+    before_path: str | Path,
+    after_path: str | Path,
+    pages: str = "all",
+) -> ToolResult:
+    try:
+        return semantic_diff_pdf(before_path, after_path, pages=pages)
+    except AgentPDFException as exc:
+        return _failed("pdf.compare.semantic_diff", exc.to_error())
+
+
+def run_compare_visual_diff(
+    before_path: str | Path,
+    after_path: str | Path,
+    pages: str = "all",
+    max_difference_ratio: float = 0.001,
+    render_scale: float = 0.5,
+) -> ToolResult:
+    try:
+        return visual_diff_pdf(
+            before_path,
+            after_path,
+            pages=pages,
+            max_difference_ratio=max_difference_ratio,
+            render_scale=render_scale,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.compare.visual_diff", exc.to_error())
+
+
+def run_compare_version_report(
+    before_path: str | Path,
+    after_path: str | Path,
+    output_path: str | Path | None = None,
+    pages: str = "all",
+) -> ToolResult:
+    try:
+        return version_report_pdf(
+            before_path,
+            after_path,
+            output_path=output_path,
+            pages=pages,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.compare.version_report", exc.to_error())
+
+
+def run_parse_figures(input_path: str | Path, pages: str = "all") -> ToolResult:
+    try:
+        return parse_figures_pdf(input_path, pages=pages)
+    except AgentPDFException as exc:
+        return _failed("pdf.ai.parse.figures", exc.to_error())
+
+
+def run_parse_formulas(input_path: str | Path, pages: str = "all") -> ToolResult:
+    try:
+        return parse_formulas_pdf(input_path, pages=pages)
+    except AgentPDFException as exc:
+        return _failed("pdf.ai.parse.formulas", exc.to_error())
+
+
+def run_parse_charts(input_path: str | Path, pages: str = "all") -> ToolResult:
+    try:
+        return parse_charts_pdf(input_path, pages=pages)
+    except AgentPDFException as exc:
+        return _failed("pdf.ai.parse.charts", exc.to_error())
+
+
+def run_parse_references(input_path: str | Path, pages: str = "all") -> ToolResult:
+    try:
+        return parse_references_pdf(input_path, pages=pages)
+    except AgentPDFException as exc:
+        return _failed("pdf.ai.parse.references", exc.to_error())
+
+
+def run_ocr_scan_to_pdf(image_paths: list[str | Path], output_path: str | Path) -> ToolResult:
+    try:
+        return scan_to_pdf(image_paths, output_path=output_path)
+    except AgentPDFException as exc:
+        return _failed("pdf.ocr_scan.scan_to_pdf", exc.to_error())
+
+
+def run_ocr(
+    input_path: str | Path,
+    pages: str = "all",
+    languages: list[str] | None = None,
+    dpi: int = 200,
+    engine: str = "tesseract",
+    psm: int = 6,
+) -> ToolResult:
+    try:
+        return ocr_pdf(
+            input_path,
+            pages=pages,
+            languages=languages,
+            dpi=dpi,
+            engine=engine,
+            psm=psm,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.ocr_scan.ocr", exc.to_error())
+
+
+def run_ocr_searchable_pdf(
+    input_path: str | Path,
+    output_path: str | Path,
+    pages: str = "all",
+    languages: list[str] | None = None,
+    dpi: int = 200,
+    engine: str = "tesseract",
+    psm: int = 6,
+) -> ToolResult:
+    try:
+        return searchable_pdf(
+            input_path,
+            output_path=output_path,
+            pages=pages,
+            languages=languages,
+            dpi=dpi,
+            engine=engine,
+            psm=psm,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.ocr_scan.searchable_pdf", exc.to_error())
+
+
+def run_ocr_despeckle(input_path: str | Path, output_path: str | Path) -> ToolResult:
+    try:
+        return despeckle_pdf(input_path, output_path=output_path)
+    except AgentPDFException as exc:
+        return _failed("pdf.ocr_scan.despeckle", exc.to_error())
+
+
+def run_ocr_remove_existing(input_path: str | Path, output_path: str | Path) -> ToolResult:
+    try:
+        return remove_existing_ocr_pdf(input_path, output_path=output_path)
+    except AgentPDFException as exc:
+        return _failed("pdf.ocr_scan.remove_existing_ocr", exc.to_error())
+
+
+def run_ocr_multilingual(
+    input_path: str | Path,
+    output_path: str | Path,
+    languages: list[str] | None = None,
+) -> ToolResult:
+    try:
+        return multilingual_ocr_pdf(input_path, output_path=output_path, languages=languages)
+    except AgentPDFException as exc:
+        return _failed("pdf.ocr_scan.multilingual_ocr", exc.to_error())
 
 
 def run_rag_ingest(

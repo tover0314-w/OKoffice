@@ -36,7 +36,7 @@ The public CLI is `okpdf`. The legacy/internal command `agentpdf` still works fo
 - Local-first by default: no hosted URL, paid key, or cloud dependency required.
 - Agent-first outputs: every tool returns structured JSON with artifacts, validation, warnings, and next recommended tools.
 - Bigger than RAG: the product direction covers context packets, target PDF profiles, source graphs, composition IR, PDF patch transactions, evidence coverage, and multimodal context-to-PDF workflows.
-- MCP, REST, and TypeScript ready: Claude Code, Claude Desktop, Cursor, Codex-style agents, Node scripts, and web apps can call the same tool layer.
+- MCP, REST, and TypeScript ready: Claude Code, Claude Desktop, Cursor, Codex-style, Kilo Code, OpenClaw-style agents, Node scripts, and web apps can call the same tool layer.
 - Safety-minded PDF workflow: explicit paths, no input mutation, path traversal rejection, metadata removal, and validation for generated PDFs.
 - License-safe core: default dependencies avoid GPL/AGPL.
 
@@ -53,13 +53,14 @@ The public CLI is `okpdf`. The legacy/internal command `agentpdf` still works fo
 | Evidence / Patch | context packet reports, coverage reports, and structured append transactions for Markdown, code, tables, images, citations, media references, and slide pages that do not mutate inputs | CLI, MCP, REST, Node.js |
 | Edit | text watermark, page numbers | CLI, MCP, REST |
 | Metadata | read, update, remove | CLI, MCP, REST |
-| Validation | generated PDF validation, render check, blank page check | CLI, MCP, REST |
+| Validation | generated PDF validation, render check, blank page check, rendered visual diff | CLI, MCP, REST, Node.js |
 | AI-lite | local Document IR parse, PDF-to-JSON/Markdown, local RAG ingest/query with citations | CLI, MCP, REST |
+| Forms / OCR Scan | local text-form creation/import/validation and image-only scan PDF preparation with OCR limitation warnings | CLI, MCP, REST, Node.js |
 | Workflow | local-first agent workflow planning, execution, and reporting with per-step evidence | CLI, MCP, REST, Node.js |
 | SDK | TypeScript/Node REST client and Node CLI wrappers | Node.js |
 | Discovery | complete tool manifest | CLI, MCP, REST, Node.js |
 
-Planned next local tools include crop/resize, forms, attachments, richer repair diagnostics, better table parsing, visual diff, and redaction verification.
+Planned next local tools include crop, attachments, richer repair diagnostics, better table parsing, and redaction verification. The current OSS baseline already includes local form field creation/import/validation, scan-to-PDF OCR preparation helpers, and rendered visual diff.
 
 ## Languages
 
@@ -83,6 +84,8 @@ python scripts/doctor.py
 python scripts/smoke.py
 okpdf tools list
 okpdf create text "Hello from okpdf" -o .agentpdf-out/hello.pdf --json
+okpdf agent setup kilo-code -o .agentpdf-out/kilo-code.mcp.json --safe-root . --json
+okpdf agent setup openclaw -o .agentpdf-out/openclaw.mcp.json --safe-root . --json
 ```
 
 That is the happy path: install, check the environment, generate a validated PDF.
@@ -110,6 +113,8 @@ Common commands:
 ```bash
 okpdf inspect tests/fixtures/simple.pdf --json
 okpdf agent setup codex -o .agentpdf-out/codex.mcp.json --safe-root . --json
+okpdf agent setup kilo-code -o .agentpdf-out/kilo-code.mcp.json --safe-root . --json
+okpdf agent setup openclaw -o .agentpdf-out/openclaw.mcp.json --safe-root . --json
 okpdf inspect-pages tests/fixtures/text.pdf --pages 1 --render-check --json
 okpdf workflow plan --goal "Chat with this PDF and cite answers" --input-path .agentpdf-out/numbered.pdf --json
 okpdf workflow run examples/workflows/local-rag.json --json
@@ -127,14 +132,18 @@ okpdf create template-packs -o .agentpdf-out/template-packs.json --json
 okpdf create validate-template-pack examples/template-packs/local-agent-starter.json -o .agentpdf-out/template-pack.validation.json --json
 okpdf create from-template-pack examples/template-packs/local-agent-starter.json --template board_audit --color-scheme executive_blue -o .agentpdf-out/board-audit.pdf --json
 okpdf evidence coverage-report .agentpdf-out/board-audit.composition.json -o .agentpdf-out/board-audit.coverage.json --json
+okpdf artifacts source-map --composition .agentpdf-out/board-audit.composition.json -o .agentpdf-out/board-audit.artifact-source-map.json --title "Board Audit Artifact Source Map" --json
 okpdf patch plan .agentpdf-out/board-audit.pdf --operations examples/patch-operations/layer-aware-reviewer-note.json -o .agentpdf-out/board-audit.layer.patch.json --composition .agentpdf-out/board-audit.composition.json --layers .agentpdf-out/board-audit.layers.json --reason "Append a layer-aware reviewer note." --json
 okpdf patch plan .agentpdf-out/board-audit.pdf --operations examples/patch-operations/regenerate-layer-block.json -o .agentpdf-out/board-audit.regenerate.patch.json --composition .agentpdf-out/board-audit.composition.json --layers .agentpdf-out/board-audit.layers.json --reason "Regenerate a template block with layer evidence." --json
+okpdf artifacts manifest --file .agentpdf-out/board-audit.pdf --file .agentpdf-out/board-audit.composition.json --file .agentpdf-out/board-audit.coverage.json --file .agentpdf-out/board-audit.artifact-source-map.json --file .agentpdf-out/board-audit.layer.patch.json -o .agentpdf-out/board-audit.artifacts.json --title "Board Audit Artifacts" --metadata workflow=template-pack-patch --json
+okpdf artifacts graph --manifest .agentpdf-out/board-audit.artifacts.json -o .agentpdf-out/board-audit.artifact-graph.json --title "Board Audit Artifact Graph" --json
 okpdf create preview invoice -o .agentpdf-out/invoice-preview.pdf --json
 okpdf create from-prompt "Create a research brief about local PDF agents and template validation." -o .agentpdf-out/research-brief.pdf --template research_brief --style-pack paper_ink --color primary=#4f46e5 --color accent=#f59e0b --json
 okpdf create from-prompt "Create an invoice for okpdf local template work." -o .agentpdf-out/invoice.pdf --template invoice --data examples/create-data/invoice.json --json
 okpdf context ingest --file src/agentpdf/compose/context.py --role code_evidence --label "Composer Source" -o .agentpdf-out/composer.context-item.json --json
 okpdf context code-snapshot src/agentpdf/compose/context.py --line-start 1 --line-end 80 --repository-root . -o .agentpdf-out/composer.snapshot.context-item.json --json
 okpdf context data-profile examples/create-data/metrics.csv --label "Runtime Metrics" -o .agentpdf-out/metrics.profile.context-item.json --json
+okpdf context image-analyze assets/brand/okpdf-logo.png --skip-ocr --json
 okpdf context packet --item-json .agentpdf-out/composer.context-item.json --text "Create a technical audit PDF from pre-ingested code evidence." -o .agentpdf-out/agent.context.packet.json --title "Agent Packet" --json
 okpdf context build --text "Create a technical audit PDF from code, metrics, visual evidence, project docs, and media context." --file src/agentpdf/compose/context.py --file examples/create-data/metrics.csv --file assets/brand/okpdf-logo.png --file examples/sample-documents/business_report.md --item-json examples/context/media-items.json -o .agentpdf-out/context.packet.json --title "Audit Context" --json
 okpdf context classify .agentpdf-out/context.packet.json --profile technical_audit -o .agentpdf-out/context.classification.json --json
@@ -145,7 +154,7 @@ okpdf target profiles -o .agentpdf-out/target-profiles.json --json
 okpdf target validate --profile-json examples/target-profiles/media-learning-deck.json -o .agentpdf-out/media-learning-deck.validation.json --json
 okpdf compose plan .agentpdf-out/context.packet.json --profile technical_audit -o .agentpdf-out/technical-audit.plan.json --json
 okpdf compose render-ir .agentpdf-out/technical-audit.plan.json -o .agentpdf-out/technical-audit-from-ir.pdf --json
-okpdf compose from-context .agentpdf-out/context.packet.json --profile technical_audit -o .agentpdf-out/technical-audit.pdf --json
+okpdf compose from-context .agentpdf-out/context.packet.json --profile technical_audit -o .agentpdf-out/technical-audit.pdf --renderer html --html-output .agentpdf-out/technical-audit.html --json
 okpdf compose from-context .agentpdf-out/context.packet.json --profile slide_deck -o .agentpdf-out/agent-review-deck.pdf --json
 okpdf compose from-context .agentpdf-out/context.packet.json --profile-json examples/target-profiles/media-learning-deck.json -o .agentpdf-out/media-learning-deck.pdf --json
 okpdf compose add-code-block .agentpdf-out/technical-audit.pdf --title "Risk Function" --code "def risky_total(items): return sum(items)" --language python --source-ref ctx_002 --target-slot code_review -o .agentpdf-out/technical-audit.code.pdf --json
@@ -167,10 +176,28 @@ okpdf render tests/fixtures/simple.pdf --pages 1 --format png --out-dir .agentpd
 okpdf extract-images .agentpdf-out/numbered.pdf --pages all --out-dir .agentpdf-out/extracted-images --json
 okpdf extract-text tests/fixtures/text.pdf --pages 1 --json
 okpdf metadata remove tests/fixtures/metadata.pdf -o .agentpdf-out/metadata-clean.pdf --json
+okpdf security redact .agentpdf-out/sensitive.pdf -o .agentpdf-out/sensitive-redacted.pdf --region '{"page":1,"bbox":[60,700,280,760],"label":"secret"}' --json
+okpdf security verify-redaction .agentpdf-out/sensitive-redacted.pdf --search-term SECRET-CODE-123 --json
+okpdf redaction-check .agentpdf-out/sensitive-redacted.pdf --search-term SECRET-CODE-123 --json
 okpdf validate .agentpdf-out/numbered.pdf --expected-pages 1 --json
 okpdf render-check .agentpdf-out/numbered.pdf --pages 1 --json
 okpdf blank-page-check .agentpdf-out/with-blank.pdf --pages all --json
 okpdf parse-lite .agentpdf-out/numbered.pdf --json
+okpdf compare semantic-diff .agentpdf-out/numbered-v1.pdf .agentpdf-out/numbered-v2.pdf --pages 1 --json
+okpdf compare version-report .agentpdf-out/numbered-v1.pdf .agentpdf-out/numbered-v2.pdf -o .agentpdf-out/numbered.version-report.md --json
+okpdf compare visual-diff .agentpdf-out/numbered-v1.pdf .agentpdf-out/numbered-v2.pdf --pages 1 --json
+okpdf visual-diff .agentpdf-out/numbered-v1.pdf .agentpdf-out/numbered-v2.pdf --max-difference-ratio 0.001 --json
+okpdf parse-figures .agentpdf-out/numbered.pdf --json
+okpdf parse-formulas .agentpdf-out/numbered.pdf --json
+okpdf parse-charts .agentpdf-out/numbered.pdf --json
+okpdf parse-references .agentpdf-out/numbered.pdf --json
+okpdf forms create -o .agentpdf-out/contact-form.pdf --field '{"name":"name","label":"Name","required":true}' --json
+okpdf forms import-data .agentpdf-out/contact-form.pdf --data '{"name":"Ada"}' -o .agentpdf-out/contact-form-filled.pdf --json
+okpdf forms validate .agentpdf-out/contact-form-filled.pdf --required-field name --json
+okpdf ocr scan-to-pdf assets/brand/okpdf-logo.png -o .agentpdf-out/scan.pdf --json
+okpdf ocr despeckle .agentpdf-out/scan.pdf -o .agentpdf-out/scan-despeckled.pdf --json
+okpdf ocr remove-existing .agentpdf-out/scan.pdf -o .agentpdf-out/scan-no-ocr.pdf --json
+okpdf ocr multilingual .agentpdf-out/scan.pdf -o .agentpdf-out/scan-multilingual.pdf --language eng --language chi_sim --json
 okpdf pdf-to-json .agentpdf-out/numbered.pdf -o .agentpdf-out/numbered.ir.json --json
 okpdf pdf-to-markdown .agentpdf-out/numbered.pdf -o .agentpdf-out/numbered.md --json
 okpdf rag ingest .agentpdf-out/numbered.pdf --index .agentpdf-out/numbered.index.json --json
@@ -182,7 +209,9 @@ okpdf rag highlight-sources .agentpdf-out/numbered.index.json --answer "This doc
 okpdf rag export-report .agentpdf-out/numbered.index.json --question "What does this document say?" --answer "This document is locally indexed." -o .agentpdf-out/numbered-rag-report.pdf --json
 ```
 
-Template-pack creation writes a validated PDF plus sibling `.composition.json` and `.layers.json` artifacts. The composition file carries source maps, slot routing, and evidence coverage; the layer manifest gives agents stable block/layer ids, target slots, source refs, estimated normalized-page anchors, and edit policies for PDF patch/edit workflows. `pdf.context.ingest` normalizes one local source into a reusable context item, `pdf.context.packet` merges raw or pre-ingested items into a Context Packet so multiple agents can collect evidence independently before composition, and `pdf.context.classify` gives deterministic local block/slot routing hints plus safety limitations before agents compose. `pdf.context.code_snapshot` creates range-aware static code context with symbols, hashes, optional dependency hints, and repository-relative path evidence; it does not execute code. `pdf.context.data_profile` profiles CSV/TSV/JSON/JSONL/XLSX files into table previews with column types and `data_profile_evidence`; XLSX support reads worksheet XML locally and does not evaluate formulas, macros, or legacy `.xls` binary content. Document context includes local Markdown/text/HTML previews and DOCX paragraph text extracted from `word/document.xml` with `document_evidence`; it does not claim full Office layout conversion. `pdf.compose.plan` creates replayable Composition IR plus source map, coverage, validation plan, and a render plan without writing a PDF; `pdf.compose.render_ir` renders that plan into a validated PDF artifact. `pdf.evidence.map_sources` normalizes block/claim source refs against a Context Packet and writes a source-map report with matched/unmatched refs, coverage ratios, and evidence summaries for patch/audit workflows. When `pdf.ai.create.agent` receives a Context Packet it runs classification automatically, records the nested `context_classification` ToolResult in `usage.create_agent_run`, and includes the classification JSON in audit bundles. `pdf.compose.add_code_block`, `pdf.compose.add_table`, `pdf.compose.add_figure`, `pdf.compose.add_appendix`, `pdf.compose.add_citation`, `pdf.compose.add_media_reference`, and `pdf.compose.add_slide` provide one-step append-only composition for agents: each writes a new PDF plus `.compose-block.json`, patch evidence, rollback metadata, and validation. Citation append uses local citation metadata and does not fetch web links by default; media-reference append records local file metadata, MIME type, size, SHA-256, and provided transcript excerpts without transcribing audio/video by default. `pdf.patch.plan` can consume those layers for lower-level append-only notes and `regenerate_block` operations, which create a new PDF artifact with an audited regenerated block appendix instead of claiming unsafe in-place layout-preserving edits.
+For document-style `pdf.compose.from_context` runs, `--renderer html` writes an inspectable HTML package plus `.html-manifest.json` before creating the PDF. The current OSS converter preserves the local evidence and validation contract while using a lightweight HTML-to-PDF fallback; a browser renderer can replace that final conversion step later without changing the agent-facing tool contract.
+
+Template-pack creation writes a validated PDF plus sibling `.composition.json` and `.layers.json` artifacts. The composition file carries source maps, slot routing, and evidence coverage; the layer manifest gives agents stable block/layer ids, target slots, source refs, estimated normalized-page anchors, and edit policies for PDF patch/edit workflows. `pdf.context.ingest` normalizes one local source into a reusable context item, `pdf.context.packet` merges raw or pre-ingested items into a Context Packet so multiple agents can collect evidence independently before composition, and `pdf.context.classify` gives deterministic local block/slot routing hints plus safety limitations before agents compose. `pdf.context.code_snapshot` creates range-aware static code context with symbols, hashes, optional dependency hints, and repository-relative path evidence; it does not execute code. `pdf.context.data_profile` profiles CSV/TSV/JSON/JSONL/XLSX files into table previews with column types and `data_profile_evidence`; XLSX support reads worksheet XML locally and does not evaluate formulas, macros, or legacy `.xls` binary content. Document context includes local Markdown/text/HTML previews and DOCX paragraph text extracted from `word/document.xml` with `document_evidence`; it does not claim full Office layout conversion. `pdf.ai.parse.figures`, `pdf.ai.parse.formulas`, `pdf.ai.parse.charts`, and `pdf.ai.parse.references` provide local text-layer semantic hints for agents without OCR, vision models, or cloud inference; `pdf.compare.semantic_diff` and `pdf.compare.version_report` compare text-layer changes and emit structured page-level evidence plus optional Markdown reports. `pdf.compose.plan` creates replayable Composition IR plus source map, coverage, validation plan, and a render plan without writing a PDF; `pdf.compose.render_ir` renders that plan into a validated PDF artifact. `pdf.evidence.map_sources` normalizes block/claim source refs against a Context Packet and writes a source-map report with matched/unmatched refs, coverage ratios, and evidence summaries for patch/audit workflows. `pdf.evidence.cite_claims` turns source-backed claim objects into local citation records with source refs, matched evidence summaries, and any available page, bbox, timestamp, row, or line locators without inventing missing precision. `pdf.artifacts.source_map` converts composition/source-map evidence into block, page, source-ref, and generated-artifact indexes; `pdf.artifacts.manifest` collects output PDFs, composition files, coverage reports, source maps, citations, patches, and layer manifests into a local JSON manifest with SHA-256 checksums, page counts, evidence links, and source refs before bundle export; `pdf.artifacts.graph` turns that manifest into local artifact/source-ref nodes, inclusion edges, and clearly marked convention-inferred lineage edges for audit traversal. When `pdf.ai.create.agent` receives a Context Packet it runs classification automatically, records the nested `context_classification` ToolResult in `usage.create_agent_run`, and includes the classification JSON in audit bundles. `pdf.compose.add_code_block`, `pdf.compose.add_table`, `pdf.compose.add_figure`, `pdf.compose.add_appendix`, `pdf.compose.add_citation`, `pdf.compose.add_media_reference`, and `pdf.compose.add_slide` provide one-step append-only composition for agents: each writes a new PDF plus `.compose-block.json`, patch evidence, rollback metadata, and validation. Citation append uses local citation metadata and does not fetch web links by default; media-reference append records local file metadata, MIME type, size, SHA-256, and provided transcript excerpts without transcribing audio/video by default. `pdf.patch.plan` can consume those layers for lower-level append-only notes and `regenerate_block` operations, which create a new PDF artifact with an audited regenerated block appendix instead of claiming unsafe in-place layout-preserving edits.
 
 ## TypeScript / Node.js
 
@@ -191,6 +220,8 @@ Run the Python REST server, then call it from TypeScript or Node:
 ```bash
 okpdf serve --api
 node packages/agentpdf-node/dist/src/cli.js tools
+node packages/agentpdf-node/dist/src/cli.js agent-setup-kilo-code -o kilo-code.mcp.json --safe-root .
+node packages/agentpdf-node/dist/src/cli.js agent-setup-openclaw -o openclaw.mcp.json --safe-root .
 node packages/agentpdf-node/dist/src/cli.js create-text --text "Hello Node" -o .agentpdf-out/node.pdf
 ```
 
@@ -216,6 +247,37 @@ const pageFacts = await client.inspectPages({
   inputPath: ".agentpdf-out/report.pdf",
   pages: "1",
   renderCheck: true,
+});
+const form = await client.formsCreate({
+  outputPath: ".agentpdf-out/contact-form.pdf",
+  fields: [{ name: "name", label: "Name", required: true }],
+});
+const filledForm = await client.formsImportData({
+  inputPath: ".agentpdf-out/contact-form.pdf",
+  data: { name: "Ada" },
+  outputPath: ".agentpdf-out/contact-form-filled.pdf",
+});
+const formValidation = await client.formsValidate({
+  inputPath: ".agentpdf-out/contact-form-filled.pdf",
+  requiredFields: ["name"],
+});
+const scan = await client.ocrScanToPdf({
+  imagePaths: ["assets/brand/okpdf-logo.png"],
+  outputPath: ".agentpdf-out/scan.pdf",
+});
+const ocrText = await client.ocr({
+  inputPath: ".agentpdf-out/scan.pdf",
+  languages: ["eng"],
+});
+const searchableScan = await client.ocrSearchablePdf({
+  inputPath: ".agentpdf-out/scan.pdf",
+  outputPath: ".agentpdf-out/scan-searchable.pdf",
+  languages: ["eng"],
+});
+const multilingualScan = await client.ocrMultilingual({
+  inputPath: ".agentpdf-out/scan.pdf",
+  outputPath: ".agentpdf-out/scan-multilingual.pdf",
+  languages: ["eng", "chi_sim"],
 });
 
 await client.watermark({
@@ -262,6 +324,9 @@ Example config:
 MCP tools currently exposed:
 
 - `agent_setup_claude_code`
+- `agent_setup_codex`
+- `agent_setup_kilo_code`
+- `agent_setup_openclaw`
 - `agentpdf_tool_manifest`
 - `pdf_inspect_document`
 - `pdf_inspect_pages`
@@ -286,8 +351,37 @@ MCP tools currently exposed:
 - `pdf_ai_create_templates`
 - `pdf_ai_create_template_packs`
 - `pdf_ai_create_validate_template_pack`
+- `pdf_ai_create_plan_template_pack`
+- `pdf_ai_create_agent`
 - `pdf_ai_create_from_template_pack`
 - `pdf_ai_create_template_preview`
+- `pdf_context_build_packet`
+- `pdf_context_ingest`
+- `pdf_context_packet`
+- `pdf_context_classify`
+- `pdf_context_code_snapshot`
+- `pdf_context_data_profile`
+- `pdf_compose_from_context`
+- `pdf_compose_add_code_block`
+- `pdf_compose_add_table`
+- `pdf_compose_add_figure`
+- `pdf_compose_add_appendix`
+- `pdf_compose_add_citation`
+- `pdf_compose_add_media_reference`
+- `pdf_compose_add_slide`
+- `pdf_target_profiles`
+- `pdf_target_select_profile`
+- `pdf_target_validate_profile`
+- `pdf_evidence_map_sources`
+- `pdf_evidence_cite_claims`
+- `pdf_evidence_coverage_report`
+- `pdf_evidence_context_packet_report`
+- `pdf_artifacts_export_bundle`
+- `pdf_artifacts_verify_bundle`
+- `pdf_patch_plan`
+- `pdf_patch_preview`
+- `pdf_patch_apply`
+- `pdf_patch_verify`
 - `pdf_render_pages`
 - `pdf_extract_images`
 - `pdf_extract_text`
@@ -450,8 +544,8 @@ okpdf is inspired by mature open-source document processing projects such as pdf
 
 - Lite document parse and local RAG demo.
 - More creation inputs and style packs.
-- More deterministic operations: cropping, forms baseline, metadata page info, attachments, and safe redaction helpers.
-- Richer validation: repair diagnostics, page visual diff, redaction verification.
+- More deterministic operations: crop, attachments, richer form widgets, and safe redaction helpers.
+- Richer validation: repair diagnostics, text-layer checks, and redaction verification.
 - Context packet, target PDF profile, source graph, composition IR, artifact lineage, and patch manifests.
 - Multimodal context-to-PDF workflows for images, video, documents, code, links, data, and existing PDFs.
 - Docker and self-hosted examples.

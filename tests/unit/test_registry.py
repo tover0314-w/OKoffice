@@ -24,14 +24,26 @@ def test_registry_loads_complete_public_manifest() -> None:
     assert get_tool("pdf.organize.insert_blank_pages").implemented is True
     assert get_tool("pdf.optimize.compress").implemented is True
     assert get_tool("pdf.optimize.repair").implemented is True
+    assert get_tool("pdf.optimize.subset_fonts").implemented is True
+    assert get_tool("pdf.optimize.to_pdfa").implemented is True
     assert get_tool("pdf.convert.pdf_to_images").implemented is True
     assert get_tool("pdf.convert.extract_images").implemented is True
     assert get_tool("pdf.convert.pdf_to_text").implemented is True
     assert get_tool("pdf.convert.pdf_to_json").implemented is True
     assert get_tool("pdf.convert.pdf_to_markdown").implemented is True
+    assert get_tool("pdf.convert.pdf_to_html").implemented is True
+    assert get_tool("pdf.convert.pdf_to_docx").implemented is True
+    assert get_tool("pdf.convert.pdf_to_pptx").implemented is True
+    assert get_tool("pdf.convert.pdf_to_xlsx").implemented is True
     assert get_tool("pdf.convert.image_to_pdf").implemented is True
+    assert get_tool("pdf.convert.html_to_pdf").implemented is True
+    assert get_tool("pdf.convert.url_to_pdf").implemented is True
+    assert get_tool("pdf.convert.docx_to_pdf").implemented is True
+    assert get_tool("pdf.convert.pptx_to_pdf").implemented is True
+    assert get_tool("pdf.convert.xlsx_to_pdf").implemented is True
     assert get_tool("pdf.convert.text_to_pdf").implemented is True
     assert get_tool("pdf.convert.markdown_to_pdf").implemented is True
+    assert get_tool("pdf.context.image_analyze").implemented is True
     assert get_tool("pdf.edit.watermark").implemented is True
     assert get_tool("pdf.edit.page_numbers").implemented is True
     assert get_tool("pdf.metadata.read").implemented is True
@@ -40,6 +52,21 @@ def test_registry_loads_complete_public_manifest() -> None:
     assert get_tool("pdf.validation.validate_output").implemented is True
     assert get_tool("pdf.validation.render_check").implemented is True
     assert get_tool("pdf.validation.blank_page_check").implemented is True
+    assert get_tool("pdf.forms.import_data").implemented is True
+    assert get_tool("pdf.forms.create").implemented is True
+    assert get_tool("pdf.forms.validate").implemented is True
+    assert get_tool("pdf.security.protect").implemented is True
+    assert get_tool("pdf.security.decrypt_authorized").implemented is True
+    assert get_tool("pdf.security.malware_scan").implemented is True
+    assert get_tool("pdf.ocr_scan.ocr").implemented is True
+    assert get_tool("pdf.ocr_scan.searchable_pdf").implemented is True
+    assert get_tool("pdf.ocr_scan.scan_to_pdf").implemented is True
+    assert get_tool("pdf.compare.semantic_diff").implemented is True
+    assert get_tool("pdf.compare.version_report").implemented is True
+    assert get_tool("pdf.ai.parse.figures").implemented is True
+    assert get_tool("pdf.ai.parse.formulas").implemented is True
+    assert get_tool("pdf.ai.parse.charts").implemented is True
+    assert get_tool("pdf.ai.parse.references").implemented is True
     assert get_tool("pdf.ai.create.from_prompt").implemented is True
     assert get_tool("pdf.ai.create.template_preview").implemented is True
     assert get_tool("pdf.ai.create.templates").implemented is True
@@ -58,6 +85,7 @@ def test_registry_loads_complete_public_manifest() -> None:
     assert get_tool("pdf.target.profiles").implemented is True
     assert get_tool("pdf.target.validate_profile").implemented is True
     assert get_tool("pdf.evidence.map_sources").implemented is True
+    assert get_tool("pdf.evidence.cite_claims").implemented is True
     assert get_tool("pdf.evidence.coverage_report").implemented is True
     assert get_tool("pdf.artifacts.export_bundle").implemented is True
     assert get_tool("pdf.patch.plan").implemented is True
@@ -133,8 +161,11 @@ def test_implemented_tools_are_known_names() -> None:
     assert IMPLEMENTED_TOOLS == {
         "agent.setup.claude_code",
         "agent.setup.codex",
+        "agent.setup.kilo_code",
+        "agent.setup.openclaw",
         "pdf.inspect.document",
         "pdf.inspect.pages",
+        "pdf.inspect.health",
         "pdf.organize.merge",
         "pdf.organize.split",
         "pdf.organize.extract_pages",
@@ -142,28 +173,80 @@ def test_implemented_tools_are_known_names() -> None:
         "pdf.organize.rotate_pages",
         "pdf.organize.reorder_pages",
         "pdf.organize.insert_blank_pages",
+        "pdf.organize.n_up",
+        "pdf.organize.booklet",
         "pdf.optimize.compress",
         "pdf.optimize.repair",
+        "pdf.optimize.remove_unused_objects",
+        "pdf.optimize.subset_fonts",
+        "pdf.optimize.to_pdfa",
+        "pdf.optimize.validate_pdfa",
         "pdf.convert.pdf_to_images",
         "pdf.convert.extract_images",
+        "pdf.convert.extract_fonts",
         "pdf.convert.pdf_to_text",
+        "pdf.convert.pdf_to_html",
+        "pdf.convert.pdf_to_docx",
+        "pdf.convert.pdf_to_pptx",
+        "pdf.convert.pdf_to_xlsx",
         "pdf.convert.pdf_to_json",
         "pdf.convert.pdf_to_markdown",
         "pdf.convert.image_to_pdf",
+        "pdf.convert.html_to_pdf",
+        "pdf.convert.url_to_pdf",
+        "pdf.convert.docx_to_pdf",
+        "pdf.convert.pptx_to_pdf",
+        "pdf.convert.xlsx_to_pdf",
         "pdf.convert.text_to_pdf",
         "pdf.convert.markdown_to_pdf",
         "pdf.edit.watermark",
         "pdf.edit.page_numbers",
+        "pdf.edit.add_shape",
+        "pdf.edit.underline",
+        "pdf.edit.strikeout",
+        "pdf.edit.freehand_draw",
+        "pdf.edit.resize_pages",
+        "pdf.edit.add_margin",
+        "pdf.edit.underlay",
         "pdf.metadata.read",
         "pdf.metadata.update",
         "pdf.metadata.remove",
         "pdf.metadata.page_info",
+        "pdf.metadata.update_outline",
         "pdf.validation.validate_output",
         "pdf.validation.page_count_check",
         "pdf.validation.render_check",
         "pdf.validation.blank_page_check",
+        "pdf.validation.visual_diff",
+        "pdf.validation.redaction_check",
+        "pdf.forms.import_data",
+        "pdf.forms.create",
+        "pdf.forms.validate",
+        "pdf.ocr_scan.ocr",
+        "pdf.ocr_scan.searchable_pdf",
+        "pdf.ocr_scan.despeckle",
+        "pdf.ocr_scan.remove_existing_ocr",
+        "pdf.ocr_scan.scan_to_pdf",
+        "pdf.ocr_scan.multilingual_ocr",
+        "pdf.security.protect",
+        "pdf.security.unlock_authorized",
+        "pdf.security.encrypt",
+        "pdf.security.decrypt_authorized",
+        "pdf.security.sign",
+        "pdf.security.verify_signature",
         "pdf.security.remove_metadata",
+        "pdf.security.malware_scan",
+        "pdf.security.sanitize",
+        "pdf.security.redact",
+        "pdf.security.verify_redaction",
+        "pdf.compare.semantic_diff",
+        "pdf.compare.visual_diff",
+        "pdf.compare.version_report",
         "pdf.ai.parse.lite",
+        "pdf.ai.parse.figures",
+        "pdf.ai.parse.formulas",
+        "pdf.ai.parse.charts",
+        "pdf.ai.parse.references",
         "pdf.ai.create.from_prompt",
         "pdf.ai.create.template_preview",
         "pdf.ai.create.templates",
@@ -188,6 +271,7 @@ def test_implemented_tools_are_known_names() -> None:
         "pdf.context.classify",
         "pdf.context.code_snapshot",
         "pdf.context.data_profile",
+        "pdf.context.image_analyze",
         "pdf.compose.plan",
         "pdf.compose.from_context",
         "pdf.compose.render_ir",
@@ -201,7 +285,11 @@ def test_implemented_tools_are_known_names() -> None:
         "pdf.target.profiles",
         "pdf.target.select_profile",
         "pdf.target.validate_profile",
+        "pdf.artifacts.graph",
+        "pdf.artifacts.manifest",
+        "pdf.artifacts.source_map",
         "pdf.evidence.map_sources",
+        "pdf.evidence.cite_claims",
         "pdf.evidence.coverage_report",
         "pdf.evidence.context_packet_report",
         "pdf.artifacts.export_bundle",

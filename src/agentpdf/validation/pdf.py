@@ -202,6 +202,96 @@ def blank_page_check_pdf(
     return report, usage
 
 
+def visual_diff_check_pdf(
+    before_path: str | Path,
+    after_path: str | Path,
+    pages: str = "all",
+    max_difference_ratio: float = 0.001,
+    render_scale: float = 0.5,
+) -> tuple[ValidationReport, dict[str, Any]]:
+    """Compare rendered PDF pages and return validation-grade pixel evidence."""
+    before = resolve_input_path(before_path)
+    after = resolve_input_path(after_path)
+    before_reader = _reader_for_validation(before)
+    after_reader = _reader_for_validation(after)
+    page_count = min(len(before_reader.pages), len(after_reader.pages))
+    selected_pages = parse_page_range(pages, total_pages=page_count)
+    before_document = _pdfium_document(before)
+    after_document = _pdfium_document(after)
+
+    checks: list[ValidationCheck] = []
+    changes: list[dict[str, Any]] = []
+    try:
+        for page_index in selected_pages:
+            page_number = page_index + 1
+            before_image = _render_page_image(before_document, page_index, render_scale)
+            after_image = _render_page_image(after_document, page_index, render_scale)
+            size_mismatch = before_image.size != after_image.size
+            difference_ratio = (
+                1.0
+                if size_mismatch
+                else _image_difference_ratio(before_image, after_image)
+            )
+            changed = size_mismatch or difference_ratio > max_difference_ratio
+            change = {
+                "page_number": page_number,
+                "changed": changed,
+                "difference_ratio": round(difference_ratio, 6),
+                "max_difference_ratio": max_difference_ratio,
+                "before_size": list(before_image.size),
+                "after_size": list(after_image.size),
+                "size_mismatch": size_mismatch,
+            }
+            changes.append(change)
+            checks.append(
+                ValidationCheck(
+                    name="visual_diff_page",
+                    status="warning" if changed else "passed",
+                    details=change,
+                    message="Rendered page differs." if changed else None,
+                )
+            )
+    finally:
+        _close_pdfium_document(before_document)
+        _close_pdfium_document(after_document)
+
+    warnings = []
+    if len(before_reader.pages) != len(after_reader.pages):
+        warnings.append("Input PDFs have different page counts; visual diff used overlapping pages.")
+    changed_pages = [change["page_number"] for change in changes if change["changed"]]
+    if changed_pages:
+        warnings.append(
+            "Rendered page differences detected: "
+            + ", ".join(str(page) for page in changed_pages)
+        )
+
+    report = ValidationReport(
+        status=_validation_status(checks),
+        checks=checks,
+        page_count=len(selected_pages),
+        warnings=warnings,
+    )
+    usage = {
+        "before": str(before),
+        "after": str(after),
+        "page_range": pages,
+        "selected_pages": [page + 1 for page in selected_pages],
+        "before_page_count": len(before_reader.pages),
+        "after_page_count": len(after_reader.pages),
+        "changed_page_count": len(changed_pages),
+        "changed_pages": changed_pages,
+        "changes": changes,
+        "max_difference_ratio": max_difference_ratio,
+        "render_scale": render_scale,
+        "diff_strategy": "local_render_pixel_difference",
+        "limitations": [
+            "Visual diff uses local rasterized pages and does not explain semantic cause.",
+            "Minor antialiasing or renderer differences can appear as pixel changes.",
+        ],
+    }
+    return report, usage
+
+
 def _reader_for_validation(path: Path) -> PdfReader:
     if path.suffix.lower() != ".pdf":
         raise AgentPDFException("unsupported_file_type", "Only PDF files are supported.")
@@ -239,6 +329,24 @@ def _render_non_white_ratio(document: Any, page_index: int, white_threshold: int
         return 0.0
     non_white_pixels = sum(count for value, count in enumerate(histogram) if value < white_threshold)
     return non_white_pixels / total_pixels
+
+
+def _render_page_image(document: Any, page_index: int, scale: float) -> Any:
+    page = document[page_index]
+    bitmap = page.render(scale=scale)
+    return bitmap.to_pil().convert("RGB")
+
+
+def _image_difference_ratio(before_image: Any, after_image: Any) -> float:
+    from PIL import ImageChops
+
+    diff = ImageChops.difference(before_image, after_image).convert("L")
+    histogram = diff.histogram()
+    total_pixels = diff.size[0] * diff.size[1]
+    if total_pixels == 0:
+        return 0.0
+    changed_pixels = sum(count for value, count in enumerate(histogram) if value > 0)
+    return changed_pixels / total_pixels
 
 
 def _validation_status(checks: list[ValidationCheck]) -> str:

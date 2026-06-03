@@ -22,8 +22,8 @@ Generate local runtime configs for agent ecosystems that call okpdf through MCP 
 |---|---:|---|
 | `agent.setup.claude_code` | beta | Generate a Claude Code project-level MCP config for local okpdf tools. |
 | `agent.setup.codex` | beta | Generate a Codex MCP/workspace integration config for local okpdf tools. |
-| `agent.setup.kilo_code` | planned | Generate Kilo Code integration config. |
-| `agent.setup.openclaw` | planned | Generate OpenClaw integration config. |
+| `agent.setup.kilo_code` | beta | Generate a Kilo Code MCP config for local okpdf tools. |
+| `agent.setup.openclaw` | beta | Generate an OpenClaw MCP config for local okpdf tools. |
 
 ### `pdf.context`
 
@@ -35,7 +35,7 @@ Normalize heterogeneous context and create context packets.
 | `pdf.context.packet` | beta | Build a reusable Context Packet from raw or pre-ingested local context items with source graph metadata. |
 | `pdf.context.build_packet` | beta target | Build a local Context Packet JSON with source graph metadata from text, files, and links. |
 | `pdf.context.classify` | beta | Classify context items by type, role, local evidence, safety limits, likely block type, and target slots. |
-| `pdf.context.image_analyze` | planned/cloud | OCR/caption/image-region analysis for images and screenshots. |
+| `pdf.context.image_analyze` | beta | Analyze local images with metadata and optional OCR text-region evidence. |
 | `pdf.context.video_transcribe` | planned/cloud | Transcribe video and create timestamped transcript context/source nodes. |
 | `pdf.context.video_keyframes` | planned/cloud | Extract keyframes and frame source refs from video. |
 | `pdf.context.audio_transcribe` | planned/cloud | Transcribe audio into timestamped context/source nodes. |
@@ -60,7 +60,7 @@ Map generated content and answers back to source material. RAG is one implementa
 | Tool | Status | Description |
 |---|---:|---|
 | `pdf.evidence.map_sources` | beta | Normalize block or claim source refs against Context Packet evidence into a source-map report. |
-| `pdf.evidence.cite_claims` | beta target | Return citations for claims using page/bbox/timestamp/file/row refs. |
+| `pdf.evidence.cite_claims` | beta | Return local citations for claims using source refs and source-map evidence. |
 | `pdf.evidence.coverage_report` | beta target | Report which claims, blocks, tables, and figures have source evidence. |
 | `pdf.evidence.highlight_sources` | beta target | Produce highlighted source artifacts from evidence refs. |
 | `pdf.evidence.context_packet_report` | beta target | Create a validated PDF/JSON appendix summarizing context items, sources, refs, checksums, evidence, and limitations. |
@@ -73,7 +73,7 @@ Create new PDF artifacts from context packets, target PDF profiles, composition 
 | Tool | Status | Description |
 |---|---:|---|
 | `pdf.compose.plan` | beta | Plan a context-to-target-PDF artifact with Composition IR, source refs, validation, render plan, and style constraints. |
-| `pdf.compose.from_context` | beta | Compose a validated target PDF from a Context Packet and target profile with source map and evidence coverage. |
+| `pdf.compose.from_context` | beta | Compose a validated target PDF from a Context Packet and target profile with source map, evidence coverage, and optional HTML package artifacts. |
 | `pdf.compose.render_ir` | beta | Render a composition plan or IR payload into a validated PDF artifact. |
 | `pdf.compose.add_code_block` | beta target | Append a code evidence page to a new PDF with source refs, patch evidence, rollback metadata, and validation. |
 | `pdf.compose.add_figure` | beta target | Append an image/figure evidence page to a new PDF with captions, source refs, patch evidence, rollback metadata, and validation. |
@@ -139,7 +139,7 @@ Inspect artifact lineage and manifests.
 | `pdf.inspect.document` | stable target | Detect page count, sizes, rotations, encryption, metadata, text layer, forms, annotations, attachments, signatures, scanned pages, outlines. |
 | `pdf.inspect.pages` | stable target | Return per-page dimensions, rotation, text availability, image count, object count, and renderability. |
 | `pdf.inspect.permissions` | beta target | Inspect encryption and usage permissions. |
-| `pdf.inspect.health` | beta target | Detect corruption, missing xref, malformed objects, huge pages, suspicious attachments, embedded JS. |
+| `pdf.inspect.health` | beta | Detect corruption, missing xref, malformed objects, huge pages, suspicious attachments, embedded JS. |
 
 ### `pdf.organize`
 
@@ -154,8 +154,8 @@ Inspect artifact lineage and manifests.
 | `pdf.organize.duplicate_pages` | beta target | Duplicate one or more pages. |
 | `pdf.organize.insert_blank_pages` | beta target | Insert blank pages. |
 | `pdf.organize.insert_pdf` | beta target | Insert one PDF into another at specific positions. |
-| `pdf.organize.n_up` | planned | Place multiple source pages on one output page. |
-| `pdf.organize.booklet` | planned | Booklet imposition. |
+| `pdf.organize.n_up` | beta | Place multiple source pages on one output page. |
+| `pdf.organize.booklet` | beta | Booklet imposition. |
 | `pdf.organize.flatten_pages` | beta target | Flatten annotations/forms into page content. |
 
 ### `pdf.optimize`
@@ -167,10 +167,10 @@ Inspect artifact lineage and manifests.
 | `pdf.optimize.repair` | beta target | Repair xref and malformed objects when possible. |
 | `pdf.optimize.web_optimize` | beta target | Rewrite output for web-friendly viewing when safe. |
 | `pdf.optimize.downsample_images` | beta target | Downsample embedded images. |
-| `pdf.optimize.remove_unused_objects` | planned | Remove unreachable objects. |
-| `pdf.optimize.subset_fonts` | planned | Subset embedded fonts when safe. |
-| `pdf.optimize.to_pdfa` | planned | Convert to PDF/A where possible. |
-| `pdf.optimize.validate_pdfa` | planned | Validate PDF/A compliance. |
+| `pdf.optimize.remove_unused_objects` | beta | Remove unreachable objects by rewriting reachable page-tree content. |
+| `pdf.optimize.subset_fonts` | beta | Rewrite PDF and return local font-subset audit evidence. |
+| `pdf.optimize.to_pdfa` | beta | Best-effort local PDF/A tagging plus validation report. |
+| `pdf.optimize.validate_pdfa` | beta | Validate PDF/A compliance with local heuristic evidence. |
 
 ### `pdf.convert.to_pdf`
 
@@ -178,12 +178,12 @@ Inspect artifact lineage and manifests.
 |---|---:|---|
 | `pdf.convert.image_to_pdf` | stable target | Create PDF from images. |
 | `pdf.convert.markdown_to_pdf` | stable target | Render Markdown to PDF using templates. |
-| `pdf.convert.html_to_pdf` | beta target | Render HTML/CSS to PDF. |
-| `pdf.convert.url_to_pdf` | planned | Render URL to PDF with SSRF-safe fetch. |
+| `pdf.convert.html_to_pdf` | beta target | Convert local HTML into a validated PDF; the current OSS converter preserves text and emits layout-approximation warnings. |
+| `pdf.convert.url_to_pdf` | beta | Fetch URL with safety checks and convert HTML text to PDF. |
 | `pdf.convert.text_to_pdf` | stable target | Plain text to PDF. |
-| `pdf.convert.docx_to_pdf` | planned | Office conversion, likely optional worker. |
-| `pdf.convert.pptx_to_pdf` | planned | Office conversion, likely optional worker. |
-| `pdf.convert.xlsx_to_pdf` | planned | Office conversion, likely optional worker. |
+| `pdf.convert.docx_to_pdf` | beta | Convert DOCX text to local PDF. |
+| `pdf.convert.pptx_to_pdf` | beta | Convert PPTX slide text to local PDF. |
+| `pdf.convert.xlsx_to_pdf` | beta | Convert XLSX rows to local PDF. |
 
 ### `pdf.convert.from_pdf`
 
@@ -193,12 +193,12 @@ Inspect artifact lineage and manifests.
 | `pdf.convert.pdf_to_text` | stable target | Extract text. |
 | `pdf.convert.pdf_to_markdown` | beta target | Convert document structure to Markdown. |
 | `pdf.convert.pdf_to_json` | beta target | Convert to Document IR JSON. |
-| `pdf.convert.pdf_to_html` | planned | Convert to HTML approximation. |
-| `pdf.convert.pdf_to_docx` | planned/cloud | Convert to DOCX. |
-| `pdf.convert.pdf_to_pptx` | planned/cloud | Convert to PPTX. |
-| `pdf.convert.pdf_to_xlsx` | planned/cloud | Extract tables to XLSX. |
+| `pdf.convert.pdf_to_html` | beta | Export PDF text to simple HTML. |
+| `pdf.convert.pdf_to_docx` | beta | Export PDF text to minimal DOCX. |
+| `pdf.convert.pdf_to_pptx` | beta | Export PDF pages to simple text slides. |
+| `pdf.convert.pdf_to_xlsx` | beta | Export page text rows to minimal XLSX. |
 | `pdf.convert.extract_images` | stable target | Extract embedded images. |
-| `pdf.convert.extract_fonts` | planned | Extract/list fonts. |
+| `pdf.convert.extract_fonts` | beta | Extract/list fonts. |
 | `pdf.convert.extract_attachments` | beta target | Extract embedded attachments safely. |
 
 ### `pdf.edit`
@@ -207,22 +207,22 @@ Inspect artifact lineage and manifests.
 |---|---:|---|
 | `pdf.edit.add_text` | beta target | Add overlay text at coordinates. |
 | `pdf.edit.add_image` | beta target | Add image at coordinates. |
-| `pdf.edit.add_shape` | planned | Add rectangle/line/circle/freehand. |
+| `pdf.edit.add_shape` | beta | Add rectangle/line/circle/freehand. |
 | `pdf.edit.add_link` | beta target | Add link annotations. |
 | `pdf.edit.add_annotation` | beta target | Add comment/sticky note. |
 | `pdf.edit.highlight` | beta target | Highlight text spans or coordinates. |
-| `pdf.edit.underline` | planned | Underline text spans or coordinates. |
-| `pdf.edit.strikeout` | planned | Strikeout text spans or coordinates. |
-| `pdf.edit.freehand_draw` | planned | Add freehand drawing paths. |
+| `pdf.edit.underline` | beta | Underline text spans or coordinates. |
+| `pdf.edit.strikeout` | beta | Strikeout text spans or coordinates. |
+| `pdf.edit.freehand_draw` | beta | Add freehand drawing paths. |
 | `pdf.edit.crop` | beta target | Crop pages. |
-| `pdf.edit.resize_pages` | planned | Resize pages. |
-| `pdf.edit.add_margin` | planned | Add margins. |
+| `pdf.edit.resize_pages` | beta | Resize pages. |
+| `pdf.edit.add_margin` | beta | Add margins. |
 | `pdf.edit.header_footer` | beta target | Add headers/footers. |
 | `pdf.edit.page_numbers` | stable target | Add page numbers. |
 | `pdf.edit.watermark` | stable target | Add text/image watermark. |
 | `pdf.edit.stamp` | beta target | Add stamp overlays. |
 | `pdf.edit.overlay` | beta target | Overlay PDF/page content. |
-| `pdf.edit.underlay` | planned | Underlay PDF/page content. |
+| `pdf.edit.underlay` | beta | Underlay PDF/page content. |
 | `pdf.edit.flatten_annotations` | beta target | Flatten annotations. |
 
 ### `pdf.forms`
@@ -232,49 +232,49 @@ Inspect artifact lineage and manifests.
 | `pdf.forms.detect_fields` | beta target | Detect AcroForm fields. |
 | `pdf.forms.fill` | beta target | Fill form fields. |
 | `pdf.forms.export_data` | beta target | Export form data. |
-| `pdf.forms.import_data` | planned | Import form data. |
+| `pdf.forms.import_data` | beta | Import local JSON field data into PDF forms. |
 | `pdf.forms.flatten` | beta target | Flatten filled forms. |
-| `pdf.forms.create` | planned | Create form fields. |
-| `pdf.forms.validate` | planned | Validate required fields and formats. |
+| `pdf.forms.create` | beta | Create local text form fields. |
+| `pdf.forms.validate` | beta | Validate required fields and formats. |
 
 ### `pdf.security`
 
 | Tool | Status | Description |
 |---|---:|---|
-| `pdf.security.protect` | planned | Encrypt/protect PDF with password. |
-| `pdf.security.unlock_authorized` | planned | Decrypt with valid password only. |
-| `pdf.security.encrypt` | planned | Encrypt PDF. |
-| `pdf.security.decrypt_authorized` | planned | Decrypt authorized PDF with a valid password only. |
+| `pdf.security.protect` | beta | Protect PDF with local password encryption. |
+| `pdf.security.unlock_authorized` | beta | Unlock only with supplied authorized password. |
+| `pdf.security.encrypt` | beta | Encrypt PDF with local password. |
+| `pdf.security.decrypt_authorized` | beta | Decrypt only with supplied authorized password. |
 | `pdf.security.permissions` | beta target | Read/update permissions. |
-| `pdf.security.redact` | beta target | True redaction, not visual cover-up. |
-| `pdf.security.verify_redaction` | beta target | Verify text/images are removed. |
-| `pdf.security.sign` | planned | Digital signing. |
-| `pdf.security.verify_signature` | planned | Verify signatures. |
+| `pdf.security.redact` | beta | Rasterize local pages and mask explicit redaction regions. |
+| `pdf.security.verify_redaction` | beta | Verify supplied terms are absent from redacted PDF text and bytes. |
+| `pdf.security.sign` | beta | Detached local integrity signature manifest. |
+| `pdf.security.verify_signature` | beta | Verify detached local integrity signature. |
 | `pdf.security.remove_metadata` | beta | Remove document metadata through the security namespace. |
-| `pdf.security.sanitize` | beta target | Remove JS, attachments, external actions, metadata. |
-| `pdf.security.malware_scan` | planned/cloud | Integrate scanning worker. |
+| `pdf.security.sanitize` | beta | Remove JS, attachments, external actions, metadata. |
+| `pdf.security.malware_scan` | beta | Local static PDF risk marker scan. |
 
 ### `pdf.ocr_scan`
 
 | Tool | Status | Description |
 |---|---:|---|
-| `pdf.ocr_scan.ocr` | beta target | Add OCR text layer. |
-| `pdf.ocr_scan.searchable_pdf` | beta target | Generate searchable PDF. |
+| `pdf.ocr_scan.ocr` | beta | Run local OCR and return text regions with page numbers, bboxes, confidence, and language metadata. |
+| `pdf.ocr_scan.searchable_pdf` | beta | Generate a searchable PDF by adding a local OCR text layer. |
 | `pdf.ocr_scan.deskew` | beta target | Deskew scanned pages. |
-| `pdf.ocr_scan.despeckle` | planned | Remove speckles/noise. |
+| `pdf.ocr_scan.despeckle` | beta | Safe local scan rewrite with despeckle limitation warnings. |
 | `pdf.ocr_scan.auto_rotate` | beta target | Detect and rotate pages. |
-| `pdf.ocr_scan.remove_existing_ocr` | planned | Remove OCR layer when needed. |
-| `pdf.ocr_scan.scan_to_pdf` | planned | Images/scans to OCR PDF. |
-| `pdf.ocr_scan.multilingual_ocr` | planned/cloud | Multi-language OCR. |
+| `pdf.ocr_scan.remove_existing_ocr` | beta | Best-effort local OCR-layer rewrite. |
+| `pdf.ocr_scan.scan_to_pdf` | beta | Images/scans to local image-only PDF. |
+| `pdf.ocr_scan.multilingual_ocr` | beta | Record multilingual OCR intent and rewrite local PDF artifact. |
 
 ### `pdf.compare`
 
 | Tool | Status | Description |
 |---|---:|---|
 | `pdf.compare.text_diff` | beta target | Compare text extraction. |
-| `pdf.compare.visual_diff` | beta target | Rendered page visual diff. |
-| `pdf.compare.semantic_diff` | planned/cloud | AI-assisted semantic diff. |
-| `pdf.compare.version_report` | planned | Create version comparison report. |
+| `pdf.compare.visual_diff` | beta | Local rendered page visual diff with pixel-change evidence. |
+| `pdf.compare.semantic_diff` | beta | Local text-layer semantic diff with heuristic change evidence. |
+| `pdf.compare.version_report` | beta | Create a local Markdown version comparison report. |
 
 ### `pdf.metadata`
 
@@ -284,7 +284,7 @@ Inspect artifact lineage and manifests.
 | `pdf.metadata.update` | stable target | Update metadata. |
 | `pdf.metadata.remove` | stable target | Remove metadata. |
 | `pdf.metadata.read_outline` | beta target | Read bookmarks/outline. |
-| `pdf.metadata.update_outline` | planned | Update bookmarks/outline. |
+| `pdf.metadata.update_outline` | beta | Update bookmarks/outline. |
 | `pdf.metadata.read_links` | beta target | Read links. |
 | `pdf.metadata.read_attachments` | beta target | Read attachments. |
 | `pdf.metadata.page_info` | beta | Page size/rotation/info. |
@@ -298,8 +298,8 @@ Inspect artifact lineage and manifests.
 | `pdf.validation.blank_page_check` | stable target | Detect blank or near-blank pages. |
 | `pdf.validation.page_count_check` | beta | Compare expected page counts. |
 | `pdf.validation.text_layer_check` | beta target | Check text extraction. |
-| `pdf.validation.visual_diff` | beta target | Compare before/after render. |
-| `pdf.validation.redaction_check` | beta target | Verify redaction. |
+| `pdf.validation.visual_diff` | beta | Validate before/after rendered pages with pixel-change thresholds. |
+| `pdf.validation.redaction_check` | beta | Validation-grade redaction leak check for supplied terms. |
 
 ## AI families
 
@@ -311,10 +311,10 @@ Inspect artifact lineage and manifests.
 | `pdf.ai.parse.agentic` | cloud_only | AI/VLM-backed complex layout parse. |
 | `pdf.ai.parse.layout` | beta/cloud | Reading order, blocks, sections. |
 | `pdf.ai.parse.tables` | beta/cloud | Table extraction. |
-| `pdf.ai.parse.figures` | planned/cloud | Figure detection and captions. |
-| `pdf.ai.parse.formulas` | planned/cloud | Formula extraction. |
-| `pdf.ai.parse.charts` | planned/cloud | Chart understanding. |
-| `pdf.ai.parse.references` | planned/cloud | Research references extraction. |
+| `pdf.ai.parse.figures` | beta | Local figure caption and image-hint extraction. |
+| `pdf.ai.parse.formulas` | beta | Local formula-like text extraction. |
+| `pdf.ai.parse.charts` | beta | Local chart caption extraction. |
+| `pdf.ai.parse.references` | beta | Local reference, URL, and DOI-like line extraction. |
 
 ### `pdf.ai.rag`
 

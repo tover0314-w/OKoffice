@@ -8,11 +8,20 @@ from agentpdf import __version__
 from agentpdf.schemas.models import ToolResult
 from agentpdf.tools.registry import get_tool, load_tool_manifest
 from agentpdf.tools.runner import (
+    run_add_margin,
+    run_add_shape,
+    run_underlay,
     run_agent_setup_claude_code,
     run_agent_setup_codex,
+    run_agent_setup_kilo_code,
+    run_agent_setup_openclaw,
     run_artifacts_export_bundle,
+    run_artifacts_graph,
+    run_artifacts_manifest,
+    run_artifacts_source_map,
     run_artifacts_verify_bundle,
     run_blank_page_check,
+    run_booklet,
     run_build_context_packet,
     run_compose_add_appendix,
     run_compose_add_citation,
@@ -25,6 +34,9 @@ from agentpdf.tools.runner import (
     run_compose_plan,
     run_compose_render_ir,
     run_compress,
+    run_compare_semantic_diff,
+    run_compare_visual_diff,
+    run_compare_version_report,
     run_create_markdown,
     run_create_text,
     run_create_agent,
@@ -38,31 +50,52 @@ from agentpdf.tools.runner import (
     run_context_classify,
     run_context_code_snapshot,
     run_context_data_profile,
+    run_context_image_analyze,
     run_context_ingest,
     run_context_packet,
     run_validate_template_pack,
+    run_evidence_cite_claims,
     run_evidence_coverage_report,
     run_evidence_map_sources,
+    run_docx_to_pdf,
+    run_extract_fonts,
     run_extract_images,
     run_extract_pages,
     run_extract_text,
+    run_forms_create,
+    run_forms_import_data,
+    run_forms_validate,
+    run_freehand_draw,
+    run_html_to_pdf,
     run_image_to_pdf,
     run_inspect,
+    run_inspect_health,
     run_inspect_pages,
     run_insert_blank_pages,
     run_metadata_read,
     run_metadata_page_info,
     run_metadata_remove,
     run_metadata_update,
+    run_metadata_update_outline,
     run_merge,
+    run_n_up,
     run_page_numbers,
     run_patch_apply,
     run_patch_plan,
     run_patch_preview,
     run_patch_verify,
+    run_parse_charts,
+    run_parse_figures,
+    run_parse_formulas,
     run_parse_lite,
+    run_parse_references,
+    run_pdf_to_docx,
+    run_pdf_to_html,
     run_pdf_to_markdown,
+    run_pdf_to_pptx,
+    run_pdf_to_xlsx,
     run_pdf_to_json,
+    run_pptx_to_pdf,
     run_rag_chat,
     run_rag_cite_answer,
     run_rag_export_report,
@@ -71,21 +104,48 @@ from agentpdf.tools.runner import (
     run_rag_query,
     run_rag_search,
     run_remove_pages,
+    run_remove_unused_objects,
     run_render,
     run_render_check,
     run_repair,
     run_reorder_pages,
+    run_resize_pages,
     run_rotate_pages,
     run_page_count_check,
+    run_ocr_despeckle,
+    run_ocr,
+    run_ocr_multilingual,
+    run_ocr_remove_existing,
+    run_ocr_scan_to_pdf,
+    run_ocr_searchable_pdf,
+    run_security_decrypt_authorized,
+    run_security_encrypt,
+    run_security_malware_scan,
     run_security_remove_metadata,
+    run_security_protect,
+    run_security_redact,
+    run_security_sanitize,
+    run_security_sign,
+    run_security_unlock_authorized,
+    run_security_verify_redaction,
+    run_security_verify_signature,
     run_split,
+    run_strikeout,
+    run_subset_fonts,
     run_target_profiles,
+    run_underline,
     run_validate_output,
+    run_validate_pdfa,
     run_validate_target_profile,
+    run_validation_redaction_check,
+    run_validation_visual_diff,
+    run_to_pdfa,
+    run_url_to_pdf,
     run_watermark,
     run_workflow_plan,
     run_workflow_report,
     run_workflow_run,
+    run_xlsx_to_pdf,
 )
 
 app = typer.Typer(help="AgentPDF Infra CLI")
@@ -94,6 +154,8 @@ agent_setup_app = typer.Typer(help="Set up specific agent runtimes.")
 tools_app = typer.Typer(help="Discover AgentPDF tools.")
 metadata_app = typer.Typer(help="Read and write PDF metadata.")
 security_app = typer.Typer(help="Run local PDF security and privacy tools.")
+forms_app = typer.Typer(help="Create, import, and validate PDF forms.")
+ocr_app = typer.Typer(help="Local scan and OCR preparation tools.")
 create_app = typer.Typer(help="Create PDFs from local inputs.")
 context_app = typer.Typer(help="Build agent context packets.")
 compose_app = typer.Typer(help="Compose target PDFs from context packets.")
@@ -101,6 +163,7 @@ target_app = typer.Typer(help="List and validate target PDF profiles.")
 evidence_app = typer.Typer(help="Audit source evidence and coverage.")
 patch_app = typer.Typer(help="Plan, preview, apply, and verify PDF patch transactions.")
 artifacts_app = typer.Typer(help="Export and inspect local artifact lineage.")
+compare_app = typer.Typer(help="Compare local PDF versions.")
 rag_app = typer.Typer(help="Local document retrieval tools.")
 workflow_app = typer.Typer(help="Plan local agent PDF workflows.")
 app.add_typer(agent_app, name="agent")
@@ -108,6 +171,8 @@ agent_app.add_typer(agent_setup_app, name="setup")
 app.add_typer(tools_app, name="tools")
 app.add_typer(metadata_app, name="metadata")
 app.add_typer(security_app, name="security")
+app.add_typer(forms_app, name="forms")
+app.add_typer(ocr_app, name="ocr")
 app.add_typer(create_app, name="create")
 app.add_typer(context_app, name="context")
 app.add_typer(compose_app, name="compose")
@@ -115,6 +180,7 @@ app.add_typer(target_app, name="target")
 app.add_typer(evidence_app, name="evidence")
 app.add_typer(patch_app, name="patch")
 app.add_typer(artifacts_app, name="artifacts")
+app.add_typer(compare_app, name="compare")
 app.add_typer(rag_app, name="rag")
 app.add_typer(workflow_app, name="workflow")
 
@@ -209,6 +275,80 @@ def agent_setup_codex(
     )
 
 
+@agent_setup_app.command("kilo-code")
+def agent_setup_kilo_code(
+    output_path: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", help="Optional Kilo Code MCP config output path."),
+    ] = None,
+    safe_root: Annotated[
+        str,
+        typer.Option("--safe-root", help="Kilo Code project safe root."),
+    ] = ".",
+    command: Annotated[
+        str,
+        typer.Option("--command", help="Executable used by Kilo Code to start okpdf."),
+    ] = "okpdf",
+    args_prefix: Annotated[
+        list[str] | None,
+        typer.Option("--arg-prefix", help="Extra args before 'serve', e.g. -m agentpdf.cli."),
+    ] = None,
+    server_name: Annotated[
+        str,
+        typer.Option("--server-name", help="MCP server name in Kilo Code config."),
+    ] = "agentpdf",
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Generate a Kilo Code MCP config for local okpdf tools."""
+    _emit_result(
+        run_agent_setup_kilo_code(
+            output_path=output_path,
+            safe_root=safe_root,
+            command=command,
+            args_prefix=args_prefix,
+            server_name=server_name,
+        ),
+        json_output=json_output,
+    )
+
+
+@agent_setup_app.command("openclaw")
+def agent_setup_openclaw(
+    output_path: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", help="Optional OpenClaw MCP config output path."),
+    ] = None,
+    safe_root: Annotated[
+        str,
+        typer.Option("--safe-root", help="OpenClaw project safe root."),
+    ] = ".",
+    command: Annotated[
+        str,
+        typer.Option("--command", help="Executable used by OpenClaw to start okpdf."),
+    ] = "okpdf",
+    args_prefix: Annotated[
+        list[str] | None,
+        typer.Option("--arg-prefix", help="Extra args before 'serve', e.g. -m agentpdf.cli."),
+    ] = None,
+    server_name: Annotated[
+        str,
+        typer.Option("--server-name", help="MCP server name in OpenClaw config."),
+    ] = "agentpdf",
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Generate an OpenClaw-style MCP config for local okpdf tools."""
+    _emit_result(
+        run_agent_setup_openclaw(
+            output_path=output_path,
+            safe_root=safe_root,
+            command=command,
+            args_prefix=args_prefix,
+            server_name=server_name,
+        ),
+        json_output=json_output,
+    )
+
+
 @tools_app.command("list")
 def tools_list(
     json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
@@ -257,6 +397,15 @@ def inspect_pages(
         run_inspect_pages(input_path, pages=pages, render_check=render_check),
         json_output=json_output,
     )
+
+
+@app.command("inspect-health")
+def inspect_health(
+    input_path: Annotated[Path, typer.Argument(help="PDF file to inspect for health and active-content risks.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Inspect PDF parseability, trailer markers, page geometry, and static risk markers."""
+    _emit_result(run_inspect_health(input_path), json_output=json_output)
 
 
 @app.command()
@@ -357,6 +506,32 @@ def insert_blank_pages(
     )
 
 
+@app.command("n-up")
+def n_up(
+    input_path: Annotated[Path, typer.Argument(help="Input PDF file.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output PDF path.")],
+    pages: Annotated[str, typer.Option("--pages", help="Page range such as all or 1-4.")] = "all",
+    per_sheet: Annotated[int, typer.Option("--per-sheet", help="Pages per output sheet: 2 or 4.")] = 2,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Place multiple source pages on one output PDF page."""
+    _emit_result(
+        run_n_up(input_path, output_path=output_path, pages=pages, per_sheet=per_sheet),
+        json_output=json_output,
+    )
+
+
+@app.command("booklet")
+def booklet(
+    input_path: Annotated[Path, typer.Argument(help="Input PDF file.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output PDF path.")],
+    pages: Annotated[str, typer.Option("--pages", help="Page range such as all or 1-8.")] = "all",
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Create a local booklet imposition PDF."""
+    _emit_result(run_booklet(input_path, output_path=output_path, pages=pages), json_output=json_output)
+
+
 @app.command("compress")
 def compress(
     input_path: Annotated[Path, typer.Argument(help="Input PDF file.")],
@@ -383,6 +558,52 @@ def repair(
     )
 
 
+@app.command("remove-unused-objects")
+def remove_unused_objects(
+    input_path: Annotated[Path, typer.Argument(help="Input PDF file.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output PDF path.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Rewrite the reachable page tree into a new optimized PDF."""
+    _emit_result(
+        run_remove_unused_objects(input_path, output_path=output_path),
+        json_output=json_output,
+    )
+
+
+@app.command("validate-pdfa")
+def validate_pdfa(
+    input_path: Annotated[Path, typer.Argument(help="Input PDF file.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Run local heuristic PDF/A validation checks."""
+    _emit_result(run_validate_pdfa(input_path), json_output=json_output)
+
+
+@app.command("subset-fonts")
+def subset_fonts(
+    input_path: Annotated[Path, typer.Argument(help="Input PDF file.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output PDF path.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Rewrite a PDF and return local font-subset audit evidence."""
+    _emit_result(run_subset_fonts(input_path, output_path=output_path), json_output=json_output)
+
+
+@app.command("to-pdfa")
+def to_pdfa(
+    input_path: Annotated[Path, typer.Argument(help="Input PDF file.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output PDF path.")],
+    profile: Annotated[str, typer.Option("--profile", help="Requested PDF/A profile.")] = "PDF/A-2B",
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Create a best-effort local PDF/A-tagged copy and validation report."""
+    _emit_result(
+        run_to_pdfa(input_path, output_path=output_path, profile=profile),
+        json_output=json_output,
+    )
+
+
 @app.command("image-to-pdf")
 def image_to_pdf(
     image_paths: Annotated[list[Path], typer.Argument(help="Input image files.")],
@@ -391,6 +612,69 @@ def image_to_pdf(
 ) -> None:
     """Create a PDF from one or more local images."""
     _emit_result(run_image_to_pdf(image_paths, output_path=output_path), json_output=json_output)
+
+
+@app.command("html-to-pdf")
+def html_to_pdf_cmd(
+    input_path: Annotated[Path, typer.Argument(help="Input HTML file.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output PDF path.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Convert a local HTML file to a text-approximated PDF."""
+    _emit_result(run_html_to_pdf(input_path, output_path=output_path), json_output=json_output)
+
+
+@app.command("url-to-pdf")
+def url_to_pdf_cmd(
+    url: Annotated[str, typer.Argument(help="HTTP(S) URL to convert.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output PDF path.")],
+    allow_private_hosts: Annotated[
+        bool,
+        typer.Option("--allow-private-hosts", help="Allow private/loopback hosts."),
+    ] = False,
+    allow_file_urls: Annotated[bool, typer.Option("--allow-file-urls", help="Allow file:// URLs.")] = False,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Fetch a URL with safety checks and convert HTML text to PDF."""
+    _emit_result(
+        run_url_to_pdf(
+            url,
+            output_path=output_path,
+            allow_private_hosts=allow_private_hosts,
+            allow_file_urls=allow_file_urls,
+        ),
+        json_output=json_output,
+    )
+
+
+@app.command("docx-to-pdf")
+def docx_to_pdf_cmd(
+    input_path: Annotated[Path, typer.Argument(help="Input DOCX file.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output PDF path.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Convert DOCX text to a local PDF."""
+    _emit_result(run_docx_to_pdf(input_path, output_path=output_path), json_output=json_output)
+
+
+@app.command("pptx-to-pdf")
+def pptx_to_pdf_cmd(
+    input_path: Annotated[Path, typer.Argument(help="Input PPTX file.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output PDF path.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Convert PPTX slide text to a local PDF."""
+    _emit_result(run_pptx_to_pdf(input_path, output_path=output_path), json_output=json_output)
+
+
+@app.command("xlsx-to-pdf")
+def xlsx_to_pdf_cmd(
+    input_path: Annotated[Path, typer.Argument(help="Input XLSX file.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output PDF path.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Convert the first XLSX sheet to a local PDF."""
+    _emit_result(run_xlsx_to_pdf(input_path, output_path=output_path), json_output=json_output)
 
 
 @app.command()
@@ -439,6 +723,188 @@ def page_numbers(
             pages=pages,
             template=template,
             font_size=font_size,
+        ),
+        json_output=json_output,
+    )
+
+
+@app.command("add-shape")
+def add_shape(
+    input_path: Annotated[Path, typer.Argument(help="Input PDF file.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output PDF path.")],
+    shape: Annotated[str, typer.Option("--shape", help="rectangle, line, circle, or ellipse.")],
+    page: Annotated[int, typer.Option("--page", help="1-based page number.")],
+    x: Annotated[float, typer.Option("--x", help="Lower-left x coordinate.")],
+    y: Annotated[float, typer.Option("--y", help="Lower-left y coordinate.")],
+    width: Annotated[float, typer.Option("--width", help="Shape width or line delta x.")],
+    height: Annotated[float, typer.Option("--height", help="Shape height or line delta y.")],
+    stroke_color: Annotated[str, typer.Option("--stroke-color", help="Stroke color hex.")] = "#2563eb",
+    fill_color: Annotated[str | None, typer.Option("--fill-color", help="Optional fill color hex.")] = None,
+    line_width: Annotated[float, typer.Option("--line-width", help="Stroke width.")] = 1.5,
+    opacity: Annotated[float, typer.Option("--opacity", help="Opacity from 0 to 1.")] = 1.0,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Add a vector shape overlay to a PDF page."""
+    _emit_result(
+        run_add_shape(
+            input_path,
+            output_path=output_path,
+            shape=shape,
+            page=page,
+            x=x,
+            y=y,
+            width=width,
+            height=height,
+            stroke_color=stroke_color,
+            fill_color=fill_color,
+            line_width=line_width,
+            opacity=opacity,
+        ),
+        json_output=json_output,
+    )
+
+
+@app.command("underline")
+def underline(
+    input_path: Annotated[Path, typer.Argument(help="Input PDF file.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output PDF path.")],
+    page: Annotated[int, typer.Option("--page", help="1-based page number.")],
+    bbox: Annotated[str, typer.Option("--bbox", help="x0,y0,x1,y1 coordinates.")],
+    color: Annotated[str, typer.Option("--color", help="Line color hex.")] = "#2563eb",
+    line_width: Annotated[float, typer.Option("--line-width", help="Line width.")] = 1.0,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Underline a coordinate span."""
+    _emit_result(
+        run_underline(
+            input_path,
+            output_path=output_path,
+            page=page,
+            bbox=_parse_float_list(bbox, expected=4, label="bbox"),
+            color=color,
+            line_width=line_width,
+        ),
+        json_output=json_output,
+    )
+
+
+@app.command("strikeout")
+def strikeout(
+    input_path: Annotated[Path, typer.Argument(help="Input PDF file.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output PDF path.")],
+    page: Annotated[int, typer.Option("--page", help="1-based page number.")],
+    bbox: Annotated[str, typer.Option("--bbox", help="x0,y0,x1,y1 coordinates.")],
+    color: Annotated[str, typer.Option("--color", help="Line color hex.")] = "#dc2626",
+    line_width: Annotated[float, typer.Option("--line-width", help="Line width.")] = 1.0,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Strike out a coordinate span."""
+    _emit_result(
+        run_strikeout(
+            input_path,
+            output_path=output_path,
+            page=page,
+            bbox=_parse_float_list(bbox, expected=4, label="bbox"),
+            color=color,
+            line_width=line_width,
+        ),
+        json_output=json_output,
+    )
+
+
+@app.command("freehand-draw")
+def freehand_draw(
+    input_path: Annotated[Path, typer.Argument(help="Input PDF file.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output PDF path.")],
+    page: Annotated[int, typer.Option("--page", help="1-based page number.")],
+    points: Annotated[str, typer.Option("--points", help="JSON array like [[72,680],[120,700]].")],
+    stroke_color: Annotated[str, typer.Option("--stroke-color", help="Stroke color hex.")] = "#2563eb",
+    line_width: Annotated[float, typer.Option("--line-width", help="Line width.")] = 1.5,
+    opacity: Annotated[float, typer.Option("--opacity", help="Opacity from 0 to 1.")] = 1.0,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Add a freehand drawing path to a PDF page."""
+    _emit_result(
+        run_freehand_draw(
+            input_path,
+            output_path=output_path,
+            page=page,
+            points=_parse_points_json(points),
+            stroke_color=stroke_color,
+            line_width=line_width,
+            opacity=opacity,
+        ),
+        json_output=json_output,
+    )
+
+
+@app.command("resize-pages")
+def resize_pages(
+    input_path: Annotated[Path, typer.Argument(help="Input PDF file.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output PDF path.")],
+    width: Annotated[float, typer.Option("--width", help="Target page width in points.")],
+    height: Annotated[float, typer.Option("--height", help="Target page height in points.")],
+    pages: Annotated[str, typer.Option("--pages", help="Page range such as all or 1-3.")] = "all",
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Resize selected pages and scale content to fit."""
+    _emit_result(
+        run_resize_pages(input_path, output_path=output_path, width=width, height=height, pages=pages),
+        json_output=json_output,
+    )
+
+
+@app.command("add-margin")
+def add_margin(
+    input_path: Annotated[Path, typer.Argument(help="Input PDF file.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output PDF path.")],
+    margin: Annotated[float, typer.Option("--margin", help="Default margin in points.")] = 0,
+    pages: Annotated[str, typer.Option("--pages", help="Page range such as all or 1-3.")] = "all",
+    top: Annotated[float | None, typer.Option("--top", help="Top margin override.")] = None,
+    right: Annotated[float | None, typer.Option("--right", help="Right margin override.")] = None,
+    bottom: Annotated[float | None, typer.Option("--bottom", help="Bottom margin override.")] = None,
+    left: Annotated[float | None, typer.Option("--left", help="Left margin override.")] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Add page margins by placing content on larger pages."""
+    _emit_result(
+        run_add_margin(
+            input_path,
+            output_path=output_path,
+            margin=margin,
+            pages=pages,
+            top=top,
+            right=right,
+            bottom=bottom,
+            left=left,
+        ),
+        json_output=json_output,
+    )
+
+
+@app.command("underlay")
+def underlay(
+    input_path: Annotated[Path, typer.Argument(help="Input PDF file.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output PDF path.")],
+    text: Annotated[str, typer.Option("--text", help="Underlay text.")],
+    pages: Annotated[str, typer.Option("--pages", help="Page range such as all or 1-3.")] = "all",
+    font_size: Annotated[int, typer.Option("--font-size", help="Underlay font size.")] = 72,
+    opacity: Annotated[float, typer.Option("--opacity", help="Opacity from 0 to 1.")] = 0.12,
+    angle: Annotated[int, typer.Option("--angle", help="Rotation angle.")] = 45,
+    color: Annotated[str, typer.Option("--color", help="Text color hex.")] = "#64748b",
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Add text below existing page content."""
+    _emit_result(
+        run_underlay(
+            input_path,
+            output_path=output_path,
+            text=text,
+            pages=pages,
+            font_size=font_size,
+            opacity=opacity,
+            angle=angle,
+            color=color,
         ),
         json_output=json_output,
     )
@@ -985,6 +1451,34 @@ def context_data_profile(
     )
 
 
+@context_app.command("image-analyze")
+def context_image_analyze(
+    input_path: Annotated[Path, typer.Argument(help="Local image file to analyze.")],
+    languages: Annotated[
+        list[str] | None,
+        typer.Option("--language", help="OCR language code. Can be repeated."),
+    ] = None,
+    run_ocr: Annotated[
+        bool,
+        typer.Option("--run-ocr/--skip-ocr", help="Run local OCR when available."),
+    ] = True,
+    engine: Annotated[str, typer.Option("--engine", help="Local OCR engine executable.")] = "tesseract",
+    psm: Annotated[int, typer.Option("--psm", help="Tesseract page segmentation mode.")] = 6,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Analyze a local image with metadata and optional OCR evidence."""
+    _emit_result(
+        run_context_image_analyze(
+            input_path,
+            languages=languages,
+            run_ocr=run_ocr,
+            engine=engine,
+            psm=psm,
+        ),
+        json_output=json_output,
+    )
+
+
 @compose_app.command("plan")
 def compose_plan_command(
     context_packet_path: Annotated[Path, typer.Argument(help="Context packet JSON path.")],
@@ -1046,6 +1540,11 @@ def compose_from_context_command(
     ] = None,
     style_pack: Annotated[str | None, typer.Option("--style-pack", help="Optional style pack override.")] = None,
     title: Annotated[str | None, typer.Option("--title", help="Optional composed PDF title.")] = None,
+    renderer: Annotated[str, typer.Option("--renderer", help="Renderer mode: markdown or html.")] = "markdown",
+    html_output_path: Annotated[
+        Path | None,
+        typer.Option("--html-output", help="Optional HTML package output path when renderer=html."),
+    ] = None,
     json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
 ) -> None:
     """Compose a validated target PDF from a Context Packet and target profile."""
@@ -1057,6 +1556,8 @@ def compose_from_context_command(
             output_path=output_path,
             style_pack=style_pack,
             title=title,
+            renderer=renderer,
+            html_output_path=html_output_path,
         ),
         json_output=json_output,
     )
@@ -1431,6 +1932,40 @@ def evidence_map_sources(
     )
 
 
+@evidence_app.command("cite-claims")
+def evidence_cite_claims(
+    claims_path: Annotated[Path, typer.Argument(help="Claims JSON array path.")],
+    composition_path: Annotated[
+        Path | None,
+        typer.Option("--composition", help="Optional composition JSON artifact path."),
+    ] = None,
+    source_map_path: Annotated[
+        Path | None,
+        typer.Option("--source-map", help="Optional source-map report or source_map JSON path."),
+    ] = None,
+    context_packet_path: Annotated[
+        Path | None,
+        typer.Option("--context-packet", help="Optional Context Packet JSON for source evidence enrichment."),
+    ] = None,
+    output_path: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", help="Optional output citation report JSON path."),
+    ] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Return local citations for claims using source refs and source-map evidence."""
+    _emit_result(
+        run_evidence_cite_claims(
+            claims=_read_json_object_list(claims_path, "claims"),
+            composition=composition_path,
+            source_map=source_map_path,
+            context_packet=context_packet_path,
+            output_path=output_path,
+        ),
+        json_output=json_output,
+    )
+
+
 @evidence_app.command("context-packet-report")
 def evidence_context_packet_report(
     context_packet_path: Annotated[Path, typer.Argument(help="Context packet JSON artifact path.")],
@@ -1533,6 +2068,108 @@ def patch_verify(
     )
 
 
+@artifacts_app.command("manifest")
+def artifacts_manifest(
+    artifact_paths: Annotated[
+        list[Path] | None,
+        typer.Option("--file", help="Artifact file to include in the manifest."),
+    ] = None,
+    output_path: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", help="Optional artifact manifest JSON output path."),
+    ] = None,
+    title: Annotated[str | None, typer.Option("--title", help="Optional manifest title.")] = None,
+    metadata_items: Annotated[
+        list[str] | None,
+        typer.Option("--metadata", help="Metadata key=value pair to include."),
+    ] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Create a local artifact manifest with checksums, evidence links, and source refs."""
+    _emit_result(
+        run_artifacts_manifest(
+            artifact_paths=artifact_paths or [],
+            output_path=output_path,
+            title=title,
+            metadata=_parse_key_value_items(metadata_items or []),
+        ),
+        json_output=json_output,
+    )
+
+
+@artifacts_app.command("graph")
+def artifacts_graph(
+    artifact_manifest_path: Annotated[
+        Path | None,
+        typer.Option("--manifest", help="Artifact manifest JSON path to turn into a lineage graph."),
+    ] = None,
+    artifact_paths: Annotated[
+        list[Path] | None,
+        typer.Option("--file", help="Artifact file to include when building a manifest inline."),
+    ] = None,
+    output_path: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", help="Optional artifact graph JSON output path."),
+    ] = None,
+    title: Annotated[str | None, typer.Option("--title", help="Optional graph title.")] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Create a local artifact lineage graph from a manifest or artifact files."""
+    _emit_result(
+        run_artifacts_graph(
+            artifact_manifest_path=artifact_manifest_path,
+            artifact_paths=artifact_paths or [],
+            output_path=output_path,
+            title=title,
+        ),
+        json_output=json_output,
+    )
+
+
+@artifacts_app.command("source-map")
+def artifacts_source_map(
+    composition_path: Annotated[
+        Path | None,
+        typer.Option("--composition", help="Composition JSON path containing composition_ir and source_map."),
+    ] = None,
+    source_map_path: Annotated[
+        Path | None,
+        typer.Option("--source-map", help="Existing source-map JSON path to normalize."),
+    ] = None,
+    context_packet_path: Annotated[
+        Path | None,
+        typer.Option("--context-packet", help="Optional Context Packet JSON path for source-ref enrichment."),
+    ] = None,
+    artifact_manifest_path: Annotated[
+        Path | None,
+        typer.Option("--manifest", help="Optional artifact manifest JSON path for generated PDF artifacts."),
+    ] = None,
+    artifact_paths: Annotated[
+        list[Path] | None,
+        typer.Option("--file", help="Artifact file to include when building a manifest inline."),
+    ] = None,
+    output_path: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", help="Optional artifact source-map JSON output path."),
+    ] = None,
+    title: Annotated[str | None, typer.Option("--title", help="Optional source-map title.")] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Create an artifact-focused source map index for generated PDF blocks and sources."""
+    _emit_result(
+        run_artifacts_source_map(
+            composition_path=composition_path,
+            source_map_path=source_map_path,
+            context_packet_path=context_packet_path,
+            artifact_manifest_path=artifact_manifest_path,
+            artifact_paths=artifact_paths or [],
+            output_path=output_path,
+            title=title,
+        ),
+        json_output=json_output,
+    )
+
+
 @artifacts_app.command("export-bundle")
 def artifacts_export_bundle(
     artifact_paths: Annotated[
@@ -1614,6 +2251,16 @@ def extract_text(
     _emit_result(run_extract_text(input_path, pages=pages), json_output=json_output)
 
 
+@app.command("extract-fonts")
+def extract_fonts(
+    input_path: Annotated[Path, typer.Argument(help="Input PDF file.")],
+    pages: Annotated[str, typer.Option("--pages", help="Page range such as all or 1-3.")] = "all",
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """List fonts referenced by selected PDF pages."""
+    _emit_result(run_extract_fonts(input_path, pages=pages), json_output=json_output)
+
+
 @app.command("pdf-to-json")
 def pdf_to_json(
     input_path: Annotated[Path, typer.Argument(help="Input PDF file.")],
@@ -1640,6 +2287,50 @@ def pdf_to_markdown(
         run_pdf_to_markdown(input_path, output_path=output_path, pages=pages),
         json_output=json_output,
     )
+
+
+@app.command("pdf-to-html")
+def pdf_to_html_cmd(
+    input_path: Annotated[Path, typer.Argument(help="Input PDF file.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output HTML path.")],
+    pages: Annotated[str, typer.Option("--pages", help="Page range such as all or 1-3.")] = "all",
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Export PDF text to a simple HTML document."""
+    _emit_result(run_pdf_to_html(input_path, output_path=output_path, pages=pages), json_output=json_output)
+
+
+@app.command("pdf-to-docx")
+def pdf_to_docx_cmd(
+    input_path: Annotated[Path, typer.Argument(help="Input PDF file.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output DOCX path.")],
+    pages: Annotated[str, typer.Option("--pages", help="Page range such as all or 1-3.")] = "all",
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Export PDF text to a minimal DOCX package."""
+    _emit_result(run_pdf_to_docx(input_path, output_path=output_path, pages=pages), json_output=json_output)
+
+
+@app.command("pdf-to-pptx")
+def pdf_to_pptx_cmd(
+    input_path: Annotated[Path, typer.Argument(help="Input PDF file.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output PPTX path.")],
+    pages: Annotated[str, typer.Option("--pages", help="Page range such as all or 1-3.")] = "all",
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Export each PDF page as a simple text slide."""
+    _emit_result(run_pdf_to_pptx(input_path, output_path=output_path, pages=pages), json_output=json_output)
+
+
+@app.command("pdf-to-xlsx")
+def pdf_to_xlsx_cmd(
+    input_path: Annotated[Path, typer.Argument(help="Input PDF file.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output XLSX path.")],
+    pages: Annotated[str, typer.Option("--pages", help="Page range such as all or 1-3.")] = "all",
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Export PDF page text rows to a minimal XLSX workbook."""
+    _emit_result(run_pdf_to_xlsx(input_path, output_path=output_path, pages=pages), json_output=json_output)
 
 
 @metadata_app.command("read")
@@ -1688,6 +2379,24 @@ def metadata_update(
     )
 
 
+@metadata_app.command("update-outline")
+def metadata_update_outline(
+    input_path: Annotated[Path, typer.Argument(help="Input PDF file.")],
+    outline_path: Annotated[Path, typer.Argument(help="Outline JSON array path.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output PDF path.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Write PDF outline/bookmarks from a JSON array."""
+    _emit_result(
+        run_metadata_update_outline(
+            input_path,
+            outline=_read_json_object_list(outline_path, "outline"),
+            output_path=output_path,
+        ),
+        json_output=json_output,
+    )
+
+
 @metadata_app.command("remove")
 def metadata_remove(
     input_path: Annotated[Path, typer.Argument(help="Input PDF file.")],
@@ -1706,6 +2415,325 @@ def security_remove_metadata(
 ) -> None:
     """Remove document metadata under the security namespace."""
     _emit_result(run_security_remove_metadata(input_path, output_path=output_path), json_output=json_output)
+
+
+@security_app.command("protect")
+def security_protect(
+    input_path: Annotated[Path, typer.Argument(help="Input PDF file.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output encrypted PDF path.")],
+    password: Annotated[str, typer.Option("--password", help="User password.")],
+    owner_password: Annotated[str | None, typer.Option("--owner-password", help="Owner password.")] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Protect a PDF with password encryption."""
+    _emit_result(
+        run_security_protect(
+            input_path,
+            output_path=output_path,
+            password=password,
+            owner_password=owner_password,
+        ),
+        json_output=json_output,
+    )
+
+
+@security_app.command("encrypt")
+def security_encrypt(
+    input_path: Annotated[Path, typer.Argument(help="Input PDF file.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output encrypted PDF path.")],
+    password: Annotated[str, typer.Option("--password", help="User password.")],
+    owner_password: Annotated[str | None, typer.Option("--owner-password", help="Owner password.")] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Encrypt a PDF with a password."""
+    _emit_result(
+        run_security_encrypt(
+            input_path,
+            output_path=output_path,
+            password=password,
+            owner_password=owner_password,
+        ),
+        json_output=json_output,
+    )
+
+
+@security_app.command("unlock-authorized")
+def security_unlock_authorized(
+    input_path: Annotated[Path, typer.Argument(help="Input encrypted PDF file.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output unlocked PDF path.")],
+    password: Annotated[str, typer.Option("--password", help="Authorized password.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Unlock a PDF only with a supplied authorized password."""
+    _emit_result(
+        run_security_unlock_authorized(input_path, output_path=output_path, password=password),
+        json_output=json_output,
+    )
+
+
+@security_app.command("decrypt-authorized")
+def security_decrypt_authorized(
+    input_path: Annotated[Path, typer.Argument(help="Input encrypted PDF file.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output decrypted PDF path.")],
+    password: Annotated[str, typer.Option("--password", help="Authorized password.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Decrypt a PDF only with a supplied authorized password."""
+    _emit_result(
+        run_security_decrypt_authorized(input_path, output_path=output_path, password=password),
+        json_output=json_output,
+    )
+
+
+@security_app.command("sign")
+def security_sign(
+    input_path: Annotated[Path, typer.Argument(help="Input PDF file.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output signature JSON path.")],
+    secret: Annotated[str | None, typer.Option("--secret", help="Optional HMAC secret.")] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Create a detached local integrity signature manifest."""
+    _emit_result(
+        run_security_sign(input_path, output_path=output_path, secret=secret),
+        json_output=json_output,
+    )
+
+
+@security_app.command("verify-signature")
+def security_verify_signature(
+    input_path: Annotated[Path, typer.Argument(help="Input PDF file.")],
+    signature_path: Annotated[Path, typer.Argument(help="Detached signature JSON path.")],
+    secret: Annotated[str | None, typer.Option("--secret", help="Optional HMAC secret.")] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Verify a detached local integrity signature manifest."""
+    _emit_result(
+        run_security_verify_signature(input_path, signature_path=signature_path, secret=secret),
+        json_output=json_output,
+    )
+
+
+@security_app.command("malware-scan")
+def security_malware_scan(
+    input_path: Annotated[Path, typer.Argument(help="Input PDF file.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Run a local static PDF risk marker scan."""
+    _emit_result(run_security_malware_scan(input_path), json_output=json_output)
+
+
+@security_app.command("sanitize")
+def security_sanitize(
+    input_path: Annotated[Path, typer.Argument(help="Input PDF file.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output sanitized PDF path.")],
+    remove_metadata: Annotated[
+        bool,
+        typer.Option("--remove-metadata/--keep-metadata", help="Remove document metadata while rewriting."),
+    ] = True,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Rewrite a PDF while removing known active-content structures and metadata."""
+    _emit_result(
+        run_security_sanitize(input_path, output_path=output_path, remove_metadata=remove_metadata),
+        json_output=json_output,
+    )
+
+
+@security_app.command("redact")
+def security_redact(
+    input_path: Annotated[Path, typer.Argument(help="Input PDF file.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output redacted PDF path.")],
+    regions: Annotated[
+        list[str],
+        typer.Option("--region", help="Redaction region JSON object. Can be repeated."),
+    ],
+    fill_color: Annotated[str, typer.Option("--fill-color", help="Mask fill color.")] = "#000000",
+    render_scale: Annotated[float, typer.Option("--render-scale", help="Raster render scale.")] = 2.0,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Redact explicit bbox regions by creating an image-only PDF."""
+    _emit_result(
+        run_security_redact(
+            input_path,
+            output_path=output_path,
+            regions=[_parse_json_object_value(region, "--region") for region in regions],
+            fill_color=fill_color,
+            render_scale=render_scale,
+        ),
+        json_output=json_output,
+    )
+
+
+@security_app.command("verify-redaction")
+def security_verify_redaction(
+    input_path: Annotated[Path, typer.Argument(help="Input redacted PDF file.")],
+    search_terms: Annotated[
+        list[str] | None,
+        typer.Option("--search-term", help="Sensitive term that must be absent. Can be repeated."),
+    ] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Verify supplied sensitive terms are absent after redaction."""
+    _emit_result(
+        run_security_verify_redaction(input_path, search_terms=search_terms),
+        json_output=json_output,
+    )
+
+
+@forms_app.command("create")
+def forms_create(
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output form PDF path.")],
+    fields: Annotated[
+        list[str],
+        typer.Option("--field", help="Form field JSON object or path. Can be repeated."),
+    ],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Create a local PDF with text form fields."""
+    _emit_result(
+        run_forms_create(
+            output_path=output_path,
+            fields=[_parse_json_object_value(field, "--field") for field in fields],
+        ),
+        json_output=json_output,
+    )
+
+
+@forms_app.command("import-data")
+def forms_import_data(
+    input_path: Annotated[Path, typer.Argument(help="Input form PDF.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output filled PDF path.")],
+    data: Annotated[str, typer.Option("--data", help="Field data JSON object or path.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Import local JSON form data into a PDF form."""
+    _emit_result(
+        run_forms_import_data(
+            input_path,
+            data=_parse_json_object_value(data, "--data"),
+            output_path=output_path,
+        ),
+        json_output=json_output,
+    )
+
+
+@forms_app.command("validate")
+def forms_validate(
+    input_path: Annotated[Path, typer.Argument(help="Input form PDF.")],
+    required_fields: Annotated[
+        list[str] | None,
+        typer.Option("--required-field", help="Required field name. Can be repeated."),
+    ] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Validate required PDF form fields."""
+    _emit_result(
+        run_forms_validate(input_path, required_fields=required_fields),
+        json_output=json_output,
+    )
+
+
+@ocr_app.command("scan-to-pdf")
+def ocr_scan_to_pdf(
+    image_paths: Annotated[list[Path], typer.Argument(help="Input scan image files.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output PDF path.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Create an image-only PDF from local scan images."""
+    _emit_result(run_ocr_scan_to_pdf(image_paths, output_path=output_path), json_output=json_output)
+
+
+@ocr_app.command("ocr")
+def ocr_extract(
+    input_path: Annotated[Path, typer.Argument(help="Input PDF or image file.")],
+    pages: Annotated[str, typer.Option("--pages", help="Page range for PDF input.")] = "all",
+    languages: Annotated[
+        list[str] | None,
+        typer.Option("--language", help="OCR language code. Can be repeated."),
+    ] = None,
+    dpi: Annotated[int, typer.Option("--dpi", help="PDF render DPI before OCR.")] = 200,
+    engine: Annotated[str, typer.Option("--engine", help="Local OCR engine executable.")] = "tesseract",
+    psm: Annotated[int, typer.Option("--psm", help="Tesseract page segmentation mode.")] = 6,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Run local OCR and return text regions with bboxes."""
+    _emit_result(
+        run_ocr(
+            input_path,
+            pages=pages,
+            languages=languages,
+            dpi=dpi,
+            engine=engine,
+            psm=psm,
+        ),
+        json_output=json_output,
+    )
+
+
+@ocr_app.command("searchable-pdf")
+def ocr_searchable_pdf(
+    input_path: Annotated[Path, typer.Argument(help="Input PDF file.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output searchable PDF path.")],
+    pages: Annotated[str, typer.Option("--pages", help="Page range for OCR.")] = "all",
+    languages: Annotated[
+        list[str] | None,
+        typer.Option("--language", help="OCR language code. Can be repeated."),
+    ] = None,
+    dpi: Annotated[int, typer.Option("--dpi", help="PDF render DPI before OCR.")] = 200,
+    engine: Annotated[str, typer.Option("--engine", help="Local OCR engine executable.")] = "tesseract",
+    psm: Annotated[int, typer.Option("--psm", help="Tesseract page segmentation mode.")] = 6,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Add a local OCR text layer to a PDF."""
+    _emit_result(
+        run_ocr_searchable_pdf(
+            input_path,
+            output_path=output_path,
+            pages=pages,
+            languages=languages,
+            dpi=dpi,
+            engine=engine,
+            psm=psm,
+        ),
+        json_output=json_output,
+    )
+
+
+@ocr_app.command("despeckle")
+def ocr_despeckle(
+    input_path: Annotated[Path, typer.Argument(help="Input PDF file.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output PDF path.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Run local scan despeckle preparation."""
+    _emit_result(run_ocr_despeckle(input_path, output_path=output_path), json_output=json_output)
+
+
+@ocr_app.command("remove-existing")
+def ocr_remove_existing(
+    input_path: Annotated[Path, typer.Argument(help="Input PDF file.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output PDF path.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Rewrite a PDF while removing existing OCR-layer metadata where possible."""
+    _emit_result(run_ocr_remove_existing(input_path, output_path=output_path), json_output=json_output)
+
+
+@ocr_app.command("multilingual")
+def ocr_multilingual(
+    input_path: Annotated[Path, typer.Argument(help="Input PDF file.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output PDF path.")],
+    languages: Annotated[
+        list[str] | None,
+        typer.Option("--language", help="OCR language code. Can be repeated."),
+    ] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Record a local multilingual OCR request and rewrite the PDF artifact."""
+    _emit_result(
+        run_ocr_multilingual(input_path, output_path=output_path, languages=languages),
+        json_output=json_output,
+    )
 
 
 @app.command()
@@ -1760,6 +2788,50 @@ def blank_page_check(
     )
 
 
+@app.command("visual-diff")
+def validation_visual_diff(
+    before_path: Annotated[Path, typer.Argument(help="Earlier PDF file.")],
+    after_path: Annotated[Path, typer.Argument(help="Later PDF file.")],
+    pages: Annotated[str, typer.Option("--pages", help="Page range such as all or 1-3.")] = "all",
+    max_difference_ratio: Annotated[
+        float,
+        typer.Option("--max-difference-ratio", help="Maximum allowed changed pixel ratio per page."),
+    ] = 0.001,
+    render_scale: Annotated[
+        float,
+        typer.Option("--render-scale", help="PDF render scale used for local pixel comparison."),
+    ] = 0.5,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Validate before/after PDFs with rendered page visual diff evidence."""
+    _emit_result(
+        run_validation_visual_diff(
+            before_path,
+            after_path,
+            pages=pages,
+            max_difference_ratio=max_difference_ratio,
+            render_scale=render_scale,
+        ),
+        json_output=json_output,
+    )
+
+
+@app.command("redaction-check")
+def validation_redaction_check(
+    input_path: Annotated[Path, typer.Argument(help="Input redacted PDF file.")],
+    search_terms: Annotated[
+        list[str] | None,
+        typer.Option("--search-term", help="Sensitive term that must be absent. Can be repeated."),
+    ] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Run validation-grade redaction leak checks for supplied terms."""
+    _emit_result(
+        run_validation_redaction_check(input_path, search_terms=search_terms),
+        json_output=json_output,
+    )
+
+
 @app.command("parse-lite")
 def parse_lite(
     input_path: Annotated[Path, typer.Argument(help="Input PDF file.")],
@@ -1768,6 +2840,111 @@ def parse_lite(
 ) -> None:
     """Parse a local PDF text layer into Document IR."""
     _emit_result(run_parse_lite(input_path, pages=pages), json_output=json_output)
+
+
+@compare_app.command("semantic-diff")
+def semantic_diff(
+    before_path: Annotated[Path, typer.Argument(help="Earlier PDF file.")],
+    after_path: Annotated[Path, typer.Argument(help="Later PDF file.")],
+    pages: Annotated[str, typer.Option("--pages", help="Page range such as all or 1-3.")] = "all",
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Compare local PDF text layers with heuristic semantic evidence."""
+    _emit_result(
+        run_compare_semantic_diff(before_path, after_path, pages=pages),
+        json_output=json_output,
+    )
+
+
+@compare_app.command("visual-diff")
+def compare_visual_diff(
+    before_path: Annotated[Path, typer.Argument(help="Earlier PDF file.")],
+    after_path: Annotated[Path, typer.Argument(help="Later PDF file.")],
+    pages: Annotated[str, typer.Option("--pages", help="Page range such as all or 1-3.")] = "all",
+    max_difference_ratio: Annotated[
+        float,
+        typer.Option("--max-difference-ratio", help="Difference ratio threshold for changed pages."),
+    ] = 0.001,
+    render_scale: Annotated[
+        float,
+        typer.Option("--render-scale", help="PDF render scale used for local pixel comparison."),
+    ] = 0.5,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Compare rendered PDF pages and report local visual difference evidence."""
+    _emit_result(
+        run_compare_visual_diff(
+            before_path,
+            after_path,
+            pages=pages,
+            max_difference_ratio=max_difference_ratio,
+            render_scale=render_scale,
+        ),
+        json_output=json_output,
+    )
+
+
+@compare_app.command("version-report")
+def version_report(
+    before_path: Annotated[Path, typer.Argument(help="Earlier PDF file.")],
+    after_path: Annotated[Path, typer.Argument(help="Later PDF file.")],
+    output_path: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", help="Optional Markdown report output path."),
+    ] = None,
+    pages: Annotated[str, typer.Option("--pages", help="Page range such as all or 1-3.")] = "all",
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Create a local Markdown version report from PDF text-layer changes."""
+    _emit_result(
+        run_compare_version_report(
+            before_path,
+            after_path,
+            output_path=output_path,
+            pages=pages,
+        ),
+        json_output=json_output,
+    )
+
+
+@app.command("parse-figures")
+def parse_figures(
+    input_path: Annotated[Path, typer.Argument(help="Input PDF file.")],
+    pages: Annotated[str, typer.Option("--pages", help="Page range such as all or 1-3.")] = "all",
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Detect figure captions and page image hints from a local PDF."""
+    _emit_result(run_parse_figures(input_path, pages=pages), json_output=json_output)
+
+
+@app.command("parse-formulas")
+def parse_formulas(
+    input_path: Annotated[Path, typer.Argument(help="Input PDF file.")],
+    pages: Annotated[str, typer.Option("--pages", help="Page range such as all or 1-3.")] = "all",
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Detect formula-like text lines from a local PDF."""
+    _emit_result(run_parse_formulas(input_path, pages=pages), json_output=json_output)
+
+
+@app.command("parse-charts")
+def parse_charts(
+    input_path: Annotated[Path, typer.Argument(help="Input PDF file.")],
+    pages: Annotated[str, typer.Option("--pages", help="Page range such as all or 1-3.")] = "all",
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Detect chart captions from a local PDF."""
+    _emit_result(run_parse_charts(input_path, pages=pages), json_output=json_output)
+
+
+@app.command("parse-references")
+def parse_references(
+    input_path: Annotated[Path, typer.Argument(help="Input PDF file.")],
+    pages: Annotated[str, typer.Option("--pages", help="Page range such as all or 1-3.")] = "all",
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Detect reference lines, DOIs, and URLs from a local PDF."""
+    _emit_result(run_parse_references(input_path, pages=pages), json_output=json_output)
 
 
 @rag_app.command("ingest")
@@ -2008,6 +3185,34 @@ def _parse_csv_values(value: str) -> list[str]:
     return [item.strip() for item in value.split(",") if item.strip()]
 
 
+def _parse_float_list(value: str, expected: int, label: str) -> list[float]:
+    parts = [item.strip() for item in value.split(",") if item.strip()]
+    if len(parts) != expected:
+        raise typer.BadParameter(f"{label} must contain {expected} comma-separated numbers.")
+    try:
+        return [float(item) for item in parts]
+    except ValueError as exc:
+        raise typer.BadParameter(f"{label} must contain only numbers.") from exc
+
+
+def _parse_points_json(value: str) -> list[list[float]]:
+    try:
+        payload = json.loads(value)
+    except json.JSONDecodeError as exc:
+        raise typer.BadParameter("--points must be a JSON array of [x, y] pairs.") from exc
+    if not isinstance(payload, list):
+        raise typer.BadParameter("--points must be a JSON array of [x, y] pairs.")
+    points: list[list[float]] = []
+    for point in payload:
+        if not isinstance(point, list) or len(point) != 2:
+            raise typer.BadParameter("--points entries must be [x, y] arrays.")
+        try:
+            points.append([float(point[0]), float(point[1])])
+        except (TypeError, ValueError) as exc:
+            raise typer.BadParameter("--points entries must contain numeric x/y values.") from exc
+    return points
+
+
 def _read_json_object(path: Path) -> dict[str, object]:
     payload = _read_json_value(path)
     if not isinstance(payload, dict):
@@ -2024,6 +3229,20 @@ def _read_json_object_list(path: Path, option_name: str) -> list[dict[str, objec
 
 def _read_json_value(path: Path) -> object:
     return json.loads(path.read_text(encoding="utf-8-sig"))
+
+
+def _parse_json_object_value(value: str, option_name: str) -> dict[str, object]:
+    raw_value = value.strip()
+    candidate_path = Path(raw_value)
+    if candidate_path.exists():
+        raw_value = candidate_path.read_text(encoding="utf-8-sig")
+    try:
+        payload = json.loads(raw_value)
+    except json.JSONDecodeError as exc:
+        raise typer.BadParameter(f"{option_name} must be a JSON object or path to one.") from exc
+    if not isinstance(payload, dict):
+        raise typer.BadParameter(f"{option_name} must decode to a JSON object.")
+    return payload
 
 
 def _parse_patch_operations(value: object) -> list[dict[str, Any]]:

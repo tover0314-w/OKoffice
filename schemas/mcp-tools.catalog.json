@@ -18,6 +18,16 @@
       "status": "beta"
     },
     {
+      "name": "agent_setup_kilo_code",
+      "maps_to": "agent.setup.kilo_code",
+      "status": "beta"
+    },
+    {
+      "name": "agent_setup_openclaw",
+      "maps_to": "agent.setup.openclaw",
+      "status": "beta"
+    },
+    {
       "name": "pdf_inspect_document",
       "maps_to": "pdf.inspect.document",
       "status": "stable"
@@ -26,6 +36,11 @@
       "name": "pdf_inspect_pages",
       "maps_to": "pdf.inspect.pages",
       "status": "stable"
+    },
+    {
+      "name": "pdf_inspect_health",
+      "maps_to": "pdf.inspect.health",
+      "status": "beta"
     },
     {
       "name": "pdf_workflow_plan",
@@ -42,51 +57,56 @@
       "maps_to": "pdf.workflow.report",
       "status": "beta"
     },
-        {
-            "name": "pdf_context_build_packet",
-            "maps_to": "pdf.context.build_packet",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_context_ingest",
-            "maps_to": "pdf.context.ingest",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_context_packet",
-            "maps_to": "pdf.context.packet",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_context_classify",
-            "maps_to": "pdf.context.classify",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_context_code_snapshot",
-            "maps_to": "pdf.context.code_snapshot",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_context_data_profile",
-            "maps_to": "pdf.context.data_profile",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_compose_plan",
-            "maps_to": "pdf.compose.plan",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_compose_render_ir",
-            "maps_to": "pdf.compose.render_ir",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_compose_from_context",
-            "maps_to": "pdf.compose.from_context",
-            "status": "beta"
-        },
+    {
+      "name": "pdf_context_build_packet",
+      "maps_to": "pdf.context.build_packet",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_context_ingest",
+      "maps_to": "pdf.context.ingest",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_context_packet",
+      "maps_to": "pdf.context.packet",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_context_classify",
+      "maps_to": "pdf.context.classify",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_context_image_analyze",
+      "maps_to": "pdf.context.image_analyze",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_context_code_snapshot",
+      "maps_to": "pdf.context.code_snapshot",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_context_data_profile",
+      "maps_to": "pdf.context.data_profile",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_compose_plan",
+      "maps_to": "pdf.compose.plan",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_compose_render_ir",
+      "maps_to": "pdf.compose.render_ir",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_compose_from_context",
+      "maps_to": "pdf.compose.from_context",
+      "status": "beta"
+    },
     {
       "name": "pdf_compose_add_code_block",
       "maps_to": "pdf.compose.add_code_block",
@@ -148,6 +168,11 @@
       "status": "beta"
     },
     {
+      "name": "pdf_evidence_cite_claims",
+      "maps_to": "pdf.evidence.cite_claims",
+      "status": "beta"
+    },
+    {
       "name": "pdf_evidence_context_packet_report",
       "maps_to": "pdf.evidence.context_packet_report",
       "status": "beta"
@@ -155,6 +180,21 @@
     {
       "name": "pdf_artifacts_export_bundle",
       "maps_to": "pdf.artifacts.export_bundle",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_artifacts_manifest",
+      "maps_to": "pdf.artifacts.manifest",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_artifacts_graph",
+      "maps_to": "pdf.artifacts.graph",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_artifacts_source_map",
+      "maps_to": "pdf.artifacts.source_map",
       "status": "beta"
     },
     {
@@ -218,6 +258,16 @@
       "status": "stable"
     },
     {
+      "name": "pdf_n_up",
+      "maps_to": "pdf.organize.n_up",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_booklet",
+      "maps_to": "pdf.organize.booklet",
+      "status": "beta"
+    },
+    {
       "name": "pdf_optimize_compress",
       "maps_to": "pdf.optimize.compress",
       "status": "stable"
@@ -225,6 +275,16 @@
     {
       "name": "pdf_optimize_repair",
       "maps_to": "pdf.optimize.repair",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_optimize_remove_unused_objects",
+      "maps_to": "pdf.optimize.remove_unused_objects",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_optimize_validate_pdfa",
+      "maps_to": "pdf.optimize.validate_pdfa",
       "status": "beta"
     },
     {
@@ -246,6 +306,11 @@
       "name": "pdf_extract_text",
       "maps_to": "pdf.convert.pdf_to_text",
       "status": "stable"
+    },
+    {
+      "name": "pdf_extract_fonts",
+      "maps_to": "pdf.convert.extract_fonts",
+      "status": "beta"
     },
     {
       "name": "pdf_pdf_to_json",
@@ -318,6 +383,56 @@
       "status": "stable"
     },
     {
+      "name": "pdf_add_shape",
+      "maps_to": "pdf.edit.add_shape",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_underline",
+      "maps_to": "pdf.edit.underline",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_strikeout",
+      "maps_to": "pdf.edit.strikeout",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_freehand_draw",
+      "maps_to": "pdf.edit.freehand_draw",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_resize_pages",
+      "maps_to": "pdf.edit.resize_pages",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_add_margin",
+      "maps_to": "pdf.edit.add_margin",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_underlay",
+      "maps_to": "pdf.edit.underlay",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_compare_semantic_diff",
+      "maps_to": "pdf.compare.semantic_diff",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_compare_visual_diff",
+      "maps_to": "pdf.compare.visual_diff",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_compare_version_report",
+      "maps_to": "pdf.compare.version_report",
+      "status": "beta"
+    },
+    {
       "name": "pdf_metadata_read",
       "maps_to": "pdf.metadata.read",
       "status": "stable"
@@ -333,6 +448,11 @@
       "status": "stable"
     },
     {
+      "name": "pdf_metadata_update_outline",
+      "maps_to": "pdf.metadata.update_outline",
+      "status": "beta"
+    },
+    {
       "name": "pdf_metadata_remove",
       "maps_to": "pdf.metadata.remove",
       "status": "stable"
@@ -340,6 +460,16 @@
     {
       "name": "pdf_security_remove_metadata",
       "maps_to": "pdf.security.remove_metadata",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_security_redact",
+      "maps_to": "pdf.security.redact",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_security_verify_redaction",
+      "maps_to": "pdf.security.verify_redaction",
       "status": "beta"
     },
     {
@@ -363,8 +493,83 @@
       "status": "stable"
     },
     {
+      "name": "pdf_validation_visual_diff",
+      "maps_to": "pdf.validation.visual_diff",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_validation_redaction_check",
+      "maps_to": "pdf.validation.redaction_check",
+      "status": "beta"
+    },
+    {
       "name": "pdf_ai_parse_lite",
       "maps_to": "pdf.ai.parse.lite",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_ai_parse_figures",
+      "maps_to": "pdf.ai.parse.figures",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_ai_parse_formulas",
+      "maps_to": "pdf.ai.parse.formulas",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_ai_parse_charts",
+      "maps_to": "pdf.ai.parse.charts",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_ai_parse_references",
+      "maps_to": "pdf.ai.parse.references",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_forms_create",
+      "maps_to": "pdf.forms.create",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_forms_import_data",
+      "maps_to": "pdf.forms.import_data",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_forms_validate",
+      "maps_to": "pdf.forms.validate",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_ocr",
+      "maps_to": "pdf.ocr_scan.ocr",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_ocr_searchable_pdf",
+      "maps_to": "pdf.ocr_scan.searchable_pdf",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_ocr_scan_to_pdf",
+      "maps_to": "pdf.ocr_scan.scan_to_pdf",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_ocr_despeckle",
+      "maps_to": "pdf.ocr_scan.despeckle",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_ocr_remove_existing_ocr",
+      "maps_to": "pdf.ocr_scan.remove_existing_ocr",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_ocr_multilingual_ocr",
+      "maps_to": "pdf.ocr_scan.multilingual_ocr",
       "status": "beta"
     },
     {
@@ -400,6 +605,101 @@
     {
       "name": "pdf_ai_rag_search",
       "maps_to": "pdf.ai.rag.search",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_optimize_subset_fonts",
+      "maps_to": "pdf.optimize.subset_fonts",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_optimize_to_pdfa",
+      "maps_to": "pdf.optimize.to_pdfa",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_html_to_pdf",
+      "maps_to": "pdf.convert.html_to_pdf",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_url_to_pdf",
+      "maps_to": "pdf.convert.url_to_pdf",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_docx_to_pdf",
+      "maps_to": "pdf.convert.docx_to_pdf",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_pptx_to_pdf",
+      "maps_to": "pdf.convert.pptx_to_pdf",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_xlsx_to_pdf",
+      "maps_to": "pdf.convert.xlsx_to_pdf",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_pdf_to_html",
+      "maps_to": "pdf.convert.pdf_to_html",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_pdf_to_docx",
+      "maps_to": "pdf.convert.pdf_to_docx",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_pdf_to_pptx",
+      "maps_to": "pdf.convert.pdf_to_pptx",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_pdf_to_xlsx",
+      "maps_to": "pdf.convert.pdf_to_xlsx",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_security_protect",
+      "maps_to": "pdf.security.protect",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_security_unlock_authorized",
+      "maps_to": "pdf.security.unlock_authorized",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_security_encrypt",
+      "maps_to": "pdf.security.encrypt",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_security_decrypt_authorized",
+      "maps_to": "pdf.security.decrypt_authorized",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_security_sign",
+      "maps_to": "pdf.security.sign",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_security_verify_signature",
+      "maps_to": "pdf.security.verify_signature",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_security_malware_scan",
+      "maps_to": "pdf.security.malware_scan",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_security_sanitize",
+      "maps_to": "pdf.security.sanitize",
       "status": "beta"
     }
   ]

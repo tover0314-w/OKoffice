@@ -73,6 +73,73 @@ export async function runCli(
         stdout,
       );
     }
+    if (command === "agent-setup-kilo-code") {
+      return emitResult(
+        await client.setupKiloCode({
+          outputPath: takeOption(args, ["--output", "-o"]),
+          safeRoot: takeOption(args, ["--safe-root"]),
+          command: takeOption(args, ["--command"]),
+          argsPrefix: takeOptions(args, ["--arg-prefix"]),
+          serverName: takeOption(args, ["--server-name"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "agent-setup-openclaw") {
+      return emitResult(
+        await client.setupOpenClaw({
+          outputPath: takeOption(args, ["--output", "-o"]),
+          safeRoot: takeOption(args, ["--safe-root"]),
+          command: takeOption(args, ["--command"]),
+          argsPrefix: takeOptions(args, ["--arg-prefix"]),
+          serverName: takeOption(args, ["--server-name"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "n-up") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing PDF path for n-up.");
+      }
+      return emitResult(
+        await client.nUp({
+          inputPath,
+          outputPath: takeRequiredOption(args, ["--output", "-o"]),
+          pages: takeOption(args, ["--pages"]),
+          perSheet: takeIntegerOption(args, ["--per-sheet"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "booklet") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing PDF path for booklet.");
+      }
+      return emitResult(
+        await client.booklet({
+          inputPath,
+          outputPath: takeRequiredOption(args, ["--output", "-o"]),
+          pages: takeOption(args, ["--pages"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "metadata-update-outline") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing PDF path for metadata-update-outline.");
+      }
+      return emitResult(
+        await client.metadataUpdateOutline({
+          inputPath,
+          outline: await parseRequiredObjectList(takeRequiredOption(args, ["--outline"])),
+          outputPath: takeRequiredOption(args, ["--output", "-o"]),
+        }),
+        stdout,
+      );
+    }
     if (command === "inspect") {
       const path = args.shift();
       if (!path) {
@@ -93,6 +160,13 @@ export async function runCli(
         }),
         stdout,
       );
+    }
+    if (command === "inspect-health") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing PDF path for inspect-health.");
+      }
+      return emitResult(await client.inspectHealth({ inputPath }), stdout);
     }
     if (command === "workflow-plan") {
       return emitResult(
@@ -239,6 +313,22 @@ export async function runCli(
         stdout,
       );
     }
+    if (command === "context-image-analyze") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing image path for context-image-analyze.");
+      }
+      return emitResult(
+        await client.contextImageAnalyze({
+          inputPath,
+          languages: takeOptions(args, ["--language"]),
+          runOcr: takeBooleanOption(args, "--run-ocr", "--skip-ocr"),
+          engine: takeOption(args, ["--engine"]),
+          psm: takeIntegerOption(args, ["--psm"]),
+        }),
+        stdout,
+      );
+    }
     if (command === "target-profiles") {
       return emitResult(
         await client.targetProfiles({
@@ -286,6 +376,8 @@ export async function runCli(
           outputPath: takeRequiredOption(args, ["--output", "-o"]),
           stylePack: takeOption(args, ["--style-pack"]),
           title: takeOption(args, ["--title"]),
+          renderer: takeOption(args, ["--renderer"]),
+          htmlOutputPath: takeOption(args, ["--html-output"]),
         }),
         stdout,
       );
@@ -304,6 +396,8 @@ export async function runCli(
           outputPath: takeRequiredOption(args, ["--output", "-o"]),
           stylePack: takeOption(args, ["--style-pack"]),
           title: takeOption(args, ["--title"]),
+          renderer: takeOption(args, ["--renderer"]),
+          htmlOutputPath: takeOption(args, ["--html-output"]),
         }),
         stdout,
       );
@@ -494,6 +588,18 @@ export async function runCli(
         stdout,
       );
     }
+    if (command === "evidence-cite-claims") {
+      return emitResult(
+        await client.evidenceCiteClaims({
+          claims: await parseRequiredObjectList(takeRequiredOption(args, ["--claims"])),
+          compositionPath: takeOption(args, ["--composition"]),
+          sourceMapPath: takeOption(args, ["--source-map"]),
+          contextPacketPath: takeOption(args, ["--context-packet"]),
+          outputPath: takeOption(args, ["--output", "-o"]),
+        }),
+        stdout,
+      );
+    }
     if (command === "evidence-context-packet-report") {
       const contextPacketPath = args.shift();
       if (!contextPacketPath) {
@@ -522,6 +628,58 @@ export async function runCli(
           outputPath: takeRequiredOption(args, ["--output", "-o"]),
           title: takeOption(args, ["--title"]),
           metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
+        }),
+        stdout,
+      );
+    }
+    if (command === "artifact-manifest") {
+      const artifactPaths = takeOptions(args, ["--file"]);
+      if (artifactPaths.length === 0) {
+        throw new UsageError("Missing --file for artifact-manifest.");
+      }
+      const metadata = parseBindings(takeOptions(args, ["--metadata"]));
+      return emitResult(
+        await client.artifactManifest({
+          artifactPaths,
+          outputPath: takeOption(args, ["--output", "-o"]),
+          title: takeOption(args, ["--title"]),
+          metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
+        }),
+        stdout,
+      );
+    }
+    if (command === "artifact-graph") {
+      const artifactManifestPath = takeOption(args, ["--manifest"]);
+      const artifactPaths = takeOptions(args, ["--file"]);
+      if (!artifactManifestPath && artifactPaths.length === 0) {
+        throw new UsageError("Missing --manifest or --file for artifact-graph.");
+      }
+      return emitResult(
+        await client.artifactGraph({
+          artifactManifestPath,
+          artifactPaths: artifactPaths.length > 0 ? artifactPaths : undefined,
+          outputPath: takeOption(args, ["--output", "-o"]),
+          title: takeOption(args, ["--title"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "artifact-source-map") {
+      const compositionPath = takeOption(args, ["--composition"]);
+      const sourceMapPath = takeOption(args, ["--source-map"]);
+      const artifactPaths = takeOptions(args, ["--file"]);
+      if (!compositionPath && !sourceMapPath) {
+        throw new UsageError("Missing --composition or --source-map for artifact-source-map.");
+      }
+      return emitResult(
+        await client.artifactSourceMap({
+          compositionPath,
+          sourceMapPath,
+          contextPacketPath: takeOption(args, ["--context-packet"]),
+          artifactManifestPath: takeOption(args, ["--manifest"]),
+          artifactPaths: artifactPaths.length > 0 ? artifactPaths : undefined,
+          outputPath: takeOption(args, ["--output", "-o"]),
+          title: takeOption(args, ["--title"]),
         }),
         stdout,
       );
@@ -653,6 +811,319 @@ export async function runCli(
         stdout,
       );
     }
+    if (command === "remove-unused-objects") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing PDF path for remove-unused-objects.");
+      }
+      return emitResult(
+        await client.removeUnusedObjects({
+          inputPath,
+          outputPath: takeRequiredOption(args, ["--output", "-o"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "validate-pdfa") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing PDF path for validate-pdfa.");
+      }
+      return emitResult(await client.validatePdfa({ inputPath }), stdout);
+    }
+    if (command === "subset-fonts") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing PDF path for subset-fonts.");
+      }
+      return emitResult(
+        await client.subsetFonts({
+          inputPath,
+          outputPath: takeRequiredOption(args, ["--output", "-o"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "to-pdfa") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing PDF path for to-pdfa.");
+      }
+      return emitResult(
+        await client.toPdfa({
+          inputPath,
+          outputPath: takeRequiredOption(args, ["--output", "-o"]),
+          profile: takeOption(args, ["--profile"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "html-to-pdf") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing HTML path for html-to-pdf.");
+      }
+      return emitResult(
+        await client.htmlToPdf({
+          inputPath,
+          outputPath: takeRequiredOption(args, ["--output", "-o"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "url-to-pdf") {
+      const url = args.shift();
+      if (!url) {
+        throw new UsageError("Missing URL for url-to-pdf.");
+      }
+      return emitResult(
+        await client.urlToPdf({
+          url,
+          outputPath: takeRequiredOption(args, ["--output", "-o"]),
+          allowPrivateHosts: takeFlag(args, ["--allow-private-hosts"]),
+          allowFileUrls: takeFlag(args, ["--allow-file-urls"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "docx-to-pdf") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing DOCX path for docx-to-pdf.");
+      }
+      return emitResult(
+        await client.docxToPdf({
+          inputPath,
+          outputPath: takeRequiredOption(args, ["--output", "-o"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "pptx-to-pdf") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing PPTX path for pptx-to-pdf.");
+      }
+      return emitResult(
+        await client.pptxToPdf({
+          inputPath,
+          outputPath: takeRequiredOption(args, ["--output", "-o"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "xlsx-to-pdf") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing XLSX path for xlsx-to-pdf.");
+      }
+      return emitResult(
+        await client.xlsxToPdf({
+          inputPath,
+          outputPath: takeRequiredOption(args, ["--output", "-o"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "pdf-to-html") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing PDF path for pdf-to-html.");
+      }
+      return emitResult(
+        await client.pdfToHtml({
+          inputPath,
+          outputPath: takeRequiredOption(args, ["--output", "-o"]),
+          pages: takeOption(args, ["--pages"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "pdf-to-docx") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing PDF path for pdf-to-docx.");
+      }
+      return emitResult(
+        await client.pdfToDocx({
+          inputPath,
+          outputPath: takeRequiredOption(args, ["--output", "-o"]),
+          pages: takeOption(args, ["--pages"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "pdf-to-pptx") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing PDF path for pdf-to-pptx.");
+      }
+      return emitResult(
+        await client.pdfToPptx({
+          inputPath,
+          outputPath: takeRequiredOption(args, ["--output", "-o"]),
+          pages: takeOption(args, ["--pages"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "pdf-to-xlsx") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing PDF path for pdf-to-xlsx.");
+      }
+      return emitResult(
+        await client.pdfToXlsx({
+          inputPath,
+          outputPath: takeRequiredOption(args, ["--output", "-o"]),
+          pages: takeOption(args, ["--pages"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "security-protect") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing PDF path for security-protect.");
+      }
+      return emitResult(
+        await client.securityProtect({
+          inputPath,
+          outputPath: takeRequiredOption(args, ["--output", "-o"]),
+          password: takeRequiredOption(args, ["--password"]),
+          ownerPassword: takeOption(args, ["--owner-password"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "security-encrypt") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing PDF path for security-encrypt.");
+      }
+      return emitResult(
+        await client.securityEncrypt({
+          inputPath,
+          outputPath: takeRequiredOption(args, ["--output", "-o"]),
+          password: takeRequiredOption(args, ["--password"]),
+          ownerPassword: takeOption(args, ["--owner-password"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "security-unlock-authorized") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing PDF path for security-unlock-authorized.");
+      }
+      return emitResult(
+        await client.securityUnlockAuthorized({
+          inputPath,
+          outputPath: takeRequiredOption(args, ["--output", "-o"]),
+          password: takeRequiredOption(args, ["--password"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "security-decrypt-authorized") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing PDF path for security-decrypt-authorized.");
+      }
+      return emitResult(
+        await client.securityDecryptAuthorized({
+          inputPath,
+          outputPath: takeRequiredOption(args, ["--output", "-o"]),
+          password: takeRequiredOption(args, ["--password"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "security-sign") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing PDF path for security-sign.");
+      }
+      return emitResult(
+        await client.securitySign({
+          inputPath,
+          outputPath: takeRequiredOption(args, ["--output", "-o"]),
+          secret: takeOption(args, ["--secret"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "security-verify-signature") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing PDF path for security-verify-signature.");
+      }
+      return emitResult(
+        await client.securityVerifySignature({
+          inputPath,
+          signaturePath: takeRequiredOption(args, ["--signature"]),
+          secret: takeOption(args, ["--secret"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "security-malware-scan") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing PDF path for security-malware-scan.");
+      }
+      return emitResult(await client.securityMalwareScan({ inputPath }), stdout);
+    }
+    if (command === "security-sanitize") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing PDF path for security-sanitize.");
+      }
+      return emitResult(
+        await client.securitySanitize({
+          inputPath,
+          outputPath: takeRequiredOption(args, ["--output", "-o"]),
+          removeMetadata: takeBooleanOption(args, "--remove-metadata", "--keep-metadata"),
+        }),
+        stdout,
+      );
+    }
+    if (command === "security-redact") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing PDF path for security-redact.");
+      }
+      const regions = await Promise.all(
+        takeOptions(args, ["--region"]).map((region) => parseRequiredObject(region, "--region")),
+      );
+      return emitResult(
+        await client.securityRedact({
+          inputPath,
+          outputPath: takeRequiredOption(args, ["--output", "-o"]),
+          regions: regions.map((region) => ({
+            page: Number(region.page),
+            bbox: region.bbox as number[],
+            ...(typeof region.label === "string" ? { label: region.label } : {}),
+          })),
+          fillColor: takeOption(args, ["--fill-color"]),
+          renderScale: takeNumberOption(args, ["--render-scale"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "security-verify-redaction") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing PDF path for security-verify-redaction.");
+      }
+      return emitResult(
+        await client.securityVerifyRedaction({
+          inputPath,
+          searchTerms: takeOptions(args, ["--search-term"]),
+        }),
+        stdout,
+      );
+    }
     if (command === "watermark") {
       const inputPath = args.shift();
       if (!inputPath) {
@@ -686,6 +1157,135 @@ export async function runCli(
           pages: takeOption(args, ["--pages"]),
           template: takeOption(args, ["--template"]),
           fontSize: takeIntegerOption(args, ["--font-size"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "add-shape") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing PDF path for add-shape.");
+      }
+      return emitResult(
+        await client.addShape({
+          inputPath,
+          outputPath: takeRequiredOption(args, ["--output", "-o"]),
+          shape: takeRequiredOption(args, ["--shape"]),
+          page: takeRequiredIntegerOption(args, ["--page"]),
+          x: takeRequiredNumberOption(args, ["--x"]),
+          y: takeRequiredNumberOption(args, ["--y"]),
+          width: takeRequiredNumberOption(args, ["--width"]),
+          height: takeRequiredNumberOption(args, ["--height"]),
+          strokeColor: takeOption(args, ["--stroke-color"]),
+          fillColor: takeOption(args, ["--fill-color"]),
+          lineWidth: takeNumberOption(args, ["--line-width"]),
+          opacity: takeNumberOption(args, ["--opacity"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "underline") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing PDF path for underline.");
+      }
+      return emitResult(
+        await client.underline({
+          inputPath,
+          outputPath: takeRequiredOption(args, ["--output", "-o"]),
+          page: takeRequiredIntegerOption(args, ["--page"]),
+          bbox: parseNumberList(takeRequiredOption(args, ["--bbox"]), 4, "--bbox"),
+          color: takeOption(args, ["--color"]),
+          lineWidth: takeNumberOption(args, ["--line-width"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "strikeout") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing PDF path for strikeout.");
+      }
+      return emitResult(
+        await client.strikeout({
+          inputPath,
+          outputPath: takeRequiredOption(args, ["--output", "-o"]),
+          page: takeRequiredIntegerOption(args, ["--page"]),
+          bbox: parseNumberList(takeRequiredOption(args, ["--bbox"]), 4, "--bbox"),
+          color: takeOption(args, ["--color"]),
+          lineWidth: takeNumberOption(args, ["--line-width"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "freehand-draw") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing PDF path for freehand-draw.");
+      }
+      return emitResult(
+        await client.freehandDraw({
+          inputPath,
+          outputPath: takeRequiredOption(args, ["--output", "-o"]),
+          page: takeRequiredIntegerOption(args, ["--page"]),
+          points: parsePointsPayload(takeRequiredOption(args, ["--points"])),
+          strokeColor: takeOption(args, ["--stroke-color"]),
+          lineWidth: takeNumberOption(args, ["--line-width"]),
+          opacity: takeNumberOption(args, ["--opacity"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "resize-pages") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing PDF path for resize-pages.");
+      }
+      return emitResult(
+        await client.resizePages({
+          inputPath,
+          outputPath: takeRequiredOption(args, ["--output", "-o"]),
+          width: takeRequiredNumberOption(args, ["--width"]),
+          height: takeRequiredNumberOption(args, ["--height"]),
+          pages: takeOption(args, ["--pages"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "add-margin") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing PDF path for add-margin.");
+      }
+      return emitResult(
+        await client.addMargin({
+          inputPath,
+          outputPath: takeRequiredOption(args, ["--output", "-o"]),
+          margin: takeNumberOption(args, ["--margin"]),
+          pages: takeOption(args, ["--pages"]),
+          top: takeNumberOption(args, ["--top"]),
+          right: takeNumberOption(args, ["--right"]),
+          bottom: takeNumberOption(args, ["--bottom"]),
+          left: takeNumberOption(args, ["--left"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "underlay") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing PDF path for underlay.");
+      }
+      return emitResult(
+        await client.underlay({
+          inputPath,
+          outputPath: takeRequiredOption(args, ["--output", "-o"]),
+          text: takeRequiredOption(args, ["--text"]),
+          pages: takeOption(args, ["--pages"]),
+          fontSize: takeIntegerOption(args, ["--font-size"]),
+          opacity: takeNumberOption(args, ["--opacity"]),
+          angle: takeIntegerOption(args, ["--angle"]),
+          color: takeOption(args, ["--color"]),
         }),
         stdout,
       );
@@ -729,6 +1329,19 @@ export async function runCli(
         stdout,
       );
     }
+    if (command === "redaction-check") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing PDF path for redaction-check.");
+      }
+      return emitResult(
+        await client.validationRedactionCheck({
+          inputPath,
+          searchTerms: takeOptions(args, ["--search-term"]),
+        }),
+        stdout,
+      );
+    }
     if (command === "extract-images") {
       const inputPath = args.shift();
       if (!inputPath) {
@@ -743,6 +1356,19 @@ export async function runCli(
         stdout,
       );
     }
+    if (command === "extract-fonts") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing PDF path for extract-fonts.");
+      }
+      return emitResult(
+        await client.extractFonts({
+          inputPath,
+          pages: takeOption(args, ["--pages"]),
+        }),
+        stdout,
+      );
+    }
     if (command === "parse-lite") {
       const inputPath = args.shift();
       if (!inputPath) {
@@ -750,6 +1376,231 @@ export async function runCli(
       }
       return emitResult(
         await client.parseLite({ inputPath, pages: takeOption(args, ["--pages"]) }),
+        stdout,
+      );
+    }
+    if (command === "semantic-diff") {
+      const beforePath = args.shift();
+      const afterPath = args.shift();
+      if (!beforePath || !afterPath) {
+        throw new UsageError("Missing PDF paths for semantic-diff.");
+      }
+      return emitResult(
+        await client.semanticDiff({
+          beforePath,
+          afterPath,
+          pages: takeOption(args, ["--pages"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "version-report") {
+      const beforePath = args.shift();
+      const afterPath = args.shift();
+      if (!beforePath || !afterPath) {
+        throw new UsageError("Missing PDF paths for version-report.");
+      }
+      return emitResult(
+        await client.versionReport({
+          beforePath,
+          afterPath,
+          outputPath: takeOption(args, ["--output", "-o"]),
+          pages: takeOption(args, ["--pages"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "compare-visual-diff") {
+      const beforePath = args.shift();
+      const afterPath = args.shift();
+      if (!beforePath || !afterPath) {
+        throw new UsageError("Missing PDF paths for compare-visual-diff.");
+      }
+      return emitResult(
+        await client.visualDiff({
+          beforePath,
+          afterPath,
+          pages: takeOption(args, ["--pages"]),
+          maxDifferenceRatio: takeNumberOption(args, ["--max-difference-ratio"]),
+          renderScale: takeNumberOption(args, ["--render-scale"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "visual-diff") {
+      const beforePath = args.shift();
+      const afterPath = args.shift();
+      if (!beforePath || !afterPath) {
+        throw new UsageError("Missing PDF paths for visual-diff.");
+      }
+      return emitResult(
+        await client.validationVisualDiff({
+          beforePath,
+          afterPath,
+          pages: takeOption(args, ["--pages"]),
+          maxDifferenceRatio: takeNumberOption(args, ["--max-difference-ratio"]),
+          renderScale: takeNumberOption(args, ["--render-scale"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "parse-figures") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing PDF path for parse-figures.");
+      }
+      return emitResult(
+        await client.parseFigures({ inputPath, pages: takeOption(args, ["--pages"]) }),
+        stdout,
+      );
+    }
+    if (command === "parse-formulas") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing PDF path for parse-formulas.");
+      }
+      return emitResult(
+        await client.parseFormulas({ inputPath, pages: takeOption(args, ["--pages"]) }),
+        stdout,
+      );
+    }
+    if (command === "parse-charts") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing PDF path for parse-charts.");
+      }
+      return emitResult(
+        await client.parseCharts({ inputPath, pages: takeOption(args, ["--pages"]) }),
+        stdout,
+      );
+    }
+    if (command === "parse-references") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing PDF path for parse-references.");
+      }
+      return emitResult(
+        await client.parseReferences({ inputPath, pages: takeOption(args, ["--pages"]) }),
+        stdout,
+      );
+    }
+    if (command === "forms-create") {
+      const outputPath = takeRequiredOption(args, ["--output", "-o"]);
+      const fields = await Promise.all(
+        takeOptions(args, ["--field"]).map((field) => parseRequiredObject(field, "--field")),
+      );
+      if (fields.length === 0) {
+        throw new UsageError("forms-create requires at least one --field JSON object.");
+      }
+      return emitResult(await client.formsCreate({ outputPath, fields }), stdout);
+    }
+    if (command === "forms-import-data") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing PDF path for forms-import-data.");
+      }
+      return emitResult(
+        await client.formsImportData({
+          inputPath,
+          data: await parseRequiredObject(takeRequiredOption(args, ["--data"]), "--data"),
+          outputPath: takeRequiredOption(args, ["--output", "-o"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "forms-validate") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing PDF path for forms-validate.");
+      }
+      return emitResult(
+        await client.formsValidate({
+          inputPath,
+          requiredFields: takeOptions(args, ["--required-field"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "ocr-scan-to-pdf") {
+      const outputPath = takeRequiredOption(args, ["--output", "-o"]);
+      const imagePaths = [...args];
+      if (imagePaths.length === 0) {
+        throw new UsageError("ocr-scan-to-pdf requires at least one image path.");
+      }
+      return emitResult(await client.ocrScanToPdf({ imagePaths, outputPath }), stdout);
+    }
+    if (command === "ocr") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing PDF or image path for ocr.");
+      }
+      return emitResult(
+        await client.ocr({
+          inputPath,
+          pages: takeOption(args, ["--pages"]),
+          languages: takeOptions(args, ["--language"]),
+          dpi: takeNumberOption(args, ["--dpi"]),
+          engine: takeOption(args, ["--engine"]),
+          psm: takeNumberOption(args, ["--psm"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "ocr-searchable-pdf") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing PDF path for ocr-searchable-pdf.");
+      }
+      return emitResult(
+        await client.ocrSearchablePdf({
+          inputPath,
+          outputPath: takeRequiredOption(args, ["--output", "-o"]),
+          pages: takeOption(args, ["--pages"]),
+          languages: takeOptions(args, ["--language"]),
+          dpi: takeNumberOption(args, ["--dpi"]),
+          engine: takeOption(args, ["--engine"]),
+          psm: takeNumberOption(args, ["--psm"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "ocr-despeckle") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing PDF path for ocr-despeckle.");
+      }
+      return emitResult(
+        await client.ocrDespeckle({
+          inputPath,
+          outputPath: takeRequiredOption(args, ["--output", "-o"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "ocr-remove-existing") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing PDF path for ocr-remove-existing.");
+      }
+      return emitResult(
+        await client.ocrRemoveExistingOcr({
+          inputPath,
+          outputPath: takeRequiredOption(args, ["--output", "-o"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "ocr-multilingual") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing PDF path for ocr-multilingual.");
+      }
+      return emitResult(
+        await client.ocrMultilingual({
+          inputPath,
+          outputPath: takeRequiredOption(args, ["--output", "-o"]),
+          languages: takeOptions(args, ["--language"]),
+        }),
         stdout,
       );
     }
@@ -1134,6 +1985,14 @@ function takeNumberOption(args: string[], names: string[]): number | undefined {
   return value;
 }
 
+function takeRequiredNumberOption(args: string[], names: string[]): number {
+  const value = takeNumberOption(args, names);
+  if (value === undefined) {
+    throw new UsageError(`Missing required option: ${names[0]}`);
+  }
+  return value;
+}
+
 function parsePayload(raw: string): JsonObject {
   const parsed = JSON.parse(raw) as unknown;
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
@@ -1153,6 +2012,18 @@ async function parseOptionalObject(raw: string | undefined): Promise<JsonObject 
       return parsePayload(await readFile(raw, "utf8"));
     } catch (error) {
       throw new UsageError(`--data must be a JSON object or readable JSON file: ${String(error)}`);
+    }
+  }
+}
+
+async function parseRequiredObject(raw: string, optionName: string): Promise<JsonObject> {
+  try {
+    return parsePayload(raw);
+  } catch {
+    try {
+      return parsePayload(await readFile(raw, "utf8"));
+    } catch (error) {
+      throw new UsageError(`${optionName} must be a JSON object or readable JSON file: ${String(error)}`);
     }
   }
 }
@@ -1177,6 +2048,10 @@ async function parseOptionalObjectList(raw: string | undefined): Promise<JsonObj
     throw new UsageError("Expected a JSON array of objects.");
   }
   return parsed;
+}
+
+async function parseRequiredObjectList(raw: string): Promise<JsonObject[]> {
+  return (await parseOptionalObjectList(raw)) ?? [];
 }
 
 function parseScope(raw: string | undefined): "project" | "local" | "user" | undefined {
@@ -1219,6 +2094,32 @@ function parseColorOverrides(rawColors: string[]): Record<string, string> | unde
 
 function parseCsvValues(raw: string): string[] {
   return raw.split(",").map((item) => item.trim()).filter(Boolean);
+}
+
+function parseNumberList(raw: string, expected: number, label: string): number[] {
+  const values = raw.split(",").map((item) => Number(item.trim()));
+  if (values.length !== expected || values.some((value) => !Number.isFinite(value))) {
+    throw new UsageError(`${label} must contain ${expected} comma-separated numbers.`);
+  }
+  return values;
+}
+
+function parsePointsPayload(raw: string): number[][] {
+  const parsed = JSON.parse(raw) as unknown;
+  if (!Array.isArray(parsed)) {
+    throw new UsageError("--points must be a JSON array of [x,y] pairs.");
+  }
+  return parsed.map((point) => {
+    if (!Array.isArray(point) || point.length !== 2) {
+      throw new UsageError("--points entries must be [x,y] pairs.");
+    }
+    const x = Number(point[0]);
+    const y = Number(point[1]);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) {
+      throw new UsageError("--points entries must contain numeric x/y values.");
+    }
+    return [x, y];
+  });
 }
 
 async function contextItemFromCli(input: {
@@ -1337,8 +2238,14 @@ function helpText(): string {
     "  agentpdf-node run TOOL --payload '{...}' [--base-url URL]",
     "  agentpdf-node agent-setup-claude-code [-o .mcp.json] [--safe-root '${CLAUDE_PROJECT_DIR:-.}']",
     "  agentpdf-node agent-setup-codex [-o codex.mcp.json] [--safe-root .]",
+    "  agentpdf-node agent-setup-kilo-code [-o kilo-code.mcp.json] [--safe-root .]",
+    "  agentpdf-node agent-setup-openclaw [-o openclaw.mcp.json] [--safe-root .]",
+    "  agentpdf-node n-up report.pdf --per-sheet 2 -o report.n-up.pdf",
+    "  agentpdf-node booklet report.pdf -o report.booklet.pdf",
+    "  agentpdf-node metadata-update-outline report.pdf --outline outline.json -o outlined.pdf",
     "  agentpdf-node inspect PATH [--base-url URL]",
     "  agentpdf-node inspect-pages PATH [--pages 1-3] [--render-check]",
+    "  agentpdf-node inspect-health FILE",
     "  agentpdf-node workflow-plan --goal GOAL [--input-path FILE]",
     "  agentpdf-node workflow-run --payload '{...}' [--binding KEY=VALUE] [--dry-run]",
     "  agentpdf-node workflow-report --payload '{...}' [-o report.md]",
@@ -1348,11 +2255,12 @@ function helpText(): string {
     "  agentpdf-node context-classify context.packet.json [--profile technical_audit] [-o context.classification.json]",
     "  agentpdf-node code-snapshot src/service.ts [--line-start 1 --line-end 20] [-o code.context-item.json]",
     "  agentpdf-node data-profile metrics.csv [--sheet Sheet1] [-o data.context-item.json]",
+    "  agentpdf-node context-image-analyze scan.png [--language eng] [--skip-ocr]",
     "  agentpdf-node target-profiles [-o profiles.json]",
     "  agentpdf-node target-validate --target-profile '{...}' [-o validation.json]",
     "  agentpdf-node compose-plan context.packet.json --profile technical_audit [-o composition.plan.json]",
     "  agentpdf-node compose-render-ir composition.plan.json -o report.pdf",
-    "  agentpdf-node compose-from-context context.packet.json --profile technical_audit -o report.pdf",
+    "  agentpdf-node compose-from-context context.packet.json --profile technical_audit -o report.pdf [--renderer html --html-output report.html]",
     "  agentpdf-node compose-add-code-block report.pdf --code 'print(1)' --source-ref ctx_code -o report.code.pdf",
     "  agentpdf-node compose-add-table report.pdf --columns metric,value --row latency_ms,42 -o report.table.pdf",
     "  agentpdf-node compose-add-figure report.pdf --image diagram.png --source-ref ctx_image -o report.figure.pdf",
@@ -1362,7 +2270,11 @@ function helpText(): string {
     "  agentpdf-node compose-add-slide report.pdf --title 'Review Slide' --body 'Decision evidence' --source-ref ctx_slide -o report.slide.pdf",
     "  agentpdf-node evidence-coverage-report report.composition.json [-o coverage.json]",
     "  agentpdf-node evidence-map-sources [report.composition.json] [--context-packet context.packet.json] [--blocks blocks.json] [-o source-map.json]",
+    "  agentpdf-node evidence-cite-claims --claims claims.json [--source-map source-map.json] [-o citations.json]",
     "  agentpdf-node evidence-context-packet-report context.packet.json -o context-report.pdf [--report-output context-report.json]",
+    "  agentpdf-node artifact-manifest --file OUT.pdf --file OUT.composition.json [-o artifacts.json]",
+    "  agentpdf-node artifact-graph --manifest artifacts.json [-o artifact-graph.json]",
+    "  agentpdf-node artifact-source-map --composition OUT.composition.json [--context-packet context.packet.json] [-o artifact-source-map.json]",
     "  agentpdf-node export-bundle --file OUT.pdf --file OUT.composition.json -o audit-bundle.zip",
     "  agentpdf-node verify-bundle audit-bundle.zip",
     "  agentpdf-node patch-plan report.pdf --operations '{...}' -o patch.json",
@@ -1374,13 +2286,62 @@ function helpText(): string {
     "  agentpdf-node insert-blank-pages FILE --after-page 1 -o OUT.pdf",
     "  agentpdf-node compress FILE -o OUT.pdf",
     "  agentpdf-node repair FILE -o OUT.pdf",
+    "  agentpdf-node remove-unused-objects FILE -o OUT.pdf",
+    "  agentpdf-node validate-pdfa FILE",
+    "  agentpdf-node subset-fonts FILE -o OUT.pdf",
+    "  agentpdf-node to-pdfa FILE -o OUT.pdf [--profile PDF/A-2b]",
+    "  agentpdf-node html-to-pdf input.html -o OUT.pdf",
+    "  agentpdf-node url-to-pdf https://example.com -o OUT.pdf",
+    "  agentpdf-node docx-to-pdf report.docx -o OUT.pdf",
+    "  agentpdf-node pptx-to-pdf deck.pptx -o OUT.pdf",
+    "  agentpdf-node xlsx-to-pdf metrics.xlsx -o OUT.pdf",
+    "  agentpdf-node pdf-to-html FILE -o OUT.html [--pages 1-3]",
+    "  agentpdf-node pdf-to-docx FILE -o OUT.docx [--pages 1-3]",
+    "  agentpdf-node pdf-to-pptx FILE -o OUT.pptx [--pages 1-3]",
+    "  agentpdf-node pdf-to-xlsx FILE -o OUT.xlsx [--pages 1-3]",
+    "  agentpdf-node security-protect FILE --password PASS -o OUT.pdf [--owner-password OWNER]",
+    "  agentpdf-node security-encrypt FILE --password PASS -o OUT.pdf [--owner-password OWNER]",
+    "  agentpdf-node security-unlock-authorized FILE --password PASS -o OUT.pdf",
+    "  agentpdf-node security-decrypt-authorized FILE --password PASS -o OUT.pdf",
+    "  agentpdf-node security-sign FILE -o OUT.pdf [--secret SECRET]",
+    "  agentpdf-node security-verify-signature FILE --signature FILE.signature.json [--secret SECRET]",
+    "  agentpdf-node security-malware-scan FILE",
+    "  agentpdf-node security-sanitize FILE -o OUT.pdf",
+    "  agentpdf-node security-redact FILE --region '{\"page\":1,\"bbox\":[60,700,280,760]}' -o OUT.pdf",
+    "  agentpdf-node security-verify-redaction FILE --search-term SECRET",
     "  agentpdf-node watermark FILE --text TEXT -o OUT.pdf",
     "  agentpdf-node page-numbers FILE -o OUT.pdf",
+    "  agentpdf-node add-shape FILE --shape rectangle --page 1 --x 72 --y 640 --width 120 --height 40 -o OUT.pdf",
+    "  agentpdf-node underline FILE --page 1 --bbox 72,640,180,656 -o OUT.pdf",
+    "  agentpdf-node strikeout FILE --page 1 --bbox 72,640,180,656 -o OUT.pdf",
+    "  agentpdf-node freehand-draw FILE --page 1 --points '[[72,680],[120,700]]' -o OUT.pdf",
+    "  agentpdf-node resize-pages FILE --width 612 --height 792 -o OUT.pdf",
+    "  agentpdf-node add-margin FILE --margin 36 -o OUT.pdf",
+    "  agentpdf-node underlay FILE --text DRAFT -o OUT.pdf",
     "  agentpdf-node validate FILE [--expected-pages N]",
     "  agentpdf-node render-check FILE [--pages 1-3]",
     "  agentpdf-node blank-page-check FILE [--pages 1-3]",
+    "  agentpdf-node redaction-check FILE [--search-term SECRET]",
     "  agentpdf-node extract-images FILE [--pages 1-3] [--out-dir DIR]",
+    "  agentpdf-node extract-fonts FILE [--pages 1-3]",
     "  agentpdf-node parse-lite FILE",
+    "  agentpdf-node semantic-diff BEFORE.pdf AFTER.pdf [--pages 1-3]",
+    "  agentpdf-node version-report BEFORE.pdf AFTER.pdf [-o report.md]",
+    "  agentpdf-node compare-visual-diff BEFORE.pdf AFTER.pdf [--pages 1-3]",
+    "  agentpdf-node visual-diff BEFORE.pdf AFTER.pdf [--max-difference-ratio 0.001]",
+    "  agentpdf-node parse-figures FILE [--pages 1-3]",
+    "  agentpdf-node parse-formulas FILE [--pages 1-3]",
+    "  agentpdf-node parse-charts FILE [--pages 1-3]",
+    "  agentpdf-node parse-references FILE [--pages 1-3]",
+    "  agentpdf-node forms-create --field '{\"name\":\"name\",\"label\":\"Name\"}' -o form.pdf",
+    "  agentpdf-node forms-import-data form.pdf --data '{\"name\":\"Ada\"}' -o filled.pdf",
+    "  agentpdf-node forms-validate filled.pdf --required-field name",
+    "  agentpdf-node ocr scan.png --language eng",
+    "  agentpdf-node ocr-searchable-pdf scan.pdf -o searchable.pdf --language eng",
+    "  agentpdf-node ocr-scan-to-pdf scan.png -o scan.pdf",
+    "  agentpdf-node ocr-despeckle scan.pdf -o despeckled.pdf",
+    "  agentpdf-node ocr-remove-existing scan.pdf -o no-ocr.pdf",
+    "  agentpdf-node ocr-multilingual scan.pdf --language eng --language chi_sim -o ocr.pdf",
     "  agentpdf-node pdf-to-json FILE -o OUT.json",
     "  agentpdf-node pdf-to-markdown FILE -o OUT.md",
     "  agentpdf-node rag-ingest FILE --index INDEX.json",

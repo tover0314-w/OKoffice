@@ -18,6 +18,477 @@ from agentpdf.mcp.server import pdf_artifacts_export_bundle
 runner = CliRunner()
 
 
+def test_artifact_manifest_collects_metadata_source_refs_and_evidence_links(tmp_path: Path) -> None:
+    pdf_path = tmp_path / "report.pdf"
+    composition_path = tmp_path / "report.composition.json"
+    coverage_path = tmp_path / "report.coverage.json"
+    patch_path = tmp_path / "report.patch.json"
+    output_path = tmp_path / "report.artifacts.json"
+    create_text_pdf("Artifact manifests keep generated outputs auditable.", pdf_path)
+    composition_path.write_text(
+        json.dumps(
+            {
+                "composition_id": "cmp_report",
+                "composition_ir": {
+                    "blocks": [
+                        {
+                            "block_id": "blk_summary",
+                            "type": "section",
+                            "source_refs": ["ctx_text"],
+                        }
+                    ]
+                },
+                "source_map": [{"block_id": "blk_summary", "source_ref": "ctx_text"}],
+            }
+        ),
+        encoding="utf-8",
+    )
+    coverage_path.write_text(
+        json.dumps({"coverage": {"coverage_ratio": 1.0}, "source_refs": ["ctx_text"]}),
+        encoding="utf-8",
+    )
+    patch_path.write_text(
+        json.dumps(
+            {
+                "patch_id": "patch_report",
+                "operations": [{"op": "append_markdown", "source_refs": ["ctx_patch"]}],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert hasattr(artifact_bundle, "create_artifact_manifest")
+    result = artifact_bundle.create_artifact_manifest(
+        artifact_paths=[pdf_path, composition_path, coverage_path, patch_path],
+        output_path=output_path,
+        title="Report Artifact Manifest",
+        metadata={"workflow": "context-packet-patch"},
+    )
+
+    assert result.status == "succeeded"
+    assert result.tool == "pdf.artifacts.manifest"
+    assert result.artifacts[0].mime_type == "application/json"
+    manifest = result.usage["artifact_manifest"]
+    assert manifest["manifest_version"] == "0.1"
+    assert manifest["title"] == "Report Artifact Manifest"
+    assert manifest["metadata"]["workflow"] == "context-packet-patch"
+    assert manifest["artifact_count"] == 4
+    assert manifest["source_refs"] == ["ctx_patch", "ctx_text"]
+    assert manifest["source_ref_count"] == 2
+    assert manifest["evidence_links"]["composition"] == [composition_path.resolve().as_posix()]
+    assert manifest["evidence_links"]["coverage"] == [coverage_path.resolve().as_posix()]
+    assert manifest["evidence_links"]["patch"] == [patch_path.resolve().as_posix()]
+    assert manifest["artifacts"][0]["path"] == pdf_path.resolve().as_posix()
+    assert manifest["artifacts"][0]["page_count"] == 1
+    assert manifest["artifacts"][0]["sha256"]
+    saved = json.loads(output_path.read_text(encoding="utf-8"))
+    assert saved["manifest_id"].startswith("artifact_manifest_")
+    assert saved["safety"]["mutates_inputs"] is False
+    assert result.next_recommended_tools == ["pdf.artifacts.export_bundle", "pdf.artifacts.graph"]
+
+
+def test_artifact_manifest_cli_api_and_mcp_are_exposed(tmp_path: Path) -> None:
+    pdf_path = tmp_path / "report.pdf"
+    composition_path = tmp_path / "report.composition.json"
+    create_text_pdf("Artifact manifest interfaces.", pdf_path)
+    composition_path.write_text(
+        json.dumps({"source_map": [{"source_ref": "ctx_cli"}]}),
+        encoding="utf-8",
+    )
+
+    cli_output = tmp_path / "cli-artifacts.json"
+    cli = runner.invoke(
+        app,
+        [
+            "artifacts",
+            "manifest",
+            "--file",
+            str(pdf_path),
+            "--file",
+            str(composition_path),
+            "-o",
+            str(cli_output),
+            "--title",
+            "CLI Artifact Manifest",
+            "--metadata",
+            "agent=codex",
+            "--json",
+        ],
+    )
+
+    assert cli.exit_code == 0
+    cli_payload = json.loads(cli.stdout)
+    assert cli_payload["tool"] == "pdf.artifacts.manifest"
+    assert cli_payload["usage"]["artifact_manifest"]["metadata"]["agent"] == "codex"
+    assert cli_payload["usage"]["artifact_manifest"]["source_refs"] == ["ctx_cli"]
+    assert cli_output.exists()
+
+    api_output = tmp_path / "api-artifacts.json"
+    api = TestClient(create_app())
+    api_result = api.post(
+        "/v1/tools/pdf.artifacts.manifest/run",
+        json={
+            "artifact_paths": [str(pdf_path), str(composition_path)],
+            "output_path": str(api_output),
+            "title": "API Artifact Manifest",
+            "metadata": {"agent": "rest"},
+        },
+    )
+
+    assert api_result.status_code == 200
+    assert api_result.json()["tool"] == "pdf.artifacts.manifest"
+    assert api_result.json()["usage"]["artifact_manifest"]["metadata"]["agent"] == "rest"
+    assert api_output.exists()
+
+    assert hasattr(mcp_server, "pdf_artifacts_manifest")
+    mcp_output = tmp_path / "mcp-artifacts.json"
+    mcp = json.loads(
+        mcp_server.pdf_artifacts_manifest(
+            [str(pdf_path), str(composition_path)],
+            output_path=str(mcp_output),
+            title="MCP Artifact Manifest",
+            metadata={"agent": "mcp"},
+        )
+    )
+
+    assert mcp["tool"] == "pdf.artifacts.manifest"
+    assert mcp["usage"]["artifact_manifest"]["title"] == "MCP Artifact Manifest"
+    assert mcp_output.exists()
+
+
+def test_artifact_graph_builds_lineage_from_manifest(tmp_path: Path) -> None:
+    pdf_path = tmp_path / "report-patched.pdf"
+    composition_path = tmp_path / "report.composition.json"
+    source_map_path = tmp_path / "report.source-map.json"
+    citations_path = tmp_path / "report.citations.json"
+    patch_path = tmp_path / "report.patch.json"
+    manifest_path = tmp_path / "report.artifacts.json"
+    graph_path = tmp_path / "report.artifact-graph.json"
+    create_text_pdf("Artifact graphs make evidence lineage traversable.", pdf_path)
+    composition_path.write_text(
+        json.dumps(
+            {
+                "composition_id": "cmp_report",
+                "blocks": [{"block_id": "blk_summary", "source_refs": ["ctx_text"]}],
+            }
+        ),
+        encoding="utf-8",
+    )
+    source_map_path.write_text(
+        json.dumps({"source_map": [{"block_id": "blk_summary", "source_ref": "ctx_text"}]}),
+        encoding="utf-8",
+    )
+    citations_path.write_text(
+        json.dumps({"citations": [{"claim_id": "claim_1", "source_refs": ["ctx_text"]}]}),
+        encoding="utf-8",
+    )
+    patch_path.write_text(
+        json.dumps({"patch_id": "patch_report", "operations": [{"op": "append_markdown", "source_refs": ["ctx_patch"]}]}),
+        encoding="utf-8",
+    )
+    manifest = artifact_bundle.create_artifact_manifest(
+        artifact_paths=[pdf_path, composition_path, source_map_path, citations_path, patch_path],
+        output_path=manifest_path,
+        title="Report Artifact Manifest",
+        metadata={"workflow": "context-packet-patch"},
+    ).usage["artifact_manifest"]
+
+    assert hasattr(artifact_bundle, "build_artifact_graph")
+    result = artifact_bundle.build_artifact_graph(
+        artifact_manifest_path=manifest_path,
+        output_path=graph_path,
+        title="Report Artifact Graph",
+    )
+
+    assert result.status == "succeeded"
+    assert result.tool == "pdf.artifacts.graph"
+    assert result.artifacts[0].mime_type == "application/json"
+    graph = result.usage["artifact_graph"]
+    assert graph["artifact_graph_version"] == "0.1"
+    assert graph["title"] == "Report Artifact Graph"
+    assert graph["manifest_id"] == manifest["manifest_id"]
+    assert graph["artifact_count"] == 5
+    assert graph["source_ref_count"] == 2
+    assert graph["node_count"] == len(graph["nodes"])
+    assert graph["edge_count"] == len(graph["edges"])
+    assert graph["source_ref_index"]["ctx_text"]["artifact_count"] == 3
+    assert graph["source_ref_index"]["ctx_patch"]["artifact_count"] == 1
+    relations = {edge["relation"] for edge in graph["edges"]}
+    assert {"includes_artifact", "uses_source_ref", "derived_from_composition", "produces_pdf"} <= relations
+    assert graph["safety"]["mutates_inputs"] is False
+    assert graph["safety"]["lineage_inference"] == "local_manifest_conventions"
+    saved = json.loads(graph_path.read_text(encoding="utf-8"))
+    assert saved["artifact_graph_id"].startswith("artifact_graph_")
+    assert result.next_recommended_tools == ["pdf.artifacts.export_bundle", "pdf.workflow.report"]
+
+
+def test_artifact_graph_cli_api_and_mcp_are_exposed(tmp_path: Path) -> None:
+    pdf_path = tmp_path / "report.pdf"
+    composition_path = tmp_path / "report.composition.json"
+    manifest_path = tmp_path / "report.artifacts.json"
+    create_text_pdf("Artifact graph interfaces.", pdf_path)
+    composition_path.write_text(
+        json.dumps({"source_map": [{"source_ref": "ctx_cli"}]}),
+        encoding="utf-8",
+    )
+    artifact_bundle.create_artifact_manifest(
+        artifact_paths=[pdf_path, composition_path],
+        output_path=manifest_path,
+        title="Interface Artifact Manifest",
+    )
+
+    cli_output = tmp_path / "cli-artifact-graph.json"
+    cli = runner.invoke(
+        app,
+        [
+            "artifacts",
+            "graph",
+            "--manifest",
+            str(manifest_path),
+            "-o",
+            str(cli_output),
+            "--title",
+            "CLI Artifact Graph",
+            "--json",
+        ],
+    )
+
+    assert cli.exit_code == 0
+    cli_payload = json.loads(cli.stdout)
+    assert cli_payload["tool"] == "pdf.artifacts.graph"
+    assert cli_payload["usage"]["artifact_graph"]["title"] == "CLI Artifact Graph"
+    assert cli_payload["usage"]["artifact_graph"]["source_ref_index"]["ctx_cli"]["artifact_count"] == 1
+    assert cli_output.exists()
+
+    api_output = tmp_path / "api-artifact-graph.json"
+    api = TestClient(create_app())
+    api_result = api.post(
+        "/v1/tools/pdf.artifacts.graph/run",
+        json={
+            "artifact_manifest_path": str(manifest_path),
+            "output_path": str(api_output),
+            "title": "API Artifact Graph",
+        },
+    )
+
+    assert api_result.status_code == 200
+    assert api_result.json()["tool"] == "pdf.artifacts.graph"
+    assert api_result.json()["usage"]["artifact_graph"]["title"] == "API Artifact Graph"
+    assert api_output.exists()
+
+    assert hasattr(mcp_server, "pdf_artifacts_graph")
+    mcp_output = tmp_path / "mcp-artifact-graph.json"
+    mcp = json.loads(
+        mcp_server.pdf_artifacts_graph(
+            artifact_manifest_path=str(manifest_path),
+            output_path=str(mcp_output),
+            title="MCP Artifact Graph",
+        )
+    )
+
+    assert mcp["tool"] == "pdf.artifacts.graph"
+    assert mcp["usage"]["artifact_graph"]["title"] == "MCP Artifact Graph"
+    assert mcp_output.exists()
+
+
+def test_artifact_source_map_indexes_blocks_pages_sources_and_artifacts(tmp_path: Path) -> None:
+    pdf_path = tmp_path / "report.pdf"
+    composition_path = tmp_path / "report.composition.json"
+    context_packet_path = tmp_path / "context.packet.json"
+    manifest_path = tmp_path / "report.artifacts.json"
+    output_path = tmp_path / "report.artifact-source-map.json"
+    create_text_pdf("Artifact source maps preserve block-to-source evidence.", pdf_path)
+    composition_path.write_text(
+        json.dumps(
+            {
+                "composition_ir": {
+                    "composition_id": "cmp_report",
+                    "blocks": [
+                        {
+                            "block_id": "blk_summary",
+                            "type": "section",
+                            "title": "Summary",
+                            "target_slot": "executive_summary",
+                            "source_refs": ["ctx_text"],
+                        },
+                        {
+                            "block_id": "blk_metrics",
+                            "type": "table",
+                            "title": "Metrics",
+                            "target_slot": "findings",
+                            "source_refs": ["ctx_table"],
+                        },
+                    ],
+                },
+                "source_map": [
+                    {
+                        "block_id": "blk_summary",
+                        "block_type": "section",
+                        "target_slot": "executive_summary",
+                        "source_ref": "ctx_text",
+                        "page_number": 1,
+                        "bbox": [72, 640, 520, 720],
+                    },
+                    {
+                        "block_id": "blk_metrics",
+                        "block_type": "table",
+                        "target_slot": "findings",
+                        "source_ref": "ctx_table",
+                        "page_number": 1,
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    context_packet_path.write_text(
+        json.dumps(
+            {
+                "context_packet_version": "0.1",
+                "context_packet_id": "ctxpkt_report",
+                "items": [
+                    {
+                        "context_item_id": "ctx_001",
+                        "source_ref": "ctx_text",
+                        "type": "text",
+                        "role": "brief",
+                        "label": "Audit Brief",
+                        "metadata": {"preview": "Audit brief evidence."},
+                    },
+                    {
+                        "context_item_id": "ctx_002",
+                        "source_ref": "ctx_table",
+                        "type": "data",
+                        "role": "data_evidence",
+                        "label": "Runtime Metrics",
+                        "metadata": {"preview": "Runtime metrics.", "row_count": 2, "column_count": 2},
+                    },
+                ],
+                "source_graph": {"source_graph_id": "srcgraph_report", "nodes": [], "edges": []},
+            }
+        ),
+        encoding="utf-8",
+    )
+    manifest = artifact_bundle.create_artifact_manifest(
+        artifact_paths=[pdf_path, composition_path],
+        output_path=manifest_path,
+        title="Report Artifacts",
+    ).usage["artifact_manifest"]
+
+    assert hasattr(artifact_bundle, "build_artifact_source_map")
+    result = artifact_bundle.build_artifact_source_map(
+        composition_path=composition_path,
+        context_packet_path=context_packet_path,
+        artifact_manifest_path=manifest_path,
+        output_path=output_path,
+        title="Report Artifact Source Map",
+    )
+
+    assert result.status == "succeeded"
+    assert result.tool == "pdf.artifacts.source_map"
+    assert result.artifacts[0].mime_type == "application/json"
+    report = result.usage["artifact_source_map"]
+    assert report["artifact_source_map_version"] == "0.1"
+    assert report["title"] == "Report Artifact Source Map"
+    assert report["composition_id"] == "cmp_report"
+    assert report["context_packet_id"] == "ctxpkt_report"
+    assert report["artifact_manifest_id"] == manifest["manifest_id"]
+    assert report["generated_artifacts"][0]["path"] == pdf_path.resolve().as_posix()
+    assert report["block_index"]["blk_summary"]["source_refs"] == ["ctx_text"]
+    assert report["block_index"]["blk_summary"]["page_refs"][0]["bbox"] == [72, 640, 520, 720]
+    assert report["source_ref_index"]["ctx_text"]["mapping_count"] == 1
+    assert report["source_ref_index"]["ctx_text"]["source_match_status"] == "matched"
+    assert report["page_index"]["1"]["block_ids"] == ["blk_metrics", "blk_summary"]
+    assert report["coverage"]["source_ref_match_ratio"] == 1.0
+    assert report["safety"]["mutates_inputs"] is False
+    saved = json.loads(output_path.read_text(encoding="utf-8"))
+    assert saved["artifact_source_map_id"].startswith("artifact_srcmap_")
+    assert result.next_recommended_tools == ["pdf.artifacts.graph", "pdf.artifacts.export_bundle", "pdf.patch.plan"]
+
+
+def test_artifact_source_map_cli_api_and_mcp_are_exposed(tmp_path: Path) -> None:
+    composition_path = tmp_path / "report.composition.json"
+    context_packet_path = tmp_path / "context.packet.json"
+    composition_path.write_text(
+        json.dumps(
+            {
+                "composition_ir": {
+                    "composition_id": "cmp_cli",
+                    "blocks": [{"block_id": "blk_cli", "type": "section", "source_refs": ["ctx_cli"]}],
+                },
+                "source_map": [{"block_id": "blk_cli", "source_ref": "ctx_cli", "page_number": 1}],
+            }
+        ),
+        encoding="utf-8",
+    )
+    context_packet_path.write_text(
+        json.dumps(
+            {
+                "context_packet_id": "ctxpkt_cli",
+                "items": [{"context_item_id": "ctx_001", "source_ref": "ctx_cli", "type": "text"}],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    cli_output = tmp_path / "cli-artifact-source-map.json"
+    cli = runner.invoke(
+        app,
+        [
+            "artifacts",
+            "source-map",
+            "--composition",
+            str(composition_path),
+            "--context-packet",
+            str(context_packet_path),
+            "-o",
+            str(cli_output),
+            "--title",
+            "CLI Artifact Source Map",
+            "--json",
+        ],
+    )
+
+    assert cli.exit_code == 0
+    cli_payload = json.loads(cli.stdout)
+    assert cli_payload["tool"] == "pdf.artifacts.source_map"
+    assert cli_payload["usage"]["artifact_source_map"]["title"] == "CLI Artifact Source Map"
+    assert cli_payload["usage"]["artifact_source_map"]["source_ref_index"]["ctx_cli"]["mapping_count"] == 1
+    assert cli_output.exists()
+
+    api_output = tmp_path / "api-artifact-source-map.json"
+    api = TestClient(create_app())
+    api_result = api.post(
+        "/v1/tools/pdf.artifacts.source_map/run",
+        json={
+            "composition_path": str(composition_path),
+            "context_packet_path": str(context_packet_path),
+            "output_path": str(api_output),
+            "title": "API Artifact Source Map",
+        },
+    )
+
+    assert api_result.status_code == 200
+    assert api_result.json()["tool"] == "pdf.artifacts.source_map"
+    assert api_result.json()["usage"]["artifact_source_map"]["title"] == "API Artifact Source Map"
+    assert api_output.exists()
+
+    assert hasattr(mcp_server, "pdf_artifacts_source_map")
+    mcp_output = tmp_path / "mcp-artifact-source-map.json"
+    mcp = json.loads(
+        mcp_server.pdf_artifacts_source_map(
+            composition_path=str(composition_path),
+            context_packet_path=str(context_packet_path),
+            output_path=str(mcp_output),
+            title="MCP Artifact Source Map",
+        )
+    )
+
+    assert mcp["tool"] == "pdf.artifacts.source_map"
+    assert mcp["usage"]["artifact_source_map"]["title"] == "MCP Artifact Source Map"
+    assert mcp_output.exists()
+
+
 def test_export_artifact_bundle_writes_zip_manifest_and_checksums(tmp_path: Path) -> None:
     pdf_path = tmp_path / "report.pdf"
     composition_path = tmp_path / "report.composition.json"

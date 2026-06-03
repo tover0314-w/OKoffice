@@ -95,6 +95,8 @@ A target PDF profile defines the intended output type, structure, style, and val
 okpdf compose from-context .agentpdf-out/context.packet.json \
   --profile technical_audit \
   -o .agentpdf-out/technical-audit.pdf \
+  --renderer html \
+  --html-output .agentpdf-out/technical-audit.html \
   --json
 ```
 

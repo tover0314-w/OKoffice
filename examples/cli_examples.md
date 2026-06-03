@@ -32,10 +32,13 @@ okpdf create agent examples/template-packs/local-agent-starter.json --target-pro
 okpdf create from-template-pack examples/template-packs/local-agent-starter.json --template board_audit --color-scheme executive_blue -o board-audit.pdf --json
 okpdf create from-template-pack examples/template-packs/local-agent-starter.json --template board_audit --color-scheme executive_blue --data examples/create-data/agent-block-audit.json -o board-audit-blocks.pdf --json
 okpdf evidence coverage-report board-audit.composition.json -o board-audit.coverage.json --json
+okpdf artifacts source-map --composition board-audit.composition.json -o board-audit.artifact-source-map.json --title "Board Audit Artifact Source Map" --json
 okpdf patch plan board-audit.pdf --operations examples/patch-operations/layer-aware-reviewer-note.json -o board-audit.patch.json --composition board-audit.composition.json --layers board-audit.layers.json --reason "Append verified template-pack layer evidence." --json
 okpdf patch plan board-audit.pdf --operations examples/patch-operations/regenerate-layer-block.json -o board-audit.regenerate.patch.json --composition board-audit.composition.json --layers board-audit.layers.json --reason "Regenerate a template block with layer evidence." --json
 okpdf patch apply board-audit.patch.json -o board-audit-patched.pdf --json
 okpdf patch verify board-audit.patch.json board-audit-patched.pdf --json
+okpdf artifacts manifest --file board-audit-patched.pdf --file board-audit.composition.json --file board-audit.coverage.json --file board-audit.artifact-source-map.json --file board-audit.patch.json -o board-audit.artifacts.json --title "Board Audit Artifacts" --metadata workflow=template-pack-patch --json
+okpdf artifacts graph --manifest board-audit.artifacts.json -o board-audit.artifact-graph.json --title "Board Audit Artifact Graph" --json
 okpdf artifacts export-bundle --file board-audit-patched.pdf --file board-audit.composition.json --file board-audit.coverage.json --file board-audit.patch.json -o board-audit.agentpdf-bundle.zip --title "Board Audit Bundle" --metadata workflow=template-pack-patch --json
 okpdf artifacts verify-bundle board-audit.agentpdf-bundle.zip --json
 okpdf create preview invoice -o invoice-preview.pdf --json
@@ -45,6 +48,7 @@ okpdf create from-prompt "Create a resume for an agent infrastructure engineer."
 okpdf context ingest --file src/agentpdf/compose/context.py --role code_evidence --label "Composer Source" -o composer.context-item.json --json
 okpdf context code-snapshot src/agentpdf/compose/context.py --line-start 1 --line-end 80 --repository-root . -o composer.snapshot.context-item.json --json
 okpdf context data-profile examples/create-data/metrics.csv --label "Runtime Metrics" -o metrics.profile.context-item.json --json
+okpdf context image-analyze assets/brand/okpdf-logo.png --skip-ocr --json
 okpdf context packet --item-json composer.context-item.json --text "Create a technical audit PDF from pre-ingested code evidence." -o agent.context.packet.json --title "Agent Packet" --json
 okpdf context build --text "Create a technical audit PDF from code, metrics, visual evidence, project docs, and media context." --file src/agentpdf/compose/context.py --file examples/create-data/metrics.csv --file assets/brand/okpdf-logo.png --file examples/sample-documents/business_report.md --item-json examples/context/media-items.json -o context.packet.json --title "Audit Context" --json
 okpdf context classify context.packet.json --profile technical_audit -o context.classification.json --json
@@ -56,7 +60,7 @@ okpdf target profiles -o target-profiles.json --json
 okpdf target validate --profile-json examples/target-profiles/media-learning-deck.json -o media-learning-deck.validation.json --json
 okpdf compose plan context.packet.json --profile technical_audit -o technical-audit.plan.json --json
 okpdf compose render-ir technical-audit.plan.json -o technical-audit-from-ir.pdf --json
-okpdf compose from-context context.packet.json --profile technical_audit -o technical-audit.pdf --json
+okpdf compose from-context context.packet.json --profile technical_audit -o technical-audit.pdf --renderer html --html-output technical-audit.html --json
 okpdf compose from-context context.packet.json --profile slide_deck -o agent-review-deck.pdf --json
 okpdf compose from-context context.packet.json --profile-json examples/target-profiles/media-learning-deck.json -o media-learning-deck.pdf --json
 okpdf compose add-code-block technical-audit.pdf --title "Risk Function" --code "def risky_total(items): return sum(items)" --language python --source-ref ctx_002 --target-slot code_review -o technical-audit.code.pdf --json
@@ -68,10 +72,14 @@ okpdf compose add-media-reference technical-audit.pdf --title "Meeting Audio" --
 okpdf compose add-slide technical-audit.pdf --title "Review Slide" --body "Decision evidence" --source-ref ctx_slide --target-slot evidence_slide -o technical-audit.slide.pdf --json
 okpdf evidence coverage-report technical-audit.composition.json -o technical-audit.coverage.json --json
 okpdf evidence map-sources technical-audit.composition.json --context-packet context.packet.json -o technical-audit.source-map.json --json
+okpdf artifacts source-map --composition technical-audit.composition.json --context-packet context.packet.json -o technical-audit.artifact-source-map.json --title "Technical Audit Artifact Source Map" --json
+okpdf evidence cite-claims claims.json --source-map technical-audit.source-map.json -o technical-audit.citations.json --json
 okpdf patch plan technical-audit.pdf --operations examples/patch-operations/reviewer-note.json -o technical-audit.patch.json --composition technical-audit.composition.json --reason "Add reviewer note appendix." --json
 okpdf patch preview technical-audit.patch.json -o technical-audit.patch-preview.json --json
 okpdf patch apply technical-audit.patch.json -o technical-audit-patched.pdf --json
 okpdf patch verify technical-audit.patch.json technical-audit-patched.pdf --json
+okpdf artifacts manifest --file technical-audit-patched.pdf --file technical-audit.composition.json --file technical-audit.coverage.json --file technical-audit.source-map.json --file technical-audit.artifact-source-map.json --file technical-audit.citations.json --file technical-audit.patch.json -o technical-audit.artifacts.json --title "Technical Audit Artifacts" --metadata workflow=context-packet-patch --json
+okpdf artifacts graph --manifest technical-audit.artifacts.json -o technical-audit.artifact-graph.json --title "Technical Audit Artifact Graph" --json
 okpdf artifacts export-bundle --file technical-audit-patched.pdf --file technical-audit.composition.json --file technical-audit.coverage.json --file technical-audit.patch.json -o technical-audit.agentpdf-bundle.zip --title "Technical Audit Bundle" --metadata workflow=context-packet-patch --json
 okpdf artifacts verify-bundle technical-audit.agentpdf-bundle.zip --json
 okpdf patch plan technical-audit.pdf --operations examples/patch-operations/structured-appendix.json -o technical-audit.structured.patch.json --composition technical-audit.composition.json --reason "Append code, table, image, citation, media, and slide evidence." --json
@@ -82,6 +90,9 @@ okpdf extract-images report.pdf --pages all --out-dir extracted-images/ --json
 okpdf extract-text report.pdf --pages all --json
 okpdf metadata page-info report.pdf --pages 1-3 --json
 okpdf security remove-metadata report.pdf -o report.no-metadata.pdf --json
+okpdf security redact sensitive.pdf -o sensitive.redacted.pdf --region '{"page":1,"bbox":[60,700,280,760],"label":"secret"}' --json
+okpdf security verify-redaction sensitive.redacted.pdf --search-term SECRET-CODE-123 --json
+okpdf redaction-check sensitive.redacted.pdf --search-term SECRET-CODE-123 --json
 okpdf create text "Hello from okpdf" -o hello.pdf --json
 okpdf create markdown summary.md --style-pack plain_report -o board-report.pdf --json
 okpdf create from-prompt "Create a research brief about local PDF template agents." -o research-brief.pdf --template research_brief --style-pack paper_ink --color primary=#4f46e5 --json
@@ -90,6 +101,21 @@ okpdf page-count-check scan-numbered.pdf --expected-pages 2 --json
 okpdf render-check scan-numbered.pdf --pages 1 --json
 okpdf blank-page-check with-blanks.pdf --pages all --json
 okpdf parse-lite board-report.pdf --json
+okpdf compare semantic-diff board-report-v1.pdf board-report-v2.pdf --pages 1 --json
+okpdf compare version-report board-report-v1.pdf board-report-v2.pdf -o board-report.version-report.md --json
+okpdf compare visual-diff board-report-v1.pdf board-report-v2.pdf --pages 1 --json
+okpdf visual-diff board-report-v1.pdf board-report-v2.pdf --max-difference-ratio 0.001 --json
+okpdf parse-figures board-report.pdf --json
+okpdf parse-formulas board-report.pdf --json
+okpdf parse-charts board-report.pdf --json
+okpdf parse-references board-report.pdf --json
+okpdf forms create -o contact-form.pdf --field '{"name":"name","label":"Name","required":true}' --json
+okpdf forms import-data contact-form.pdf --data '{"name":"Ada"}' -o contact-form-filled.pdf --json
+okpdf forms validate contact-form-filled.pdf --required-field name --json
+okpdf ocr scan-to-pdf cover.png -o scan.pdf --json
+okpdf ocr despeckle scan.pdf -o scan-despeckled.pdf --json
+okpdf ocr remove-existing scan.pdf -o scan-no-ocr.pdf --json
+okpdf ocr multilingual scan.pdf -o scan-multilingual.pdf --language eng --language chi_sim --json
 okpdf pdf-to-json board-report.pdf -o board-report.ir.json --json
 okpdf pdf-to-markdown board-report.pdf -o board-report.md --json
 okpdf rag ingest board-report.pdf --index board-report.index.json --json

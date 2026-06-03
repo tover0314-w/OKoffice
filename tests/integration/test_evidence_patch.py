@@ -11,10 +11,12 @@ from agentpdf.cli.main import app
 from agentpdf.compose.context import compose_from_context
 from agentpdf.context.packet import build_context_packet
 from agentpdf.core.pdf import inspect_pdf_pages
+from agentpdf.evidence.citations import cite_claims
 from agentpdf.evidence.coverage import create_coverage_report
 from agentpdf.evidence.source_map import map_sources
 from agentpdf.mcp.server import (
     pdf_evidence_coverage_report,
+    pdf_evidence_cite_claims,
     pdf_evidence_map_sources,
     pdf_patch_apply,
     pdf_patch_plan,
@@ -69,6 +71,41 @@ def test_evidence_map_sources_enriches_composition_source_map(tmp_path: Path) ->
     saved = json.loads(source_map_path.read_text(encoding="utf-8"))
     assert saved["source_map_report_version"] == "0.1"
     assert saved["source_map"][0]["source_ref"]
+
+
+def test_evidence_cite_claims_returns_source_ref_citations(tmp_path: Path) -> None:
+    composition_path = _write_composed_pdf(tmp_path)[1]
+    context_packet_path = tmp_path / "context.packet.json"
+    citations_path = tmp_path / "citations.json"
+    claims = [
+        {
+            "claim_id": "claim_margin",
+            "text": "Margin pressure needs evidence.",
+            "source_refs": ["ctx_002"],
+        }
+    ]
+
+    result = cite_claims(
+        claims=claims,
+        composition=composition_path,
+        context_packet=context_packet_path,
+        output_path=citations_path,
+    )
+
+    assert result.status == "succeeded"
+    assert result.tool == "pdf.evidence.cite_claims"
+    assert result.artifacts[0].mime_type == "application/json"
+    assert result.usage["citation_count"] == 1
+    assert result.usage["coverage"]["claim_citation_ratio"] == 1.0
+    citation = result.usage["citations"][0]
+    assert citation["claim_id"] == "claim_margin"
+    assert citation["source_ref"] == "ctx_002"
+    assert citation["source_match_status"] == "matched"
+    assert citation["support_status"] == "cited"
+    assert citation["evidence_summary"]["available"] is True
+    saved = json.loads(citations_path.read_text(encoding="utf-8"))
+    assert saved["citation_report_version"] == "0.1"
+    assert saved["citations"][0]["source_ref"] == "ctx_002"
 
 
 def test_patch_transaction_appends_audited_markdown_without_mutating_input(tmp_path: Path) -> None:
@@ -258,6 +295,7 @@ def test_evidence_and_patch_cli_api_mcp_are_exposed(tmp_path: Path) -> None:
     source_pdf, composition_path = _write_composed_pdf(tmp_path)
     operations_path = tmp_path / "operations.json"
     single_operation_path = tmp_path / "single-operation.json"
+    claims_path = tmp_path / "claims.json"
     operations = [
         {
             "op": "append_markdown",
@@ -268,8 +306,21 @@ def test_evidence_and_patch_cli_api_mcp_are_exposed(tmp_path: Path) -> None:
     ]
     operations_path.write_text(json.dumps(operations), encoding="utf-8")
     single_operation_path.write_text(json.dumps(operations[0]), encoding="utf-8")
+    claims_path.write_text(
+        json.dumps(
+            [
+                {
+                    "claim_id": "claim_cli",
+                    "text": "Patch applied through exposed agent interfaces.",
+                    "source_refs": ["ctx_001"],
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
     coverage_path = tmp_path / "coverage.json"
     source_map_path = tmp_path / "source-map.json"
+    citations_path = tmp_path / "citations.json"
     patch_path = tmp_path / "patch.json"
     single_patch_path = tmp_path / "single-patch.json"
     preview_path = tmp_path / "patch-preview.json"
@@ -289,6 +340,19 @@ def test_evidence_and_patch_cli_api_mcp_are_exposed(tmp_path: Path) -> None:
             str(tmp_path / "context.packet.json"),
             "-o",
             str(source_map_path),
+            "--json",
+        ],
+    )
+    cite_claims_cli = runner.invoke(
+        app,
+        [
+            "evidence",
+            "cite-claims",
+            str(claims_path),
+            "--source-map",
+            str(source_map_path),
+            "-o",
+            str(citations_path),
             "--json",
         ],
     )
@@ -330,6 +394,8 @@ def test_evidence_and_patch_cli_api_mcp_are_exposed(tmp_path: Path) -> None:
     assert json.loads(coverage_cli.stdout)["tool"] == "pdf.evidence.coverage_report"
     assert map_sources_cli.exit_code == 0
     assert json.loads(map_sources_cli.stdout)["tool"] == "pdf.evidence.map_sources"
+    assert cite_claims_cli.exit_code == 0
+    assert json.loads(cite_claims_cli.stdout)["tool"] == "pdf.evidence.cite_claims"
     assert plan_cli.exit_code == 0
     assert json.loads(plan_cli.stdout)["tool"] == "pdf.patch.plan"
     assert single_plan_cli.exit_code == 0
@@ -354,6 +420,14 @@ def test_evidence_and_patch_cli_api_mcp_are_exposed(tmp_path: Path) -> None:
             "output_path": str(tmp_path / "api-source-map.json"),
         },
     )
+    api_cite_claims = client.post(
+        "/v1/tools/pdf.evidence.cite_claims/run",
+        json={
+            "claims": json.loads(claims_path.read_text(encoding="utf-8")),
+            "source_map_path": str(source_map_path),
+            "output_path": str(tmp_path / "api-citations.json"),
+        },
+    )
     api_plan = client.post(
         "/v1/tools/pdf.patch.plan/run",
         json={
@@ -368,6 +442,8 @@ def test_evidence_and_patch_cli_api_mcp_are_exposed(tmp_path: Path) -> None:
     assert api_coverage.json()["tool"] == "pdf.evidence.coverage_report"
     assert api_map_sources.status_code == 200
     assert api_map_sources.json()["tool"] == "pdf.evidence.map_sources"
+    assert api_cite_claims.status_code == 200
+    assert api_cite_claims.json()["tool"] == "pdf.evidence.cite_claims"
     assert api_plan.status_code == 200
     assert api_plan.json()["tool"] == "pdf.patch.plan"
 
@@ -379,6 +455,13 @@ def test_evidence_and_patch_cli_api_mcp_are_exposed(tmp_path: Path) -> None:
             output_path=str(tmp_path / "mcp-source-map.json"),
         )
     )
+    mcp_cite_claims = json.loads(
+        pdf_evidence_cite_claims(
+            json.loads(claims_path.read_text(encoding="utf-8")),
+            source_map=str(source_map_path),
+            output_path=str(tmp_path / "mcp-citations.json"),
+        )
+    )
     mcp_plan = json.loads(pdf_patch_plan(str(source_pdf), operations, str(tmp_path / "mcp-patch.json")))
     mcp_preview = json.loads(pdf_patch_preview(str(tmp_path / "mcp-patch.json")))
     mcp_apply = json.loads(pdf_patch_apply(str(tmp_path / "mcp-patch.json"), str(tmp_path / "mcp-patched.pdf")))
@@ -386,6 +469,7 @@ def test_evidence_and_patch_cli_api_mcp_are_exposed(tmp_path: Path) -> None:
 
     assert mcp_coverage["tool"] == "pdf.evidence.coverage_report"
     assert mcp_map_sources["tool"] == "pdf.evidence.map_sources"
+    assert mcp_cite_claims["tool"] == "pdf.evidence.cite_claims"
     assert mcp_plan["tool"] == "pdf.patch.plan"
     assert mcp_preview["tool"] == "pdf.patch.preview"
     assert mcp_apply["validation"]["status"] == "passed"

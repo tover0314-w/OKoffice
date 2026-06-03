@@ -250,6 +250,8 @@ def test_extract_remove_and_rotate_cli(two_page_pdf: Path, tmp_path: Path) -> No
 def test_reorder_and_insert_blank_pages_cli(two_page_pdf: Path, tmp_path: Path) -> None:
     reordered = tmp_path / "reordered.pdf"
     with_blank = tmp_path / "with-blank.pdf"
+    n_up = tmp_path / "n-up.pdf"
+    booklet = tmp_path / "booklet.pdf"
 
     reorder = runner.invoke(
         app,
@@ -269,10 +271,22 @@ def test_reorder_and_insert_blank_pages_cli(two_page_pdf: Path, tmp_path: Path) 
             "--json",
         ],
     )
+    n_up_result = runner.invoke(
+        app,
+        ["n-up", str(with_blank), "--per-sheet", "2", "-o", str(n_up), "--json"],
+    )
+    booklet_result = runner.invoke(
+        app,
+        ["booklet", str(with_blank), "-o", str(booklet), "--json"],
+    )
 
     assert reorder.exit_code == 0
     assert json.loads(reorder.stdout)["tool"] == "pdf.organize.reorder_pages"
     assert insert_blank.exit_code == 0
+    assert n_up_result.exit_code == 0
+    assert json.loads(n_up_result.stdout)["tool"] == "pdf.organize.n_up"
+    assert booklet_result.exit_code == 0
+    assert json.loads(booklet_result.stdout)["tool"] == "pdf.organize.booklet"
     payload = json.loads(insert_blank.stdout)
     assert payload["tool"] == "pdf.organize.insert_blank_pages"
     assert payload["artifacts"][0]["page_count"] == 3
@@ -281,6 +295,7 @@ def test_reorder_and_insert_blank_pages_cli(two_page_pdf: Path, tmp_path: Path) 
 def test_optimize_compress_and_repair_cli(two_page_pdf: Path, tmp_path: Path) -> None:
     compressed = tmp_path / "compressed.pdf"
     repaired = tmp_path / "repaired.pdf"
+    optimized = tmp_path / "optimized.pdf"
 
     compress = runner.invoke(
         app,
@@ -290,6 +305,11 @@ def test_optimize_compress_and_repair_cli(two_page_pdf: Path, tmp_path: Path) ->
         app,
         ["repair", str(two_page_pdf), "-o", str(repaired), "--json"],
     )
+    remove_unused = runner.invoke(
+        app,
+        ["remove-unused-objects", str(two_page_pdf), "-o", str(optimized), "--json"],
+    )
+    validate_pdfa = runner.invoke(app, ["validate-pdfa", str(two_page_pdf), "--json"])
 
     assert compress.exit_code == 0
     assert json.loads(compress.stdout)["tool"] == "pdf.optimize.compress"
@@ -297,6 +317,11 @@ def test_optimize_compress_and_repair_cli(two_page_pdf: Path, tmp_path: Path) ->
     assert repair.exit_code == 0
     assert json.loads(repair.stdout)["tool"] == "pdf.optimize.repair"
     assert repaired.exists()
+    assert remove_unused.exit_code == 0
+    assert json.loads(remove_unused.stdout)["tool"] == "pdf.optimize.remove_unused_objects"
+    assert optimized.exists()
+    assert validate_pdfa.exit_code == 0
+    assert json.loads(validate_pdfa.stdout)["tool"] == "pdf.optimize.validate_pdfa"
 
 
 def test_render_cli_writes_png_output(simple_pdf: Path, tmp_path: Path) -> None:
@@ -345,8 +370,12 @@ def test_extract_images_cli_writes_image_artifacts(tmp_path: Path) -> None:
 def test_text_and_metadata_cli(text_pdf: Path, metadata_pdf: Path, tmp_path: Path) -> None:
     updated = tmp_path / "updated.pdf"
     cleaned = tmp_path / "cleaned.pdf"
+    outlined = tmp_path / "outlined.pdf"
+    outline_path = tmp_path / "outline.json"
+    outline_path.write_text(json.dumps([{"title": "Page One", "page": 1}]), encoding="utf-8")
 
     text = runner.invoke(app, ["extract-text", str(text_pdf), "--pages", "1", "--json"])
+    fonts = runner.invoke(app, ["extract-fonts", str(text_pdf), "--pages", "1", "--json"])
     read = runner.invoke(app, ["metadata", "read", str(metadata_pdf), "--json"])
     page_info = runner.invoke(app, ["metadata", "page-info", str(text_pdf), "--pages", "1", "--json"])
     update = runner.invoke(
@@ -366,6 +395,10 @@ def test_text_and_metadata_cli(text_pdf: Path, metadata_pdf: Path, tmp_path: Pat
         app,
         ["metadata", "remove", str(metadata_pdf), "-o", str(cleaned), "--json"],
     )
+    outline = runner.invoke(
+        app,
+        ["metadata", "update-outline", str(metadata_pdf), str(outline_path), "-o", str(outlined), "--json"],
+    )
     security_cleaned = tmp_path / "security-cleaned.pdf"
     security_remove = runner.invoke(
         app,
@@ -374,12 +407,16 @@ def test_text_and_metadata_cli(text_pdf: Path, metadata_pdf: Path, tmp_path: Pat
 
     assert text.exit_code == 0
     assert "AgentPDF local text layer" in json.loads(text.stdout)["usage"]["text"]
+    assert fonts.exit_code == 0
+    assert json.loads(fonts.stdout)["tool"] == "pdf.convert.extract_fonts"
     assert read.exit_code == 0
     assert json.loads(read.stdout)["usage"]["metadata"]["Title"] == "Original Title"
     assert page_info.exit_code == 0
     assert json.loads(page_info.stdout)["tool"] == "pdf.metadata.page_info"
     assert update.exit_code == 0
     assert json.loads(update.stdout)["tool"] == "pdf.metadata.update"
+    assert outline.exit_code == 0
+    assert json.loads(outline.stdout)["tool"] == "pdf.metadata.update_outline"
     assert remove.exit_code == 0
     assert json.loads(remove.stdout)["tool"] == "pdf.metadata.remove"
     assert security_remove.exit_code == 0
@@ -500,6 +537,13 @@ def test_image_watermark_page_numbers_and_validate_cli(tmp_path: Path) -> None:
     image_pdf = tmp_path / "cover.pdf"
     watermarked = tmp_path / "watermarked.pdf"
     numbered = tmp_path / "numbered.pdf"
+    shaped = tmp_path / "shaped.pdf"
+    underlined = tmp_path / "underlined.pdf"
+    struck = tmp_path / "struck.pdf"
+    drawn = tmp_path / "drawn.pdf"
+    resized = tmp_path / "resized.pdf"
+    margined = tmp_path / "margined.pdf"
+    underlaid = tmp_path / "underlaid.pdf"
     Image.new("RGB", (160, 90), color=(40, 80, 120)).save(image)
 
     image_result = runner.invoke(app, ["image-to-pdf", str(image), "-o", str(image_pdf), "--json"])
@@ -511,10 +555,66 @@ def test_image_watermark_page_numbers_and_validate_cli(tmp_path: Path) -> None:
         app,
         ["page-numbers", str(watermarked), "-o", str(numbered), "--json"],
     )
-    validate_result = runner.invoke(app, ["validate", str(numbered), "--json"])
-    page_count = runner.invoke(app, ["page-count-check", str(numbered), "--expected-pages", "1", "--json"])
-    render_check = runner.invoke(app, ["render-check", str(numbered), "--pages", "1", "--json"])
-    blank_check = runner.invoke(app, ["blank-page-check", str(numbered), "--pages", "1", "--json"])
+    shape_result = runner.invoke(
+        app,
+        [
+            "add-shape",
+            str(numbered),
+            "-o",
+            str(shaped),
+            "--shape",
+            "rectangle",
+            "--page",
+            "1",
+            "--x",
+            "12",
+            "--y",
+            "12",
+            "--width",
+            "48",
+            "--height",
+            "32",
+            "--json",
+        ],
+    )
+    underline_result = runner.invoke(
+        app,
+        ["underline", str(shaped), "-o", str(underlined), "--page", "1", "--bbox", "10,10,80,24", "--json"],
+    )
+    strikeout_result = runner.invoke(
+        app,
+        ["strikeout", str(underlined), "-o", str(struck), "--page", "1", "--bbox", "10,10,80,24", "--json"],
+    )
+    draw_result = runner.invoke(
+        app,
+        [
+            "freehand-draw",
+            str(struck),
+            "-o",
+            str(drawn),
+            "--page",
+            "1",
+            "--points",
+            "[[10,10],[30,40],[60,20]]",
+            "--json",
+        ],
+    )
+    resize_result = runner.invoke(
+        app,
+        ["resize-pages", str(drawn), "-o", str(resized), "--width", "200", "--height", "200", "--json"],
+    )
+    margin_result = runner.invoke(
+        app,
+        ["add-margin", str(resized), "-o", str(margined), "--margin", "12", "--json"],
+    )
+    underlay_result = runner.invoke(
+        app,
+        ["underlay", str(margined), "-o", str(underlaid), "--text", "DRAFT", "--json"],
+    )
+    validate_result = runner.invoke(app, ["validate", str(underlaid), "--json"])
+    page_count = runner.invoke(app, ["page-count-check", str(underlaid), "--expected-pages", "1", "--json"])
+    render_check = runner.invoke(app, ["render-check", str(underlaid), "--pages", "1", "--json"])
+    blank_check = runner.invoke(app, ["blank-page-check", str(underlaid), "--pages", "1", "--json"])
 
     assert image_result.exit_code == 0
     assert json.loads(image_result.stdout)["tool"] == "pdf.convert.image_to_pdf"
@@ -522,6 +622,20 @@ def test_image_watermark_page_numbers_and_validate_cli(tmp_path: Path) -> None:
     assert json.loads(watermark_result.stdout)["tool"] == "pdf.edit.watermark"
     assert page_numbers_result.exit_code == 0
     assert json.loads(page_numbers_result.stdout)["tool"] == "pdf.edit.page_numbers"
+    assert shape_result.exit_code == 0
+    assert json.loads(shape_result.stdout)["tool"] == "pdf.edit.add_shape"
+    assert underline_result.exit_code == 0
+    assert json.loads(underline_result.stdout)["tool"] == "pdf.edit.underline"
+    assert strikeout_result.exit_code == 0
+    assert json.loads(strikeout_result.stdout)["tool"] == "pdf.edit.strikeout"
+    assert draw_result.exit_code == 0
+    assert json.loads(draw_result.stdout)["tool"] == "pdf.edit.freehand_draw"
+    assert resize_result.exit_code == 0
+    assert json.loads(resize_result.stdout)["tool"] == "pdf.edit.resize_pages"
+    assert margin_result.exit_code == 0
+    assert json.loads(margin_result.stdout)["tool"] == "pdf.edit.add_margin"
+    assert underlay_result.exit_code == 0
+    assert json.loads(underlay_result.stdout)["tool"] == "pdf.edit.underlay"
     assert validate_result.exit_code == 0
     assert json.loads(validate_result.stdout)["tool"] == "pdf.validation.validate_output"
     assert page_count.exit_code == 0
@@ -653,6 +767,37 @@ def test_parse_lite_and_rag_cli(tmp_path: Path) -> None:
     assert chat_highlighted.exists()
     assert cite.exit_code == 0
     assert json.loads(cite.stdout)["tool"] == "pdf.ai.rag.cite_answer"
+
+
+def test_ocr_cli_returns_regions(monkeypatch, tmp_path: Path) -> None:
+    image = tmp_path / "scan.png"
+    Image.new("RGB", (160, 80), color=(255, 255, 255)).save(image)
+    monkeypatch.setattr("agentpdf.ocr_scan.local._run_tesseract_tsv", _fake_tesseract_tsv)
+
+    result = runner.invoke(app, ["ocr", "ocr", str(image), "--language", "eng", "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["tool"] == "pdf.ocr_scan.ocr"
+    assert payload["usage"]["text"] == "Hello OCR"
+    assert payload["usage"]["pages"][0]["regions"][0]["image_bbox"] == [10, 20, 50, 32]
+
+
+def _fake_tesseract_tsv(
+    image_path: Path,
+    languages: list[str],
+    engine: str,
+    psm: int,
+) -> str:
+    assert image_path.exists()
+    assert languages == ["eng"]
+    assert engine == "tesseract"
+    assert psm == 6
+    return (
+        "level\tpage_num\tblock_num\tpar_num\tline_num\tword_num\tleft\ttop\twidth\theight\tconf\ttext\n"
+        "5\t1\t1\t1\t1\t1\t10\t20\t40\t12\t96\tHello\n"
+        "5\t1\t1\t1\t1\t2\t56\t20\t28\t12\t91\tOCR\n"
+    )
 
 
 def test_serve_api_invokes_local_rest_server(monkeypatch) -> None:
