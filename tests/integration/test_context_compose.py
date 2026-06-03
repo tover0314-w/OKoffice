@@ -16,6 +16,8 @@ from agentpdf.context.packet import build_context_packet
 from agentpdf.context.image import analyze_image
 from agentpdf.core.pdf import create_text_pdf, inspect_pdf_pages
 from agentpdf.evidence.context_packet_report import create_context_packet_report
+from agentpdf.renderers.html_package import write_composition_html_package
+import agentpdf.mcp.server as mcp_server
 from agentpdf.mcp.server import (
     pdf_compose_from_context,
     pdf_compose_plan,
@@ -640,6 +642,60 @@ def test_compose_from_context_html_renderer_is_exposed_to_cli_rest_mcp(tmp_path:
     assert mcp_pdf.exists()
     assert mcp_html.exists()
     assert mcp_html.with_suffix(".html-manifest.json").exists()
+
+
+def test_render_html_package_is_exposed_to_cli_rest_mcp(tmp_path: Path) -> None:
+    image = tmp_path / "diagram.png"
+    Image.new("RGB", (80, 40), color=(40, 80, 120)).save(image)
+    package = write_composition_html_package(
+        composition_ir={
+            "composition_id": "comp_render_interfaces",
+            "context_packet_id": "ctxpkt_render_interfaces",
+            "target_profile_id": "technical_audit",
+            "blocks": [
+                {
+                    "block_id": "figure_1",
+                    "type": "image",
+                    "title": "Architecture Figure",
+                    "source_refs": ["ctx_image"],
+                    "render_hints": {"path": str(image), "caption": "Local image evidence."},
+                }
+            ],
+        },
+        source_map=[{"block_id": "figure_1", "source_ref": "ctx_image", "type": "image"}],
+        target_profile={"profile_id": "technical_audit", "title": "Audit"},
+        render_plan={"title": "Audit"},
+        html_output_path=tmp_path / "audit.html",
+        source_tool="pdf.compose.from_context",
+    )
+    manifest_path = package["html_package_manifest_path"]
+    cli_pdf = tmp_path / "cli-rendered.pdf"
+    api_pdf = tmp_path / "api-rendered.pdf"
+    mcp_pdf = tmp_path / "mcp-rendered.pdf"
+
+    cli_result = runner.invoke(
+        app,
+        ["render-html-package", manifest_path, "-o", str(cli_pdf), "--json"],
+    )
+    client = TestClient(create_app())
+    api_response = client.post(
+        "/v1/tools/pdf.render.html_package/run",
+        json={"package_path": manifest_path, "output_path": str(api_pdf)},
+    )
+    mcp_payload = json.loads(mcp_server.pdf_render_html_package(manifest_path, str(mcp_pdf)))
+
+    assert cli_result.exit_code == 0
+    cli_payload = json.loads(cli_result.stdout)
+    assert cli_payload["tool"] == "pdf.render.html_package"
+    assert cli_payload["usage"]["renderer"] == "local_html_package_fallback"
+    assert cli_pdf.exists()
+    assert api_response.status_code == 200
+    assert api_response.json()["tool"] == "pdf.render.html_package"
+    assert api_response.json()["usage"]["html_package_manifest"]["asset_count"] == 1
+    assert api_pdf.exists()
+    assert mcp_payload["tool"] == "pdf.render.html_package"
+    assert mcp_payload["validation"]["status"] == "passed"
+    assert mcp_pdf.exists()
 
 
 def test_inline_table_context_composes_as_table_block(tmp_path: Path) -> None:

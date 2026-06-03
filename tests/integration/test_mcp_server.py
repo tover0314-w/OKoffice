@@ -88,6 +88,7 @@ def test_mcp_server_exposes_local_pdf_tools() -> None:
     assert "pdf_extract_images" in tool_names
     assert "pdf_extract_fonts" in tool_names
     assert "pdf_extract_text" in tool_names
+    assert "pdf_render_html_package" in tool_names
     assert "pdf_metadata_read" in tool_names
     assert "pdf_metadata_page_info" in tool_names
     assert "pdf_metadata_update" in tool_names

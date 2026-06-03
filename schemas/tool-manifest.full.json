@@ -1,6 +1,6 @@
 {
   "manifest_version": "0.1-full",
-  "tool_count": 227,
+  "tool_count": 228,
   "tools": [
     {
       "name": "agent.setup.claude_code",
@@ -1224,6 +1224,21 @@
       "status": "beta",
       "description": "Convert local HTML text to a validated PDF with layout-approximation warnings in the OSS fallback converter.",
       "category": "convert_to_pdf",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.render.html_package",
+      "status": "beta",
+      "description": "Validate an AgentPDF HTML package manifest and render it to a validated PDF through the local fallback renderer.",
+      "category": "render",
       "interfaces": [
         "cli",
         "mcp",

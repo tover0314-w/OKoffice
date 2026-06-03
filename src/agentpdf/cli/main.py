@@ -104,6 +104,7 @@ from agentpdf.tools.runner import (
     run_rag_query,
     run_rag_search,
     run_remove_pages,
+    run_render_html_package,
     run_remove_unused_objects,
     run_render,
     run_render_check,
@@ -622,6 +623,16 @@ def html_to_pdf_cmd(
 ) -> None:
     """Convert a local HTML file to a text-approximated PDF."""
     _emit_result(run_html_to_pdf(input_path, output_path=output_path), json_output=json_output)
+
+
+@app.command("render-html-package")
+def render_html_package_cmd(
+    package_path: Annotated[Path, typer.Argument(help="HTML package manifest or HTML file.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output PDF path.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Validate and render an AgentPDF HTML package to PDF."""
+    _emit_result(run_render_html_package(package_path, output_path=output_path), json_output=json_output)
 
 
 @app.command("url-to-pdf")

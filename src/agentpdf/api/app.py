@@ -106,6 +106,7 @@ from agentpdf.tools.runner import (
     run_rag_query,
     run_rag_search,
     run_remove_pages,
+    run_render_html_package,
     run_remove_unused_objects,
     run_render,
     run_render_check,
@@ -382,6 +383,11 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
     if tool_name == "pdf.convert.html_to_pdf":
         return run_html_to_pdf(
             payload.get("input_path", ""),
+            output_path=payload.get("output_path", ""),
+        )
+    if tool_name == "pdf.render.html_package":
+        return run_render_html_package(
+            payload.get("package_path") or payload.get("input_path", ""),
             output_path=payload.get("output_path", ""),
         )
     if tool_name == "pdf.convert.url_to_pdf":

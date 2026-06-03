@@ -88,6 +88,7 @@ IMPLEMENTED_TOOLS = {
     "pdf.convert.pdf_to_xlsx",
     "pdf.convert.pdf_to_json",
     "pdf.convert.pdf_to_markdown",
+    "pdf.render.html_package",
     "pdf.edit.watermark",
     "pdf.edit.page_numbers",
     "pdf.edit.add_shape",

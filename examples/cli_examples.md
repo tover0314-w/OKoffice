@@ -61,6 +61,7 @@ okpdf target validate --profile-json examples/target-profiles/media-learning-dec
 okpdf compose plan context.packet.json --profile technical_audit -o technical-audit.plan.json --json
 okpdf compose render-ir technical-audit.plan.json -o technical-audit-from-ir.pdf --json
 okpdf compose from-context context.packet.json --profile technical_audit -o technical-audit.pdf --renderer html --html-output technical-audit.html --json
+okpdf render-html-package technical-audit.html-manifest.json -o technical-audit-rendered.pdf --json
 okpdf compose from-context context.packet.json --profile slide_deck -o agent-review-deck.pdf --json
 okpdf compose from-context context.packet.json --profile-json examples/target-profiles/media-learning-deck.json -o media-learning-deck.pdf --json
 okpdf compose add-code-block technical-audit.pdf --title "Risk Function" --code "def risky_total(items): return sum(items)" --language python --source-ref ctx_002 --target-slot code_review -o technical-audit.code.pdf --json

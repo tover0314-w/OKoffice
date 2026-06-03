@@ -37,6 +37,7 @@ def test_registry_loads_complete_public_manifest() -> None:
     assert get_tool("pdf.convert.pdf_to_xlsx").implemented is True
     assert get_tool("pdf.convert.image_to_pdf").implemented is True
     assert get_tool("pdf.convert.html_to_pdf").implemented is True
+    assert get_tool("pdf.render.html_package").implemented is True
     assert get_tool("pdf.convert.url_to_pdf").implemented is True
     assert get_tool("pdf.convert.docx_to_pdf").implemented is True
     assert get_tool("pdf.convert.pptx_to_pdf").implemented is True
@@ -193,12 +194,14 @@ def test_implemented_tools_are_known_names() -> None:
         "pdf.convert.pdf_to_markdown",
         "pdf.convert.image_to_pdf",
         "pdf.convert.html_to_pdf",
+        "pdf.render.html_package",
         "pdf.convert.url_to_pdf",
         "pdf.convert.docx_to_pdf",
         "pdf.convert.pptx_to_pdf",
         "pdf.convert.xlsx_to_pdf",
         "pdf.convert.text_to_pdf",
         "pdf.convert.markdown_to_pdf",
+        "pdf.render.html_package",
         "pdf.edit.watermark",
         "pdf.edit.page_numbers",
         "pdf.edit.add_shape",

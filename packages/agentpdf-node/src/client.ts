@@ -63,6 +63,7 @@ import type {
   PageNumbersInput,
   PageCountCheckInput,
   PlanTemplatePackInput,
+  RenderHtmlPackageInput,
   PatchApplyInput,
   PatchPlanInput,
   PatchPreviewInput,
@@ -655,6 +656,13 @@ export class AgentPDFClient {
   async htmlToPdf(input: HtmlToPdfInput): Promise<ToolResult> {
     return this.runTool("pdf.convert.html_to_pdf", {
       input_path: input.inputPath,
+      output_path: input.outputPath,
+    });
+  }
+
+  async renderHtmlPackage(input: RenderHtmlPackageInput): Promise<ToolResult> {
+    return this.runTool("pdf.render.html_package", {
+      package_path: input.packagePath,
       output_path: input.outputPath,
     });
   }

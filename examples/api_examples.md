@@ -501,6 +501,15 @@ curl -X POST http://127.0.0.1:7331/v1/tools/pdf.compose.from_context/run \
 ```
 
 ```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.render.html_package/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "package_path": ".agentpdf-out/technical-audit.html-manifest.json",
+    "output_path": ".agentpdf-out/technical-audit-rendered.pdf"
+  }'
+```
+
+```bash
 curl -X POST http://127.0.0.1:7331/v1/tools/pdf.evidence.context_packet_report/run \
   -H 'Content-Type: application/json' \
   -d '{

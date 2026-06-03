@@ -179,6 +179,7 @@ Inspect artifact lineage and manifests.
 | `pdf.convert.image_to_pdf` | stable target | Create PDF from images. |
 | `pdf.convert.markdown_to_pdf` | stable target | Render Markdown to PDF using templates. |
 | `pdf.convert.html_to_pdf` | beta target | Convert local HTML into a validated PDF; the current OSS converter preserves text and emits layout-approximation warnings. |
+| `pdf.render.html_package` | beta | Validate an AgentPDF HTML package manifest, local assets, and render it to a validated PDF through the local fallback renderer. |
 | `pdf.convert.url_to_pdf` | beta | Fetch URL with safety checks and convert HTML text to PDF. |
 | `pdf.convert.text_to_pdf` | stable target | Plain text to PDF. |
 | `pdf.convert.docx_to_pdf` | beta | Convert DOCX text to local PDF. |

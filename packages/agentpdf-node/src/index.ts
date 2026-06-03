@@ -66,6 +66,7 @@ export type {
   PageNumbersInput,
   PageCountCheckInput,
   PlanTemplatePackInput,
+  RenderHtmlPackageInput,
   PatchApplyInput,
   PatchPlanInput,
   PatchPreviewInput,

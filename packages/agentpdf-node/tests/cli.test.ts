@@ -2037,6 +2037,7 @@ test("runCli exposes conversion, PDF/A, and security commands", async () => {
   assert.equal(await invoke(["subset-fonts", "report.pdf", "-o", "report.subset.pdf"]), 0);
   assert.equal(await invoke(["to-pdfa", "report.pdf", "-o", "report.pdfa.pdf", "--profile", "PDF/A-2b"]), 0);
   assert.equal(await invoke(["html-to-pdf", "page.html", "-o", "page.pdf"]), 0);
+  assert.equal(await invoke(["render-html-package", "page.html-manifest.json", "-o", "page.pdf"]), 0);
   assert.equal(
     await invoke([
       "url-to-pdf",
@@ -2118,6 +2119,7 @@ test("runCli exposes conversion, PDF/A, and security commands", async () => {
     "http://127.0.0.1:7331/v1/tools/pdf.optimize.subset_fonts/run",
     "http://127.0.0.1:7331/v1/tools/pdf.optimize.to_pdfa/run",
     "http://127.0.0.1:7331/v1/tools/pdf.convert.html_to_pdf/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.render.html_package/run",
     "http://127.0.0.1:7331/v1/tools/pdf.convert.url_to_pdf/run",
     "http://127.0.0.1:7331/v1/tools/pdf.convert.docx_to_pdf/run",
     "http://127.0.0.1:7331/v1/tools/pdf.convert.pptx_to_pdf/run",
@@ -2144,44 +2146,48 @@ test("runCli exposes conversion, PDF/A, and security commands", async () => {
     profile: "PDF/A-2b",
   });
   assert.deepEqual(calls[3]?.body, {
+    package_path: "page.html-manifest.json",
+    output_path: "page.pdf",
+  });
+  assert.deepEqual(calls[4]?.body, {
     url: "https://example.com",
     output_path: "url.pdf",
     allow_private_hosts: true,
     allow_file_urls: true,
   });
-  assert.deepEqual(calls[7]?.body, {
+  assert.deepEqual(calls[8]?.body, {
     input_path: "report.pdf",
     output_path: "report.html",
     pages: "1",
   });
-  assert.deepEqual(calls[11]?.body, {
+  assert.deepEqual(calls[12]?.body, {
     input_path: "report.pdf",
     output_path: "protected.pdf",
     password: "open",
     owner_password: "owner",
   });
-  assert.deepEqual(calls[16]?.body, {
+  assert.deepEqual(calls[17]?.body, {
     input_path: "signed.pdf",
     signature_path: "signed.pdf.signature.json",
     secret: "local-secret",
   });
-  assert.deepEqual(calls[17]?.body, {
+  assert.deepEqual(calls[18]?.body, {
     input_path: "report.pdf",
   });
-  assert.deepEqual(calls[18]?.body, {
+  assert.deepEqual(calls[19]?.body, {
     input_path: "report.pdf",
     output_path: "sanitized.pdf",
   });
-  assert.deepEqual(calls[19]?.body, {
+  assert.deepEqual(calls[20]?.body, {
     input_path: "report.pdf",
     output_path: "redacted.pdf",
     regions: [{ page: 1, bbox: [60, 700, 280, 760], label: "secret" }],
   });
-  assert.deepEqual(calls[20]?.body, {
+  assert.deepEqual(calls[21]?.body, {
     input_path: "redacted.pdf",
     search_terms: ["SECRET-CODE-123"],
   });
-  assert.deepEqual(calls[21]?.body, {
+  assert.deepEqual(calls[22]?.body, {
     input_path: "redacted.pdf",
     search_terms: ["SECRET-CODE-123"],
   });

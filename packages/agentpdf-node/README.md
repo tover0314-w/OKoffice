@@ -233,6 +233,10 @@ const audit = await client.composeFromContext({
   renderer: "html",
   htmlOutputPath: ".agentpdf-out/technical-audit.html",
 });
+const rerenderedAudit = await client.renderHtmlPackage({
+  packagePath: ".agentpdf-out/technical-audit.html-manifest.json",
+  outputPath: ".agentpdf-out/technical-audit-rendered.pdf",
+});
 const deck = await client.composeFromContext({
   contextPacketPath: ".agentpdf-out/context.packet.json",
   profile: "slide_deck",
@@ -591,6 +595,7 @@ agentpdf-node target-validate --target-profile '{"profile_id":"media_learning_de
 agentpdf-node compose-plan context.packet.json --profile technical_audit -o technical-audit.plan.json
 agentpdf-node compose-render-ir technical-audit.plan.json -o technical-audit-from-ir.pdf
 agentpdf-node compose-from-context context.packet.json --profile technical_audit -o technical-audit.pdf --renderer html --html-output technical-audit.html
+agentpdf-node render-html-package technical-audit.html-manifest.json -o technical-audit-rendered.pdf
 agentpdf-node compose-from-context context.packet.json --profile slide_deck -o agent-review-deck.pdf
 agentpdf-node compose-add-code-block technical-audit.pdf --title "Risk Function" --code "def risky_total(items): return sum(items)" --language python --source-ref ctx_002 --target-slot code_review -o technical-audit.code.pdf
 agentpdf-node compose-add-table technical-audit.pdf --title "Runtime Metrics" --columns metric,value --row latency_ms,42 --source-ref ctx_003 -o technical-audit.table.pdf

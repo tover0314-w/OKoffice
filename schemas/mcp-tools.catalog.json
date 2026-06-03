@@ -623,6 +623,11 @@
       "status": "beta"
     },
     {
+      "name": "pdf_render_html_package",
+      "maps_to": "pdf.render.html_package",
+      "status": "beta"
+    },
+    {
       "name": "pdf_url_to_pdf",
       "maps_to": "pdf.convert.url_to_pdf",
       "status": "beta"

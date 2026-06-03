@@ -400,6 +400,10 @@ curl -X POST http://127.0.0.1:7331/v1/tools/pdf.compose.from_context/run \
   -H 'Content-Type: application/json' \
   -d '{"context_packet_path": "context.packet.json", "profile": "technical_audit", "output_path": "technical-audit.pdf", "renderer": "html", "html_output_path": "technical-audit.html"}'
 
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.render.html_package/run \
+  -H 'Content-Type: application/json' \
+  -d '{"package_path": "technical-audit.html-manifest.json", "output_path": "technical-audit-rendered.pdf"}'
+
 curl -X POST http://127.0.0.1:7331/v1/tools/pdf.evidence.context_packet_report/run \
   -H 'Content-Type: application/json' \
   -d '{"context_packet_path": "context.packet.json", "output_path": "context-report.pdf", "report_output_path": "context-report.json", "title": "Context Packet Report"}'

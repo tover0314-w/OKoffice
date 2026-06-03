@@ -102,6 +102,7 @@ from agentpdf.tools.runner import (
     run_rag_query,
     run_rag_search,
     run_remove_pages,
+    run_render_html_package,
     run_remove_unused_objects,
     run_render,
     run_render_check,
@@ -184,6 +185,7 @@ def create_mcp_server() -> FastMCP:
     server.tool(name="pdf_optimize_validate_pdfa")(pdf_optimize_validate_pdfa)
     server.tool(name="pdf_image_to_pdf")(pdf_image_to_pdf)
     server.tool(name="pdf_html_to_pdf")(pdf_html_to_pdf)
+    server.tool(name="pdf_render_html_package")(pdf_render_html_package)
     server.tool(name="pdf_url_to_pdf")(pdf_url_to_pdf)
     server.tool(name="pdf_docx_to_pdf")(pdf_docx_to_pdf)
     server.tool(name="pdf_pptx_to_pdf")(pdf_pptx_to_pdf)
@@ -515,6 +517,11 @@ def pdf_image_to_pdf(image_paths: list[str], output_path: str) -> str:
 def pdf_html_to_pdf(input_path: str, output_path: str) -> str:
     """Convert local HTML text to a PDF."""
     return run_html_to_pdf(input_path, output_path=output_path).model_dump_json()
+
+
+def pdf_render_html_package(package_path: str, output_path: str) -> str:
+    """Validate and render an AgentPDF HTML package to PDF."""
+    return run_render_html_package(package_path, output_path=output_path).model_dump_json()
 
 
 def pdf_url_to_pdf(

@@ -437,6 +437,11 @@ export interface HtmlToPdfInput {
   outputPath: string;
 }
 
+export interface RenderHtmlPackageInput {
+  packagePath: string;
+  outputPath: string;
+}
+
 export interface UrlToPdfInput {
   url: string;
   outputPath: string;

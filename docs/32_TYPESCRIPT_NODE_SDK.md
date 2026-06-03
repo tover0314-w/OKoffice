@@ -92,6 +92,7 @@ node packages/agentpdf-node/dist/src/cli.js target-validate --target-profile '{"
 node packages/agentpdf-node/dist/src/cli.js compose-plan .agentpdf-out/context.packet.json --profile technical_audit -o .agentpdf-out/technical-audit.plan.json
 node packages/agentpdf-node/dist/src/cli.js compose-render-ir .agentpdf-out/technical-audit.plan.json -o .agentpdf-out/technical-audit-from-ir.pdf
 node packages/agentpdf-node/dist/src/cli.js compose-from-context .agentpdf-out/context.packet.json --profile technical_audit -o .agentpdf-out/technical-audit.pdf --renderer html --html-output .agentpdf-out/technical-audit.html
+node packages/agentpdf-node/dist/src/cli.js render-html-package .agentpdf-out/technical-audit.html-manifest.json -o .agentpdf-out/technical-audit-rendered.pdf
 node packages/agentpdf-node/dist/src/cli.js compose-from-context .agentpdf-out/context.packet.json --profile slide_deck -o .agentpdf-out/agent-review-deck.pdf
 node packages/agentpdf-node/dist/src/cli.js compose-add-code-block .agentpdf-out/technical-audit.pdf --title "Risk Function" --code "def risky_total(items): return sum(items)" --language python --source-ref ctx_002 --target-slot code_review -o .agentpdf-out/technical-audit.code.pdf
 node packages/agentpdf-node/dist/src/cli.js compose-add-table .agentpdf-out/technical-audit.pdf --title "Runtime Metrics" --columns metric,value --row latency_ms,42 --source-ref ctx_003 -o .agentpdf-out/technical-audit.table.pdf
@@ -384,6 +385,10 @@ const composedAudit = await client.composeFromContext({
   outputPath: ".agentpdf-out/technical-audit.pdf",
   renderer: "html",
   htmlOutputPath: ".agentpdf-out/technical-audit.html",
+});
+const rerenderedAudit = await client.renderHtmlPackage({
+  packagePath: ".agentpdf-out/technical-audit.html-manifest.json",
+  outputPath: ".agentpdf-out/technical-audit-rendered.pdf",
 });
 const composedDeck = await client.composeFromContext({
   contextPacketPath: ".agentpdf-out/context.packet.json",
@@ -719,6 +724,7 @@ console.log(ragReport.usage.pages_cited);
 - `composePlan({ contextPacket, contextPacketPath, targetProfile, profile, outputPath, stylePack, title })`
 - `composeRenderIr({ composition, compositionPath, outputPath, stylePack, title })`
 - `composeFromContext({ contextPacket, contextPacketPath, targetProfile, profile, outputPath, stylePack, title, renderer, htmlOutputPath })`
+- `renderHtmlPackage({ packagePath, outputPath })`
 - `composeAddCodeBlock({ inputPath, outputPath, title, code, language, sourceRefs, blockId, targetSlot, compositionPath, layerManifestPath, manifestOutputPath })`
 - `composeAddTable({ inputPath, outputPath, title, columns, rows, sourceRefs, blockId, targetSlot, compositionPath, layerManifestPath, manifestOutputPath })`
 - `composeAddFigure({ inputPath, outputPath, title, imagePath, caption, sourceRefs, blockId, targetSlot, compositionPath, layerManifestPath, manifestOutputPath })`

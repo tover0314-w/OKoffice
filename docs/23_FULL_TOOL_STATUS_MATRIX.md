@@ -1,6 +1,6 @@
 # 23 — Full Tool Status Matrix
 
-Total tools specified: **227**
+Total tools specified: **228**
 
 | Tool | Category | Status | OSS default |
 |---|---|---:|---:|
@@ -87,6 +87,7 @@ Total tools specified: **227**
 | `pdf.convert.image_to_pdf` | convert_to_pdf | stable | yes |
 | `pdf.convert.markdown_to_pdf` | convert_to_pdf | stable | yes |
 | `pdf.convert.html_to_pdf` | convert_to_pdf | beta | yes |
+| `pdf.render.html_package` | render | beta | yes |
 | `pdf.convert.url_to_pdf` | convert_to_pdf | beta | yes |
 | `pdf.convert.text_to_pdf` | convert_to_pdf | stable | yes |
 | `pdf.convert.docx_to_pdf` | convert_to_pdf | beta | yes |

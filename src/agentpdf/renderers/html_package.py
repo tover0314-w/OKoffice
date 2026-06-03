@@ -11,8 +11,9 @@ from urllib.parse import urlparse
 from uuid import uuid4
 
 from agentpdf.artifacts.store import build_artifact
+from agentpdf.conversion.local import html_to_pdf
 from agentpdf.schemas.errors import AgentPDFException
-from agentpdf.schemas.models import ValidationCheck, ValidationReport
+from agentpdf.schemas.models import ToolResult, ValidationCheck, ValidationReport
 from agentpdf.security.paths import resolve_input_path, resolve_output_path
 
 
@@ -89,6 +90,44 @@ def write_composition_html_package(
         "html_package_validation": validation,
         "artifacts": [html_artifact, manifest_artifact],
     }
+
+
+def render_html_package(package_path: str | Path, output_path: str | Path) -> ToolResult:
+    tool = "pdf.render.html_package"
+    manifest_path = _resolve_manifest_path(package_path)
+    manifest = _load_html_package_manifest(manifest_path)
+    html_path = _manifest_html_path(manifest)
+    html_validation = _validate_existing_html_package_manifest(manifest, manifest_path=manifest_path, html_path=html_path)
+    rendered = html_to_pdf(html_path, output_path)
+    pdf_validation = rendered.validation or ValidationReport(status="skipped", checks=[])
+    validation = _merge_validation(html_validation, pdf_validation)
+    output = Path(output_path).expanduser().resolve()
+    artifacts = [
+        build_artifact(output, source_tool=tool),
+        build_artifact(html_path, source_tool=tool),
+        build_artifact(manifest_path, source_tool=tool),
+    ]
+    return ToolResult(
+        job_id=f"job_{uuid4().hex[:16]}",
+        status="succeeded" if validation.status == "passed" else "failed",
+        tool=tool,
+        artifacts=artifacts,
+        validation=validation,
+        warnings=[*rendered.warnings, *validation.warnings],
+        usage={
+            "renderer": "local_html_package_fallback",
+            "input": str(manifest_path),
+            "html_path": str(html_path),
+            "output": str(output),
+            "html_package_manifest": manifest,
+            "html_package_validation": html_validation.model_dump(mode="json"),
+        },
+        next_recommended_tools=[
+            "pdf.validation.render_check",
+            "pdf.validation.blank_page_check",
+            "pdf.evidence.coverage_report",
+        ],
+    )
 
 
 def _html_document(
@@ -284,6 +323,145 @@ def _validate_html_package(assets: list[dict[str, Any]]) -> ValidationReport:
         ),
     ]
     return ValidationReport(status="passed", checks=checks)
+
+
+def _resolve_manifest_path(package_path: str | Path) -> Path:
+    resolved = resolve_input_path(package_path)
+    if resolved.suffix.lower() in {".html", ".htm"}:
+        return resolve_input_path(resolved.with_suffix(".html-manifest.json"))
+    return resolved
+
+
+def _load_html_package_manifest(manifest_path: Path) -> dict[str, Any]:
+    try:
+        payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise AgentPDFException(
+            "html_invalid_package",
+            "HTML package manifest is not valid JSON.",
+            details={"manifest_path": str(manifest_path)},
+        ) from exc
+    if not isinstance(payload, dict):
+        raise AgentPDFException(
+            "html_invalid_package",
+            "HTML package manifest must be a JSON object.",
+            details={"manifest_path": str(manifest_path)},
+        )
+    if payload.get("renderer_contract") != "html-package-v0":
+        raise AgentPDFException(
+            "html_invalid_package",
+            "HTML package manifest has an unsupported renderer contract.",
+            details={"manifest_path": str(manifest_path), "renderer_contract": payload.get("renderer_contract")},
+        )
+    return payload
+
+
+def _manifest_html_path(manifest: dict[str, Any]) -> Path:
+    raw_path = manifest.get("html_path")
+    if not raw_path:
+        raise AgentPDFException("html_invalid_package", "HTML package manifest is missing html_path.")
+    return resolve_input_path(str(raw_path))
+
+
+def _validate_existing_html_package_manifest(
+    manifest: dict[str, Any],
+    *,
+    manifest_path: Path,
+    html_path: Path,
+) -> ValidationReport:
+    assets = manifest.get("assets", [])
+    if not isinstance(assets, list):
+        raise AgentPDFException(
+            "html_invalid_package",
+            "HTML package manifest assets must be an array.",
+            details={"manifest_path": str(manifest_path)},
+        )
+    for asset in assets:
+        if not isinstance(asset, dict):
+            raise AgentPDFException(
+                "html_invalid_package",
+                "HTML package manifest asset entries must be objects.",
+                details={"manifest_path": str(manifest_path)},
+            )
+        _validate_manifest_asset(asset, manifest_path=manifest_path)
+    checks = [
+        ValidationCheck(
+            name="html_package_manifest_valid",
+            status="passed",
+            details={
+                "manifest_path": str(manifest_path),
+                "html_path": str(html_path),
+                "renderer_contract": manifest.get("renderer_contract"),
+            },
+        ),
+        ValidationCheck(
+            name="all_assets_resolved",
+            status="passed",
+            details={"asset_count": len(assets)},
+        ),
+        ValidationCheck(
+            name="no_remote_assets",
+            status="passed",
+            details={"remote_assets_enabled": bool(manifest.get("remote_assets_enabled", False))},
+        ),
+        ValidationCheck(
+            name="no_forbidden_asset_paths",
+            status="passed",
+            details={"checked_assets": len(assets)},
+        ),
+    ]
+    return ValidationReport(status="passed", checks=checks)
+
+
+def _validate_manifest_asset(asset: dict[str, Any], *, manifest_path: Path) -> None:
+    raw_path = str(asset.get("packaged_path") or "")
+    if not raw_path:
+        raise AgentPDFException(
+            "html_invalid_package",
+            "HTML package asset is missing packaged_path.",
+            details={"manifest_path": str(manifest_path), "asset_id": asset.get("asset_id")},
+        )
+    if _is_blocked_asset_ref(raw_path):
+        raise AgentPDFException(
+            "html_invalid_package",
+            "HTML package asset path must be local.",
+            details={"manifest_path": str(manifest_path), "asset_id": asset.get("asset_id"), "asset_ref": raw_path},
+        )
+    path = Path(raw_path).expanduser().resolve()
+    if not path.exists() or not path.is_file():
+        raise AgentPDFException(
+            "html_asset_missing",
+            "HTML package asset is missing.",
+            details={
+                "manifest_path": str(manifest_path),
+                "asset_id": asset.get("asset_id"),
+                "packaged_path": str(path),
+            },
+        )
+    expected_sha = asset.get("sha256")
+    if expected_sha and hashlib.sha256(path.read_bytes()).hexdigest() != expected_sha:
+        raise AgentPDFException(
+            "html_invalid_package",
+            "HTML package asset hash does not match the manifest.",
+            details={"manifest_path": str(manifest_path), "asset_id": asset.get("asset_id"), "packaged_path": str(path)},
+        )
+
+
+def _merge_validation(first: ValidationReport, second: ValidationReport) -> ValidationReport:
+    checks = [*first.checks, *second.checks]
+    status = "passed"
+    if any(check.status == "failed" for check in checks):
+        status = "failed"
+    elif any(check.status == "warning" for check in checks):
+        status = "warning"
+    elif checks and all(check.status == "skipped" for check in checks):
+        status = "skipped"
+    return ValidationReport(
+        status=status,
+        checks=checks,
+        page_count=second.page_count,
+        warnings=[*first.warnings, *second.warnings],
+    )
 
 
 def _source_map_row(mapping: dict[str, Any]) -> str:

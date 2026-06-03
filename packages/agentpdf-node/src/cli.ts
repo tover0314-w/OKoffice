@@ -871,6 +871,19 @@ export async function runCli(
         stdout,
       );
     }
+    if (command === "render-html-package") {
+      const packagePath = args.shift();
+      if (!packagePath) {
+        throw new UsageError("Missing HTML package path for render-html-package.");
+      }
+      return emitResult(
+        await client.renderHtmlPackage({
+          packagePath,
+          outputPath: takeRequiredOption(args, ["--output", "-o"]),
+        }),
+        stdout,
+      );
+    }
     if (command === "url-to-pdf") {
       const url = args.shift();
       if (!url) {
@@ -2291,6 +2304,7 @@ function helpText(): string {
     "  agentpdf-node subset-fonts FILE -o OUT.pdf",
     "  agentpdf-node to-pdfa FILE -o OUT.pdf [--profile PDF/A-2b]",
     "  agentpdf-node html-to-pdf input.html -o OUT.pdf",
+    "  agentpdf-node render-html-package report.html-manifest.json -o OUT.pdf",
     "  agentpdf-node url-to-pdf https://example.com -o OUT.pdf",
     "  agentpdf-node docx-to-pdf report.docx -o OUT.pdf",
     "  agentpdf-node pptx-to-pdf deck.pptx -o OUT.pdf",

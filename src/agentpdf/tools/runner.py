@@ -88,6 +88,7 @@ from agentpdf.patch.transaction import (
     preview_patch_transaction,
     verify_patch_transaction,
 )
+from agentpdf.renderers.html_package import render_html_package
 from agentpdf.security.local import (
     decrypt_authorized_pdf,
     encrypt_pdf,
@@ -366,6 +367,13 @@ def run_html_to_pdf(input_path: str | Path, output_path: str | Path) -> ToolResu
         return html_to_pdf(input_path, output_path=output_path)
     except AgentPDFException as exc:
         return _failed("pdf.convert.html_to_pdf", exc.to_error())
+
+
+def run_render_html_package(package_path: str | Path, output_path: str | Path) -> ToolResult:
+    try:
+        return render_html_package(package_path, output_path=output_path)
+    except AgentPDFException as exc:
+        return _failed("pdf.render.html_package", exc.to_error())
 
 
 def run_url_to_pdf(
