@@ -73,7 +73,7 @@ Create new PDF artifacts from context packets, target PDF profiles, composition 
 | Tool | Status | Description |
 |---|---:|---|
 | `pdf.compose.plan` | beta | Plan a context-to-target-PDF artifact with Composition IR, source refs, validation, render plan, and style constraints. |
-| `pdf.compose.from_context` | beta | Compose a validated target PDF from a Context Packet and target profile with source map, evidence coverage, and optional HTML package artifacts. |
+| `pdf.compose.from_context` | beta | Compose a validated target PDF from a Context Packet and target profile with source map, evidence coverage, optional HTML package artifacts, local asset manifest, and HTML package validation. |
 | `pdf.compose.render_ir` | beta | Render a composition plan or IR payload into a validated PDF artifact. |
 | `pdf.compose.add_code_block` | beta target | Append a code evidence page to a new PDF with source refs, patch evidence, rollback metadata, and validation. |
 | `pdf.compose.add_figure` | beta target | Append an image/figure evidence page to a new PDF with captions, source refs, patch evidence, rollback metadata, and validation. |

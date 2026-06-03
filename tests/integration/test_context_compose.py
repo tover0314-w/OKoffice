@@ -383,10 +383,13 @@ def test_compose_from_context_creates_pdf_with_source_map_and_coverage(tmp_path:
 def test_compose_from_context_html_renderer_writes_html_package_pdf_and_manifest(tmp_path: Path) -> None:
     csv = tmp_path / "metrics.csv"
     csv.write_text("metric,value\nlatency_ms,42\n", encoding="utf-8")
+    image = tmp_path / "diagram.png"
+    Image.new("RGB", (80, 40), color=(40, 80, 120)).save(image)
     packet = build_context_packet(
         [
             {"text": "Create an HTML-first technical audit.", "role": "brief", "label": "Brief"},
             {"path": str(csv), "role": "data_evidence", "label": "Runtime Metrics"},
+            {"path": str(image), "role": "image_evidence", "label": "Architecture Figure"},
         ],
         output_path=tmp_path / "html.context.packet.json",
         title="HTML Context",
@@ -415,7 +418,12 @@ def test_compose_from_context_html_renderer_writes_html_package_pdf_and_manifest
     assert result.usage["html_output_path"] == str(html_output.resolve())
     assert result.usage["html_package_manifest_path"] == str(manifest_path.resolve())
     assert result.usage["html_package_manifest"]["block_count"] == len(result.usage["composition_ir"]["blocks"])
-    assert result.usage["html_package_manifest"]["source_ref_count"] == 2
+    assert result.usage["html_package_manifest"]["source_ref_count"] == 3
+    assert result.usage["html_package_manifest"]["asset_count"] == 1
+    assert result.usage["html_package_manifest"]["assets"][0]["source_path"] == str(image.resolve())
+    assert result.usage["html_package_validation"]["status"] == "passed"
+    assert any(check.name == "html_package_manifest_valid" for check in result.validation.checks)
+    assert any(check.name == "all_assets_resolved" for check in result.validation.checks)
     assert any(artifact.mime_type == "text/html" for artifact in result.artifacts)
     assert any(str(artifact.path).endswith(".html-manifest.json") for artifact in result.artifacts)
 
@@ -423,7 +431,8 @@ def test_compose_from_context_html_renderer_writes_html_package_pdf_and_manifest
     assert "<body data-agentpdf-document" in html_text
     assert 'data-agentpdf-renderer="html-package-v0"' in html_text
     assert 'data-block-id="summary"' in html_text
-    assert 'data-source-refs="ctx_001 ctx_002"' in html_text
+    assert 'data-source-refs="ctx_001 ctx_002 ctx_003"' in html_text
+    assert '<img src="./html-audit.assets/' in html_text
     assert "latency_ms" in html_text
     pdf_text = "\n".join(page.extract_text() or "" for page in PdfReader(output_pdf).pages)
     assert "HTML First Audit" in pdf_text

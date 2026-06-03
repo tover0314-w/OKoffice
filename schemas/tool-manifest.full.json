@@ -374,7 +374,7 @@
     {
       "name": "pdf.compose.from_context",
       "status": "beta",
-      "description": "Compose a validated target PDF from a Context Packet and target profile with optional HTML package artifacts.",
+      "description": "Compose a validated target PDF from a Context Packet and target profile with optional HTML package artifacts, local asset manifest, and HTML package validation.",
       "category": "compose",
       "interfaces": [
         "cli",
