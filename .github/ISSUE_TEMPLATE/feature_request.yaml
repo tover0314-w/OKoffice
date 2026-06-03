@@ -1,29 +1,68 @@
 name: Feature request
-description: Suggest a new tool or improvement
+description: Suggest a new tool or product improvement
 title: "feat: "
-labels: ["enhancement"]
+labels: ["enhancement", "needs-triage"]
 body:
   - type: textarea
     id: problem
     attributes:
       label: Problem
-      description: What user/agent problem does this solve?
+      description: What user, agent, or document workflow problem does this solve?
+      placeholder: "Agents need a safe way to..."
     validations:
       required: true
   - type: textarea
     id: proposal
     attributes:
       label: Proposed solution
+      description: Describe the smallest useful version.
+    validations:
+      required: true
   - type: dropdown
     id: area
     attributes:
-      label: Area
+      label: Primary area
       options:
         - CLI
         - MCP
-        - API
+        - REST API
+        - TypeScript / Node SDK
         - PDF core
-        - AI parse/RAG
-        - Create/edit
+        - Validation
+        - Create / compose / patch
+        - Lite parse / local RAG
         - Security
-        - Docs
+        - Documentation
+        - Infrastructure
+    validations:
+      required: true
+  - type: checkboxes
+    id: interfaces
+    attributes:
+      label: Interfaces that should expose this
+      options:
+        - label: CLI
+        - label: MCP
+        - label: REST API / OpenAPI
+        - label: TypeScript / Node SDK
+        - label: Tool manifest / schema catalog
+        - label: Documentation examples
+  - type: textarea
+    id: output-contract
+    attributes:
+      label: Expected structured output
+      description: What artifacts, validation evidence, warnings, usage fields, or next recommended tools should agents receive?
+      render: json
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Optional, but helpful for scope and design trade-offs.
+  - type: checkboxes
+    id: boundaries
+    attributes:
+      label: Boundaries
+      options:
+        - label: This can work locally without a hosted cloud service.
+        - label: This may require an optional worker or feature flag.
+        - label: This has security, privacy, license, or redaction implications.

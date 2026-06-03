@@ -60,7 +60,10 @@
               "append_code_block",
               "append_table",
               "append_image",
-              "append_slide"
+              "append_slide",
+              "append_citation",
+              "append_media_reference",
+              "regenerate_block"
             ]
           },
           "title": {
@@ -69,6 +72,30 @@
           "markdown": {
             "type": "string",
             "minLength": 1
+          },
+          "replacement_markdown": {
+            "type": "string",
+            "minLength": 1
+          },
+          "regeneration_policy": {
+            "type": "object",
+            "required": [
+              "requested_effect",
+              "actual_effect",
+              "mutates_original_block",
+              "requires_new_output_path",
+              "claims_layout_preservation",
+              "requires_layer_evidence"
+            ],
+            "additionalProperties": true,
+            "properties": {
+              "requested_effect": {"type": "string"},
+              "actual_effect": {"type": "string"},
+              "mutates_original_block": {"const": false},
+              "requires_new_output_path": {"const": true},
+              "claims_layout_preservation": {"const": false},
+              "requires_layer_evidence": {"type": "boolean"}
+            }
           },
           "language": {
             "type": "string"
@@ -96,6 +123,45 @@
           },
           "caption": {
             "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "quote": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "citation_evidence": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "media_path": {
+            "type": "string"
+          },
+          "media_kind": {
+            "type": "string",
+            "enum": ["audio", "video", "media"]
+          },
+          "transcript_excerpt": {
+            "type": "string"
+          },
+          "duration_seconds": {
+            "type": "number",
+            "minimum": 0
+          },
+          "chapter_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "keyframe_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "media_evidence": {
+            "type": "object",
+            "additionalProperties": true
           },
           "body": {
             "type": "array",
@@ -382,7 +448,10 @@
               "append_code_block",
               "append_table",
               "append_image",
-              "append_slide"
+              "append_slide",
+              "append_citation",
+              "append_media_reference",
+              "regenerate_block"
             ]
           }
         },

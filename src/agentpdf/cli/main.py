@@ -9,11 +9,21 @@ from agentpdf.schemas.models import ToolResult
 from agentpdf.tools.registry import get_tool, load_tool_manifest
 from agentpdf.tools.runner import (
     run_agent_setup_claude_code,
+    run_agent_setup_codex,
     run_artifacts_export_bundle,
     run_artifacts_verify_bundle,
     run_blank_page_check,
     run_build_context_packet,
+    run_compose_add_appendix,
+    run_compose_add_citation,
+    run_compose_add_code_block,
+    run_compose_add_figure,
+    run_compose_add_media_reference,
+    run_compose_add_slide,
+    run_compose_add_table,
     run_compose_from_context,
+    run_compose_plan,
+    run_compose_render_ir,
     run_compress,
     run_create_markdown,
     run_create_text,
@@ -24,8 +34,15 @@ from agentpdf.tools.runner import (
     run_create_template_preview,
     run_create_template_packs,
     run_create_templates,
+    run_context_packet_report,
+    run_context_classify,
+    run_context_code_snapshot,
+    run_context_data_profile,
+    run_context_ingest,
+    run_context_packet,
     run_validate_template_pack,
     run_evidence_coverage_report,
+    run_evidence_map_sources,
     run_extract_images,
     run_extract_pages,
     run_extract_text,
@@ -34,6 +51,7 @@ from agentpdf.tools.runner import (
     run_inspect_pages,
     run_insert_blank_pages,
     run_metadata_read,
+    run_metadata_page_info,
     run_metadata_remove,
     run_metadata_update,
     run_merge,
@@ -58,6 +76,8 @@ from agentpdf.tools.runner import (
     run_repair,
     run_reorder_pages,
     run_rotate_pages,
+    run_page_count_check,
+    run_security_remove_metadata,
     run_split,
     run_target_profiles,
     run_validate_output,
@@ -73,6 +93,7 @@ agent_app = typer.Typer(help="Generate local agent runtime configs.")
 agent_setup_app = typer.Typer(help="Set up specific agent runtimes.")
 tools_app = typer.Typer(help="Discover AgentPDF tools.")
 metadata_app = typer.Typer(help="Read and write PDF metadata.")
+security_app = typer.Typer(help="Run local PDF security and privacy tools.")
 create_app = typer.Typer(help="Create PDFs from local inputs.")
 context_app = typer.Typer(help="Build agent context packets.")
 compose_app = typer.Typer(help="Compose target PDFs from context packets.")
@@ -86,6 +107,7 @@ app.add_typer(agent_app, name="agent")
 agent_app.add_typer(agent_setup_app, name="setup")
 app.add_typer(tools_app, name="tools")
 app.add_typer(metadata_app, name="metadata")
+app.add_typer(security_app, name="security")
 app.add_typer(create_app, name="create")
 app.add_typer(context_app, name="context")
 app.add_typer(compose_app, name="compose")
@@ -145,6 +167,43 @@ def agent_setup_claude_code(
             args_prefix=args_prefix,
             server_name=server_name,
             scope=scope,
+        ),
+        json_output=json_output,
+    )
+
+
+@agent_setup_app.command("codex")
+def agent_setup_codex(
+    output_path: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", help="Optional Codex MCP config output path."),
+    ] = None,
+    safe_root: Annotated[
+        str,
+        typer.Option("--safe-root", help="Codex workspace safe root."),
+    ] = ".",
+    command: Annotated[
+        str,
+        typer.Option("--command", help="Executable used by Codex to start okpdf."),
+    ] = "okpdf",
+    args_prefix: Annotated[
+        list[str] | None,
+        typer.Option("--arg-prefix", help="Extra args before 'serve', e.g. -m agentpdf.cli."),
+    ] = None,
+    server_name: Annotated[
+        str,
+        typer.Option("--server-name", help="MCP server name in Codex config."),
+    ] = "agentpdf",
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Generate a Codex MCP config for local okpdf tools."""
+    _emit_result(
+        run_agent_setup_codex(
+            output_path=output_path,
+            safe_root=safe_root,
+            command=command,
+            args_prefix=args_prefix,
+            server_name=server_name,
         ),
         json_output=json_output,
     )
@@ -575,6 +634,22 @@ def create_agent(
         Path | None,
         typer.Option("--coverage-output", help="Optional evidence coverage JSON output path."),
     ] = None,
+    context_classification_output_path: Annotated[
+        Path | None,
+        typer.Option("--context-classification-output", help="Optional Context Packet classification JSON output path."),
+    ] = None,
+    context_report_output_path: Annotated[
+        Path | None,
+        typer.Option("--context-report-output", help="Optional Context Packet PDF audit report output path."),
+    ] = None,
+    context_report_json_output_path: Annotated[
+        Path | None,
+        typer.Option("--context-report-json-output", help="Optional Context Packet JSON audit report output path."),
+    ] = None,
+    bundle_output_path: Annotated[
+        Path | None,
+        typer.Option("--bundle-output", help="Optional portable audit bundle ZIP output path."),
+    ] = None,
     preferred_template_id: Annotated[
         str | None,
         typer.Option("--preferred-template", help="Preferred template id to bias selection."),
@@ -608,6 +683,10 @@ def create_agent(
             output_path=output_path,
             plan_output_path=plan_output_path,
             coverage_output_path=coverage_output_path,
+            context_classification_output_path=context_classification_output_path,
+            context_report_output_path=context_report_output_path,
+            context_report_json_output_path=context_report_json_output_path,
+            bundle_output_path=bundle_output_path,
             preferred_template_id=preferred_template_id,
             preferred_color_scheme=preferred_color_scheme,
             title=title,
@@ -728,6 +807,234 @@ def context_build(
     )
 
 
+@context_app.command("ingest")
+def context_ingest(
+    output_path: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", help="Optional output context item JSON path."),
+    ] = None,
+    file: Annotated[Path | None, typer.Option("--file", help="Local context file.")] = None,
+    text: Annotated[str | None, typer.Option("--text", help="Inline text context.")] = None,
+    link: Annotated[str | None, typer.Option("--link", help="Web/link context URI.")] = None,
+    item_json: Annotated[
+        str | None,
+        typer.Option("--item-json", help="Structured context item JSON object or JSON file."),
+    ] = None,
+    role: Annotated[str | None, typer.Option("--role", help="Context item role override.")] = None,
+    label: Annotated[str | None, typer.Option("--label", help="Context item label override.")] = None,
+    item_type: Annotated[str | None, typer.Option("--type", help="Explicit context item type override.")] = None,
+    transcript: Annotated[str | None, typer.Option("--transcript", help="Provided audio/video transcript.")] = None,
+    duration_seconds: Annotated[
+        float | None,
+        typer.Option("--duration-seconds", help="Provided media duration in seconds."),
+    ] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Normalize one local source into an agent context item."""
+    _emit_result(
+        run_context_ingest(
+            _single_context_item_from_cli(
+                file=file,
+                text=text,
+                link=link,
+                item_json=item_json,
+                role=role,
+                label=label,
+                item_type=item_type,
+                transcript=transcript,
+                duration_seconds=duration_seconds,
+            ),
+            output_path=output_path,
+        ),
+        json_output=json_output,
+    )
+
+
+@context_app.command("packet")
+def context_packet(
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output context packet JSON path.")],
+    files: Annotated[
+        list[Path] | None,
+        typer.Option("--file", help="Local context file. Can be repeated."),
+    ] = None,
+    texts: Annotated[
+        list[str] | None,
+        typer.Option("--text", help="Inline text context. Can be repeated."),
+    ] = None,
+    links: Annotated[
+        list[str] | None,
+        typer.Option("--link", help="Web/link context URI. Can be repeated."),
+    ] = None,
+    item_json: Annotated[
+        list[str] | None,
+        typer.Option("--item-json", help="Structured context item JSON object or JSON file. Can be repeated."),
+    ] = None,
+    title: Annotated[str | None, typer.Option("--title", help="Context packet title.")] = None,
+    intent: Annotated[str | None, typer.Option("--intent", help="User or agent intent for this context packet.")] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Build a reusable Context Packet from raw or pre-ingested context items."""
+    _emit_result(
+        run_context_packet(
+            _context_items_from_cli(files or [], texts or [], links or [], item_json or []),
+            output_path=output_path,
+            title=title,
+            intent=intent,
+        ),
+        json_output=json_output,
+    )
+
+
+@context_app.command("classify")
+def context_classify(
+    context_packet_path: Annotated[Path, typer.Argument(help="Context packet JSON path.")],
+    output_path: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", help="Optional output classification JSON path."),
+    ] = None,
+    profile: Annotated[str | None, typer.Option("--profile", help="Target PDF profile id.")] = None,
+    profile_path: Annotated[
+        Path | None,
+        typer.Option("--profile-json", help="Optional target profile JSON file."),
+    ] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Classify context items for agent routing into target PDF blocks and slots."""
+    target_profile: dict[str, object] | str | None = _read_json_object(profile_path) if profile_path else profile
+    _emit_result(
+        run_context_classify(
+            context_packet_path,
+            target_profile=target_profile,
+            output_path=output_path,
+        ),
+        json_output=json_output,
+    )
+
+
+@context_app.command("code-snapshot")
+def context_code_snapshot(
+    path: Annotated[Path, typer.Argument(help="Local code file to snapshot.")],
+    output_path: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", help="Optional output context item JSON path."),
+    ] = None,
+    label: Annotated[str | None, typer.Option("--label", help="Context item label.")] = None,
+    role: Annotated[str, typer.Option("--role", help="Context item role.")] = "code_evidence",
+    context_item_id: Annotated[
+        str | None,
+        typer.Option("--context-item-id", help="Stable context item/source ref id."),
+    ] = None,
+    line_start: Annotated[int | None, typer.Option("--line-start", help="1-based first line to include.")] = None,
+    line_end: Annotated[int | None, typer.Option("--line-end", help="1-based final line to include.")] = None,
+    repository_root: Annotated[
+        Path | None,
+        typer.Option("--repository-root", help="Optional repo root for relative path evidence."),
+    ] = None,
+    include_dependencies: Annotated[
+        bool,
+        typer.Option("--include-dependencies", help="Include static import/dependency hints."),
+    ] = False,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Create a code context item with local symbol, range, hash, and source refs."""
+    _emit_result(
+        run_context_code_snapshot(
+            path=path,
+            output_path=output_path,
+            label=label,
+            role=role,
+            context_item_id=context_item_id,
+            line_start=line_start,
+            line_end=line_end,
+            repository_root=repository_root,
+            include_dependencies=include_dependencies,
+        ),
+        json_output=json_output,
+    )
+
+
+@context_app.command("data-profile")
+def context_data_profile(
+    path: Annotated[Path, typer.Argument(help="Local CSV/TSV/JSON/JSONL/XLSX data file to profile.")],
+    output_path: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", help="Optional output context item JSON path."),
+    ] = None,
+    label: Annotated[str | None, typer.Option("--label", help="Context item label.")] = None,
+    role: Annotated[str, typer.Option("--role", help="Context item role.")] = "data_evidence",
+    context_item_id: Annotated[
+        str | None,
+        typer.Option("--context-item-id", help="Stable context item/source ref id."),
+    ] = None,
+    sheet: Annotated[str | None, typer.Option("--sheet", help="Optional XLSX sheet name.")] = None,
+    max_rows: Annotated[int, typer.Option("--max-rows", help="Maximum preview rows to keep.")] = 100,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Create a data context item with local table/profile evidence."""
+    _emit_result(
+        run_context_data_profile(
+            path=path,
+            output_path=output_path,
+            label=label,
+            role=role,
+            context_item_id=context_item_id,
+            sheet=sheet,
+            max_rows=max_rows,
+        ),
+        json_output=json_output,
+    )
+
+
+@compose_app.command("plan")
+def compose_plan_command(
+    context_packet_path: Annotated[Path, typer.Argument(help="Context packet JSON path.")],
+    output_path: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", help="Optional output composition plan JSON path."),
+    ] = None,
+    profile: Annotated[str, typer.Option("--profile", help="Target PDF profile id.")] = "research_brief",
+    profile_path: Annotated[
+        Path | None,
+        typer.Option("--profile-json", help="Optional target profile JSON file."),
+    ] = None,
+    style_pack: Annotated[str | None, typer.Option("--style-pack", help="Optional style pack override.")] = None,
+    title: Annotated[str | None, typer.Option("--title", help="Optional planned PDF title.")] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Plan composition IR, source map, coverage, and render payload without writing a PDF."""
+    target_profile: dict[str, object] | str = _read_json_object(profile_path) if profile_path else profile
+    _emit_result(
+        run_compose_plan(
+            context_packet_path,
+            target_profile=target_profile,
+            output_path=output_path,
+            style_pack=style_pack,
+            title=title,
+        ),
+        json_output=json_output,
+    )
+
+
+@compose_app.command("render-ir")
+def compose_render_ir_command(
+    composition_path: Annotated[Path, typer.Argument(help="Composition plan/IR JSON path.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output rendered PDF path.")],
+    style_pack: Annotated[str | None, typer.Option("--style-pack", help="Optional style pack override.")] = None,
+    title: Annotated[str | None, typer.Option("--title", help="Optional rendered PDF title.")] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Render a composition plan or IR payload into a validated PDF artifact."""
+    _emit_result(
+        run_compose_render_ir(
+            composition_path,
+            output_path=output_path,
+            style_pack=style_pack,
+            title=title,
+        ),
+        json_output=json_output,
+    )
+
+
 @compose_app.command("from-context")
 def compose_from_context_command(
     context_packet_path: Annotated[Path, typer.Argument(help="Context packet JSON path.")],
@@ -750,6 +1057,289 @@ def compose_from_context_command(
             output_path=output_path,
             style_pack=style_pack,
             title=title,
+        ),
+        json_output=json_output,
+    )
+
+
+@compose_app.command("add-code-block")
+def compose_add_code_block(
+    input_path: Annotated[Path, typer.Argument(help="Input PDF path.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output composed PDF path.")],
+    title: Annotated[str, typer.Option("--title", help="Code block title.")] = "Code Block",
+    code: Annotated[str, typer.Option("--code", help="Code content to append.")] = "",
+    language: Annotated[str, typer.Option("--language", help="Code language label.")] = "text",
+    source_refs: Annotated[
+        list[str] | None,
+        typer.Option("--source-ref", help="Source ref for this block; may be repeated."),
+    ] = None,
+    block_id: Annotated[str | None, typer.Option("--block-id", help="Optional target block id.")] = None,
+    target_slot: Annotated[str | None, typer.Option("--target-slot", help="Optional target slot.")] = None,
+    composition_path: Annotated[Path | None, typer.Option("--composition", help="Composition JSON for source-ref validation.")] = None,
+    layer_manifest_path: Annotated[Path | None, typer.Option("--layers", help="Layer manifest for edit-policy validation.")] = None,
+    manifest_output_path: Annotated[Path | None, typer.Option("--manifest-output", help="Output compose block manifest JSON path.")] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Append a source-backed code block page to a new PDF artifact."""
+    _emit_result(
+        run_compose_add_code_block(
+            input_path=input_path,
+            output_path=output_path,
+            title=title,
+            code=code,
+            language=language,
+            source_refs=source_refs,
+            block_id=block_id,
+            target_slot=target_slot,
+            composition_path=composition_path,
+            layer_manifest_path=layer_manifest_path,
+            manifest_output_path=manifest_output_path,
+        ),
+        json_output=json_output,
+    )
+
+
+@compose_app.command("add-table")
+def compose_add_table(
+    input_path: Annotated[Path, typer.Argument(help="Input PDF path.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output composed PDF path.")],
+    title: Annotated[str, typer.Option("--title", help="Table title.")] = "Table",
+    columns_raw: Annotated[str, typer.Option("--columns", help="Comma-separated column names.")] = "",
+    rows_raw: Annotated[
+        list[str] | None,
+        typer.Option("--row", help="Comma-separated row values; may be repeated."),
+    ] = None,
+    source_refs: Annotated[
+        list[str] | None,
+        typer.Option("--source-ref", help="Source ref for this block; may be repeated."),
+    ] = None,
+    block_id: Annotated[str | None, typer.Option("--block-id", help="Optional target block id.")] = None,
+    target_slot: Annotated[str | None, typer.Option("--target-slot", help="Optional target slot.")] = None,
+    composition_path: Annotated[Path | None, typer.Option("--composition", help="Composition JSON for source-ref validation.")] = None,
+    layer_manifest_path: Annotated[Path | None, typer.Option("--layers", help="Layer manifest for edit-policy validation.")] = None,
+    manifest_output_path: Annotated[Path | None, typer.Option("--manifest-output", help="Output compose block manifest JSON path.")] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Append a source-backed table page to a new PDF artifact."""
+    _emit_result(
+        run_compose_add_table(
+            input_path=input_path,
+            output_path=output_path,
+            title=title,
+            columns=_parse_csv_values(columns_raw),
+            rows=[_parse_csv_values(row) for row in rows_raw or []],
+            source_refs=source_refs,
+            block_id=block_id,
+            target_slot=target_slot,
+            composition_path=composition_path,
+            layer_manifest_path=layer_manifest_path,
+            manifest_output_path=manifest_output_path,
+        ),
+        json_output=json_output,
+    )
+
+
+@compose_app.command("add-figure")
+def compose_add_figure(
+    input_path: Annotated[Path, typer.Argument(help="Input PDF path.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output composed PDF path.")],
+    image_path: Annotated[Path, typer.Option("--image", help="Local image path to append.")],
+    title: Annotated[str, typer.Option("--title", help="Figure title.")] = "Figure",
+    caption: Annotated[str | None, typer.Option("--caption", help="Optional figure caption.")] = None,
+    source_refs: Annotated[
+        list[str] | None,
+        typer.Option("--source-ref", help="Source ref for this block; may be repeated."),
+    ] = None,
+    block_id: Annotated[str | None, typer.Option("--block-id", help="Optional target block id.")] = None,
+    target_slot: Annotated[str | None, typer.Option("--target-slot", help="Optional target slot.")] = None,
+    composition_path: Annotated[Path | None, typer.Option("--composition", help="Composition JSON for source-ref validation.")] = None,
+    layer_manifest_path: Annotated[Path | None, typer.Option("--layers", help="Layer manifest for edit-policy validation.")] = None,
+    manifest_output_path: Annotated[Path | None, typer.Option("--manifest-output", help="Output compose block manifest JSON path.")] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Append a source-backed figure page to a new PDF artifact."""
+    _emit_result(
+        run_compose_add_figure(
+            input_path=input_path,
+            output_path=output_path,
+            title=title,
+            image_path=image_path,
+            caption=caption,
+            source_refs=source_refs,
+            block_id=block_id,
+            target_slot=target_slot,
+            composition_path=composition_path,
+            layer_manifest_path=layer_manifest_path,
+            manifest_output_path=manifest_output_path,
+        ),
+        json_output=json_output,
+    )
+
+
+@compose_app.command("add-appendix")
+def compose_add_appendix(
+    input_path: Annotated[Path, typer.Argument(help="Input PDF path.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output composed PDF path.")],
+    title: Annotated[str, typer.Option("--title", help="Appendix title.")] = "Appendix",
+    markdown: Annotated[str, typer.Option("--markdown", help="Markdown appendix body.")] = "",
+    source_refs: Annotated[
+        list[str] | None,
+        typer.Option("--source-ref", help="Source ref for this block; may be repeated."),
+    ] = None,
+    block_id: Annotated[str | None, typer.Option("--block-id", help="Optional target block id.")] = None,
+    target_slot: Annotated[str | None, typer.Option("--target-slot", help="Optional target slot.")] = None,
+    composition_path: Annotated[Path | None, typer.Option("--composition", help="Composition JSON for source-ref validation.")] = None,
+    layer_manifest_path: Annotated[Path | None, typer.Option("--layers", help="Layer manifest for edit-policy validation.")] = None,
+    manifest_output_path: Annotated[Path | None, typer.Option("--manifest-output", help="Output compose block manifest JSON path.")] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Append a source-backed Markdown appendix to a new PDF artifact."""
+    _emit_result(
+        run_compose_add_appendix(
+            input_path=input_path,
+            output_path=output_path,
+            title=title,
+            markdown=markdown,
+            source_refs=source_refs,
+            block_id=block_id,
+            target_slot=target_slot,
+            composition_path=composition_path,
+            layer_manifest_path=layer_manifest_path,
+            manifest_output_path=manifest_output_path,
+        ),
+        json_output=json_output,
+    )
+
+
+@compose_app.command("add-citation")
+def compose_add_citation(
+    input_path: Annotated[Path, typer.Argument(help="Input PDF path.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output composed PDF path.")],
+    source: Annotated[str, typer.Option("--source", help="Citation source URL, file, or reference.")],
+    title: Annotated[str, typer.Option("--title", help="Citation title.")] = "Citation",
+    quote: Annotated[str | None, typer.Option("--quote", help="Optional quoted or cited claim text.")] = None,
+    page: Annotated[str | None, typer.Option("--page", help="Optional page, section, or timestamp label.")] = None,
+    source_refs: Annotated[
+        list[str] | None,
+        typer.Option("--source-ref", help="Source ref for this block; may be repeated."),
+    ] = None,
+    block_id: Annotated[str | None, typer.Option("--block-id", help="Optional target block id.")] = None,
+    target_slot: Annotated[str | None, typer.Option("--target-slot", help="Optional target slot.")] = None,
+    composition_path: Annotated[Path | None, typer.Option("--composition", help="Composition JSON for source-ref validation.")] = None,
+    layer_manifest_path: Annotated[Path | None, typer.Option("--layers", help="Layer manifest for edit-policy validation.")] = None,
+    manifest_output_path: Annotated[Path | None, typer.Option("--manifest-output", help="Output compose block manifest JSON path.")] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Append a source-backed citation page to a new PDF artifact."""
+    _emit_result(
+        run_compose_add_citation(
+            input_path=input_path,
+            output_path=output_path,
+            title=title,
+            source=source,
+            quote=quote,
+            page=page,
+            source_refs=source_refs,
+            block_id=block_id,
+            target_slot=target_slot,
+            composition_path=composition_path,
+            layer_manifest_path=layer_manifest_path,
+            manifest_output_path=manifest_output_path,
+        ),
+        json_output=json_output,
+    )
+
+
+@compose_app.command("add-media-reference")
+def compose_add_media_reference(
+    input_path: Annotated[Path, typer.Argument(help="Input PDF path.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output composed PDF path.")],
+    media_path: Annotated[Path, typer.Option("--media", help="Local audio/video/media file or reference path.")],
+    title: Annotated[str, typer.Option("--title", help="Media reference title.")] = "Media Reference",
+    media_kind: Annotated[str, typer.Option("--media-kind", help="Media kind: audio, video, or media.")] = "media",
+    transcript_excerpt: Annotated[
+        str | None,
+        typer.Option("--transcript-excerpt", help="Optional user/agent-provided transcript excerpt."),
+    ] = None,
+    duration_seconds: Annotated[
+        float | None,
+        typer.Option("--duration-seconds", help="Optional media duration in seconds."),
+    ] = None,
+    chapter_count: Annotated[int | None, typer.Option("--chapter-count", help="Optional chapter count.")] = None,
+    keyframe_count: Annotated[int | None, typer.Option("--keyframe-count", help="Optional keyframe count.")] = None,
+    source_refs: Annotated[
+        list[str] | None,
+        typer.Option("--source-ref", help="Source ref for this block; may be repeated."),
+    ] = None,
+    block_id: Annotated[str | None, typer.Option("--block-id", help="Optional target block id.")] = None,
+    target_slot: Annotated[str | None, typer.Option("--target-slot", help="Optional target slot.")] = None,
+    composition_path: Annotated[Path | None, typer.Option("--composition", help="Composition JSON for source-ref validation.")] = None,
+    layer_manifest_path: Annotated[Path | None, typer.Option("--layers", help="Layer manifest for edit-policy validation.")] = None,
+    manifest_output_path: Annotated[Path | None, typer.Option("--manifest-output", help="Output compose block manifest JSON path.")] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Append a source-backed media reference page to a new PDF artifact."""
+    _emit_result(
+        run_compose_add_media_reference(
+            input_path=input_path,
+            output_path=output_path,
+            title=title,
+            media_path=media_path,
+            media_kind=media_kind,
+            transcript_excerpt=transcript_excerpt,
+            duration_seconds=duration_seconds,
+            chapter_count=chapter_count,
+            keyframe_count=keyframe_count,
+            source_refs=source_refs,
+            block_id=block_id,
+            target_slot=target_slot,
+            composition_path=composition_path,
+            layer_manifest_path=layer_manifest_path,
+            manifest_output_path=manifest_output_path,
+        ),
+        json_output=json_output,
+    )
+
+
+@compose_app.command("add-slide")
+def compose_add_slide(
+    input_path: Annotated[Path, typer.Argument(help="Input PDF path.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output composed PDF path.")],
+    title: Annotated[str, typer.Option("--title", help="Slide title.")] = "Slide",
+    subtitle: Annotated[str | None, typer.Option("--subtitle", help="Optional slide subtitle.")] = None,
+    body: Annotated[
+        list[str] | None,
+        typer.Option("--body", help="Slide body line; may be repeated."),
+    ] = None,
+    code: Annotated[str | None, typer.Option("--code", help="Optional code block to include on the slide.")] = None,
+    image_path: Annotated[Path | None, typer.Option("--image", help="Optional local image path for the slide.")] = None,
+    source_refs: Annotated[
+        list[str] | None,
+        typer.Option("--source-ref", help="Source ref for this block; may be repeated."),
+    ] = None,
+    block_id: Annotated[str | None, typer.Option("--block-id", help="Optional target block id.")] = None,
+    target_slot: Annotated[str | None, typer.Option("--target-slot", help="Optional target slot.")] = None,
+    composition_path: Annotated[Path | None, typer.Option("--composition", help="Composition JSON for source-ref validation.")] = None,
+    layer_manifest_path: Annotated[Path | None, typer.Option("--layers", help="Layer manifest for edit-policy validation.")] = None,
+    manifest_output_path: Annotated[Path | None, typer.Option("--manifest-output", help="Output compose block manifest JSON path.")] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Append a source-backed slide-like page to a new PDF artifact."""
+    _emit_result(
+        run_compose_add_slide(
+            input_path=input_path,
+            output_path=output_path,
+            title=title,
+            subtitle=subtitle,
+            body=body,
+            code=code,
+            image_path=image_path,
+            source_refs=source_refs,
+            block_id=block_id,
+            target_slot=target_slot,
+            composition_path=composition_path,
+            layer_manifest_path=layer_manifest_path,
+            manifest_output_path=manifest_output_path,
         ),
         json_output=json_output,
     )
@@ -800,6 +1390,71 @@ def evidence_coverage_report(
     """Create an evidence coverage report from a composition artifact."""
     _emit_result(
         run_evidence_coverage_report(composition_path, output_path=output_path),
+        json_output=json_output,
+    )
+
+
+@evidence_app.command("map-sources")
+def evidence_map_sources(
+    composition_path: Annotated[
+        Path | None,
+        typer.Argument(help="Optional composition JSON artifact path."),
+    ] = None,
+    context_packet_path: Annotated[
+        Path | None,
+        typer.Option("--context-packet", help="Optional Context Packet JSON for source evidence enrichment."),
+    ] = None,
+    blocks_path: Annotated[
+        Path | None,
+        typer.Option("--blocks", help="Optional JSON array of generated blocks."),
+    ] = None,
+    claims_path: Annotated[
+        Path | None,
+        typer.Option("--claims", help="Optional JSON array of extracted claims."),
+    ] = None,
+    output_path: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", help="Optional output source-map report JSON path."),
+    ] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Map generated blocks or claims back to Context Packet source refs."""
+    _emit_result(
+        run_evidence_map_sources(
+            composition=composition_path,
+            blocks=_read_json_object_list(blocks_path, "--blocks") if blocks_path else None,
+            claims=_read_json_object_list(claims_path, "--claims") if claims_path else None,
+            context_packet=context_packet_path,
+            output_path=output_path,
+        ),
+        json_output=json_output,
+    )
+
+
+@evidence_app.command("context-packet-report")
+def evidence_context_packet_report(
+    context_packet_path: Annotated[Path, typer.Argument(help="Context packet JSON artifact path.")],
+    output_path: Annotated[
+        Path,
+        typer.Option("--output", "-o", help="Output PDF report path."),
+    ],
+    report_output_path: Annotated[
+        Path | None,
+        typer.Option("--report-output", help="Optional output JSON report path."),
+    ] = None,
+    title: Annotated[str | None, typer.Option("--title", help="Optional PDF report title.")] = None,
+    style_pack: Annotated[str, typer.Option("--style-pack", help="Markdown PDF style pack name.")] = "paper_ink",
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Create a validated PDF/JSON report for a Context Packet and source graph."""
+    _emit_result(
+        run_context_packet_report(
+            context_packet_path,
+            output_path=output_path,
+            report_output_path=report_output_path,
+            title=title,
+            style_pack=style_pack,
+        ),
         json_output=json_output,
     )
 
@@ -996,6 +1651,16 @@ def metadata_read(
     _emit_result(run_metadata_read(input_path), json_output=json_output)
 
 
+@metadata_app.command("page-info")
+def metadata_page_info(
+    input_path: Annotated[Path, typer.Argument(help="Input PDF file.")],
+    pages: Annotated[str, typer.Option("--pages", help="Page range such as all or 1-3.")] = "all",
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Return page size, rotation, text-layer, and image facts."""
+    _emit_result(run_metadata_page_info(input_path, pages=pages), json_output=json_output)
+
+
 @metadata_app.command("update")
 def metadata_update(
     input_path: Annotated[Path, typer.Argument(help="Input PDF file.")],
@@ -1033,6 +1698,16 @@ def metadata_remove(
     _emit_result(run_metadata_remove(input_path, output_path=output_path), json_output=json_output)
 
 
+@security_app.command("remove-metadata")
+def security_remove_metadata(
+    input_path: Annotated[Path, typer.Argument(help="Input PDF file.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output PDF path.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Remove document metadata under the security namespace."""
+    _emit_result(run_security_remove_metadata(input_path, output_path=output_path), json_output=json_output)
+
+
 @app.command()
 def validate(
     path: Annotated[Path, typer.Argument(help="PDF file to validate.")],
@@ -1047,6 +1722,16 @@ def validate(
         run_validate_output(path, expected_pages=expected_pages),
         json_output=json_output,
     )
+
+
+@app.command("page-count-check")
+def page_count_check(
+    path: Annotated[Path, typer.Argument(help="PDF file to check.")],
+    expected_pages: Annotated[int, typer.Option("--expected-pages", help="Expected page count.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Compare the PDF page count with an expected value."""
+    _emit_result(run_page_count_check(path, expected_pages=expected_pages), json_output=json_output)
 
 
 @app.command("render-check")
@@ -1319,6 +2004,10 @@ def _parse_bindings(bindings: list[str]) -> dict[str, str]:
     return parsed
 
 
+def _parse_csv_values(value: str) -> list[str]:
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+
 def _read_json_object(path: Path) -> dict[str, object]:
     payload = _read_json_value(path)
     if not isinstance(payload, dict):
@@ -1326,8 +2015,15 @@ def _read_json_object(path: Path) -> dict[str, object]:
     return payload
 
 
+def _read_json_object_list(path: Path, option_name: str) -> list[dict[str, object]]:
+    payload = _read_json_value(path)
+    if not isinstance(payload, list) or not all(isinstance(item, dict) for item in payload):
+        raise typer.BadParameter(f"{option_name} must point to a JSON array of objects.")
+    return list(payload)
+
+
 def _read_json_value(path: Path) -> object:
-    return json.loads(path.read_text(encoding="utf-8"))
+    return json.loads(path.read_text(encoding="utf-8-sig"))
 
 
 def _parse_patch_operations(value: object) -> list[dict[str, Any]]:
@@ -1381,6 +2077,39 @@ def _context_items_from_cli(
     for value in item_json:
         items.extend(_parse_context_item_json(value))
     return items
+
+
+def _single_context_item_from_cli(
+    file: Path | None,
+    text: str | None,
+    link: str | None,
+    item_json: str | None,
+    role: str | None,
+    label: str | None,
+    item_type: str | None,
+    transcript: str | None,
+    duration_seconds: float | None,
+) -> dict[str, object]:
+    items = _context_items_from_cli(
+        [file] if file is not None else [],
+        [text] if text is not None else [],
+        [link] if link is not None else [],
+        [item_json] if item_json is not None else [],
+    )
+    if len(items) != 1:
+        raise typer.BadParameter("context ingest requires exactly one of --file, --text, --link, or --item-json.")
+    item = dict(items[0])
+    if role is not None:
+        item["role"] = role
+    if label is not None:
+        item["label"] = label
+    if item_type is not None:
+        item["type"] = item_type
+    if transcript is not None:
+        item["transcript"] = transcript
+    if duration_seconds is not None:
+        item["duration_seconds"] = duration_seconds
+    return item
 
 
 def _parse_context_item_json(value: str) -> list[dict[str, object]]:

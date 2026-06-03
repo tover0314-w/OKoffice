@@ -72,6 +72,14 @@ export interface SetupClaudeCodeInput {
   scope?: "project" | "local" | "user";
 }
 
+export interface SetupCodexInput {
+  outputPath?: string;
+  safeRoot?: string;
+  command?: string;
+  argsPrefix?: string[];
+  serverName?: string;
+}
+
 export interface InspectDocumentInput {
   path: string;
 }
@@ -104,6 +112,48 @@ export interface BuildContextPacketInput {
   intent?: string;
 }
 
+export interface IngestContextInput {
+  contextItem: JsonObject;
+  outputPath?: string;
+}
+
+export interface ContextPacketInput {
+  contextItems: JsonObject[];
+  outputPath: string;
+  title?: string;
+  intent?: string;
+}
+
+export interface ClassifyContextInput {
+  contextPacket?: JsonObject;
+  contextPacketPath?: string;
+  targetProfile?: JsonObject | string;
+  profile?: string;
+  outputPath?: string;
+}
+
+export interface CodeSnapshotInput {
+  path: string;
+  outputPath?: string;
+  label?: string;
+  role?: string;
+  contextItemId?: string;
+  lineStart?: number;
+  lineEnd?: number;
+  repositoryRoot?: string;
+  includeDependencies?: boolean;
+}
+
+export interface DataProfileInput {
+  path: string;
+  outputPath?: string;
+  label?: string;
+  role?: string;
+  contextItemId?: string;
+  sheet?: string;
+  maxRows?: number;
+}
+
 export interface ComposeFromContextInput {
   contextPacket?: JsonObject;
   contextPacketPath?: string;
@@ -114,7 +164,88 @@ export interface ComposeFromContextInput {
   title?: string;
 }
 
+export interface ComposePlanInput {
+  contextPacket?: JsonObject;
+  contextPacketPath?: string;
+  targetProfile?: JsonObject | string;
+  profile?: string;
+  outputPath?: string;
+  stylePack?: string;
+  title?: string;
+}
+
+export interface ComposeRenderIrInput {
+  composition?: JsonObject;
+  compositionPath?: string;
+  outputPath: string;
+  stylePack?: string;
+  title?: string;
+}
+
+export interface ComposeBlockInputBase {
+  inputPath: string;
+  outputPath: string;
+  title: string;
+  sourceRefs?: string[];
+  blockId?: string;
+  targetSlot?: string;
+  compositionPath?: string;
+  layerManifestPath?: string;
+  manifestOutputPath?: string;
+}
+
+export interface ComposeAddCodeBlockInput extends ComposeBlockInputBase {
+  code: string;
+  language?: string;
+}
+
+export interface ComposeAddTableInput extends ComposeBlockInputBase {
+  columns: string[];
+  rows: string[][];
+}
+
+export interface ComposeAddFigureInput extends ComposeBlockInputBase {
+  imagePath: string;
+  caption?: string;
+}
+
+export interface ComposeAddAppendixInput extends ComposeBlockInputBase {
+  markdown: string;
+}
+
+export interface ComposeAddCitationInput extends ComposeBlockInputBase {
+  source: string;
+  quote?: string;
+  page?: string;
+}
+
+export interface ComposeAddMediaReferenceInput extends ComposeBlockInputBase {
+  mediaPath: string;
+  mediaKind?: "audio" | "video" | "media" | string;
+  transcriptExcerpt?: string;
+  durationSeconds?: number;
+  chapterCount?: number;
+  keyframeCount?: number;
+}
+
+export interface ComposeAddSlideInput extends ComposeBlockInputBase {
+  body?: string[];
+  subtitle?: string;
+  code?: string;
+  table?: JsonObject;
+  imagePath?: string;
+}
+
 export interface TargetProfilesInput {
+  outputPath?: string;
+}
+
+export interface SelectTargetProfileInput {
+  goal?: string;
+  contextPacket?: JsonObject | string;
+  contextPacketPath?: string;
+  preferredProfile?: string;
+  profile?: string;
   outputPath?: string;
 }
 
@@ -128,6 +259,25 @@ export interface EvidenceCoverageReportInput {
   composition?: JsonObject;
   compositionPath?: string;
   outputPath?: string;
+}
+
+export interface EvidenceMapSourcesInput {
+  composition?: JsonObject;
+  compositionPath?: string;
+  blocks?: JsonObject[];
+  claims?: JsonObject[];
+  contextPacket?: JsonObject | string;
+  contextPacketPath?: string;
+  outputPath?: string;
+}
+
+export interface ContextPacketReportInput {
+  contextPacket?: JsonObject;
+  contextPacketPath?: string;
+  outputPath: string;
+  reportOutputPath?: string;
+  title?: string;
+  stylePack?: string;
 }
 
 export interface ExportBundleInput {
@@ -278,6 +428,10 @@ export interface CreateAgentInput {
   outputPath: string;
   planOutputPath?: string;
   coverageOutputPath?: string;
+  contextClassificationOutputPath?: string;
+  contextReportOutputPath?: string;
+  contextReportJsonOutputPath?: string;
+  bundleOutputPath?: string;
   preferredTemplateId?: string;
   preferredColorScheme?: string;
   title?: string;
@@ -304,9 +458,24 @@ export interface ValidateOutputInput {
   expectedPages?: number;
 }
 
+export interface PageCountCheckInput {
+  path: string;
+  expectedPages: number;
+}
+
 export interface RenderCheckInput {
   path: string;
   pages?: string;
+}
+
+export interface MetadataPageInfoInput {
+  inputPath: string;
+  pages?: string;
+}
+
+export interface SecurityRemoveMetadataInput {
+  inputPath: string;
+  outputPath: string;
 }
 
 export interface ExtractImagesInput {

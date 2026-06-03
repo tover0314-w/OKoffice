@@ -6,8 +6,8 @@ from typer.testing import CliRunner
 
 from agentpdf.api.app import create_app
 from agentpdf.cli.main import app
-from agentpdf.compose.context import list_target_profiles, validate_target_profile
-from agentpdf.mcp.server import pdf_target_profiles, pdf_target_validate_profile
+from agentpdf.compose.context import list_target_profiles, select_target_profile, validate_target_profile
+from agentpdf.mcp.server import pdf_target_profiles, pdf_target_select_profile, pdf_target_validate_profile
 
 
 runner = CliRunner()
@@ -66,6 +66,22 @@ def test_validate_target_profile_reports_agent_compatibility(tmp_path: Path) -> 
     assert json.loads(report_path.read_text(encoding="utf-8"))["is_valid"] is True
 
 
+def test_select_target_profile_ranks_local_profiles_from_goal(tmp_path: Path) -> None:
+    output_path = tmp_path / "selected-profile.json"
+
+    result = select_target_profile(
+        goal="Create a slide deck from meeting notes and source evidence.",
+        output_path=output_path,
+    )
+
+    assert result.status == "succeeded"
+    assert result.tool == "pdf.target.select_profile"
+    assert result.usage["selected_profile_id"] == "slide_deck"
+    assert result.usage["selected_profile"]["layout_mode"] == "slides"
+    assert result.usage["candidates"][0]["profile_id"] == "slide_deck"
+    assert output_path.exists()
+
+
 def test_target_profile_cli_api_mcp_are_exposed(tmp_path: Path) -> None:
     catalog_path = tmp_path / "profiles.json"
     profile_path = tmp_path / "custom-profile.json"
@@ -105,14 +121,22 @@ def test_target_profile_cli_api_mcp_are_exposed(tmp_path: Path) -> None:
         "/v1/tools/pdf.target.validate_profile/run",
         json={"target_profile": profile, "output_path": str(tmp_path / "api-profile.validation.json")},
     )
+    api_select = client.post(
+        "/v1/tools/pdf.target.select_profile/run",
+        json={"goal": "Summarize code and screenshots in a technical audit."},
+    )
 
     assert api_catalog.status_code == 200
     assert api_catalog.json()["tool"] == "pdf.target.profiles"
     assert api_validate.status_code == 200
     assert api_validate.json()["usage"]["profile_validation"]["is_valid"] is True
+    assert api_select.status_code == 200
+    assert api_select.json()["tool"] == "pdf.target.select_profile"
 
     mcp_catalog = json.loads(pdf_target_profiles(str(tmp_path / "mcp-profiles.json")))
     mcp_validate = json.loads(pdf_target_validate_profile(profile, str(tmp_path / "mcp-profile.validation.json")))
+    mcp_select = json.loads(pdf_target_select_profile("Create an evidence packet from files."))
 
     assert mcp_catalog["tool"] == "pdf.target.profiles"
     assert mcp_validate["tool"] == "pdf.target.validate_profile"
+    assert mcp_select["tool"] == "pdf.target.select_profile"

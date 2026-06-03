@@ -1,11 +1,11 @@
 # 23 — Full Tool Status Matrix
 
-Total tools specified: **224**
+Total tools specified: **227**
 
 | Tool | Category | Status | OSS default |
 |---|---|---:|---:|
 | `agent.setup.claude_code` | agent | beta | yes |
-| `agent.setup.codex` | agent | planned | yes |
+| `agent.setup.codex` | agent | beta | yes |
 | `agent.setup.kilo_code` | agent | planned | yes |
 | `agent.setup.openclaw` | agent | planned | yes |
 | `pdf.context.ingest` | context | beta | yes |
@@ -21,12 +21,12 @@ Total tools specified: **224**
 | `pdf.context.data_profile` | context | beta | yes |
 | `pdf.target.profiles` | target | beta | yes |
 | `pdf.target.validate_profile` | target | beta | yes |
-| `pdf.target.select_profile` | target | planned | no |
+| `pdf.target.select_profile` | target | beta | yes |
 | `pdf.evidence.map_sources` | evidence | beta | yes |
 | `pdf.evidence.cite_claims` | evidence | beta | yes |
 | `pdf.evidence.coverage_report` | evidence | beta | yes |
 | `pdf.evidence.highlight_sources` | evidence | beta | yes |
-| `pdf.evidence.context_packet_report` | evidence | planned | yes |
+| `pdf.evidence.context_packet_report` | evidence | beta | yes |
 | `pdf.evidence.verify_citations` | evidence | planned/cloud | no |
 | `pdf.compose.plan` | compose | beta | yes |
 | `pdf.compose.from_context` | compose | beta | yes |
@@ -35,6 +35,9 @@ Total tools specified: **224**
 | `pdf.compose.add_figure` | compose | beta | yes |
 | `pdf.compose.add_table` | compose | beta | yes |
 | `pdf.compose.add_appendix` | compose | beta | yes |
+| `pdf.compose.add_citation` | compose | beta | yes |
+| `pdf.compose.add_media_reference` | compose | beta | yes |
+| `pdf.compose.add_slide` | compose | beta | yes |
 | `pdf.compose.compile_packet` | compose | planned/cloud | no |
 | `pdf.patch.plan` | patch | beta | yes |
 | `pdf.patch.preview` | patch | beta | yes |
@@ -135,7 +138,7 @@ Total tools specified: **224**
 | `pdf.security.verify_redaction` | security | beta | yes |
 | `pdf.security.sign` | security | planned | yes |
 | `pdf.security.verify_signature` | security | planned | yes |
-| `pdf.security.remove_metadata` | security | planned | yes |
+| `pdf.security.remove_metadata` | security | beta | yes |
 | `pdf.security.sanitize` | security | beta | yes |
 | `pdf.security.malware_scan` | security | planned | yes |
 | `pdf.ocr_scan.ocr` | ocr_scan | beta | yes |
@@ -157,11 +160,11 @@ Total tools specified: **224**
 | `pdf.metadata.update_outline` | metadata | planned | yes |
 | `pdf.metadata.read_links` | metadata | beta | yes |
 | `pdf.metadata.read_attachments` | metadata | beta | yes |
-| `pdf.metadata.page_info` | metadata | planned | yes |
+| `pdf.metadata.page_info` | metadata | beta | yes |
 | `pdf.validation.validate_output` | validation | stable | yes |
 | `pdf.validation.render_check` | validation | stable | yes |
 | `pdf.validation.blank_page_check` | validation | stable | yes |
-| `pdf.validation.page_count_check` | validation | planned | yes |
+| `pdf.validation.page_count_check` | validation | beta | yes |
 | `pdf.validation.text_layer_check` | validation | beta | yes |
 | `pdf.validation.visual_diff` | validation | beta | yes |
 | `pdf.validation.redaction_check` | validation | beta | yes |

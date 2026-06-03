@@ -84,6 +84,213 @@ test("runCli exposes a convenient create-text command", async () => {
   assert.equal(JSON.parse(output[0] ?? "{}").status, "succeeded");
 });
 
+test("runCli exposes context ingest and packet commands", async () => {
+  const calls: Array<{ url: string; body: unknown }> = [];
+  const output: string[] = [];
+  const invoke = (argv: string[]) =>
+    runCli(argv, {
+      fetch: async (input, init) => {
+        calls.push({
+          url: String(input),
+          body: JSON.parse(String(init?.body)),
+        });
+        return jsonResponse({
+          job_id: "job_context_cli",
+          status: "succeeded",
+          tool: calls.length === 1 ? "pdf.context.ingest" : "pdf.context.packet",
+          artifacts: [],
+          validation: null,
+          warnings: [],
+          usage: {},
+          next_recommended_tools: [],
+          error: null,
+        } satisfies ToolResult);
+      },
+      stdout: (line) => output.push(line),
+      stderr: (line) => output.push(`ERR:${line}`),
+    });
+
+  assert.equal(
+    await invoke([
+      "context-ingest",
+      "--file",
+      "src/service.ts",
+      "--role",
+      "code_evidence",
+      "--label",
+      "Service Code",
+      "-o",
+      "service.context-item.json",
+    ]),
+    0,
+  );
+  assert.equal(
+    await invoke([
+      "context-packet",
+      "--item-json",
+      "{\"context_item_id\":\"ctx_001\",\"type\":\"code\",\"source_ref\":\"ctx_001\",\"role\":\"code_evidence\"}",
+      "-o",
+      "context.packet.json",
+      "--title",
+      "Agent Context",
+      "--intent",
+      "Compose a target PDF.",
+    ]),
+    0,
+  );
+
+  assert.deepEqual(calls.map((call) => call.url), [
+    "http://127.0.0.1:7331/v1/tools/pdf.context.ingest/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.context.packet/run",
+  ]);
+  assert.deepEqual(calls[0]?.body, {
+    context_item: {
+      path: "src/service.ts",
+      role: "code_evidence",
+      label: "Service Code",
+    },
+    output_path: "service.context-item.json",
+  });
+  assert.deepEqual(calls[1]?.body, {
+    context_items: [
+      {
+        context_item_id: "ctx_001",
+        type: "code",
+        source_ref: "ctx_001",
+        role: "code_evidence",
+      },
+    ],
+    output_path: "context.packet.json",
+    title: "Agent Context",
+    intent: "Compose a target PDF.",
+  });
+  assert.equal(JSON.parse(output[0] ?? "{}").tool, "pdf.context.ingest");
+  assert.equal(JSON.parse(output[1] ?? "{}").tool, "pdf.context.packet");
+});
+
+test("runCli exposes context classify command", async () => {
+  const output: string[] = [];
+  let postedBody: unknown;
+  const code = await runCli(
+    [
+      "context-classify",
+      "context.packet.json",
+      "--profile",
+      "technical_audit",
+      "-o",
+      "context.classification.json",
+    ],
+    {
+      fetch: async (input, init) => {
+        assert.equal(String(input), "http://127.0.0.1:7331/v1/tools/pdf.context.classify/run");
+        postedBody = JSON.parse(String(init?.body));
+        return jsonResponse({
+          job_id: "job_context_classify_cli",
+          status: "succeeded",
+          tool: "pdf.context.classify",
+          artifacts: [],
+          validation: null,
+          warnings: [],
+          usage: { classification_count: 2 },
+          next_recommended_tools: ["pdf.compose.from_context"],
+          error: null,
+        } satisfies ToolResult);
+      },
+      stdout: (line) => output.push(line),
+      stderr: (line) => output.push(`ERR:${line}`),
+    },
+  );
+
+  assert.equal(code, 0);
+  assert.deepEqual(postedBody, {
+    context_packet_path: "context.packet.json",
+    profile: "technical_audit",
+    output_path: "context.classification.json",
+  });
+  assert.equal(JSON.parse(output[0] ?? "{}").tool, "pdf.context.classify");
+});
+
+test("runCli exposes code snapshot and data profile commands", async () => {
+  const calls: Array<{ url: string; body: unknown }> = [];
+  const output: string[] = [];
+
+  async function invoke(args: string[]): Promise<number> {
+    return runCli(args, {
+      fetch: async (input, init) => {
+        calls.push({ url: String(input), body: JSON.parse(String(init?.body)) });
+        return jsonResponse({
+          job_id: "job_context_profile_cli",
+          status: "succeeded",
+          tool: calls.length === 1 ? "pdf.context.code_snapshot" : "pdf.context.data_profile",
+          artifacts: [],
+          validation: null,
+          warnings: [],
+          usage: {},
+          next_recommended_tools: [],
+          error: null,
+        } satisfies ToolResult);
+      },
+      stdout: (line) => output.push(line),
+      stderr: (line) => output.push(`ERR:${line}`),
+    });
+  }
+
+  assert.equal(
+    await invoke([
+      "code-snapshot",
+      "src/service.ts",
+      "--line-start",
+      "2",
+      "--line-end",
+      "8",
+      "--repository-root",
+      ".",
+      "--include-dependencies",
+      "-o",
+      "service.context-item.json",
+    ]),
+    0,
+  );
+  assert.equal(
+    await invoke([
+      "data-profile",
+      "metrics.xlsx",
+      "--sheet",
+      "Sheet1",
+      "--max-rows",
+      "50",
+      "-o",
+      "metrics.context-item.json",
+    ]),
+    0,
+  );
+
+  assert.deepEqual(calls, [
+    {
+      url: "http://127.0.0.1:7331/v1/tools/pdf.context.code_snapshot/run",
+      body: {
+        path: "src/service.ts",
+        output_path: "service.context-item.json",
+        line_start: 2,
+        line_end: 8,
+        repository_root: ".",
+        include_dependencies: true,
+      },
+    },
+    {
+      url: "http://127.0.0.1:7331/v1/tools/pdf.context.data_profile/run",
+      body: {
+        path: "metrics.xlsx",
+        output_path: "metrics.context-item.json",
+        sheet: "Sheet1",
+        max_rows: 50,
+      },
+    },
+  ]);
+  assert.equal(JSON.parse(output[0] ?? "{}").tool, "pdf.context.code_snapshot");
+  assert.equal(JSON.parse(output[1] ?? "{}").tool, "pdf.context.data_profile");
+});
+
 test("runCli exposes target profile commands", async () => {
   const calls: Array<{ url: string; body: unknown }> = [];
 
@@ -132,6 +339,345 @@ test("runCli exposes target profile commands", async () => {
       body: {
         target_profile: { profile_id: "board_packet", layout_mode: "document" },
         output_path: "profile.validation.json",
+      },
+    },
+  ]);
+});
+
+test("runCli exposes compose plan and render IR commands", async () => {
+  const calls: Array<{ url: string; body: unknown }> = [];
+
+  async function invoke(args: string[]): Promise<number> {
+    return runCli(args, {
+      fetch: async (input, init) => {
+        calls.push({ url: String(input), body: JSON.parse(String(init?.body)) });
+        return jsonResponse({
+          job_id: "job_compose_ir_cli",
+          status: "succeeded",
+          tool: calls.length === 1 ? "pdf.compose.plan" : "pdf.compose.render_ir",
+          artifacts: [],
+          validation: null,
+          warnings: [],
+          usage: {},
+          next_recommended_tools: [],
+          error: null,
+        } satisfies ToolResult);
+      },
+      stdout: () => undefined,
+      stderr: () => undefined,
+    });
+  }
+
+  assert.equal(
+    await invoke([
+      "compose-plan",
+      "context.packet.json",
+      "--profile",
+      "technical_audit",
+      "-o",
+      "composition.plan.json",
+      "--title",
+      "Technical Audit Plan",
+    ]),
+    0,
+  );
+  assert.equal(
+    await invoke(["compose-render-ir", "composition.plan.json", "-o", "technical-audit.pdf"]),
+    0,
+  );
+
+  assert.deepEqual(calls, [
+    {
+      url: "http://127.0.0.1:7331/v1/tools/pdf.compose.plan/run",
+      body: {
+        context_packet_path: "context.packet.json",
+        profile: "technical_audit",
+        output_path: "composition.plan.json",
+        title: "Technical Audit Plan",
+      },
+    },
+    {
+      url: "http://127.0.0.1:7331/v1/tools/pdf.compose.render_ir/run",
+      body: {
+        composition_path: "composition.plan.json",
+        output_path: "technical-audit.pdf",
+      },
+    },
+  ]);
+});
+
+test("runCli exposes compose block commands", async () => {
+  const calls: Array<{ url: string; body: unknown }> = [];
+
+  async function invoke(args: string[]): Promise<number> {
+    return runCli(args, {
+      fetch: async (input, init) => {
+        calls.push({ url: String(input), body: JSON.parse(String(init?.body)) });
+        const url = String(input);
+        const tool = url.includes("add_table")
+          ? "pdf.compose.add_table"
+          : url.includes("add_figure")
+            ? "pdf.compose.add_figure"
+            : url.includes("add_appendix")
+              ? "pdf.compose.add_appendix"
+              : url.includes("add_citation")
+                ? "pdf.compose.add_citation"
+                : url.includes("add_media_reference")
+                  ? "pdf.compose.add_media_reference"
+                  : url.includes("add_slide")
+                    ? "pdf.compose.add_slide"
+                    : "pdf.compose.add_code_block";
+        return jsonResponse({
+          job_id: `job_${tool}`,
+          status: "succeeded",
+          tool,
+          artifacts: [],
+          validation: null,
+          warnings: [],
+          usage: {},
+          next_recommended_tools: [],
+          error: null,
+        });
+      },
+      stdout: () => undefined,
+      stderr: () => undefined,
+    });
+  }
+
+  assert.equal(
+    await invoke([
+      "compose-add-code-block",
+      "base.pdf",
+      "--title",
+      "Risk Function",
+      "--code",
+      "def risky_total(items):\n    return sum(items)\n",
+      "--language",
+      "python",
+      "--source-ref",
+      "ctx_code",
+      "--block-id",
+      "blk_code",
+      "--target-slot",
+      "code_review",
+      "-o",
+      "code.pdf",
+    ]),
+    0,
+  );
+  assert.equal(
+    await invoke([
+      "compose-add-table",
+      "base.pdf",
+      "--title",
+      "Runtime Metrics",
+      "--columns",
+      "metric,value",
+      "--row",
+      "latency_ms,42",
+      "--source-ref",
+      "ctx_metrics",
+      "-o",
+      "table.pdf",
+    ]),
+    0,
+  );
+  assert.equal(
+    await invoke([
+      "compose-add-figure",
+      "base.pdf",
+      "--title",
+      "Architecture Figure",
+      "--image",
+      "diagram.png",
+      "--caption",
+      "Local visual evidence.",
+      "--source-ref",
+      "ctx_image",
+      "-o",
+      "figure.pdf",
+    ]),
+    0,
+  );
+  assert.equal(
+    await invoke([
+      "compose-add-appendix",
+      "base.pdf",
+      "--title",
+      "Source Appendix",
+      "--markdown",
+      "## Sources\n\n- ctx_code",
+      "--source-ref",
+      "ctx_code",
+      "-o",
+      "appendix.pdf",
+    ]),
+    0,
+  );
+  assert.equal(
+    await invoke([
+      "compose-add-citation",
+      "base.pdf",
+      "--title",
+      "Source Citation",
+      "--quote",
+      "AgentPDF keeps citation source refs auditable.",
+      "--source",
+      "https://example.com/research",
+      "--page",
+      "section 2",
+      "--source-ref",
+      "ctx_web",
+      "--block-id",
+      "blk_citation",
+      "--target-slot",
+      "citations",
+      "-o",
+      "citation.pdf",
+    ]),
+    0,
+  );
+  assert.equal(
+    await invoke([
+      "compose-add-media-reference",
+      "base.pdf",
+      "--title",
+      "Meeting Media",
+      "--media",
+      "clip.mp4",
+      "--media-kind",
+      "video",
+      "--transcript-excerpt",
+      "00:00 visual evidence frame.",
+      "--duration-seconds",
+      "12.75",
+      "--keyframe-count",
+      "1",
+      "--source-ref",
+      "ctx_media",
+      "--block-id",
+      "blk_media",
+      "--target-slot",
+      "media_evidence",
+      "-o",
+      "media.pdf",
+    ]),
+    0,
+  );
+  assert.equal(
+    await invoke([
+      "compose-add-slide",
+      "base.pdf",
+      "--title",
+      "Review Slide",
+      "--subtitle",
+      "Decision evidence",
+      "--body",
+      "First slide bullet.",
+      "--body",
+      "Second slide bullet.",
+      "--code",
+      "score = 42",
+      "--source-ref",
+      "ctx_slide",
+      "--block-id",
+      "blk_slide",
+      "--target-slot",
+      "evidence_slide",
+      "-o",
+      "slide.pdf",
+    ]),
+    0,
+  );
+
+  assert.deepEqual(calls, [
+    {
+      url: "http://127.0.0.1:7331/v1/tools/pdf.compose.add_code_block/run",
+      body: {
+        input_path: "base.pdf",
+        output_path: "code.pdf",
+        title: "Risk Function",
+        code: "def risky_total(items):\n    return sum(items)\n",
+        language: "python",
+        source_refs: ["ctx_code"],
+        block_id: "blk_code",
+        target_slot: "code_review",
+      },
+    },
+    {
+      url: "http://127.0.0.1:7331/v1/tools/pdf.compose.add_table/run",
+      body: {
+        input_path: "base.pdf",
+        output_path: "table.pdf",
+        title: "Runtime Metrics",
+        columns: ["metric", "value"],
+        rows: [["latency_ms", "42"]],
+        source_refs: ["ctx_metrics"],
+      },
+    },
+    {
+      url: "http://127.0.0.1:7331/v1/tools/pdf.compose.add_figure/run",
+      body: {
+        input_path: "base.pdf",
+        output_path: "figure.pdf",
+        title: "Architecture Figure",
+        image_path: "diagram.png",
+        caption: "Local visual evidence.",
+        source_refs: ["ctx_image"],
+      },
+    },
+    {
+      url: "http://127.0.0.1:7331/v1/tools/pdf.compose.add_appendix/run",
+      body: {
+        input_path: "base.pdf",
+        output_path: "appendix.pdf",
+        title: "Source Appendix",
+        markdown: "## Sources\n\n- ctx_code",
+        source_refs: ["ctx_code"],
+      },
+    },
+    {
+      url: "http://127.0.0.1:7331/v1/tools/pdf.compose.add_citation/run",
+      body: {
+        input_path: "base.pdf",
+        output_path: "citation.pdf",
+        title: "Source Citation",
+        quote: "AgentPDF keeps citation source refs auditable.",
+        source: "https://example.com/research",
+        page: "section 2",
+        source_refs: ["ctx_web"],
+        block_id: "blk_citation",
+        target_slot: "citations",
+      },
+    },
+    {
+      url: "http://127.0.0.1:7331/v1/tools/pdf.compose.add_media_reference/run",
+      body: {
+        input_path: "base.pdf",
+        output_path: "media.pdf",
+        title: "Meeting Media",
+        media_path: "clip.mp4",
+        media_kind: "video",
+        transcript_excerpt: "00:00 visual evidence frame.",
+        duration_seconds: 12.75,
+        keyframe_count: 1,
+        source_refs: ["ctx_media"],
+        block_id: "blk_media",
+        target_slot: "media_evidence",
+      },
+    },
+    {
+      url: "http://127.0.0.1:7331/v1/tools/pdf.compose.add_slide/run",
+      body: {
+        input_path: "base.pdf",
+        output_path: "slide.pdf",
+        title: "Review Slide",
+        subtitle: "Decision evidence",
+        body: ["First slide bullet.", "Second slide bullet."],
+        code: "score = 42",
+        source_refs: ["ctx_slide"],
+        block_id: "blk_slide",
+        target_slot: "evidence_slide",
       },
     },
   ]);
@@ -219,6 +765,14 @@ test("runCli exposes template pack commands", async () => {
         "board-audit.plan.json",
         "--coverage-output",
         "board-audit.coverage.json",
+        "--context-classification-output",
+        "board-audit.context-classification.json",
+        "--context-report-output",
+        "board-audit.context-report.pdf",
+        "--context-report-json-output",
+        "board-audit.context-report.json",
+        "--bundle-output",
+        "board-audit.agentpdf-bundle.zip",
       ]),
       0,
     );
@@ -274,6 +828,10 @@ test("runCli exposes template pack commands", async () => {
         output_path: "board-audit.pdf",
         plan_output_path: "board-audit.plan.json",
         coverage_output_path: "board-audit.coverage.json",
+        context_classification_output_path: "board-audit.context-classification.json",
+        context_report_output_path: "board-audit.context-report.pdf",
+        context_report_json_output_path: "board-audit.context-report.json",
+        bundle_output_path: "board-audit.agentpdf-bundle.zip",
       },
     },
     {
@@ -433,6 +991,58 @@ test("runCli exposes Claude Code agent setup command", async () => {
   });
 });
 
+test("runCli exposes Codex agent setup command", async () => {
+  const output: string[] = [];
+  let postedBody: unknown;
+
+  const code = await runCli(
+    [
+      "agent-setup-codex",
+      "-o",
+      "codex.mcp.json",
+      "--safe-root",
+      ".",
+      "--command",
+      "python",
+      "--arg-prefix",
+      "-m",
+      "--arg-prefix",
+      "agentpdf.cli",
+      "--server-name",
+      "agentpdf",
+    ],
+    {
+      fetch: async (input, init) => {
+        assert.equal(String(input), "http://127.0.0.1:7331/v1/tools/agent.setup.codex/run");
+        postedBody = JSON.parse(String(init?.body));
+        return jsonResponse({
+          job_id: "job_codex_setup",
+          status: "succeeded",
+          tool: "agent.setup.codex",
+          artifacts: [],
+          validation: null,
+          warnings: [],
+          usage: {},
+          next_recommended_tools: [],
+          error: null,
+        });
+      },
+      stdout: (line) => output.push(line),
+      stderr: (line) => output.push(`ERR:${line}`),
+    },
+  );
+
+  assert.equal(code, 0);
+  assert.equal(JSON.parse(output[0] ?? "{}").tool, "agent.setup.codex");
+  assert.deepEqual(postedBody, {
+    output_path: "codex.mcp.json",
+    safe_root: ".",
+    command: "python",
+    args_prefix: ["-m", "agentpdf.cli"],
+    server_name: "agentpdf",
+  });
+});
+
 test("runCli exposes high-frequency PDF utility commands", async () => {
   const calls: Array<{ url: string; body: unknown }> = [];
 
@@ -575,6 +1185,30 @@ test("runCli exposes high-frequency PDF utility commands", async () => {
   );
   assert.equal(
     await invoke([
+      "evidence-map-sources",
+      "technical-audit.composition.json",
+      "--context-packet",
+      "context.packet.json",
+      "-o",
+      "technical-audit.source-map.json",
+    ]),
+    0,
+  );
+  assert.equal(
+    await invoke([
+      "evidence-context-packet-report",
+      "context.packet.json",
+      "-o",
+      "context-report.pdf",
+      "--report-output",
+      "context-report.json",
+      "--title",
+      "Context Report",
+    ]),
+    0,
+  );
+  assert.equal(
+    await invoke([
       "patch-plan",
       "technical-audit.pdf",
       "--operations",
@@ -622,6 +1256,8 @@ test("runCli exposes high-frequency PDF utility commands", async () => {
     "http://127.0.0.1:7331/v1/tools/pdf.context.build_packet/run",
     "http://127.0.0.1:7331/v1/tools/pdf.compose.from_context/run",
     "http://127.0.0.1:7331/v1/tools/pdf.evidence.coverage_report/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.evidence.map_sources/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.evidence.context_packet_report/run",
     "http://127.0.0.1:7331/v1/tools/pdf.patch.plan/run",
     "http://127.0.0.1:7331/v1/tools/pdf.patch.preview/run",
     "http://127.0.0.1:7331/v1/tools/pdf.patch.apply/run",
@@ -745,6 +1381,17 @@ test("runCli exposes high-frequency PDF utility commands", async () => {
     output_path: "technical-audit.coverage.json",
   });
   assert.deepEqual(calls[20]?.body, {
+    composition_path: "technical-audit.composition.json",
+    context_packet_path: "context.packet.json",
+    output_path: "technical-audit.source-map.json",
+  });
+  assert.deepEqual(calls[21]?.body, {
+    context_packet_path: "context.packet.json",
+    output_path: "context-report.pdf",
+    report_output_path: "context-report.json",
+    title: "Context Report",
+  });
+  assert.deepEqual(calls[22]?.body, {
     input_path: "technical-audit.pdf",
     operations: [
       {
@@ -760,19 +1407,19 @@ test("runCli exposes high-frequency PDF utility commands", async () => {
     layer_manifest_path: "technical-audit.layers.json",
     reason: "Append structured evidence.",
   });
-  assert.deepEqual(calls[21]?.body, {
+  assert.deepEqual(calls[23]?.body, {
     patch_manifest_path: "technical-audit.patch.json",
     output_path: "technical-audit.patch-preview.json",
   });
-  assert.deepEqual(calls[22]?.body, {
+  assert.deepEqual(calls[24]?.body, {
     patch_manifest_path: "technical-audit.patch.json",
     output_path: "technical-audit-patched.pdf",
   });
-  assert.deepEqual(calls[23]?.body, {
+  assert.deepEqual(calls[25]?.body, {
     patch_manifest_path: "technical-audit.patch.json",
     patched_path: "technical-audit-patched.pdf",
   });
-  assert.deepEqual(calls[24]?.body, {
+  assert.deepEqual(calls[26]?.body, {
     input_path: "numbered.pdf",
     pages: "1",
     out_dir: "images",

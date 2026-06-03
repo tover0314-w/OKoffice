@@ -10,6 +10,7 @@ KNOWN_ERROR_CODES = {
     "file_not_found",
     "unsupported_file_type",
     "encrypted_pdf_requires_password",
+    "invalid_password",
     "invalid_page_range",
     "pdf_parse_failed",
     "pdf_render_failed",
@@ -17,7 +18,12 @@ KNOWN_ERROR_CODES = {
     "dependency_missing",
     "tool_not_implemented",
     "unsafe_input_rejected",
+    "path_traversal_rejected",
+    "overwrite_not_allowed",
+    "quota_required_for_cloud_feature",
+    "cloud_feature_disabled",
     "source_ref_not_found",
+    "layer_operation_not_allowed",
 }
 
 

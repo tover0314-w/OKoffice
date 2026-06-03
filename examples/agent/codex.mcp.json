@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "agentpdf": {
+      "command": "okpdf",
+      "args": [
+        "serve",
+        "--mcp",
+        "--safe-root",
+        "."
+      ]
+    }
+  }
+}

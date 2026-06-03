@@ -24,6 +24,21 @@
     "source_refs": ["ctx_003"]
   },
   {
+    "op": "append_citation",
+    "title": "Source Citation",
+    "quote": "Cited claim text.",
+    "source": "https://example.com/research",
+    "source_refs": ["ctx_web"]
+  },
+  {
+    "op": "append_media_reference",
+    "title": "Meeting Audio",
+    "media_path": "meeting.mp3",
+    "media_kind": "audio",
+    "transcript_excerpt": "00:00 Kickoff",
+    "source_refs": ["ctx_audio"]
+  },
+  {
     "op": "append_slide",
     "title": "Agent Review Appendix",
     "body": [

@@ -1,0 +1,11 @@
+[
+  {
+    "op": "regenerate_block",
+    "title": "Regenerated Runtime Metrics Summary",
+    "replacement_markdown": "## Regenerated Runtime Metrics Summary\n\nThe findings block was regenerated from `ctx_metrics` while preserving source and template-layer evidence.",
+    "source_refs": ["ctx_metrics"],
+    "layer_id": "layer_blk_agent_table",
+    "block_id": "blk_agent_table",
+    "target_slot": "findings"
+  }
+]

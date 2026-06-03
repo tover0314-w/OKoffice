@@ -7,9 +7,18 @@
 - name: documentation
   color: 0075ca
   description: README, docs, examples, or contributor guidance.
+- name: i18n
+  color: 0366d6
+  description: Translation, localization, multilingual README, or language-specific docs.
 - name: security
   color: b60205
   description: Security-sensitive PDF, dependency, path, or redaction work.
+- name: needs-triage
+  color: fbca04
+  description: Maintainers have not yet confirmed scope, labels, priority, or ownership.
+- name: repo-hygiene
+  color: c5def5
+  description: GitHub metadata, ignore rules, release hygiene, or contributor workflow.
 - name: area:cli
   color: 5319e7
   description: Command-line interface behavior or examples.
@@ -22,6 +31,9 @@
 - name: area:sdk
   color: 5319e7
   description: TypeScript/Node client and package work.
+- name: area:tooling
+  color: 5319e7
+  description: Tool manifests, tool contracts, registry entries, or public tool specs.
 - name: area:pdf-core
   color: 0e8a16
   description: Deterministic PDF operations and file handling.
@@ -40,9 +52,15 @@
 - name: status:planned
   color: cfd3d7
   description: Reserved namespace or roadmap item that is not locally implemented yet.
+- name: status:experimental
+  color: fef2c0
+  description: Implemented but expected to change while the contract is explored.
 - name: status:beta
   color: fef2c0
   description: Implemented but still stabilizing before a stable contract.
+- name: status:stable
+  color: 0e8a16
+  description: Public behavior is intended to be relied on by users and agents.
 - name: status:cloud-boundary
   color: d4c5f9
   description: Requires hosted, model, OCR, or optional worker capabilities outside OSS core.

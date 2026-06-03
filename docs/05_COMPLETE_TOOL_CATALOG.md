@@ -21,7 +21,7 @@ Generate local runtime configs for agent ecosystems that call okpdf through MCP 
 | Tool | Status | Description |
 |---|---:|---|
 | `agent.setup.claude_code` | beta | Generate a Claude Code project-level MCP config for local okpdf tools. |
-| `agent.setup.codex` | planned | Generate Codex MCP/workspace integration config. |
+| `agent.setup.codex` | beta | Generate a Codex MCP/workspace integration config for local okpdf tools. |
 | `agent.setup.kilo_code` | planned | Generate Kilo Code integration config. |
 | `agent.setup.openclaw` | planned | Generate OpenClaw integration config. |
 
@@ -31,17 +31,17 @@ Normalize heterogeneous context and create context packets.
 
 | Tool | Status | Description |
 |---|---:|---|
-| `pdf.context.ingest` | beta target | Register PDFs, images, audio/video, text, Markdown, HTML, code, CSV/JSON, links, or data files as context items. |
-| `pdf.context.packet` | beta target | Build a reusable context packet from multiple local files, links, prompts, checksums, and warnings. |
+| `pdf.context.ingest` | beta | Normalize one PDF, image, audio/video, text, Markdown, HTML, code, CSV/JSON, web link, or data file into an agent context item with local evidence. |
+| `pdf.context.packet` | beta | Build a reusable Context Packet from raw or pre-ingested local context items with source graph metadata. |
 | `pdf.context.build_packet` | beta target | Build a local Context Packet JSON with source graph metadata from text, files, and links. |
-| `pdf.context.classify` | beta target | Classify context items by type, role, safety, and likely target uses. |
+| `pdf.context.classify` | beta | Classify context items by type, role, local evidence, safety limits, likely block type, and target slots. |
 | `pdf.context.image_analyze` | planned/cloud | OCR/caption/image-region analysis for images and screenshots. |
 | `pdf.context.video_transcribe` | planned/cloud | Transcribe video and create timestamped transcript context/source nodes. |
 | `pdf.context.video_keyframes` | planned/cloud | Extract keyframes and frame source refs from video. |
 | `pdf.context.audio_transcribe` | planned/cloud | Transcribe audio into timestamped context/source nodes. |
 | `pdf.context.web_capture` | planned/cloud | Capture web links/pages with source refs and SSRF-safe fetching. |
-| `pdf.context.code_snapshot` | beta target | Create context and source refs for files, line ranges, dependencies, and repository metadata. |
-| `pdf.context.data_profile` | beta target | Profile CSV/JSON/spreadsheet/database-like data for report generation. |
+| `pdf.context.code_snapshot` | beta | Create context and source refs for files, line ranges, dependency hints, and repository metadata. |
+| `pdf.context.data_profile` | beta | Profile CSV/TSV/JSON/JSONL/XLSX data for report generation. |
 
 ### `pdf.target`
 
@@ -51,7 +51,7 @@ Choose and validate the intended PDF output type before composition.
 |---|---:|---|
 | `pdf.target.profiles` | beta | List built-in target PDF profiles, layout slots, accepted block types, and accepted context types. |
 | `pdf.target.validate_profile` | beta | Validate required structure, style pack, layout mode, slots, and checks for a custom target profile. |
-| `pdf.target.select_profile` | planned | Select a target PDF profile such as learning, resume, paper, deck, report, packet, or audit. |
+| `pdf.target.select_profile` | beta | Select a target PDF profile such as learning, resume, paper, deck, report, packet, or audit using deterministic local scoring. |
 
 ### `pdf.evidence`
 
@@ -59,11 +59,11 @@ Map generated content and answers back to source material. RAG is one implementa
 
 | Tool | Status | Description |
 |---|---:|---|
-| `pdf.evidence.map_sources` | beta target | Attach source refs to generated blocks or extracted claims. |
+| `pdf.evidence.map_sources` | beta | Normalize block or claim source refs against Context Packet evidence into a source-map report. |
 | `pdf.evidence.cite_claims` | beta target | Return citations for claims using page/bbox/timestamp/file/row refs. |
 | `pdf.evidence.coverage_report` | beta target | Report which claims, blocks, tables, and figures have source evidence. |
 | `pdf.evidence.highlight_sources` | beta target | Produce highlighted source artifacts from evidence refs. |
-| `pdf.evidence.context_packet_report` | planned | Create a PDF appendix summarizing context items, sources, refs, checksums, and limitations. |
+| `pdf.evidence.context_packet_report` | beta target | Create a validated PDF/JSON appendix summarizing context items, sources, refs, checksums, evidence, and limitations. |
 | `pdf.evidence.verify_citations` | planned/cloud | Verify that generated claims are supported by cited sources. |
 
 ### `pdf.compose`
@@ -72,13 +72,16 @@ Create new PDF artifacts from context packets, target PDF profiles, composition 
 
 | Tool | Status | Description |
 |---|---:|---|
-| `pdf.compose.plan` | beta target | Plan a context-to-target-PDF artifact with sections, blocks, source refs, validation, and style constraints. |
-| `pdf.compose.from_context` | beta target | Compose a validated target PDF from a Context Packet and target profile with source map and evidence coverage. |
-| `pdf.compose.render_ir` | beta target | Render composition IR into a validated PDF artifact. |
-| `pdf.compose.add_code_block` | beta target | Add formatted code blocks with optional file/line source refs. |
-| `pdf.compose.add_figure` | beta target | Add image/figure blocks with captions and source refs. |
-| `pdf.compose.add_table` | beta target | Add tables from structured data with source refs. |
-| `pdf.compose.add_appendix` | beta target | Build appendix sections from context packets, citations, or artifacts. |
+| `pdf.compose.plan` | beta | Plan a context-to-target-PDF artifact with Composition IR, source refs, validation, render plan, and style constraints. |
+| `pdf.compose.from_context` | beta | Compose a validated target PDF from a Context Packet and target profile with source map and evidence coverage. |
+| `pdf.compose.render_ir` | beta | Render a composition plan or IR payload into a validated PDF artifact. |
+| `pdf.compose.add_code_block` | beta target | Append a code evidence page to a new PDF with source refs, patch evidence, rollback metadata, and validation. |
+| `pdf.compose.add_figure` | beta target | Append an image/figure evidence page to a new PDF with captions, source refs, patch evidence, rollback metadata, and validation. |
+| `pdf.compose.add_table` | beta target | Append a structured table evidence page to a new PDF with source refs, patch evidence, rollback metadata, and validation. |
+| `pdf.compose.add_appendix` | beta target | Append a Markdown appendix page to a new PDF with source refs, patch evidence, rollback metadata, and validation. |
+| `pdf.compose.add_citation` | beta target | Append a citation evidence page to a new PDF with source refs, local citation metadata, patch evidence, rollback metadata, and validation. |
+| `pdf.compose.add_media_reference` | beta target | Append an audio, video, or media reference evidence page to a new PDF with local media metadata, source refs, patch evidence, rollback metadata, and validation. |
+| `pdf.compose.add_slide` | beta target | Append a slide-like evidence page to a new PDF with source refs, patch evidence, rollback metadata, and validation. |
 | `pdf.compose.compile_packet` | planned/cloud | Compile multi-source evidence packets with source maps and validation. |
 
 ### `pdf.patch`
@@ -87,7 +90,7 @@ Represent agent edits as explicit patch transactions instead of opaque in-place 
 
 | Tool | Status | Description |
 |---|---:|---|
-| `pdf.patch.plan` | beta target | Create a structured append-only patch manifest for Markdown, code, table, image, and slide evidence. |
+| `pdf.patch.plan` | beta target | Create a structured append-only patch manifest for Markdown, code, table, image, slide, citation, media-reference, source-map, template-layer, and `regenerate_block` evidence. |
 | `pdf.patch.preview` | beta target | Preview patch effects and validation requirements without mutating the input. |
 | `pdf.patch.apply` | beta target | Apply a patch transaction and write a new PDF artifact. |
 | `pdf.patch.verify` | beta target | Verify a patched PDF against the patch manifest. |
@@ -247,7 +250,7 @@ Inspect artifact lineage and manifests.
 | `pdf.security.verify_redaction` | beta target | Verify text/images are removed. |
 | `pdf.security.sign` | planned | Digital signing. |
 | `pdf.security.verify_signature` | planned | Verify signatures. |
-| `pdf.security.remove_metadata` | planned | Remove document metadata through the security namespace. Use stable `pdf.metadata.remove` today. |
+| `pdf.security.remove_metadata` | beta | Remove document metadata through the security namespace. |
 | `pdf.security.sanitize` | beta target | Remove JS, attachments, external actions, metadata. |
 | `pdf.security.malware_scan` | planned/cloud | Integrate scanning worker. |
 
@@ -284,7 +287,7 @@ Inspect artifact lineage and manifests.
 | `pdf.metadata.update_outline` | planned | Update bookmarks/outline. |
 | `pdf.metadata.read_links` | beta target | Read links. |
 | `pdf.metadata.read_attachments` | beta target | Read attachments. |
-| `pdf.metadata.page_info` | planned | Page size/rotation/info. Use stable `pdf.inspect.pages` today. |
+| `pdf.metadata.page_info` | beta | Page size/rotation/info. |
 
 ### `pdf.validation`
 
@@ -293,7 +296,7 @@ Inspect artifact lineage and manifests.
 | `pdf.validation.validate_output` | stable target | Validate generated PDF. |
 | `pdf.validation.render_check` | stable target | Ensure pages render. |
 | `pdf.validation.blank_page_check` | stable target | Detect blank or near-blank pages. |
-| `pdf.validation.page_count_check` | planned | Compare expected page counts. Use stable `pdf.validation.validate_output` today. |
+| `pdf.validation.page_count_check` | beta | Compare expected page counts. |
 | `pdf.validation.text_layer_check` | beta target | Check text extraction. |
 | `pdf.validation.visual_diff` | beta target | Compare before/after render. |
 | `pdf.validation.redaction_check` | beta target | Verify redaction. |
@@ -359,7 +362,7 @@ RAG tools are useful evidence helpers, but the broader product layer is `pdf.evi
 | `pdf.ai.create.template_packs` | beta target | List reusable local template packs with templates, fields, target profiles, supported block types, and color schemes. |
 | `pdf.ai.create.validate_template_pack` | beta target | Validate a local template pack contract, including layout slots and supported agent blocks. |
 | `pdf.ai.create.plan_template_pack` | beta target | Recommend a local template-pack create payload from a target profile and Context Packet. |
-| `pdf.ai.create.agent` | beta target | Run the local create agent: plan a template, create the PDF, render-check, blank-check, and write coverage evidence. |
+| `pdf.ai.create.agent` | beta target | Run the local create agent: plan a template, classify Context Packet routing, create the PDF, write a Context Packet report, render-check, blank-check, write coverage evidence, and optionally export/verify an audit bundle. |
 | `pdf.ai.create.from_template_pack` | beta target | Create and validate a PDF from a local template pack entry, color scheme, optional slot-targeted `data.blocks`, or a Context Packet auto-mapped into blocks with a slot routing plan. |
 | `pdf.ai.create.report` | beta/cloud | Dedicated report creation endpoint; local report templates are available through `pdf.ai.create.from_prompt`. |
 | `pdf.ai.create.paper` | planned/cloud | Create academic paper format. |

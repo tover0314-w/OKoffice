@@ -148,6 +148,10 @@ Artifact manifest should include:
 
 Context is the first-class input to agent-native composition. A context packet may contain PDFs, images, screenshots, scans, video, audio, web links, Markdown, HTML, Office-like documents, text, code, spreadsheets, CSV/JSON, database results, prompts, and review notes.
 
+The local document baseline extracts text previews from Markdown, HTML, text, and DOCX files. DOCX support reads paragraph text from `word/document.xml` and records `document_evidence`; it does not claim full Office layout conversion.
+
+Dedicated local context tools add stronger evidence for code and data inputs: `pdf.context.code_snapshot` records selected line ranges, code hashes, symbols, and repository-relative paths without executing code, while `pdf.context.data_profile` records CSV/TSV/JSON/JSONL/XLSX table previews, column types, hashes, and sheet metadata without evaluating formulas or macros.
+
 The target PDF profile is the first-class output intent. It defines the PDF genre, audience, structure, style, validation requirements, and expected blocks before rendering begins.
 
 Target profiles include:
@@ -206,7 +210,7 @@ Composition IR should support target PDF profiles such as learning PDFs, resumes
 ## Patch transaction model
 
 Agent edits should be represented as explicit patch transactions whenever possible.
-The current local implementation is intentionally append-only: agents can add audited Markdown, code, table, image, and slide evidence pages to a new output PDF, then verify the page-count delta and input artifact hash.
+The current local implementation is intentionally append-only: agents can add audited Markdown, code, table, image, citation, media-reference, and slide evidence pages to a new output PDF, then verify the page-count delta and input artifact hash.
 
 A patch transaction should include:
 

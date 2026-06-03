@@ -50,7 +50,11 @@ curl -X POST http://127.0.0.1:7331/v1/tools/pdf.ai.create.agent/run \
     "context_packet_path": ".agentpdf-out/context.packet.json",
     "output_path": ".agentpdf-out/board-audit.pdf",
     "plan_output_path": ".agentpdf-out/board-audit.plan.json",
-    "coverage_output_path": ".agentpdf-out/board-audit.coverage.json"
+    "coverage_output_path": ".agentpdf-out/board-audit.coverage.json",
+    "context_classification_output_path": ".agentpdf-out/board-audit.context-classification.json",
+    "context_report_output_path": ".agentpdf-out/board-audit.context-report.pdf",
+    "context_report_json_output_path": ".agentpdf-out/board-audit.context-report.json",
+    "bundle_output_path": ".agentpdf-out/board-audit.agentpdf-bundle.zip"
   }'
 ```
 
@@ -142,6 +146,17 @@ curl -X POST http://127.0.0.1:7331/v1/tools/agent.setup.claude_code/run \
   -d '{
     "output_path": ".mcp.json",
     "safe_root": "${CLAUDE_PROJECT_DIR:-.}"
+  }'
+```
+
+## Codex setup
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/agent.setup.codex/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "output_path": "codex.mcp.json",
+    "safe_root": "."
   }'
 ```
 
@@ -278,6 +293,47 @@ curl -X POST http://127.0.0.1:7331/v1/tools/pdf.convert.markdown_to_pdf/run \
 ## Context Packet to target PDF
 
 ```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.context.ingest/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "context_item": {
+      "path": "src/agentpdf/compose/context.py",
+      "role": "code_evidence",
+      "label": "Composer Source"
+    },
+    "output_path": ".agentpdf-out/composer.context-item.json"
+  }'
+
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.context.code_snapshot/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "path": "src/agentpdf/compose/context.py",
+    "line_start": 1,
+    "line_end": 80,
+    "repository_root": ".",
+    "label": "Composer Source Snapshot",
+    "output_path": ".agentpdf-out/composer.snapshot.context-item.json"
+  }'
+
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.context.data_profile/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "path": "examples/create-data/metrics.csv",
+    "label": "Runtime Metrics",
+    "output_path": ".agentpdf-out/metrics.profile.context-item.json"
+  }'
+
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.context.packet/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "context_items": [
+      {"context_item": {"context_item_id": "ctx_001", "type": "code", "role": "code_evidence", "label": "Composer Source", "source_ref": "ctx_001", "metadata": {}, "content": {}}},
+      {"text": "Create a technical audit PDF from pre-ingested code evidence.", "role": "brief"}
+    ],
+    "output_path": ".agentpdf-out/agent.context.packet.json",
+    "title": "Agent Packet"
+  }'
+
 curl -X POST http://127.0.0.1:7331/v1/tools/pdf.context.build_packet/run \
   -H 'Content-Type: application/json' \
   -d '{
@@ -318,10 +374,30 @@ curl -X POST http://127.0.0.1:7331/v1/tools/pdf.context.build_packet/run \
 ```
 
 ```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.context.classify/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "context_packet_path": ".agentpdf-out/context.packet.json",
+    "profile": "technical_audit",
+    "output_path": ".agentpdf-out/context.classification.json"
+  }'
+```
+
+```bash
 curl -X POST http://127.0.0.1:7331/v1/tools/pdf.target.profiles/run \
   -H 'Content-Type: application/json' \
   -d '{
     "output_path": ".agentpdf-out/target-profiles.json"
+  }'
+```
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.target.select_profile/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "goal": "Create a slide deck from meeting notes and source evidence.",
+    "context_packet_path": ".agentpdf-out/context.packet.json",
+    "output_path": ".agentpdf-out/selected-profile.json"
   }'
 ```
 
@@ -346,12 +422,41 @@ curl -X POST http://127.0.0.1:7331/v1/tools/pdf.target.validate_profile/run \
 ```
 
 ```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.compose.plan/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "context_packet_path": ".agentpdf-out/context.packet.json",
+    "profile": "technical_audit",
+    "output_path": ".agentpdf-out/technical-audit.plan.json",
+    "title": "Technical Audit Plan"
+  }'
+
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.compose.render_ir/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "composition_path": ".agentpdf-out/technical-audit.plan.json",
+    "output_path": ".agentpdf-out/technical-audit-from-ir.pdf"
+  }'
+```
+
+```bash
 curl -X POST http://127.0.0.1:7331/v1/tools/pdf.compose.from_context/run \
   -H 'Content-Type: application/json' \
   -d '{
     "context_packet_path": ".agentpdf-out/context.packet.json",
     "profile": "technical_audit",
     "output_path": ".agentpdf-out/technical-audit.pdf"
+  }'
+```
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.evidence.context_packet_report/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "context_packet_path": ".agentpdf-out/context.packet.json",
+    "output_path": ".agentpdf-out/context-report.pdf",
+    "report_output_path": ".agentpdf-out/context-report.json",
+    "title": "Audit Context Packet Report"
   }'
 ```
 
@@ -365,6 +470,105 @@ curl -X POST http://127.0.0.1:7331/v1/tools/pdf.compose.from_context/run \
   }'
 ```
 
+Append source-backed blocks in one local step:
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.compose.add_code_block/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "input_path": ".agentpdf-out/technical-audit.pdf",
+    "output_path": ".agentpdf-out/technical-audit.code.pdf",
+    "title": "Risky Function",
+    "language": "python",
+    "code": "def risky_total(items):\n    return sum(items)\n",
+    "source_refs": ["ctx_002"],
+    "target_slot": "code_review",
+    "composition_path": ".agentpdf-out/technical-audit.composition.json"
+  }'
+```
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.compose.add_table/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "input_path": ".agentpdf-out/technical-audit.pdf",
+    "output_path": ".agentpdf-out/technical-audit.table.pdf",
+    "title": "Runtime Metrics",
+    "columns": ["metric", "value"],
+    "rows": [["latency_ms", "42"], ["error_rate", "0.01"]],
+    "source_refs": ["ctx_003"],
+    "target_slot": "evidence_table"
+  }'
+```
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.compose.add_figure/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "input_path": ".agentpdf-out/technical-audit.pdf",
+    "output_path": ".agentpdf-out/technical-audit.figure.pdf",
+    "title": "Architecture Figure",
+    "image_path": "assets/brand/okpdf-logo.png",
+    "caption": "Local visual evidence.",
+    "source_refs": ["ctx_004"]
+  }'
+```
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.compose.add_appendix/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "input_path": ".agentpdf-out/technical-audit.pdf",
+    "output_path": ".agentpdf-out/technical-audit.appendix.pdf",
+    "title": "Source Appendix",
+    "markdown": "## Sources\n\n- ctx_002\n- ctx_003\n- ctx_004",
+    "source_refs": ["ctx_002", "ctx_003", "ctx_004"]
+  }'
+```
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.compose.add_citation/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "input_path": ".agentpdf-out/technical-audit.pdf",
+    "output_path": ".agentpdf-out/technical-audit.citation.pdf",
+    "title": "Source Citation",
+    "quote": "Cited claim text.",
+    "source": "https://example.com/research",
+    "source_refs": ["ctx_web"],
+    "target_slot": "citations"
+  }'
+```
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.compose.add_media_reference/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "input_path": ".agentpdf-out/technical-audit.pdf",
+    "output_path": ".agentpdf-out/technical-audit.media.pdf",
+    "title": "Meeting Audio",
+    "media_path": "meeting.mp3",
+    "media_kind": "audio",
+    "transcript_excerpt": "00:00 Kickoff",
+    "source_refs": ["ctx_audio"],
+    "target_slot": "media_evidence"
+  }'
+```
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.compose.add_slide/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "input_path": ".agentpdf-out/technical-audit.pdf",
+    "output_path": ".agentpdf-out/technical-audit.slide.pdf",
+    "title": "Review Slide",
+    "subtitle": "Decision evidence",
+    "body": ["Patch transactions can append slide-like evidence pages."],
+    "source_refs": ["ctx_slide"],
+    "target_slot": "evidence_slide"
+  }'
+```
+
 ## Evidence coverage and patch transaction
 
 ```bash
@@ -373,6 +577,16 @@ curl -X POST http://127.0.0.1:7331/v1/tools/pdf.evidence.coverage_report/run \
   -d '{
     "composition_path": ".agentpdf-out/technical-audit.composition.json",
     "output_path": ".agentpdf-out/technical-audit.coverage.json"
+  }'
+```
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.evidence.map_sources/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "composition_path": ".agentpdf-out/technical-audit.composition.json",
+    "context_packet_path": ".agentpdf-out/context.packet.json",
+    "output_path": ".agentpdf-out/technical-audit.source-map.json"
   }'
 ```
 
@@ -406,6 +620,21 @@ curl -X POST http://127.0.0.1:7331/v1/tools/pdf.patch.plan/run \
         "source_refs": ["ctx_003"]
       },
       {
+        "op": "append_citation",
+        "title": "Source Citation",
+        "quote": "Cited claim text.",
+        "source": "https://example.com/research",
+        "source_refs": ["ctx_web"]
+      },
+      {
+        "op": "append_media_reference",
+        "title": "Meeting Audio",
+        "media_path": "meeting.mp3",
+        "media_kind": "audio",
+        "transcript_excerpt": "00:00 Kickoff",
+        "source_refs": ["ctx_audio"]
+      },
+      {
         "op": "append_slide",
         "title": "Agent Review Appendix",
         "body": ["Patch transactions can append slide-like evidence pages."],
@@ -415,7 +644,30 @@ curl -X POST http://127.0.0.1:7331/v1/tools/pdf.patch.plan/run \
     "output_path": ".agentpdf-out/technical-audit.structured.patch.json",
     "composition_path": ".agentpdf-out/technical-audit.composition.json",
     "layer_manifest_path": ".agentpdf-out/technical-audit.layers.json",
-    "reason": "Append code, table, image, and slide evidence."
+    "reason": "Append code, table, image, citation, media, and slide evidence."
+  }'
+```
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.patch.plan/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "input_path": ".agentpdf-out/board-audit.pdf",
+    "operations": [
+      {
+        "op": "regenerate_block",
+        "title": "Regenerated Runtime Metrics Summary",
+        "replacement_markdown": "## Regenerated Runtime Metrics Summary\n\nThe findings block was regenerated from `ctx_metrics` while preserving source and template-layer evidence.",
+        "source_refs": ["ctx_metrics"],
+        "layer_id": "layer_blk_agent_table",
+        "block_id": "blk_agent_table",
+        "target_slot": "findings"
+      }
+    ],
+    "output_path": ".agentpdf-out/board-audit.regenerate.patch.json",
+    "composition_path": ".agentpdf-out/board-audit.composition.json",
+    "layer_manifest_path": ".agentpdf-out/board-audit.layers.json",
+    "reason": "Regenerate a template block with layer evidence."
   }'
 ```
 
@@ -656,6 +908,10 @@ curl -X POST http://127.0.0.1:7331/v1/tools/pdf.metadata.read/run \
   -H 'Content-Type: application/json' \
   -d '{"input_path": "report.pdf"}'
 
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.metadata.page_info/run \
+  -H 'Content-Type: application/json' \
+  -d '{"input_path": "report.pdf", "pages": "1-3"}'
+
 curl -X POST http://127.0.0.1:7331/v1/tools/pdf.metadata.update/run \
   -H 'Content-Type: application/json' \
   -d '{
@@ -667,12 +923,22 @@ curl -X POST http://127.0.0.1:7331/v1/tools/pdf.metadata.update/run \
 curl -X POST http://127.0.0.1:7331/v1/tools/pdf.metadata.remove/run \
   -H 'Content-Type: application/json' \
   -d '{"input_path": "report.pdf", "output_path": "report-clean.pdf"}'
+
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.security.remove_metadata/run \
+  -H 'Content-Type: application/json' \
+  -d '{"input_path": "report.pdf", "output_path": "report-security-clean.pdf"}'
 ```
 
 ## Validate output
 
 ```bash
 curl -X POST http://127.0.0.1:7331/v1/tools/pdf.validation.validate_output/run \
+  -H 'Content-Type: application/json' \
+  -d '{"path": ".agentpdf-out/scan-numbered.pdf", "expected_pages": 2}'
+```
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.validation.page_count_check/run \
   -H 'Content-Type: application/json' \
   -d '{"path": ".agentpdf-out/scan-numbered.pdf", "expected_pages": 2}'
 ```

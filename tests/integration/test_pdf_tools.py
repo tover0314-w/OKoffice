@@ -18,6 +18,7 @@ from agentpdf.core.pdf import (
     inspect_pdf,
     inspect_pdf_pages,
     merge_pdfs,
+    page_info_pdf,
     read_metadata_pdf,
     remove_pages_pdf,
     remove_metadata_pdf,
@@ -29,6 +30,7 @@ from agentpdf.core.pdf import (
     split_pdf,
     update_metadata_pdf,
 )
+from agentpdf.tools.runner import run_page_count_check, run_security_remove_metadata
 from agentpdf.validation.pdf import blank_page_check_pdf, render_check_pdf, validate_pdf
 
 
@@ -97,6 +99,17 @@ def test_inspect_pdf_pages_reports_page_level_agent_facts(tmp_path: Path) -> Non
     assert first_page["text_char_count"] > 0
     assert first_page["image_count"] == 1
     assert info["pages"][1]["has_text_layer"] is False
+
+
+def test_page_info_pdf_returns_metadata_page_geometry(two_page_pdf: Path) -> None:
+    result = page_info_pdf(two_page_pdf, pages="2")
+
+    assert result.status == "succeeded"
+    assert result.tool == "pdf.metadata.page_info"
+    assert result.usage["page_count"] == 2
+    assert result.usage["selected_pages"] == [2]
+    assert result.usage["pages"][0]["page_number"] == 2
+    assert result.usage["pages"][0]["width"] == 612
 
 
 def test_merge_pdfs_writes_new_validated_output(simple_pdf: Path, two_page_pdf: Path, tmp_path: Path) -> None:
@@ -293,6 +306,28 @@ def test_remove_metadata_pdf_removes_custom_document_info(metadata_pdf: Path, tm
     cleaned_metadata = read_metadata_pdf(output).usage["metadata"]
     assert "Title" not in cleaned_metadata
     assert "Author" not in cleaned_metadata
+
+
+def test_security_remove_metadata_uses_security_tool_name(metadata_pdf: Path, tmp_path: Path) -> None:
+    output = tmp_path / "security-clean.pdf"
+
+    result = run_security_remove_metadata(metadata_pdf, output)
+
+    assert result.status == "succeeded"
+    assert result.tool == "pdf.security.remove_metadata"
+    assert result.artifacts[0].source_tool == "pdf.security.remove_metadata"
+    assert "Title" not in read_metadata_pdf(output).usage["metadata"]
+
+
+def test_page_count_check_returns_validation_evidence(two_page_pdf: Path) -> None:
+    result = run_page_count_check(two_page_pdf, expected_pages=2)
+
+    assert result.status == "succeeded"
+    assert result.tool == "pdf.validation.page_count_check"
+    assert result.validation is not None
+    assert result.validation.status == "passed"
+    assert result.usage["expected_pages"] == 2
+    assert result.usage["actual_pages"] == 2
 
 
 def test_create_text_pdf_writes_valid_pdf(tmp_path: Path) -> None:

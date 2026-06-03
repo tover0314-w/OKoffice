@@ -18,7 +18,17 @@
         "optional": ["audience", "checklist", "risks"]
       },
       "layout_slots": ["cover", "executive_summary", "findings", "evidence", "recommendations"],
-      "supported_block_types": ["section", "code", "table", "image", "slide", "citation"],
+      "supported_block_types": [
+        "section",
+        "code",
+        "table",
+        "image",
+        "slide",
+        "audio_reference",
+        "video_reference",
+        "media_reference",
+        "citation"
+      ],
       "color_schemes": {
         "executive_blue": {
           "primary": "#1f3a5f",
@@ -59,7 +69,15 @@
         "optional": ["audience", "checklist", "citations"]
       },
       "layout_slots": ["cover", "research_question", "findings", "implications", "sources"],
-      "supported_block_types": ["section", "table", "image", "code", "citation"],
+      "supported_block_types": [
+        "section",
+        "table",
+        "image",
+        "code",
+        "audio_reference",
+        "video_reference",
+        "citation"
+      ],
       "color_schemes": {
         "paper_blue": {
           "primary": "#1d4ed8",
@@ -100,7 +118,17 @@
         "optional": ["audience", "checklist", "source_notes"]
       },
       "layout_slots": ["cover", "evidence_summary", "source_items", "source_map"],
-      "supported_block_types": ["section", "code", "table", "image", "slide", "citation"],
+      "supported_block_types": [
+        "section",
+        "code",
+        "table",
+        "image",
+        "slide",
+        "audio_reference",
+        "video_reference",
+        "media_reference",
+        "citation"
+      ],
       "color_schemes": {
         "evidence_slate": {
           "primary": "#334155",
@@ -238,7 +266,14 @@
         "optional": ["questions", "checklist"]
       },
       "layout_slots": ["title", "learning_goal", "practice", "checklist"],
-      "supported_block_types": ["section", "table", "citation"],
+      "supported_block_types": [
+        "section",
+        "table",
+        "audio_reference",
+        "video_reference",
+        "media_reference",
+        "citation"
+      ],
       "color_schemes": {
         "classroom_green": {
           "primary": "#166534",

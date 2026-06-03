@@ -12,8 +12,10 @@ from agentpdf.compose.context import compose_from_context
 from agentpdf.context.packet import build_context_packet
 from agentpdf.core.pdf import inspect_pdf_pages
 from agentpdf.evidence.coverage import create_coverage_report
+from agentpdf.evidence.source_map import map_sources
 from agentpdf.mcp.server import (
     pdf_evidence_coverage_report,
+    pdf_evidence_map_sources,
     pdf_patch_apply,
     pdf_patch_plan,
     pdf_patch_preview,
@@ -42,6 +44,31 @@ def test_evidence_coverage_report_reads_composition_artifact(tmp_path: Path) -> 
     saved = json.loads(report_path.read_text(encoding="utf-8"))
     assert saved["coverage"]["covered_context_items"] == 2
     assert saved["block_evidence"][0]["source_refs"]
+
+
+def test_evidence_map_sources_enriches_composition_source_map(tmp_path: Path) -> None:
+    composition_path = _write_composed_pdf(tmp_path)[1]
+    context_packet_path = tmp_path / "context.packet.json"
+    source_map_path = tmp_path / "source-map.json"
+
+    result = map_sources(
+        composition=composition_path,
+        context_packet=context_packet_path,
+        output_path=source_map_path,
+    )
+
+    assert result.status == "succeeded"
+    assert result.tool == "pdf.evidence.map_sources"
+    assert result.artifacts[0].mime_type == "application/json"
+    assert result.usage["coverage"]["coverage_ratio"] == 1.0
+    assert result.usage["coverage"]["source_ref_match_ratio"] == 1.0
+    assert result.usage["unmatched_source_refs"] == []
+    assert result.usage["source_map"][0]["source_match_status"] == "matched"
+    assert result.usage["source_map"][0]["context_item_id"].startswith("ctx_")
+    assert result.usage["source_map"][0]["evidence_summary"]["available"] is True
+    saved = json.loads(source_map_path.read_text(encoding="utf-8"))
+    assert saved["source_map_report_version"] == "0.1"
+    assert saved["source_map"][0]["source_ref"]
 
 
 def test_patch_transaction_appends_audited_markdown_without_mutating_input(tmp_path: Path) -> None:
@@ -106,6 +133,8 @@ def test_patch_transaction_appends_structured_blocks_without_mutating_input(tmp_
     original_pages = len(PdfReader(source_pdf).pages)
     image_path = tmp_path / "architecture.png"
     Image.new("RGB", (120, 80), color=(20, 100, 90)).save(image_path)
+    media_path = tmp_path / "meeting.mp3"
+    media_path.write_bytes(b"ID3 local media fixture")
     manifest_path = tmp_path / "structured.patch.json"
     patched_pdf = tmp_path / "structured-patched.pdf"
 
@@ -132,6 +161,32 @@ def test_patch_transaction_appends_structured_blocks_without_mutating_input(tmp_
             "source_refs": ["ctx_001"],
         },
         {
+            "op": "append_citation",
+            "title": "Source Citation",
+            "quote": "Patch transactions keep citation evidence traceable.",
+            "source": "https://example.com/research",
+            "page": "section 2",
+            "source_refs": ["ctx_001"],
+            "citation_evidence": {
+                "domain": "example.com",
+                "fetch_status": "not_fetched",
+            },
+        },
+        {
+            "op": "append_media_reference",
+            "title": "Meeting Audio",
+            "media_path": str(media_path),
+            "media_kind": "audio",
+            "transcript_excerpt": "00:00 Keep local provenance explicit.",
+            "duration_seconds": 18,
+            "source_refs": ["ctx_001"],
+            "media_evidence": {
+                "filename": "meeting.mp3",
+                "exists": True,
+                "fetch_status": "not_fetched",
+            },
+        },
+        {
             "op": "append_slide",
             "title": "Slide Appendix",
             "body": ["Patch transactions can append slide-like pages."],
@@ -151,20 +206,28 @@ def test_patch_transaction_appends_structured_blocks_without_mutating_input(tmp_
     verified = verify_patch_transaction(manifest_path, patched_pdf)
 
     manifest = plan.usage["patch_manifest"]
-    assert manifest["operation_count"] == 4
+    assert manifest["operation_count"] == 6
     assert manifest["safety"]["supported_operations"] == [
         "append_markdown",
         "append_code_block",
         "append_table",
         "append_image",
         "append_slide",
+        "append_citation",
+        "append_media_reference",
+        "regenerate_block",
     ]
     assert [item["op"] for item in preview.usage["operation_summary"]] == [
         "append_code_block",
         "append_table",
         "append_image",
+        "append_citation",
+        "append_media_reference",
         "append_slide",
     ]
+    assert manifest["operations"][3]["citation_evidence"]["fetch_status"] == "not_fetched"
+    assert manifest["operations"][4]["media_kind"] == "audio"
+    assert manifest["operations"][4]["media_evidence"]["fetch_status"] == "not_fetched"
 
     assert applied.status == "succeeded"
     assert applied.validation is not None
@@ -179,6 +242,12 @@ def test_patch_transaction_appends_structured_blocks_without_mutating_input(tmp_
     assert "Runtime Metrics" in patched_text
     assert "latency_ms" in patched_text
     assert "Architecture Figure" in patched_text
+    assert "Source Citation" in patched_text
+    assert "Patch transactions keep citation evidence traceable." in patched_text
+    assert "https://example.com/research" in patched_text
+    assert "Meeting Audio" in patched_text
+    assert "meeting.mp3" in patched_text
+    assert "00:00 Keep local provenance explicit." in patched_text
     assert "Slide Appendix" in patched_text
     assert "Patch Evidence" in patched_text
     page_report = inspect_pdf_pages(patched_pdf, pages="all")
@@ -200,6 +269,7 @@ def test_evidence_and_patch_cli_api_mcp_are_exposed(tmp_path: Path) -> None:
     operations_path.write_text(json.dumps(operations), encoding="utf-8")
     single_operation_path.write_text(json.dumps(operations[0]), encoding="utf-8")
     coverage_path = tmp_path / "coverage.json"
+    source_map_path = tmp_path / "source-map.json"
     patch_path = tmp_path / "patch.json"
     single_patch_path = tmp_path / "single-patch.json"
     preview_path = tmp_path / "patch-preview.json"
@@ -208,6 +278,19 @@ def test_evidence_and_patch_cli_api_mcp_are_exposed(tmp_path: Path) -> None:
     coverage_cli = runner.invoke(
         app,
         ["evidence", "coverage-report", str(composition_path), "-o", str(coverage_path), "--json"],
+    )
+    map_sources_cli = runner.invoke(
+        app,
+        [
+            "evidence",
+            "map-sources",
+            str(composition_path),
+            "--context-packet",
+            str(tmp_path / "context.packet.json"),
+            "-o",
+            str(source_map_path),
+            "--json",
+        ],
     )
     plan_cli = runner.invoke(
         app,
@@ -245,6 +328,8 @@ def test_evidence_and_patch_cli_api_mcp_are_exposed(tmp_path: Path) -> None:
 
     assert coverage_cli.exit_code == 0
     assert json.loads(coverage_cli.stdout)["tool"] == "pdf.evidence.coverage_report"
+    assert map_sources_cli.exit_code == 0
+    assert json.loads(map_sources_cli.stdout)["tool"] == "pdf.evidence.map_sources"
     assert plan_cli.exit_code == 0
     assert json.loads(plan_cli.stdout)["tool"] == "pdf.patch.plan"
     assert single_plan_cli.exit_code == 0
@@ -261,6 +346,14 @@ def test_evidence_and_patch_cli_api_mcp_are_exposed(tmp_path: Path) -> None:
         "/v1/tools/pdf.evidence.coverage_report/run",
         json={"composition_path": str(composition_path), "output_path": str(tmp_path / "api-coverage.json")},
     )
+    api_map_sources = client.post(
+        "/v1/tools/pdf.evidence.map_sources/run",
+        json={
+            "composition_path": str(composition_path),
+            "context_packet_path": str(tmp_path / "context.packet.json"),
+            "output_path": str(tmp_path / "api-source-map.json"),
+        },
+    )
     api_plan = client.post(
         "/v1/tools/pdf.patch.plan/run",
         json={
@@ -273,16 +366,26 @@ def test_evidence_and_patch_cli_api_mcp_are_exposed(tmp_path: Path) -> None:
 
     assert api_coverage.status_code == 200
     assert api_coverage.json()["tool"] == "pdf.evidence.coverage_report"
+    assert api_map_sources.status_code == 200
+    assert api_map_sources.json()["tool"] == "pdf.evidence.map_sources"
     assert api_plan.status_code == 200
     assert api_plan.json()["tool"] == "pdf.patch.plan"
 
     mcp_coverage = json.loads(pdf_evidence_coverage_report(str(composition_path), str(tmp_path / "mcp-coverage.json")))
+    mcp_map_sources = json.loads(
+        pdf_evidence_map_sources(
+            str(composition_path),
+            context_packet=str(tmp_path / "context.packet.json"),
+            output_path=str(tmp_path / "mcp-source-map.json"),
+        )
+    )
     mcp_plan = json.loads(pdf_patch_plan(str(source_pdf), operations, str(tmp_path / "mcp-patch.json")))
     mcp_preview = json.loads(pdf_patch_preview(str(tmp_path / "mcp-patch.json")))
     mcp_apply = json.loads(pdf_patch_apply(str(tmp_path / "mcp-patch.json"), str(tmp_path / "mcp-patched.pdf")))
     mcp_verify = json.loads(pdf_patch_verify(str(tmp_path / "mcp-patch.json"), str(tmp_path / "mcp-patched.pdf")))
 
     assert mcp_coverage["tool"] == "pdf.evidence.coverage_report"
+    assert mcp_map_sources["tool"] == "pdf.evidence.map_sources"
     assert mcp_plan["tool"] == "pdf.patch.plan"
     assert mcp_preview["tool"] == "pdf.patch.preview"
     assert mcp_apply["validation"]["status"] == "passed"

@@ -28,6 +28,7 @@ Use the Node CLI:
 ```bash
 node packages/agentpdf-node/dist/src/cli.js tools
 node packages/agentpdf-node/dist/src/cli.js agent-setup-claude-code -o .mcp.json --safe-root '${CLAUDE_PROJECT_DIR:-.}'
+node packages/agentpdf-node/dist/src/cli.js agent-setup-codex -o codex.mcp.json --safe-root .
 node packages/agentpdf-node/dist/src/cli.js workflow-plan --goal "Chat with this PDF and cite answers" --input-path .agentpdf-out/node-report.pdf
 node packages/agentpdf-node/dist/src/cli.js workflow-run --payload '{"steps":[{"step_id":"inspect","tool":"pdf.inspect.document","input":{"path":"<input.pdf>"}}],"input_path":".agentpdf-out/node-report.pdf"}' --binding '<question>=What is this report?' --dry-run
 node packages/agentpdf-node/dist/src/cli.js workflow-report --payload '{"run_id":"wfrun_node","status":"succeeded","planned_steps":1,"executed_steps":1,"failed_steps":0,"step_results":[]}' -o .agentpdf-out/node-workflow-report.md
@@ -57,12 +58,28 @@ node packages/agentpdf-node/dist/src/cli.js rag-search .agentpdf-out/node-report
 node packages/agentpdf-node/dist/src/cli.js rag-cite-answer .agentpdf-out/node-report.index.json --answer "This report is local-first."
 node packages/agentpdf-node/dist/src/cli.js rag-highlight-sources .agentpdf-out/node-report.index.json --answer "This report is local-first." -o .agentpdf-out/node-report-highlighted.pdf
 node packages/agentpdf-node/dist/src/cli.js rag-export-report .agentpdf-out/node-report.index.json --question "What is this report about?" --answer "This report is local-first." -o .agentpdf-out/node-report-rag.pdf
+node packages/agentpdf-node/dist/src/cli.js context-ingest --file src/agentpdf/compose/context.py --role code_evidence --label "Composer Source" -o .agentpdf-out/composer.context-item.json
+node packages/agentpdf-node/dist/src/cli.js code-snapshot src/agentpdf/compose/context.py --line-start 1 --line-end 80 --repository-root . -o .agentpdf-out/composer.snapshot.context-item.json
+node packages/agentpdf-node/dist/src/cli.js data-profile examples/create-data/metrics.csv --label "Runtime Metrics" -o .agentpdf-out/metrics.profile.context-item.json
+node packages/agentpdf-node/dist/src/cli.js context-packet --item-json .agentpdf-out/composer.context-item.json --text "Create a technical audit PDF from pre-ingested code evidence." -o .agentpdf-out/agent.context.packet.json
 node packages/agentpdf-node/dist/src/cli.js context-build --text "Create a technical audit PDF." --file README.md --item-json examples/context/media-items.json -o .agentpdf-out/context.packet.json
+node packages/agentpdf-node/dist/src/cli.js context-classify .agentpdf-out/context.packet.json --profile technical_audit -o .agentpdf-out/context.classification.json
 node packages/agentpdf-node/dist/src/cli.js target-profiles -o .agentpdf-out/target-profiles.json
 node packages/agentpdf-node/dist/src/cli.js target-validate --target-profile '{"profile_id":"media_learning_deck","layout_mode":"slides","accepted_block_types":["slide","audio_reference","video_reference"],"accepted_context_types":["text","audio","video"],"validation_required":["render_check","evidence_coverage_report"]}' -o .agentpdf-out/media-learning-deck.validation.json
+node packages/agentpdf-node/dist/src/cli.js compose-plan .agentpdf-out/context.packet.json --profile technical_audit -o .agentpdf-out/technical-audit.plan.json
+node packages/agentpdf-node/dist/src/cli.js compose-render-ir .agentpdf-out/technical-audit.plan.json -o .agentpdf-out/technical-audit-from-ir.pdf
 node packages/agentpdf-node/dist/src/cli.js compose-from-context .agentpdf-out/context.packet.json --profile technical_audit -o .agentpdf-out/technical-audit.pdf
 node packages/agentpdf-node/dist/src/cli.js compose-from-context .agentpdf-out/context.packet.json --profile slide_deck -o .agentpdf-out/agent-review-deck.pdf
+node packages/agentpdf-node/dist/src/cli.js compose-add-code-block .agentpdf-out/technical-audit.pdf --title "Risk Function" --code "def risky_total(items): return sum(items)" --language python --source-ref ctx_002 --target-slot code_review -o .agentpdf-out/technical-audit.code.pdf
+node packages/agentpdf-node/dist/src/cli.js compose-add-table .agentpdf-out/technical-audit.pdf --title "Runtime Metrics" --columns metric,value --row latency_ms,42 --source-ref ctx_003 -o .agentpdf-out/technical-audit.table.pdf
+node packages/agentpdf-node/dist/src/cli.js compose-add-figure .agentpdf-out/technical-audit.pdf --title "Architecture Figure" --image assets/brand/okpdf-logo.png --caption "Local visual evidence." --source-ref ctx_004 -o .agentpdf-out/technical-audit.figure.pdf
+node packages/agentpdf-node/dist/src/cli.js compose-add-appendix .agentpdf-out/technical-audit.pdf --title "Source Appendix" --markdown "## Sources" --source-ref ctx_002 -o .agentpdf-out/technical-audit.appendix.pdf
+node packages/agentpdf-node/dist/src/cli.js compose-add-citation .agentpdf-out/technical-audit.pdf --title "Source Citation" --source https://example.com/research --quote "Cited claim" --source-ref ctx_web -o .agentpdf-out/technical-audit.citation.pdf
+node packages/agentpdf-node/dist/src/cli.js compose-add-media-reference .agentpdf-out/technical-audit.pdf --title "Meeting Audio" --media meeting.mp3 --media-kind audio --transcript-excerpt "00:00 Kickoff" --source-ref ctx_audio -o .agentpdf-out/technical-audit.media.pdf
+node packages/agentpdf-node/dist/src/cli.js compose-add-slide .agentpdf-out/technical-audit.pdf --title "Review Slide" --body "Decision evidence" --source-ref ctx_slide -o .agentpdf-out/technical-audit.slide.pdf
+node packages/agentpdf-node/dist/src/cli.js evidence-context-packet-report .agentpdf-out/context.packet.json -o .agentpdf-out/context-report.pdf --report-output .agentpdf-out/context-report.json
 node packages/agentpdf-node/dist/src/cli.js evidence-coverage-report .agentpdf-out/technical-audit.composition.json -o .agentpdf-out/technical-audit.coverage.json
+node packages/agentpdf-node/dist/src/cli.js evidence-map-sources .agentpdf-out/technical-audit.composition.json --context-packet .agentpdf-out/context.packet.json -o .agentpdf-out/technical-audit.source-map.json
 node packages/agentpdf-node/dist/src/cli.js patch-plan .agentpdf-out/technical-audit.pdf --operations '[{"op":"append_table","title":"Runtime Metrics","columns":["metric","value"],"rows":[["latency_ms","42"]],"source_refs":["ctx_002"],"target_slot":"findings"}]' -o .agentpdf-out/technical-audit.patch.json --composition .agentpdf-out/technical-audit.composition.json --layers .agentpdf-out/technical-audit.layers.json
 node packages/agentpdf-node/dist/src/cli.js patch-preview .agentpdf-out/technical-audit.patch.json -o .agentpdf-out/technical-audit.patch-preview.json
 node packages/agentpdf-node/dist/src/cli.js patch-apply .agentpdf-out/technical-audit.patch.json -o .agentpdf-out/technical-audit-patched.pdf
@@ -163,6 +180,34 @@ const invoicePreview = await client.createTemplatePreview({
   template: "invoice",
   outputPath: ".agentpdf-out/invoice-preview.pdf",
 });
+const composerItem = await client.ingestContext({
+  contextItem: {
+    path: "src/agentpdf/compose/context.py",
+    role: "code_evidence",
+    label: "Composer Source",
+  },
+  outputPath: ".agentpdf-out/composer.context-item.json",
+});
+const codeSnapshot = await client.codeSnapshot({
+  path: "src/agentpdf/compose/context.py",
+  outputPath: ".agentpdf-out/composer.snapshot.context-item.json",
+  lineStart: 1,
+  lineEnd: 80,
+  repositoryRoot: ".",
+});
+const dataProfile = await client.dataProfile({
+  path: "examples/create-data/metrics.csv",
+  outputPath: ".agentpdf-out/metrics.profile.context-item.json",
+  label: "Runtime Metrics",
+});
+const agentPacket = await client.contextPacket({
+  contextItems: [
+    composerItem.usage.context_item,
+    { text: "Create a technical audit PDF from pre-ingested code evidence.", role: "brief" },
+  ],
+  outputPath: ".agentpdf-out/agent.context.packet.json",
+  title: "Agent Packet",
+});
 const contextPacket = await client.buildContextPacket({
   contextItems: [
     { text: "Create a technical audit PDF.", role: "brief" },
@@ -200,8 +245,39 @@ const contextPacket = await client.buildContextPacket({
   outputPath: ".agentpdf-out/context.packet.json",
   title: "Audit Context",
 });
+const classification = await client.classifyContext({
+  contextPacketPath: ".agentpdf-out/context.packet.json",
+  profile: "technical_audit",
+  outputPath: ".agentpdf-out/context.classification.json",
+});
+const compositionPlan = await client.composePlan({
+  contextPacketPath: ".agentpdf-out/context.packet.json",
+  profile: "technical_audit",
+  outputPath: ".agentpdf-out/technical-audit.plan.json",
+});
+const renderedFromIr = await client.composeRenderIr({
+  compositionPath: ".agentpdf-out/technical-audit.plan.json",
+  outputPath: ".agentpdf-out/technical-audit-from-ir.pdf",
+});
+const agentRun = await client.createAgent({
+  templatePackPath: "examples/template-packs/local-agent-starter.json",
+  profile: "technical_audit",
+  contextPacketPath: ".agentpdf-out/context.packet.json",
+  outputPath: ".agentpdf-out/board-audit-agent.pdf",
+  planOutputPath: ".agentpdf-out/board-audit-agent.plan.json",
+  coverageOutputPath: ".agentpdf-out/board-audit-agent.coverage.json",
+  contextClassificationOutputPath: ".agentpdf-out/board-audit-agent.context-classification.json",
+  contextReportOutputPath: ".agentpdf-out/board-audit-agent.context-report.pdf",
+  contextReportJsonOutputPath: ".agentpdf-out/board-audit-agent.context-report.json",
+  bundleOutputPath: ".agentpdf-out/board-audit-agent.agentpdf-bundle.zip",
+});
 const targetCatalog = await client.targetProfiles({
   outputPath: ".agentpdf-out/target-profiles.json",
+});
+const targetSelection = await client.selectTargetProfile({
+  goal: "Create a slide deck from meeting notes and source evidence.",
+  contextPacketPath: ".agentpdf-out/context.packet.json",
+  outputPath: ".agentpdf-out/selected-profile.json",
 });
 const targetValidation = await client.validateTargetProfile({
   targetProfile: {
@@ -223,9 +299,81 @@ const composedDeck = await client.composeFromContext({
   profile: "slide_deck",
   outputPath: ".agentpdf-out/agent-review-deck.pdf",
 });
+const codeBlock = await client.composeAddCodeBlock({
+  inputPath: ".agentpdf-out/technical-audit.pdf",
+  outputPath: ".agentpdf-out/technical-audit.code.pdf",
+  title: "Risk Function",
+  code: "def risky_total(items):\n    return sum(items)\n",
+  language: "python",
+  sourceRefs: ["ctx_002"],
+  targetSlot: "code_review",
+  compositionPath: ".agentpdf-out/technical-audit.composition.json",
+});
+await client.composeAddTable({
+  inputPath: ".agentpdf-out/technical-audit.pdf",
+  outputPath: ".agentpdf-out/technical-audit.table.pdf",
+  title: "Runtime Metrics",
+  columns: ["metric", "value"],
+  rows: [["latency_ms", "42"], ["error_rate", "0.01"]],
+  sourceRefs: ["ctx_003"],
+});
+await client.composeAddFigure({
+  inputPath: ".agentpdf-out/technical-audit.pdf",
+  outputPath: ".agentpdf-out/technical-audit.figure.pdf",
+  title: "Architecture Figure",
+  imagePath: "assets/brand/okpdf-logo.png",
+  caption: "Local visual evidence.",
+  sourceRefs: ["ctx_004"],
+});
+await client.composeAddAppendix({
+  inputPath: ".agentpdf-out/technical-audit.pdf",
+  outputPath: ".agentpdf-out/technical-audit.appendix.pdf",
+  title: "Source Appendix",
+  markdown: "## Sources\n\n- ctx_002\n- ctx_003\n- ctx_004",
+  sourceRefs: ["ctx_002", "ctx_003", "ctx_004"],
+});
+await client.composeAddCitation({
+  inputPath: ".agentpdf-out/technical-audit.pdf",
+  outputPath: ".agentpdf-out/technical-audit.citation.pdf",
+  title: "Source Citation",
+  quote: "Cited claim",
+  source: "https://example.com/research",
+  sourceRefs: ["ctx_web"],
+  targetSlot: "citations",
+});
+await client.composeAddMediaReference({
+  inputPath: ".agentpdf-out/technical-audit.pdf",
+  outputPath: ".agentpdf-out/technical-audit.media.pdf",
+  title: "Meeting Audio",
+  mediaPath: "meeting.mp3",
+  mediaKind: "audio",
+  transcriptExcerpt: "00:00 Kickoff",
+  sourceRefs: ["ctx_audio"],
+  targetSlot: "media_evidence",
+});
+await client.composeAddSlide({
+  inputPath: ".agentpdf-out/technical-audit.pdf",
+  outputPath: ".agentpdf-out/technical-audit.slide.pdf",
+  title: "Review Slide",
+  subtitle: "Decision evidence",
+  body: ["Patch transactions can append slide-like evidence pages."],
+  sourceRefs: ["ctx_slide"],
+  targetSlot: "evidence_slide",
+});
+const contextReport = await client.contextPacketReport({
+  contextPacketPath: ".agentpdf-out/context.packet.json",
+  outputPath: ".agentpdf-out/context-report.pdf",
+  reportOutputPath: ".agentpdf-out/context-report.json",
+  title: "Context Packet Report",
+});
 const coverage = await client.evidenceCoverageReport({
   compositionPath: ".agentpdf-out/technical-audit.composition.json",
   outputPath: ".agentpdf-out/technical-audit.coverage.json",
+});
+const sourceMap = await client.evidenceMapSources({
+  compositionPath: ".agentpdf-out/technical-audit.composition.json",
+  contextPacketPath: ".agentpdf-out/context.packet.json",
+  outputPath: ".agentpdf-out/technical-audit.source-map.json",
 });
 const patch = await client.patchPlan({
   inputPath: ".agentpdf-out/technical-audit.pdf",
@@ -266,6 +414,25 @@ await client.patchApply({
 await client.patchVerify({
   patchManifestPath: ".agentpdf-out/technical-audit.patch.json",
   patchedPath: ".agentpdf-out/technical-audit-patched.pdf",
+});
+await client.patchPlan({
+  inputPath: ".agentpdf-out/board-audit.pdf",
+  operations: [
+    {
+      op: "regenerate_block",
+      title: "Regenerated Runtime Metrics Summary",
+      replacement_markdown:
+        "## Regenerated Runtime Metrics Summary\n\nRegenerated from ctx_metrics with layer evidence.",
+      source_refs: ["ctx_metrics"],
+      layer_id: "layer_blk_agent_table",
+      block_id: "blk_agent_table",
+      target_slot: "findings",
+    },
+  ],
+  outputPath: ".agentpdf-out/board-audit.regenerate.patch.json",
+  compositionPath: ".agentpdf-out/board-audit.composition.json",
+  layerManifestPath: ".agentpdf-out/board-audit.layers.json",
+  reason: "Regenerate a template block with layer evidence.",
 });
 const bundle = await client.exportBundle({
   artifactPaths: [
@@ -363,7 +530,8 @@ console.log(createdBrief.usage.template_id);
 console.log(createCatalog.usage.template_count);
 console.log(composedAudit.artifacts[0]?.path);
 console.log(composedDeck.usage.slide_count);
-console.log(targetCatalog.usage.profile_catalog.profile_count, targetValidation.usage.profile_validation.is_valid);
+console.log(codeBlock.usage.compose_block);
+console.log(targetCatalog.usage.profile_catalog.profile_count, targetSelection.usage.selected_profile_id, targetValidation.usage.profile_validation.is_valid);
 console.log(coverage.usage.uncovered_block_count);
 console.log(patch.usage.operation_count);
 console.log(bundle.usage.bundle_entries.length);
@@ -407,9 +575,27 @@ console.log(ragReport.usage.pages_cited);
 - `createFromTemplatePack({ templatePack, templatePackPath, templateId, outputPath, colorScheme, data, contextPacket, contextPacketPath, title, prompt, stylePack })`
   returns the PDF plus `.composition.json` and `.layers.json` artifacts. The layer manifest gives Node agents stable block/layer ids, target slots, source refs, estimated normalized-page anchors, and edit policies.
 - `createTemplatePreview({ template, outputPath, stylePack, colors, data })`
+- `ingestContext({ contextItem, outputPath })`
+- `contextPacket({ contextItems, outputPath, title, intent })`
 - `buildContextPacket({ contextItems, outputPath, title, intent })`
+- `classifyContext({ contextPacket, contextPacketPath, targetProfile, profile, outputPath })`
+- `targetProfiles({ outputPath })`
+- `selectTargetProfile({ goal, contextPacket, contextPacketPath, preferredProfileId, outputPath })`
+- `validateTargetProfile({ targetProfile, targetProfilePath, outputPath })`
+- `codeSnapshot({ path, outputPath, label, role, contextItemId, lineStart, lineEnd, repositoryRoot, includeDependencies })`
+- `dataProfile({ path, outputPath, label, role, contextItemId, sheet, maxRows })`
+- `composePlan({ contextPacket, contextPacketPath, targetProfile, profile, outputPath, stylePack, title })`
+- `composeRenderIr({ composition, compositionPath, outputPath, stylePack, title })`
 - `composeFromContext({ contextPacket, contextPacketPath, targetProfile, profile, outputPath, stylePack, title })`
+- `composeAddCodeBlock({ inputPath, outputPath, title, code, language, sourceRefs, blockId, targetSlot, compositionPath, layerManifestPath, manifestOutputPath })`
+- `composeAddTable({ inputPath, outputPath, title, columns, rows, sourceRefs, blockId, targetSlot, compositionPath, layerManifestPath, manifestOutputPath })`
+- `composeAddFigure({ inputPath, outputPath, title, imagePath, caption, sourceRefs, blockId, targetSlot, compositionPath, layerManifestPath, manifestOutputPath })`
+- `composeAddAppendix({ inputPath, outputPath, title, markdown, sourceRefs, blockId, targetSlot, compositionPath, layerManifestPath, manifestOutputPath })`
+- `composeAddCitation({ inputPath, outputPath, title, source, quote, page, sourceRefs, blockId, targetSlot, compositionPath, layerManifestPath, manifestOutputPath })`
+- `composeAddMediaReference({ inputPath, outputPath, title, mediaPath, mediaKind, transcriptExcerpt, durationSeconds, chapterCount, keyframeCount, sourceRefs, blockId, targetSlot, compositionPath, layerManifestPath, manifestOutputPath })`
+- `composeAddSlide({ inputPath, outputPath, title, body, subtitle, code, table, imagePath, sourceRefs, blockId, targetSlot, compositionPath, layerManifestPath, manifestOutputPath })`
 - `evidenceCoverageReport({ composition, compositionPath, outputPath })`
+- `evidenceMapSources({ composition, compositionPath, blocks, claims, contextPacket, contextPacketPath, outputPath })`
 - `patchPlan({ inputPath, operations, outputPath, compositionPath, layerManifestPath, reason })`
 - `patchPreview({ patchManifest, patchManifestPath, outputPath })`
 - `patchApply({ patchManifest, patchManifestPath, outputPath })`
@@ -417,6 +603,9 @@ console.log(ragReport.usage.pages_cited);
 - `exportBundle({ artifactPaths, outputPath, title, metadata })`
 - `verifyBundle({ bundlePath })`
 - `validateOutput({ path, expectedPages })`
+- `pageCountCheck({ path, expectedPages })`
+- `metadataPageInfo({ inputPath, pages })`
+- `securityRemoveMetadata({ inputPath, outputPath })`
 - `renderCheck({ path, pages })`
 - `blankPageCheck({ path, pages })`
 - `extractImages({ inputPath, pages, outDir })`

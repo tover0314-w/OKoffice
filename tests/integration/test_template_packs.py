@@ -27,8 +27,13 @@ from agentpdf.mcp.server import (
     pdf_ai_create_validate_template_pack,
     pdf_patch_plan,
 )
-from agentpdf.patch.transaction import apply_patch_transaction, plan_patch_transaction, verify_patch_transaction
-from agentpdf.tools.runner import run_patch_plan
+from agentpdf.patch.transaction import (
+    apply_patch_transaction,
+    plan_patch_transaction,
+    preview_patch_transaction,
+    verify_patch_transaction,
+)
+from agentpdf.tools.runner import run_patch_apply, run_patch_plan, run_patch_preview, run_patch_verify
 
 
 runner = CliRunner()
@@ -266,6 +271,10 @@ def test_template_pack_create_agent_runs_plan_create_and_validation_chain(tmp_pa
     output_path = tmp_path / "create-agent-board-audit.pdf"
     plan_path = tmp_path / "create-agent.plan.json"
     coverage_path = tmp_path / "create-agent.coverage.json"
+    context_classification_path = output_path.with_suffix(".context-classification.json")
+    context_report_pdf_path = tmp_path / "create-agent.context-report.pdf"
+    context_report_json_path = tmp_path / "create-agent.context-report.json"
+    bundle_path = tmp_path / "create-agent.agentpdf-bundle.zip"
     build_context_packet(
         [
             {"context_item_id": "ctx_brief", "text": "Create a technical audit PDF.", "label": "Brief"},
@@ -289,6 +298,9 @@ def test_template_pack_create_agent_runs_plan_create_and_validation_chain(tmp_pa
         output_path=output_path,
         plan_output_path=plan_path,
         coverage_output_path=coverage_path,
+        context_report_output_path=context_report_pdf_path,
+        context_report_json_output_path=context_report_json_path,
+        bundle_output_path=bundle_path,
     )
 
     run = result.usage["create_agent_run"]
@@ -303,15 +315,23 @@ def test_template_pack_create_agent_runs_plan_create_and_validation_chain(tmp_pa
     assert output_path.with_suffix(".composition.json").exists()
     assert plan_path.exists()
     assert coverage_path.exists()
+    assert context_classification_path.exists()
+    assert context_report_pdf_path.exists()
+    assert context_report_json_path.exists()
+    assert bundle_path.exists()
     assert run["status"] == "succeeded"
     assert run["selected_template_id"] == "board_audit"
     assert run["selected_color_scheme"] == "executive_blue"
     assert run["step_order"] == [
         "pdf.ai.create.plan_template_pack",
+        "pdf.context.classify",
+        "pdf.evidence.context_packet_report",
         "pdf.ai.create.from_template_pack",
         "pdf.validation.render_check",
         "pdf.validation.blank_page_check",
         "pdf.evidence.coverage_report",
+        "pdf.artifacts.export_bundle",
+        "pdf.artifacts.verify_bundle",
     ]
     assert run["output_pdf_path"] == str(output_path.resolve())
     assert run["composition_path"] == str(output_path.with_suffix(".composition.json").resolve())
@@ -320,10 +340,38 @@ def test_template_pack_create_agent_runs_plan_create_and_validation_chain(tmp_pa
     assert run["template_layer_manifest"]["layer_count"] == len(run["create_result"]["usage"]["composition_ir"]["blocks"])
     assert run["plan_path"] == str(plan_path.resolve())
     assert run["coverage_path"] == str(coverage_path.resolve())
+    assert run["context_classification_path"] == str(context_classification_path.resolve())
+    assert run["context_report_path"] == str(context_report_pdf_path.resolve())
+    assert run["context_report_json_path"] == str(context_report_json_path.resolve())
+    assert run["bundle_path"] == str(bundle_path.resolve())
+    assert run["context_classification"]["tool"] == "pdf.context.classify"
+    assert run["context_classification"]["usage"]["classification_count"] == 5
+    assert run["context_classification"]["usage"]["type_counts"] == {
+        "code": 1,
+        "data": 1,
+        "image": 1,
+        "text": 1,
+        "web_link": 1,
+    }
+    assert "Web links are not fetched by local classification." in run["context_classification"]["warnings"]
+    assert run["context_packet_report"]["tool"] == "pdf.evidence.context_packet_report"
+    assert run["context_packet_report"]["validation"]["status"] == "passed"
+    assert run["context_packet_report"]["usage"]["source_ref_count"] == 5
+    assert run["bundle_export"]["tool"] == "pdf.artifacts.export_bundle"
+    assert run["bundle_verification"]["validation"]["status"] == "passed"
+    assert run["bundle_export"]["usage"]["file_count"] >= 7
     assert run["render_check"]["validation"]["status"] == "passed"
     assert run["blank_page_check"]["usage"]["blank_pages"] == []
     assert run["coverage_report"]["usage"]["coverage"]["coverage_ratio"] == 1.0
+    assert run["validation_summary"]["context_classification"] == "succeeded"
+    assert run["validation_summary"]["context_packet_report"] == "passed"
+    assert run["validation_summary"]["bundle_verification"] == "passed"
     assert run["slot_routing_plan"]["warning_route_count"] == 0
+    bundle_entries = run["bundle_export"]["usage"]["bundle_entries"]
+    assert "artifacts/create-agent-board-audit.context-classification.json" in bundle_entries
+    assert "artifacts/create-agent.context-report.pdf" in bundle_entries
+    assert "artifacts/create-agent.context-report.json" in bundle_entries
+    assert "artifacts/create-agent.coverage.json" in bundle_entries
     assert "pdf.patch.plan" in result.next_recommended_tools
     assert "pdf.artifacts.export_bundle" in result.next_recommended_tools
 
@@ -621,6 +669,66 @@ def test_template_pack_maps_context_packet_to_agent_blocks(tmp_path: Path) -> No
     assert {"ctx_brief", "ctx_code", "ctx_metrics", "ctx_image", "ctx_link"} <= set(
         result.usage["evidence_coverage"]["covered_source_refs"]
     )
+
+
+def test_template_pack_media_context_respects_document_target_profile(tmp_path: Path) -> None:
+    audio = tmp_path / "meeting.mp3"
+    audio.write_bytes(b"ID3 local audio fixture")
+    video = tmp_path / "training.mp4"
+    video.write_bytes(b"\x00\x00\x00\x18ftypmp42 local video fixture")
+    packet_path = tmp_path / "media.context.json"
+    output_path = tmp_path / "board-audit-media.pdf"
+    build_context_packet(
+        [
+            {
+                "context_item_id": "ctx_audio",
+                "path": str(audio),
+                "role": "audio_context",
+                "label": "Meeting Audio",
+                "transcript": "00:00 Kickoff\n00:12 Decision: keep the local worker boundary explicit.",
+                "duration_seconds": 42.5,
+                "chapters": [{"start_seconds": 12, "title": "Decision"}],
+            },
+            {
+                "context_item_id": "ctx_video",
+                "path": str(video),
+                "role": "video_context",
+                "label": "Training Video",
+                "transcript": "00:00 Dashboard tour\n00:20 Export demo",
+                "duration_seconds": 84,
+                "keyframes": [{"timestamp_seconds": 20, "label": "Export screen"}],
+            },
+        ],
+        output_path=packet_path,
+        title="Media Evidence",
+    )
+
+    result = create_pdf_from_template_pack(
+        "examples/template-packs/local-agent-starter.json",
+        template_id="board_audit",
+        output_path=output_path,
+        color_scheme="executive_blue",
+        context_packet_path=packet_path,
+    )
+
+    blocks = {block["block_id"]: block for block in result.usage["composition_ir"]["blocks"]}
+    routes = {route["block_id"]: route for route in result.usage["slot_routing_plan"]["routes"]}
+    text = "\n".join(page.extract_text() or "" for page in PdfReader(output_path).pages)
+
+    assert blocks["blk_ctx_audio"]["type"] == "audio_reference"
+    assert blocks["blk_ctx_audio"]["target_slot"] == "media_evidence"
+    assert blocks["blk_ctx_audio"]["data"]["transcript_excerpt"].startswith("00:00 Kickoff")
+    assert blocks["blk_ctx_video"]["type"] == "video_reference"
+    assert blocks["blk_ctx_video"]["target_slot"] == "media_evidence"
+    assert blocks["blk_ctx_video"]["data"]["keyframe_count"] == 1
+    assert routes["blk_ctx_audio"]["target_profile_accepts_block_type"] is True
+    assert routes["blk_ctx_audio"]["target_profile_candidate_slots"] == ["media_evidence"]
+    assert routes["blk_ctx_video"]["target_profile_accepts_block_type"] is True
+    assert result.usage["slot_routing_plan"]["warning_route_count"] == 0
+    assert "Meeting Audio" in text
+    assert "Decision: keep the local worker boundary explicit" in text
+    assert "Training Video" in text
+    assert "Dashboard tour" in text
 
 
 def test_template_pack_context_packet_returns_slot_routing_plan(tmp_path: Path) -> None:
@@ -990,6 +1098,253 @@ def test_template_pack_layer_manifest_is_consumed_by_patch_plan(tmp_path: Path) 
     assert mcp["usage"]["patch_manifest"]["layer_ref_validation"]["requested_block_ids"] == ["blk_agent_note"]
 
 
+def test_template_pack_layer_patch_regenerates_block_as_append_only_artifact(tmp_path: Path) -> None:
+    pack = _example_pack()
+    pack["templates"][0]["supported_block_types"] = [
+        "section",
+        "code",
+        "table",
+        "image",
+        "slide",
+        "citation",
+    ]
+    pack_path = tmp_path / "template-pack.json"
+    output_path = tmp_path / "board-audit-regenerate.pdf"
+    manifest_path = tmp_path / "board-audit-regenerate.patch.json"
+    preview_path = tmp_path / "board-audit-regenerate.preview.json"
+    patched_path = tmp_path / "board-audit-regenerated.pdf"
+    pack_path.write_text(json.dumps(pack), encoding="utf-8")
+    data = {
+        "title": "Regeneratable Board Audit",
+        "blocks": [
+            {
+                "block_id": "blk_agent_note",
+                "type": "section",
+                "title": "Reviewer Note",
+                "target_slot": "findings",
+                "body": "This original block should remain traceable after regeneration.",
+                "source_refs": ["ctx_note"],
+            }
+        ],
+    }
+    create_pdf_from_template_pack(
+        pack_path,
+        template_id="board_audit",
+        output_path=output_path,
+        color_scheme="executive_blue",
+        data=data,
+    )
+    original_page_count = len(PdfReader(output_path).pages)
+    composition_path = output_path.with_suffix(".composition.json")
+    layer_path = output_path.with_suffix(".layers.json")
+
+    plan = plan_patch_transaction(
+        input_path=output_path,
+        operations=[
+            {
+                "op": "regenerate_block",
+                "title": "Regenerated Reviewer Note",
+                "replacement_markdown": (
+                    "## Regenerated Reviewer Note\n\n"
+                    "This block was regenerated from agent context while preserving audit evidence."
+                ),
+                "source_refs": ["ctx_note"],
+                "layer_id": "layer_blk_agent_note",
+                "block_id": "blk_agent_note",
+                "target_slot": "findings",
+            }
+        ],
+        output_path=manifest_path,
+        composition_path=composition_path,
+        layer_manifest_path=layer_path,
+        reason="Regenerate a template block with layer evidence.",
+    )
+    preview = preview_patch_transaction(manifest_path, output_path=preview_path)
+    applied = apply_patch_transaction(manifest_path, output_path=patched_path)
+    verified = verify_patch_transaction(manifest_path, patched_path)
+
+    manifest = plan.usage["patch_manifest"]
+    patch_schema = json.loads(Path("schemas/patch-manifest.schema.json").read_text(encoding="utf-8"))
+    operation = manifest["operations"][0]
+    layer_match = manifest["operation_layer_map"][0]["matched_layers"][0]
+    patched_text = "\n".join(page.extract_text() or "" for page in PdfReader(patched_path).pages)
+
+    assert list(Draft202012Validator(patch_schema).iter_errors(manifest)) == []
+    assert operation["op"] == "regenerate_block"
+    assert operation["replacement_markdown"].startswith("## Regenerated Reviewer Note")
+    assert operation["target_layer_refs"] == {
+        "layer_ids": ["layer_blk_agent_note"],
+        "block_ids": ["blk_agent_note"],
+        "target_slots": ["findings"],
+    }
+    assert operation["regeneration_policy"] == {
+        "requested_effect": "regenerate_template_block",
+        "actual_effect": "append_regenerated_block_appendix",
+        "mutates_original_block": False,
+        "requires_new_output_path": True,
+        "claims_layout_preservation": False,
+        "requires_layer_evidence": True,
+    }
+    assert manifest["layer_ref_validation"]["status"] == "passed"
+    assert manifest["operation_layer_map"][0]["matched_layer_count"] == 1
+    assert layer_match["layer_id"] == "layer_blk_agent_note"
+    assert "regenerate_block" in layer_match["edit_policy"]["allowed_operations"]
+    assert preview.usage["operation_summary"][0]["expected_effect"] == (
+        "append an audited regenerated block appendix; original template block remains unchanged"
+    )
+    assert preview.usage["operation_summary"][0]["matched_layer_count"] == 1
+    assert preview.usage["will_mutate_input"] is False
+    assert applied.status == "succeeded"
+    assert applied.usage["input_unchanged"] is True
+    assert len(PdfReader(output_path).pages) == original_page_count
+    assert len(PdfReader(patched_path).pages) > original_page_count
+    assert verified.status == "succeeded"
+    assert verified.usage["verification"]["input_unchanged"] is True
+    assert verified.usage["verification"]["layer_ref_validation_status"] == "passed"
+    assert verified.usage["verification"]["matched_layer_count"] == 1
+    assert "Regenerated Reviewer Note" in patched_text
+    assert "Regeneration Policy" in patched_text
+    assert "Original template block was not mutated" in patched_text
+    assert "Matched Template Layer Evidence" in patched_text
+    assert "layer_blk_agent_note" in patched_text
+    assert "estimated_slot_anchor" in patched_text
+
+
+def test_template_pack_patch_plan_rejects_layer_operation_not_allowed(tmp_path: Path) -> None:
+    pack = _example_pack()
+    pack["templates"][0]["supported_block_types"] = ["section", "code", "table"]
+    pack_path = tmp_path / "template-pack.json"
+    output_path = tmp_path / "board-audit-policy.pdf"
+    pack_path.write_text(json.dumps(pack), encoding="utf-8")
+    data = {
+        "title": "Policy Board Audit",
+        "blocks": [
+            {
+                "block_id": "blk_agent_note",
+                "type": "section",
+                "title": "Reviewer Note",
+                "target_slot": "findings",
+                "body": "This layer deliberately disallows regeneration in the edited manifest.",
+                "source_refs": ["ctx_note"],
+            }
+        ],
+    }
+    create_pdf_from_template_pack(
+        pack_path,
+        template_id="board_audit",
+        output_path=output_path,
+        color_scheme="executive_blue",
+        data=data,
+    )
+    layer_path = output_path.with_suffix(".layers.json")
+    layer_manifest = json.loads(layer_path.read_text(encoding="utf-8"))
+    for layer in layer_manifest["layers"]:
+        if layer["layer_id"] == "layer_blk_agent_note":
+            layer["edit_policy"]["allowed_operations"] = ["append_to_slot", "annotate"]
+            break
+    layer_path.write_text(json.dumps(layer_manifest, indent=2), encoding="utf-8-sig")
+
+    result = run_patch_plan(
+        input_path=output_path,
+        operations=[
+            {
+                "op": "regenerate_block",
+                "title": "Regenerated Reviewer Note",
+                "replacement_markdown": "## Regenerated Reviewer Note\n\nThis should be rejected.",
+                "source_refs": ["ctx_note"],
+                "layer_id": "layer_blk_agent_note",
+                "block_id": "blk_agent_note",
+                "target_slot": "findings",
+            }
+        ],
+        output_path=tmp_path / "policy.patch.json",
+        composition_path=output_path.with_suffix(".composition.json"),
+        layer_manifest_path=layer_path,
+    )
+
+    assert result.status == "failed"
+    assert result.error is not None
+    assert result.error.code == "layer_operation_not_allowed"
+    assert result.error.details == {
+        "operation_id": "op_001",
+        "op": "regenerate_block",
+        "layer_id": "layer_blk_agent_note",
+        "block_id": "blk_agent_note",
+        "target_slot": "findings",
+        "editable": True,
+        "allowed_operations": ["append_to_slot", "annotate"],
+    }
+
+
+def test_patch_preview_apply_and_verify_reject_tampered_layer_policy(tmp_path: Path) -> None:
+    pack = _example_pack()
+    pack["templates"][0]["supported_block_types"] = ["section", "code", "table"]
+    pack_path = tmp_path / "template-pack.json"
+    output_path = tmp_path / "board-audit-tamper.pdf"
+    manifest_path = tmp_path / "board-audit-tamper.patch.json"
+    patched_path = tmp_path / "board-audit-tamper-patched.pdf"
+    pack_path.write_text(json.dumps(pack), encoding="utf-8")
+    data = {
+        "title": "Tamper Board Audit",
+        "blocks": [
+            {
+                "block_id": "blk_agent_note",
+                "type": "section",
+                "title": "Reviewer Note",
+                "target_slot": "findings",
+                "body": "This valid patch manifest will be tampered after planning.",
+                "source_refs": ["ctx_note"],
+            }
+        ],
+    }
+    create_pdf_from_template_pack(
+        pack_path,
+        template_id="board_audit",
+        output_path=output_path,
+        color_scheme="executive_blue",
+        data=data,
+    )
+    plan_patch_transaction(
+        input_path=output_path,
+        operations=[
+            {
+                "op": "regenerate_block",
+                "title": "Regenerated Reviewer Note",
+                "replacement_markdown": "## Regenerated Reviewer Note\n\nThis valid patch will be tampered.",
+                "source_refs": ["ctx_note"],
+                "layer_id": "layer_blk_agent_note",
+                "block_id": "blk_agent_note",
+                "target_slot": "findings",
+            }
+        ],
+        output_path=manifest_path,
+        composition_path=output_path.with_suffix(".composition.json"),
+        layer_manifest_path=output_path.with_suffix(".layers.json"),
+    )
+    valid_apply = run_patch_apply(manifest_path, output_path=patched_path)
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    for operation in manifest["operations"]:
+        for layer in operation.get("layer_evidence", []):
+            layer["edit_policy"]["allowed_operations"] = ["append_to_slot", "annotate"]
+    for operation_layer_map in manifest["operation_layer_map"]:
+        for layer in operation_layer_map.get("matched_layers", []):
+            layer["edit_policy"]["allowed_operations"] = ["append_to_slot", "annotate"]
+    manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+
+    preview = run_patch_preview(manifest_path, output_path=tmp_path / "tamper-preview.json")
+    apply = run_patch_apply(manifest_path, output_path=tmp_path / "tamper-apply.pdf")
+    verify = run_patch_verify(manifest_path, patched_path=patched_path)
+
+    assert valid_apply.status == "succeeded"
+    for result in (preview, apply, verify):
+        assert result.status == "failed"
+        assert result.error is not None
+        assert result.error.code == "layer_operation_not_allowed"
+        assert result.error.details["operation_id"] == "op_001"
+        assert result.error.details["layer_id"] == "layer_blk_agent_note"
+        assert result.error.details["allowed_operations"] == ["append_to_slot", "annotate"]
+
+
 def test_template_pack_patch_plan_rejects_missing_composition_source_refs(tmp_path: Path) -> None:
     pack_path = tmp_path / "template-pack.json"
     output_path = tmp_path / "board-audit.pdf"
@@ -1084,6 +1439,14 @@ def test_template_pack_cli_api_and_mcp_are_exposed(tmp_path: Path) -> None:
             str(tmp_path / "cli-agent.plan.json"),
             "--coverage-output",
             str(tmp_path / "cli-agent.coverage.json"),
+            "--context-classification-output",
+            str(tmp_path / "cli-agent.context-classification.json"),
+            "--context-report-output",
+            str(tmp_path / "cli-agent.context-report.pdf"),
+            "--context-report-json-output",
+            str(tmp_path / "cli-agent.context-report.json"),
+            "--bundle-output",
+            str(tmp_path / "cli-agent.agentpdf-bundle.zip"),
             "--json",
         ],
     )
@@ -1118,7 +1481,14 @@ def test_template_pack_cli_api_and_mcp_are_exposed(tmp_path: Path) -> None:
     agent_payload = json.loads(agent_cli.stdout)
     assert agent_payload["tool"] == "pdf.ai.create.agent"
     assert agent_payload["usage"]["create_agent_run"]["selected_template_id"] == "board_audit"
+    assert agent_payload["usage"]["create_agent_run"]["context_classification"]["tool"] == "pdf.context.classify"
+    assert agent_payload["usage"]["create_agent_run"]["context_packet_report"]["validation"]["status"] == "passed"
+    assert agent_payload["usage"]["create_agent_run"]["bundle_verification"]["validation"]["status"] == "passed"
     assert agent_payload["validation"]["status"] == "passed"
+    assert (tmp_path / "cli-agent.context-classification.json").exists()
+    assert (tmp_path / "cli-agent.context-report.pdf").exists()
+    assert (tmp_path / "cli-agent.context-report.json").exists()
+    assert (tmp_path / "cli-agent.agentpdf-bundle.zip").exists()
     create_payload = json.loads(create_cli.stdout)
     assert create_payload["tool"] == "pdf.ai.create.from_template_pack"
     assert create_payload["usage"]["composition_path"].endswith("cli-board-audit.composition.json")
@@ -1150,6 +1520,10 @@ def test_template_pack_cli_api_and_mcp_are_exposed(tmp_path: Path) -> None:
             "output_path": str(tmp_path / "api-agent-board-audit.pdf"),
             "plan_output_path": str(tmp_path / "api-agent.plan.json"),
             "coverage_output_path": str(tmp_path / "api-agent.coverage.json"),
+            "context_classification_output_path": str(tmp_path / "api-agent.context-classification.json"),
+            "context_report_output_path": str(tmp_path / "api-agent.context-report.pdf"),
+            "context_report_json_output_path": str(tmp_path / "api-agent.context-report.json"),
+            "bundle_output_path": str(tmp_path / "api-agent.agentpdf-bundle.zip"),
         },
     )
     api_create = api.post(
@@ -1174,6 +1548,9 @@ def test_template_pack_cli_api_and_mcp_are_exposed(tmp_path: Path) -> None:
     assert api_plan.json()["usage"]["template_pack_plan"]["create_payload"]["template_id"] == "board_audit"
     assert api_agent.json()["tool"] == "pdf.ai.create.agent"
     assert api_agent.json()["usage"]["create_agent_run"]["selected_template_id"] == "board_audit"
+    assert api_agent.json()["usage"]["create_agent_run"]["context_classification"]["tool"] == "pdf.context.classify"
+    assert api_agent.json()["usage"]["create_agent_run"]["bundle_verification"]["validation"]["status"] == "passed"
+    assert (tmp_path / "api-agent.context-classification.json").exists()
     assert api_create.json()["tool"] == "pdf.ai.create.from_template_pack"
     assert api_create.json()["usage"]["context_block_count"] == 1
 
@@ -1195,6 +1572,10 @@ def test_template_pack_cli_api_and_mcp_are_exposed(tmp_path: Path) -> None:
             output_path=str(tmp_path / "mcp-agent-board-audit.pdf"),
             plan_output_path=str(tmp_path / "mcp-agent.plan.json"),
             coverage_output_path=str(tmp_path / "mcp-agent.coverage.json"),
+            context_classification_output_path=str(tmp_path / "mcp-agent.context-classification.json"),
+            context_report_output_path=str(tmp_path / "mcp-agent.context-report.pdf"),
+            context_report_json_output_path=str(tmp_path / "mcp-agent.context-report.json"),
+            bundle_output_path=str(tmp_path / "mcp-agent.agentpdf-bundle.zip"),
         )
     )
     mcp_create = json.loads(
@@ -1213,5 +1594,9 @@ def test_template_pack_cli_api_and_mcp_are_exposed(tmp_path: Path) -> None:
     assert mcp_plan["usage"]["template_pack_plan"]["selected_template_id"] == "board_audit"
     assert mcp_agent["tool"] == "pdf.ai.create.agent"
     assert mcp_agent["usage"]["create_agent_run"]["selected_template_id"] == "board_audit"
+    assert mcp_agent["usage"]["create_agent_run"]["context_classification"]["tool"] == "pdf.context.classify"
+    assert mcp_agent["usage"]["create_agent_run"]["context_packet_report"]["validation"]["status"] == "passed"
+    assert mcp_agent["usage"]["create_agent_run"]["bundle_verification"]["validation"]["status"] == "passed"
+    assert (tmp_path / "mcp-agent.context-classification.json").exists()
     assert mcp_create["tool"] == "pdf.ai.create.from_template_pack"
     assert mcp_create["usage"]["context_block_count"] == 1

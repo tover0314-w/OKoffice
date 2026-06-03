@@ -13,6 +13,11 @@
       "status": "beta"
     },
     {
+      "name": "agent_setup_codex",
+      "maps_to": "agent.setup.codex",
+      "status": "beta"
+    },
+    {
       "name": "pdf_inspect_document",
       "maps_to": "pdf.inspect.document",
       "status": "stable"
@@ -37,19 +42,94 @@
       "maps_to": "pdf.workflow.report",
       "status": "beta"
     },
+        {
+            "name": "pdf_context_build_packet",
+            "maps_to": "pdf.context.build_packet",
+            "status": "beta"
+        },
+        {
+            "name": "pdf_context_ingest",
+            "maps_to": "pdf.context.ingest",
+            "status": "beta"
+        },
+        {
+            "name": "pdf_context_packet",
+            "maps_to": "pdf.context.packet",
+            "status": "beta"
+        },
+        {
+            "name": "pdf_context_classify",
+            "maps_to": "pdf.context.classify",
+            "status": "beta"
+        },
+        {
+            "name": "pdf_context_code_snapshot",
+            "maps_to": "pdf.context.code_snapshot",
+            "status": "beta"
+        },
+        {
+            "name": "pdf_context_data_profile",
+            "maps_to": "pdf.context.data_profile",
+            "status": "beta"
+        },
+        {
+            "name": "pdf_compose_plan",
+            "maps_to": "pdf.compose.plan",
+            "status": "beta"
+        },
+        {
+            "name": "pdf_compose_render_ir",
+            "maps_to": "pdf.compose.render_ir",
+            "status": "beta"
+        },
+        {
+            "name": "pdf_compose_from_context",
+            "maps_to": "pdf.compose.from_context",
+            "status": "beta"
+        },
     {
-      "name": "pdf_context_build_packet",
-      "maps_to": "pdf.context.build_packet",
+      "name": "pdf_compose_add_code_block",
+      "maps_to": "pdf.compose.add_code_block",
       "status": "beta"
     },
     {
-      "name": "pdf_compose_from_context",
-      "maps_to": "pdf.compose.from_context",
+      "name": "pdf_compose_add_table",
+      "maps_to": "pdf.compose.add_table",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_compose_add_figure",
+      "maps_to": "pdf.compose.add_figure",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_compose_add_appendix",
+      "maps_to": "pdf.compose.add_appendix",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_compose_add_citation",
+      "maps_to": "pdf.compose.add_citation",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_compose_add_media_reference",
+      "maps_to": "pdf.compose.add_media_reference",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_compose_add_slide",
+      "maps_to": "pdf.compose.add_slide",
       "status": "beta"
     },
     {
       "name": "pdf_target_profiles",
       "maps_to": "pdf.target.profiles",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_target_select_profile",
+      "maps_to": "pdf.target.select_profile",
       "status": "beta"
     },
     {
@@ -60,6 +140,16 @@
     {
       "name": "pdf_evidence_coverage_report",
       "maps_to": "pdf.evidence.coverage_report",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_evidence_map_sources",
+      "maps_to": "pdf.evidence.map_sources",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_evidence_context_packet_report",
+      "maps_to": "pdf.evidence.context_packet_report",
       "status": "beta"
     },
     {
@@ -233,6 +323,11 @@
       "status": "stable"
     },
     {
+      "name": "pdf_metadata_page_info",
+      "maps_to": "pdf.metadata.page_info",
+      "status": "beta"
+    },
+    {
       "name": "pdf_metadata_update",
       "maps_to": "pdf.metadata.update",
       "status": "stable"
@@ -243,9 +338,19 @@
       "status": "stable"
     },
     {
+      "name": "pdf_security_remove_metadata",
+      "maps_to": "pdf.security.remove_metadata",
+      "status": "beta"
+    },
+    {
       "name": "pdf_validate_output",
       "maps_to": "pdf.validation.validate_output",
       "status": "stable"
+    },
+    {
+      "name": "pdf_page_count_check",
+      "maps_to": "pdf.validation.page_count_check",
+      "status": "beta"
     },
     {
       "name": "pdf_render_check",

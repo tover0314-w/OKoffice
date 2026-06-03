@@ -20,6 +20,9 @@ SUPPORTED_PATCH_OPERATIONS = [
     "append_table",
     "append_image",
     "append_slide",
+    "append_citation",
+    "append_media_reference",
+    "regenerate_block",
 ]
 
 
@@ -305,6 +308,63 @@ def _normalize_operation(operation: dict[str, Any], index: int) -> dict[str, Any
             if not image_path.exists():
                 raise AgentPDFException("file_not_found", f"Patch slide image not found: {image_path}")
             normalized["image_path"] = image_path.as_posix()
+    elif op == "append_citation":
+        source = str(operation.get("source") or "").strip()
+        if not source:
+            raise AgentPDFException("invalid_patch", "append_citation operation requires source.")
+        normalized["source"] = source
+        normalized["quote"] = str(operation.get("quote") or "").strip()
+        normalized["page"] = str(operation.get("page") or "").strip()
+        citation_evidence = operation.get("citation_evidence")
+        normalized["citation_evidence"] = citation_evidence if isinstance(citation_evidence, dict) else {}
+    elif op == "append_media_reference":
+        media_path = str(operation.get("media_path") or operation.get("path") or operation.get("media") or "").strip()
+        if not media_path:
+            raise AgentPDFException("invalid_patch", "append_media_reference operation requires media_path.")
+        normalized["media_path"] = media_path
+        normalized["media_kind"] = _normalize_media_kind(operation.get("media_kind"))
+        transcript_excerpt = str(operation.get("transcript_excerpt") or "").strip()
+        if transcript_excerpt:
+            normalized["transcript_excerpt"] = transcript_excerpt
+        duration_seconds = _optional_nonnegative_float(operation.get("duration_seconds"), "duration_seconds")
+        if duration_seconds is not None:
+            normalized["duration_seconds"] = duration_seconds
+        chapter_count = _optional_nonnegative_int(operation.get("chapter_count"), "chapter_count")
+        if chapter_count is not None:
+            normalized["chapter_count"] = chapter_count
+        keyframe_count = _optional_nonnegative_int(operation.get("keyframe_count"), "keyframe_count")
+        if keyframe_count is not None:
+            normalized["keyframe_count"] = keyframe_count
+        media_evidence = operation.get("media_evidence")
+        normalized["media_evidence"] = media_evidence if isinstance(media_evidence, dict) else {}
+    elif op == "regenerate_block":
+        replacement_markdown = str(
+            operation.get("replacement_markdown") or operation.get("markdown") or ""
+        ).strip()
+        if not replacement_markdown:
+            raise AgentPDFException(
+                "invalid_patch",
+                "regenerate_block operation requires replacement_markdown.",
+            )
+        if not any(target_layer_refs.values()):
+            raise AgentPDFException(
+                "invalid_patch",
+                "regenerate_block operation requires layer_id, block_id, or target_slot.",
+            )
+        if not normalized["source_refs"]:
+            raise AgentPDFException(
+                "invalid_patch",
+                "regenerate_block operation requires source_refs for audit evidence.",
+            )
+        normalized["replacement_markdown"] = replacement_markdown
+        normalized["regeneration_policy"] = {
+            "requested_effect": "regenerate_template_block",
+            "actual_effect": "append_regenerated_block_appendix",
+            "mutates_original_block": False,
+            "requires_new_output_path": True,
+            "claims_layout_preservation": False,
+            "requires_layer_evidence": True,
+        }
     return normalized
 
 
@@ -315,10 +375,44 @@ def _load_manifest(patch_manifest: dict[str, Any] | str | Path) -> dict[str, Any
         path = Path(patch_manifest)
         if not path.exists():
             raise AgentPDFException("file_not_found", f"Patch manifest not found: {path}")
-        manifest = json.loads(path.read_text(encoding="utf-8"))
+        manifest = json.loads(path.read_text(encoding="utf-8-sig"))
     if "patch_id" not in manifest or "operations" not in manifest:
         raise AgentPDFException("invalid_patch", "Patch manifest must include patch_id and operations.")
+    _validate_loaded_patch_manifest(manifest)
     return manifest
+
+
+def _validate_loaded_patch_manifest(manifest: dict[str, Any]) -> None:
+    operations = manifest.get("operations")
+    if not isinstance(operations, list) or not operations:
+        raise AgentPDFException("invalid_patch", "Patch manifest operations must be a non-empty array.")
+    for operation in operations:
+        if not isinstance(operation, dict):
+            raise AgentPDFException("invalid_patch", "Patch manifest operations must be objects.")
+        op = str(operation.get("op") or "")
+        if op not in SUPPORTED_PATCH_OPERATIONS:
+            raise AgentPDFException("unsupported_patch_operation", f"Unsupported patch operation: {op}")
+    layer_policy_maps = []
+    for item in manifest.get("operation_layer_map", []):
+        if isinstance(item, dict):
+            layer_policy_maps.append(item)
+    for operation in operations:
+        if not isinstance(operation, dict) or not operation.get("layer_evidence"):
+            continue
+        target_layer_refs = operation.get("target_layer_refs") if isinstance(operation.get("target_layer_refs"), dict) else {}
+        layer_policy_maps.append(
+            {
+                "operation_id": operation.get("operation_id"),
+                "op": operation.get("op"),
+                "title": operation.get("title"),
+                "layer_ids": _string_list(target_layer_refs.get("layer_ids")),
+                "block_ids": _string_list(target_layer_refs.get("block_ids")),
+                "target_slots": _string_list(target_layer_refs.get("target_slots")),
+                "matched_layer_count": len(operation.get("layer_evidence", [])),
+                "matched_layers": operation.get("layer_evidence", []),
+            }
+        )
+    _validate_operation_layer_policies(layer_policy_maps)
 
 
 def _validate_operation_source_refs(
@@ -431,6 +525,7 @@ def _validate_operation_layer_refs(
                 "known_target_slots": sorted(layer_indexes["by_target_slot"]),
             },
         )
+    _validate_operation_layer_policies(operation_layer_map)
     return {
         "summary": {
             "status": "passed",
@@ -448,11 +543,54 @@ def _validate_operation_layer_refs(
     }
 
 
+def _validate_operation_layer_policies(operation_layer_map: list[dict[str, Any]]) -> None:
+    for item in operation_layer_map:
+        op = str(item.get("op") or "")
+        allowed_policy_names = _policy_names_for_patch_operation(op)
+        for layer in item.get("matched_layers", []):
+            if not isinstance(layer, dict):
+                continue
+            edit_policy = layer.get("edit_policy") if isinstance(layer.get("edit_policy"), dict) else {}
+            editable = bool(edit_policy.get("editable", False))
+            allowed_operations = _string_list(edit_policy.get("allowed_operations"))
+            if editable and any(policy_name in allowed_operations for policy_name in allowed_policy_names):
+                continue
+            raise AgentPDFException(
+                "layer_operation_not_allowed",
+                "Patch operation is not allowed by the matched template layer edit policy.",
+                retry_hint="Inspect the .layers.json edit_policy.allowed_operations and retry with an allowed operation.",
+                details={
+                    "operation_id": str(item.get("operation_id") or ""),
+                    "op": op,
+                    "layer_id": str(layer.get("layer_id") or ""),
+                    "block_id": str(layer.get("block_id") or ""),
+                    "target_slot": str(layer.get("target_slot") or ""),
+                    "editable": editable,
+                    "allowed_operations": allowed_operations,
+                },
+            )
+
+
+def _policy_names_for_patch_operation(op: str) -> list[str]:
+    if op == "append_markdown":
+        return ["append_to_slot", "annotate"]
+    if op in {
+        "append_code_block",
+        "append_table",
+        "append_image",
+        "append_slide",
+        "append_citation",
+        "append_media_reference",
+    }:
+        return ["append_to_slot"]
+    return [op]
+
+
 def _load_composition_payload(composition_path: str | Path) -> dict[str, Any]:
     path = Path(composition_path)
     if not path.exists():
         raise AgentPDFException("file_not_found", f"Composition artifact not found: {path}")
-    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload = json.loads(path.read_text(encoding="utf-8-sig"))
     if not isinstance(payload, dict) or "composition_ir" not in payload:
         raise AgentPDFException("invalid_composition_ir", "Composition payload must include composition_ir.")
     return payload
@@ -462,7 +600,7 @@ def _load_layer_manifest(layer_manifest_path: str | Path) -> dict[str, Any]:
     path = Path(layer_manifest_path)
     if not path.exists():
         raise AgentPDFException("file_not_found", f"Template layer manifest not found: {path}")
-    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload = json.loads(path.read_text(encoding="utf-8-sig"))
     if not isinstance(payload, dict) or "template_layer_manifest_id" not in payload:
         raise AgentPDFException("invalid_layer_manifest", "Layer manifest must include template_layer_manifest_id.")
     return payload
@@ -673,6 +811,70 @@ def _operation_markdown_body(operation: dict[str, Any]) -> str:
     if op == "append_slide":
         body = "\n".join(f"- {item}" for item in operation.get("body", []))
         return f"## {title}\n\n{body}"
+    if op == "append_citation":
+        quote = str(operation.get("quote") or "")
+        source = str(operation.get("source") or "")
+        page = str(operation.get("page") or "")
+        evidence = operation.get("citation_evidence") if isinstance(operation.get("citation_evidence"), dict) else {}
+        lines = [f"## {title}", ""]
+        if quote:
+            lines.extend([f"> {quote}", ""])
+        lines.append(f"Source: {source}")
+        if page:
+            lines.append(f"Page: {page}")
+        if evidence:
+            lines.extend(["", "### Citation Evidence", ""])
+            for key in ("normalized_url", "domain", "path", "query", "fragment", "fetch_status", "analysis_method"):
+                if evidence.get(key) is not None:
+                    lines.append(f"- {key}: `{evidence[key]}`")
+        return "\n".join(lines)
+    if op == "append_media_reference":
+        media_path = str(operation.get("media_path") or "")
+        media_kind = str(operation.get("media_kind") or "media")
+        transcript_excerpt = str(operation.get("transcript_excerpt") or "")
+        evidence = operation.get("media_evidence") if isinstance(operation.get("media_evidence"), dict) else {}
+        lines = [
+            f"## {title}",
+            "",
+            f"Media kind: `{media_kind}`",
+            f"Media reference: `{media_path}`",
+        ]
+        if operation.get("duration_seconds") is not None:
+            lines.append(f"Duration seconds: `{operation['duration_seconds']}`")
+        if operation.get("chapter_count") is not None:
+            lines.append(f"Chapter count: `{operation['chapter_count']}`")
+        if operation.get("keyframe_count") is not None:
+            lines.append(f"Keyframe count: `{operation['keyframe_count']}`")
+        if transcript_excerpt:
+            lines.extend(["", "### Transcript Excerpt", "", transcript_excerpt])
+        if evidence:
+            lines.extend(["", "### Local Media Evidence", ""])
+            for key in (
+                "reference_type",
+                "filename",
+                "mime_type",
+                "size_bytes",
+                "sha256",
+                "exists",
+                "fetch_status",
+                "analysis_method",
+                "normalized_url",
+                "domain",
+            ):
+                if evidence.get(key) is not None:
+                    lines.append(f"- {key}: `{evidence[key]}`")
+        return "\n".join(lines)
+    if op == "regenerate_block":
+        replacement = str(operation["replacement_markdown"])
+        return (
+            f"## {title}\n\n"
+            f"{replacement}\n\n"
+            "## Regeneration Policy\n\n"
+            "- Requested effect: regenerate template block\n"
+            "- Actual effect: append regenerated block appendix\n"
+            "- Original template block was not mutated\n"
+            "- Layout preservation is not claimed\n"
+        )
     raise AgentPDFException("unsupported_patch_operation", f"Unsupported patch operation: {op}")
 
 
@@ -753,6 +955,39 @@ def _string_list(value: Any) -> list[str]:
     return [str(value)]
 
 
+def _normalize_media_kind(value: Any) -> str:
+    media_kind = str(value or "media").strip().lower().replace("-", "_")
+    if media_kind in {"audio", "audio_reference", "sound"}:
+        return "audio"
+    if media_kind in {"video", "video_reference", "movie"}:
+        return "video"
+    return "media"
+
+
+def _optional_nonnegative_float(value: Any, field_name: str) -> float | None:
+    if value is None or value == "":
+        return None
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError) as exc:
+        raise AgentPDFException("invalid_patch", f"{field_name} must be a number.") from exc
+    if parsed < 0:
+        raise AgentPDFException("invalid_patch", f"{field_name} must be non-negative.")
+    return parsed
+
+
+def _optional_nonnegative_int(value: Any, field_name: str) -> int | None:
+    if value is None or value == "":
+        return None
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError) as exc:
+        raise AgentPDFException("invalid_patch", f"{field_name} must be an integer.") from exc
+    if parsed < 0:
+        raise AgentPDFException("invalid_patch", f"{field_name} must be non-negative.")
+    return parsed
+
+
 def _source_refs(operation: dict[str, Any]) -> list[str]:
     source_refs = operation.get("source_refs", [])
     if isinstance(source_refs, str):
@@ -777,6 +1012,11 @@ def _operation_expected_effect(operation: dict[str, Any]) -> str:
         "append_table": "append one or more audited table appendix pages",
         "append_image": "append one or more audited image appendix pages",
         "append_slide": "append one audited landscape slide page",
+        "append_citation": "append one audited citation evidence page",
+        "append_media_reference": "append one audited media reference evidence page",
+        "regenerate_block": (
+            "append an audited regenerated block appendix; original template block remains unchanged"
+        ),
     }.get(operation["op"], "append one or more pages")
 
 

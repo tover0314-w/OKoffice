@@ -1,6 +1,7 @@
 import hashlib
 import json
 from pathlib import Path
+from zipfile import ZIP_DEFLATED, ZipFile
 
 from fastapi.testclient import TestClient
 from jsonschema import Draft202012Validator
@@ -10,10 +11,16 @@ from typer.testing import CliRunner
 
 from agentpdf.api.app import create_app
 from agentpdf.cli.main import app
-from agentpdf.compose.context import compose_from_context
+from agentpdf.compose.context import compose_from_context, plan_composition, render_composition_ir
 from agentpdf.context.packet import build_context_packet
 from agentpdf.core.pdf import create_text_pdf, inspect_pdf_pages
-from agentpdf.mcp.server import pdf_compose_from_context, pdf_context_build_packet
+from agentpdf.evidence.context_packet_report import create_context_packet_report
+from agentpdf.mcp.server import (
+    pdf_compose_from_context,
+    pdf_compose_plan,
+    pdf_compose_render_ir,
+    pdf_context_build_packet,
+)
 
 
 runner = CliRunner()
@@ -65,6 +72,116 @@ def test_build_context_packet_normalizes_heterogeneous_context(tmp_path: Path) -
     assert packet["items"][3]["metadata"]["width"] == 80
     assert packet["items"][3]["content"]["image"]["path"].endswith("screenshot.png")
     assert packet["items"][4]["metadata"]["page_count"] == 1
+
+
+def test_context_packet_report_creates_valid_pdf_and_json_audit(tmp_path: Path) -> None:
+    code = tmp_path / "service.py"
+    code.write_text("def score(value):\n    return value * 2\n", encoding="utf-8")
+    audio = tmp_path / "meeting.mp3"
+    audio.write_bytes(b"ID3 local audio fixture")
+    packet_path = tmp_path / "context.packet.json"
+    report_pdf = tmp_path / "context-report.pdf"
+    report_json = tmp_path / "context-report.json"
+
+    packet = build_context_packet(
+        [
+            {"path": str(code), "role": "code_evidence", "label": "Risk Service"},
+            {
+                "url": "https://okpdf.dev/docs/context",
+                "role": "citation",
+                "label": "Context Docs",
+                "title": "Context Packet Docs",
+                "snippet": "Traceable PDF context packets for agents.",
+            },
+            {
+                "path": str(audio),
+                "role": "audio_context",
+                "label": "Meeting Audio",
+                "transcript": "00:00 Keep provenance explicit.",
+                "duration_seconds": 12,
+            },
+        ],
+        output_path=packet_path,
+        title="Audit Context Packet",
+        intent="Create an auditable source packet.",
+    ).usage["context_packet"]
+
+    result = create_context_packet_report(
+        packet_path,
+        output_path=report_pdf,
+        report_output_path=report_json,
+        title="Audit Context Packet Report",
+    )
+
+    assert result.status == "succeeded"
+    assert result.tool == "pdf.evidence.context_packet_report"
+    assert result.validation is not None
+    assert result.validation.status == "passed"
+    assert [artifact.mime_type for artifact in result.artifacts] == ["application/pdf", "application/json"]
+    assert result.usage["context_packet_id"] == packet["context_packet_id"]
+    assert result.usage["source_ref_count"] == 3
+    assert result.usage["context_packet_report"]["source_graph"]["node_count"] == 3
+    assert "Web links are not fetched by the local report tool." in result.warnings
+    assert "Media transcripts are treated as provided evidence." in result.warnings
+    report_payload = json.loads(report_json.read_text(encoding="utf-8"))
+    assert report_payload["context_packet_id"] == packet["context_packet_id"]
+    assert report_payload["items"][0]["evidence_kind"] == "code_evidence"
+    assert report_payload["items"][1]["evidence_kind"] == "citation_evidence"
+    assert report_payload["items"][2]["evidence_kind"] == "media_evidence"
+    assert report_payload["limitations"]["web_fetch"] == "not_performed"
+    text = "\n".join(page.extract_text() or "" for page in PdfReader(report_pdf).pages)
+    assert "Audit Context Packet Report" in text
+    assert "Risk Service" in text
+    assert "Context Packet Docs" in text
+    assert "Keep provenance explicit" in text
+    assert "Source Graph" in text
+
+
+def test_context_packet_report_cli_rest_and_mcp_are_exposed(tmp_path: Path) -> None:
+    packet_path = tmp_path / "context.packet.json"
+    cli_pdf = tmp_path / "cli-context-report.pdf"
+    cli_json = tmp_path / "cli-context-report.json"
+    api_pdf = tmp_path / "api-context-report.pdf"
+    mcp_pdf = tmp_path / "mcp-context-report.pdf"
+    build_context_packet(
+        [{"text": "Create a local provenance report.", "role": "brief", "label": "Brief"}],
+        output_path=packet_path,
+        title="Interface Context",
+    )
+
+    cli_result = runner.invoke(
+        app,
+        [
+            "evidence",
+            "context-packet-report",
+            str(packet_path),
+            "-o",
+            str(cli_pdf),
+            "--report-output",
+            str(cli_json),
+            "--json",
+        ],
+    )
+    client = TestClient(create_app())
+    api_response = client.post(
+        "/v1/tools/pdf.evidence.context_packet_report/run",
+        json={"context_packet_path": str(packet_path), "output_path": str(api_pdf)},
+    )
+    from agentpdf.mcp.server import pdf_evidence_context_packet_report
+
+    mcp_result = json.loads(pdf_evidence_context_packet_report(str(packet_path), str(mcp_pdf)))
+
+    assert cli_result.exit_code == 0
+    cli_payload = json.loads(cli_result.stdout)
+    assert cli_payload["tool"] == "pdf.evidence.context_packet_report"
+    assert cli_payload["validation"]["status"] == "passed"
+    assert cli_pdf.exists()
+    assert cli_json.exists()
+    assert api_response.status_code == 200
+    assert api_response.json()["tool"] == "pdf.evidence.context_packet_report"
+    assert api_response.json()["validation"]["status"] == "passed"
+    assert mcp_result["tool"] == "pdf.evidence.context_packet_report"
+    assert mcp_result["validation"]["status"] == "passed"
 
 
 def test_build_context_packet_adds_local_image_visual_evidence(tmp_path: Path) -> None:
@@ -244,6 +361,138 @@ def test_compose_from_context_creates_pdf_with_source_map_and_coverage(tmp_path:
     assert "latency_ms" in text
     assert "screenshot.png" in text
     assert "Source Map" in text
+
+
+def test_compose_plan_and_render_ir_create_replayable_pdf(tmp_path: Path) -> None:
+    code = tmp_path / "service.py"
+    code.write_text("def risky_total(items):\n    return sum(items)\n", encoding="utf-8")
+    csv = tmp_path / "metrics.csv"
+    csv.write_text("metric,value\nlatency_ms,42\n", encoding="utf-8")
+    packet_path = tmp_path / "context.packet.json"
+    plan_path = tmp_path / "technical-audit.plan.json"
+    output_pdf = tmp_path / "technical-audit-rendered.pdf"
+
+    packet = build_context_packet(
+        [
+            {"text": "Create a replayable technical audit.", "role": "brief"},
+            {"path": str(code), "role": "code_evidence"},
+            {"path": str(csv), "role": "data_evidence"},
+        ],
+        output_path=packet_path,
+        title="Replay Context",
+    ).usage["context_packet"]
+
+    plan = plan_composition(
+        packet,
+        target_profile="technical_audit",
+        output_path=plan_path,
+        title="Replayable Technical Audit",
+    )
+    rendered = render_composition_ir(plan_path, output_path=output_pdf)
+
+    assert plan.status == "succeeded"
+    assert plan.tool == "pdf.compose.plan"
+    assert plan.artifacts[0].source_tool == "pdf.compose.plan"
+    assert plan.usage["composition_ir"]["composition_id"].startswith("cmp_")
+    assert plan.usage["render_plan"]["renderer"] == "local_markdown_pdf"
+    assert "Replayable Technical Audit" in plan.usage["render_plan"]["markdown"]
+    assert plan.usage["evidence_coverage"]["coverage_ratio"] == 1.0
+    assert plan.next_recommended_tools[0] == "pdf.compose.render_ir"
+    saved_plan = json.loads(plan_path.read_text(encoding="utf-8"))
+    assert saved_plan["composition_plan_id"].startswith("cmpplan_")
+    assert saved_plan["render_plan"]["markdown"] == plan.usage["render_plan"]["markdown"]
+
+    assert rendered.status == "succeeded"
+    assert rendered.tool == "pdf.compose.render_ir"
+    assert rendered.validation is not None
+    assert rendered.validation.status == "passed"
+    assert rendered.artifacts[0].source_tool == "pdf.compose.render_ir"
+    assert rendered.usage["composition_id"] == plan.usage["composition_ir"]["composition_id"]
+    assert rendered.usage["evidence_coverage"]["coverage_ratio"] == 1.0
+    text = "\n".join(page.extract_text() or "" for page in PdfReader(output_pdf).pages)
+    assert "Replayable Technical Audit" in text
+    assert "risky_total" in text
+    assert "latency_ms" in text
+
+
+def test_compose_plan_and_render_ir_are_exposed_to_cli_rest_mcp(tmp_path: Path) -> None:
+    packet_path = tmp_path / "context.packet.json"
+    cli_plan = tmp_path / "cli.plan.json"
+    cli_pdf = tmp_path / "cli-rendered.pdf"
+    api_plan = tmp_path / "api.plan.json"
+    api_pdf = tmp_path / "api-rendered.pdf"
+    mcp_plan_path = tmp_path / "mcp.plan.json"
+    mcp_pdf = tmp_path / "mcp-rendered.pdf"
+    build_context_packet(
+        [{"text": "Create a plan and render it later.", "role": "brief", "label": "Brief"}],
+        output_path=packet_path,
+        title="Interface Plan Context",
+    )
+
+    cli_plan_result = runner.invoke(
+        app,
+        [
+            "compose",
+            "plan",
+            str(packet_path),
+            "--profile",
+            "research_brief",
+            "-o",
+            str(cli_plan),
+            "--json",
+        ],
+    )
+    cli_render_result = runner.invoke(
+        app,
+        [
+            "compose",
+            "render-ir",
+            str(cli_plan),
+            "-o",
+            str(cli_pdf),
+            "--json",
+        ],
+    )
+    client = TestClient(create_app())
+    api_plan_response = client.post(
+        "/v1/tools/pdf.compose.plan/run",
+        json={
+            "context_packet_path": str(packet_path),
+            "profile": "research_brief",
+            "output_path": str(api_plan),
+        },
+    )
+    api_render_response = client.post(
+        "/v1/tools/pdf.compose.render_ir/run",
+        json={"composition_path": str(api_plan), "output_path": str(api_pdf)},
+    )
+    mcp_plan = json.loads(
+        pdf_compose_plan(
+            str(packet_path),
+            target_profile="research_brief",
+            output_path=str(mcp_plan_path),
+        )
+    )
+    mcp_render = json.loads(pdf_compose_render_ir(str(mcp_plan_path), str(mcp_pdf)))
+
+    assert cli_plan_result.exit_code == 0
+    assert json.loads(cli_plan_result.stdout)["tool"] == "pdf.compose.plan"
+    assert cli_plan.exists()
+    assert cli_render_result.exit_code == 0
+    assert json.loads(cli_render_result.stdout)["tool"] == "pdf.compose.render_ir"
+    assert cli_pdf.exists()
+    assert api_plan_response.status_code == 200
+    assert api_plan_response.json()["tool"] == "pdf.compose.plan"
+    assert api_plan.exists()
+    assert api_render_response.status_code == 200
+    assert api_render_response.json()["tool"] == "pdf.compose.render_ir"
+    assert api_render_response.json()["validation"]["status"] == "passed"
+    assert api_pdf.exists()
+    assert mcp_plan["tool"] == "pdf.compose.plan"
+    assert mcp_plan_path.exists()
+    assert mcp_render["tool"] == "pdf.compose.render_ir"
+    assert mcp_render["validation"]["status"] == "passed"
+    assert mcp_pdf.exists()
 
 
 def test_inline_table_context_composes_as_table_block(tmp_path: Path) -> None:
@@ -599,6 +848,31 @@ def test_compose_from_context_includes_document_text_snippets(tmp_path: Path) ->
     assert "Margin pressure is the largest risk" in text
 
 
+def test_compose_from_context_includes_docx_text_snippets(tmp_path: Path) -> None:
+    document = tmp_path / "field-notes.docx"
+    _write_minimal_docx(
+        document,
+        [
+            "DOCX Field Notes",
+            "Margin pressure is the largest risk.",
+        ],
+    )
+    output_pdf = tmp_path / "docx-brief.pdf"
+    packet = build_context_packet(
+        [{"path": str(document), "role": "source_document", "label": "DOCX Notes"}],
+        output_path=tmp_path / "docx.packet.json",
+        title="DOCX Document Context",
+    ).usage["context_packet"]
+
+    result = compose_from_context(packet, target_profile="research_brief", output_path=output_pdf)
+
+    assert result.status == "succeeded"
+    assert packet["items"][0]["metadata"]["document_evidence"]["format"] == "docx"
+    text = "\n".join(page.extract_text() or "" for page in PdfReader(output_pdf).pages)
+    assert "DOCX Field Notes" in text
+    assert "Margin pressure is the largest risk" in text
+
+
 def test_context_compose_api_and_mcp_expose_agent_tools(tmp_path: Path) -> None:
     code = tmp_path / "service.py"
     code.write_text("def risky_total(items):\n    return sum(items)\n", encoding="utf-8")
@@ -649,3 +923,48 @@ def test_context_compose_api_and_mcp_expose_agent_tools(tmp_path: Path) -> None:
     assert mcp_build["tool"] == "pdf.context.build_packet"
     assert mcp_compose["tool"] == "pdf.compose.from_context"
     assert mcp_compose["validation"]["status"] == "passed"
+
+
+def _write_minimal_docx(path: Path, paragraphs: list[str]) -> None:
+    def xml_escape(value: str) -> str:
+        return (
+            value.replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace('"', "&quot;")
+        )
+
+    body = "".join(
+        f"<w:p><w:r><w:t>{xml_escape(paragraph)}</w:t></w:r></w:p>"
+        for paragraph in paragraphs
+    )
+    document_xml = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+        f"<w:body>{body}</w:body></w:document>"
+    )
+    with ZipFile(path, "w", compression=ZIP_DEFLATED) as archive:
+        archive.writestr(
+            "[Content_Types].xml",
+            (
+                '<?xml version="1.0" encoding="UTF-8"?>'
+                '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+                '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+                '<Default Extension="xml" ContentType="application/xml"/>'
+                '<Override PartName="/word/document.xml" '
+                'ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>'
+                "</Types>"
+            ),
+        )
+        archive.writestr(
+            "_rels/.rels",
+            (
+                '<?xml version="1.0" encoding="UTF-8"?>'
+                '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+                '<Relationship Id="rId1" '
+                'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" '
+                'Target="word/document.xml"/>'
+                "</Relationships>"
+            ),
+        )
+        archive.writestr("word/document.xml", document_xml)

@@ -1,4 +1,4 @@
-# 19 — Dependency and License Policy
+# Dependency and License Policy
 
 ## Goal
 
@@ -20,10 +20,10 @@ Apache-2.0.
 
 ### Caution
 
-- LGPL: review linking/distribution obligations.
-- GPL: avoid in default core.
-- AGPL: avoid in default core and hosted service unless legal review approves.
-- Custom model/data licenses: review carefully.
+- LGPL: review linking and distribution obligations.
+- GPL: avoid in the default core.
+- AGPL: avoid in the default core and hosted service unless legal review approves.
+- Custom model or data licenses: review carefully.
 
 ## Optional workers
 
@@ -43,13 +43,13 @@ Every dependency should include:
 - Version range.
 - License.
 - Purpose.
-- Default/optional.
+- Default or optional.
 - Risk note.
 
 ## AI models
 
-Do not bundle model weights unless license permits redistribution and commercial use.
+Do not bundle model weights unless the license permits redistribution and commercial use.
 
 ## Fixture PDFs
 
-Do not include copyrighted sample PDFs. Generate fixtures or use public-domain/permissively licensed examples with attribution.
+Do not include copyrighted sample PDFs. Generate fixtures or use public-domain or permissively licensed examples with attribution.

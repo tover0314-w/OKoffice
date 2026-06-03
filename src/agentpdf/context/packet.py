@@ -5,10 +5,12 @@ import hashlib
 import json
 import mimetypes
 import re
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse, urlunparse
 from uuid import uuid4
+from zipfile import BadZipFile, ZipFile
 
 from PIL import Image, ImageStat
 from pypdf import PdfReader
@@ -50,11 +52,173 @@ def build_context_packet(
     title: str | None = None,
     intent: str | None = None,
 ) -> ToolResult:
-    tool = "pdf.context.build_packet"
+    return _build_context_packet(
+        context_items=context_items,
+        output_path=output_path,
+        title=title,
+        intent=intent,
+        tool="pdf.context.build_packet",
+    )
+
+
+def build_reusable_context_packet(
+    context_items: list[dict[str, Any]],
+    output_path: str | Path | None = None,
+    title: str | None = None,
+    intent: str | None = None,
+) -> ToolResult:
+    return _build_context_packet(
+        context_items=context_items,
+        output_path=output_path,
+        title=title,
+        intent=intent,
+        tool="pdf.context.packet",
+    )
+
+
+def ingest_context_item(
+    context_item: dict[str, Any],
+    output_path: str | Path | None = None,
+) -> ToolResult:
+    tool = "pdf.context.ingest"
+    if not isinstance(context_item, dict) or not context_item:
+        raise AgentPDFException("invalid_input", "context_item must be a non-empty JSON object.")
+
+    item = _normalize_context_item(context_item, 1)
+    source_graph = _build_source_graph([item])
+    source_graph_node = source_graph["nodes"][0]
+    payload = {
+        "context_item_version": "0.1",
+        "context_item": item,
+        "source_graph_node": source_graph_node,
+    }
+
+    artifacts = []
+    if output_path is not None:
+        item_path = Path(output_path)
+        item_path.parent.mkdir(parents=True, exist_ok=True)
+        item_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        artifacts.append(build_artifact(item_path, source_tool=tool))
+
+    return ToolResult(
+        job_id=f"job_{uuid4().hex[:16]}",
+        status="succeeded",
+        tool=tool,
+        artifacts=artifacts,
+        warnings=_packet_warnings([item]),
+        usage={
+            "item_type": item["type"],
+            "source_ref": item["source_ref"],
+            "context_item": item,
+            "source_graph_node": source_graph_node,
+            "source_graph": {
+                "source_graph_id": source_graph["source_graph_id"],
+                "node_count": 1,
+                "edge_count": 0,
+                "nodes": source_graph["nodes"],
+            },
+        },
+        next_recommended_tools=["pdf.context.packet", "pdf.context.build_packet", "pdf.compose.from_context"],
+    )
+
+
+def create_code_snapshot(
+    path: str | Path,
+    output_path: str | Path | None = None,
+    label: str | None = None,
+    role: str = "code_evidence",
+    context_item_id: str | None = None,
+    line_start: int | None = None,
+    line_end: int | None = None,
+    repository_root: str | Path | None = None,
+    include_dependencies: bool = False,
+) -> ToolResult:
+    tool = "pdf.context.code_snapshot"
+    source_path = Path(path).resolve()
+    if not source_path.exists():
+        raise AgentPDFException("file_not_found", f"Code snapshot path not found: {source_path}")
+    if source_path.suffix.lower() not in CODE_EXTENSIONS:
+        raise AgentPDFException("invalid_context_item", f"Code snapshot path is not a code file: {source_path}")
+
+    item = _code_snapshot_context_item(
+        source_path,
+        label=label,
+        role=role,
+        context_item_id=context_item_id or "ctx_001",
+        line_start=line_start,
+        line_end=line_end,
+        repository_root=Path(repository_root).resolve() if repository_root is not None else None,
+        include_dependencies=include_dependencies,
+    )
+    return _context_item_result(
+        tool=tool,
+        item=item,
+        output_path=output_path,
+        next_recommended_tools=[
+            "pdf.context.packet",
+            "pdf.context.classify",
+            "pdf.compose.add_code_block",
+            "pdf.compose.from_context",
+        ],
+        extra_usage={"code_snapshot": item["metadata"].get("code_snapshot_evidence", {})},
+    )
+
+
+def profile_data_source(
+    path: str | Path,
+    output_path: str | Path | None = None,
+    label: str | None = None,
+    role: str = "data_evidence",
+    context_item_id: str | None = None,
+    sheet: str | None = None,
+    max_rows: int = 100,
+) -> ToolResult:
+    tool = "pdf.context.data_profile"
+    source_path = Path(path).resolve()
+    if not source_path.exists():
+        raise AgentPDFException("file_not_found", f"Data profile path not found: {source_path}")
+    if source_path.suffix.lower() not in DATA_EXTENSIONS:
+        raise AgentPDFException("invalid_context_item", f"Data profile path is not a data file: {source_path}")
+
+    raw = {"sheet": sheet, "max_rows": max_rows}
+    metadata = _file_metadata(source_path, "data", raw)
+    content = _file_content_preview(source_path, "data", raw)
+    item = {
+        "context_item_id": context_item_id or "ctx_001",
+        "type": "data",
+        "role": role,
+        "label": label or source_path.name,
+        "source_ref": context_item_id or "ctx_001",
+        "uri": source_path.as_posix(),
+        "metadata": metadata,
+        "content": content,
+    }
+    return _context_item_result(
+        tool=tool,
+        item=item,
+        output_path=output_path,
+        next_recommended_tools=[
+            "pdf.context.packet",
+            "pdf.context.classify",
+            "pdf.compose.add_table",
+            "pdf.compose.from_context",
+        ],
+        extra_usage={"data_profile": item["metadata"].get("data_profile_evidence", {})},
+    )
+
+
+def _build_context_packet(
+    context_items: list[dict[str, Any]],
+    output_path: str | Path | None,
+    title: str | None,
+    intent: str | None,
+    tool: str,
+) -> ToolResult:
     if not context_items:
         raise AgentPDFException("invalid_input", "context_items must include at least one item.")
 
     items = [_normalize_context_item(raw, index) for index, raw in enumerate(context_items, start=1)]
+    items, ref_warnings = _ensure_unique_context_refs(items)
     source_graph = _build_source_graph(items)
     packet = {
         "context_packet_version": "0.1",
@@ -73,7 +237,7 @@ def build_context_packet(
         artifacts.append(build_artifact(packet_path, source_tool=tool))
 
     kinds = sorted({item["type"] for item in items})
-    warnings = _packet_warnings(items)
+    warnings = [*_packet_warnings(items), *ref_warnings]
     return ToolResult(
         job_id=f"job_{uuid4().hex[:16]}",
         status="succeeded",
@@ -96,7 +260,60 @@ def build_context_packet(
     )
 
 
+def _context_item_result(
+    tool: str,
+    item: dict[str, Any],
+    output_path: str | Path | None,
+    next_recommended_tools: list[str],
+    extra_usage: dict[str, Any] | None = None,
+) -> ToolResult:
+    source_graph = _build_source_graph([item])
+    source_graph_node = source_graph["nodes"][0]
+    payload = {
+        "context_item_version": "0.1",
+        "context_item": item,
+        "source_graph_node": source_graph_node,
+    }
+
+    artifacts = []
+    if output_path is not None:
+        item_path = Path(output_path)
+        item_path.parent.mkdir(parents=True, exist_ok=True)
+        item_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        artifacts.append(build_artifact(item_path, source_tool=tool))
+
+    usage = {
+        "item_type": item["type"],
+        "source_ref": item["source_ref"],
+        "context_item": item,
+        "source_graph_node": source_graph_node,
+        "source_graph": {
+            "source_graph_id": source_graph["source_graph_id"],
+            "node_count": 1,
+            "edge_count": 0,
+            "nodes": source_graph["nodes"],
+        },
+    }
+    if extra_usage:
+        usage.update(extra_usage)
+
+    return ToolResult(
+        job_id=f"job_{uuid4().hex[:16]}",
+        status="succeeded",
+        tool=tool,
+        artifacts=artifacts,
+        warnings=_packet_warnings([item]),
+        usage=usage,
+        next_recommended_tools=next_recommended_tools,
+    )
+
+
 def _normalize_context_item(raw: dict[str, Any], index: int) -> dict[str, Any]:
+    if isinstance(raw.get("context_item"), dict):
+        return _normalize_context_item(raw["context_item"], index)
+    if _looks_like_normalized_context_item(raw):
+        return _normalize_preingested_context_item(raw, index)
+
     context_item_id = str(raw.get("context_item_id") or f"ctx_{index:03d}")
     label = str(raw.get("label") or raw.get("name") or f"Context item {index}")
     role = str(raw.get("role") or "source")
@@ -182,6 +399,63 @@ def _normalize_context_item(raw: dict[str, Any], index: int) -> dict[str, Any]:
     }
 
 
+def _looks_like_normalized_context_item(raw: dict[str, Any]) -> bool:
+    return bool(raw.get("type") and raw.get("source_ref") and (raw.get("content") is not None or raw.get("metadata") is not None))
+
+
+def _normalize_preingested_context_item(raw: dict[str, Any], index: int) -> dict[str, Any]:
+    context_item_id = str(raw.get("context_item_id") or f"ctx_{index:03d}")
+    item = {
+        "context_item_id": context_item_id,
+        "type": str(raw.get("type") or "file"),
+        "role": str(raw.get("role") or "source"),
+        "label": str(raw.get("label") or raw.get("name") or f"Context item {index}"),
+        "source_ref": str(raw.get("source_ref") or context_item_id),
+        "metadata": raw.get("metadata") if isinstance(raw.get("metadata"), dict) else {},
+        "content": raw.get("content") if isinstance(raw.get("content"), dict) else {},
+    }
+    if raw.get("uri") is not None:
+        item["uri"] = str(raw["uri"])
+    return item
+
+
+def _ensure_unique_context_refs(items: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[str]]:
+    used_item_ids: set[str] = set()
+    used_source_refs: set[str] = set()
+    normalized: list[dict[str, Any]] = []
+    warnings: list[str] = []
+    for item in items:
+        item_id = str(item["context_item_id"])
+        source_ref = str(item["source_ref"])
+        if item_id in used_item_ids or source_ref in used_source_refs:
+            old_item_id = item_id
+            old_source_ref = source_ref
+            item = dict(item)
+            metadata = dict(item.get("metadata", {}))
+            new_ref = _next_context_ref(used_item_ids | used_source_refs)
+            metadata["renamed_from_context_item_id"] = old_item_id
+            metadata["renamed_from_source_ref"] = old_source_ref
+            item["context_item_id"] = new_ref
+            item["source_ref"] = new_ref
+            item["metadata"] = metadata
+            warnings.append(f"Duplicate context source ref {old_source_ref} was renamed to {new_ref}.")
+            item_id = new_ref
+            source_ref = new_ref
+        used_item_ids.add(item_id)
+        used_source_refs.add(source_ref)
+        normalized.append(item)
+    return normalized, warnings
+
+
+def _next_context_ref(used_refs: set[str]) -> str:
+    index = 1
+    while True:
+        candidate = f"ctx_{index:03d}"
+        if candidate not in used_refs:
+            return candidate
+        index += 1
+
+
 def _infer_file_type(path: Path, explicit_type: Any) -> str:
     if explicit_type and str(explicit_type) != "file":
         return str(explicit_type)
@@ -205,6 +479,114 @@ def _infer_file_type(path: Path, explicit_type: Any) -> str:
     return "file"
 
 
+def _code_snapshot_context_item(
+    path: Path,
+    label: str | None,
+    role: str,
+    context_item_id: str,
+    line_start: int | None,
+    line_end: int | None,
+    repository_root: Path | None,
+    include_dependencies: bool,
+) -> dict[str, Any]:
+    full_text = _read_text(path)
+    lines = full_text.splitlines()
+    if not lines:
+        lines = [""]
+    start = line_start or 1
+    end = line_end or len(lines)
+    if start < 1 or end < start:
+        raise AgentPDFException("invalid_context_item", "line_start and line_end must define a valid line range.")
+    if start > len(lines):
+        raise AgentPDFException("invalid_context_item", "line_start is beyond the end of the source file.")
+    end = min(end, len(lines))
+    selected_text = "\n".join(lines[start - 1 : end])
+    language = _language_from_extension(path.suffix.lower())
+    dependencies = _code_dependencies(full_text, language) if include_dependencies else []
+    file_evidence = _code_evidence(path, full_text)
+    selected_evidence = _code_evidence(path, selected_text)
+    relative_path = _relative_path(path, repository_root) if repository_root else None
+    snapshot_evidence = {
+        "path": path.as_posix(),
+        "repository_root": repository_root.as_posix() if repository_root else None,
+        "repository_relative_path": relative_path,
+        "line_start": start,
+        "line_end": end,
+        "selected_line_count": end - start + 1,
+        "file_line_count": len(full_text.splitlines()),
+        "selection_hash": hashlib.sha256(selected_text.encode("utf-8")).hexdigest(),
+        "file_code_hash": file_evidence["code_hash"],
+        "dependency_count": len(dependencies),
+        "dependencies": dependencies,
+        "analysis_method": "local_code_snapshot_v0",
+    }
+    data = path.read_bytes()
+    metadata = {
+        "path": path.as_posix(),
+        "filename": path.name,
+        "extension": path.suffix.lower(),
+        "mime_type": mimetypes.guess_type(path.name)[0] or "text/plain",
+        "size_bytes": len(data),
+        "sha256": hashlib.sha256(data).hexdigest(),
+        "line_count": selected_evidence["line_count"],
+        "char_count": selected_evidence["char_count"],
+        "file_line_count": file_evidence["line_count"],
+        "code_evidence": selected_evidence,
+        "code_snapshot_evidence": snapshot_evidence,
+    }
+    preview_text = selected_text[:6000]
+    return {
+        "context_item_id": context_item_id,
+        "type": "code",
+        "role": role,
+        "label": label or path.name,
+        "source_ref": context_item_id,
+        "uri": path.as_posix(),
+        "metadata": metadata,
+        "content": {
+            "text": preview_text,
+            "code": {
+                "text": preview_text,
+                "code_evidence": selected_evidence,
+                "code_snapshot_evidence": snapshot_evidence,
+            },
+        },
+    }
+
+
+def _relative_path(path: Path, root: Path | None) -> str | None:
+    if root is None:
+        return None
+    try:
+        return path.relative_to(root).as_posix()
+    except ValueError:
+        return None
+
+
+def _code_dependencies(text: str, language: str) -> list[dict[str, Any]]:
+    dependencies: list[dict[str, Any]] = []
+    for line_number, line in enumerate(text.splitlines(), start=1):
+        stripped = line.strip()
+        value: str | None = None
+        if language == "python":
+            match = re.match(r"^(?:from\s+([A-Za-z0-9_.]+)\s+import|import\s+([A-Za-z0-9_.,\s]+))", stripped)
+            if match:
+                value = match.group(1) or match.group(2)
+        elif language in {"javascript", "typescript"}:
+            match = re.match(r"^(?:import\s+.*?\s+from\s+|import\s+|const\s+.*?=\s+require\()['\"]([^'\"]+)", stripped)
+            if match:
+                value = match.group(1)
+        elif language == "rust":
+            match = re.match(r"^use\s+([^;]+)", stripped)
+            if match:
+                value = match.group(1)
+        if not value:
+            continue
+        for name in [part.strip() for part in value.split(",") if part.strip()]:
+            dependencies.append({"name": name, "line": line_number})
+    return dependencies[:100]
+
+
 def _file_metadata(path: Path, item_type: str, raw: dict[str, Any] | None = None) -> dict[str, Any]:
     data = path.read_bytes()
     metadata: dict[str, Any] = {
@@ -216,9 +598,27 @@ def _file_metadata(path: Path, item_type: str, raw: dict[str, Any] | None = None
         "sha256": hashlib.sha256(data).hexdigest(),
     }
     if item_type in {"code", "data", "document"}:
-        text = _read_text_preview(path, max_chars=12000)
+        if item_type == "document":
+            text = _document_text(path)
+        elif item_type == "data":
+            data_content = _data_content_preview(path, raw or {}, max_chars=12000)
+            text = str(data_content.get("text") or "")
+        else:
+            text = _read_text_preview(path, max_chars=12000)
         metadata["line_count"] = len(text.splitlines())
         metadata["char_count"] = len(text)
+        if item_type == "document":
+            metadata["document_evidence"] = _document_evidence(path, text)
+        if item_type == "data":
+            table = data_content.get("table") if isinstance(data_content.get("table"), dict) else None
+            profile = data_content.get("data_profile_evidence")
+            if isinstance(table, dict) and isinstance(table.get("table_evidence"), dict):
+                table_evidence = table["table_evidence"]
+                metadata["table_evidence"] = table_evidence
+                metadata["row_count"] = table_evidence["row_count"]
+                metadata["column_count"] = table_evidence["column_count"]
+            if isinstance(profile, dict):
+                metadata["data_profile_evidence"] = profile
         if item_type == "code":
             full_text = _read_text(path)
             metadata["line_count"] = len(full_text.splitlines())
@@ -252,17 +652,16 @@ def _file_metadata(path: Path, item_type: str, raw: dict[str, Any] | None = None
 
 
 def _file_content_preview(path: Path, item_type: str, raw: dict[str, Any] | None = None) -> dict[str, Any]:
-    if item_type in {"code", "data", "document"}:
-        text = _read_text_preview(path, max_chars=6000)
+    if item_type == "data":
+        return _data_content_preview(path, raw or {}, max_chars=6000)
+    if item_type in {"code", "document"}:
+        text = _document_text(path)[:6000] if item_type == "document" else _read_text_preview(path, max_chars=6000)
         content: dict[str, Any] = {"text": text}
         if item_type == "code":
             content["code"] = {
                 "text": text,
                 "code_evidence": _code_evidence(path, text),
             }
-        table = _table_preview(path, text)
-        if table:
-            content["table"] = table
         return content
     if item_type == "image":
         with Image.open(path) as image:
@@ -362,6 +761,307 @@ def _normalize_timed_markers(value: Any) -> list[dict[str, Any]]:
         marker.setdefault("marker_id", f"marker_{index:03d}")
         markers.append({key: value for key, value in marker.items() if value not in {"", None}})
     return markers
+
+
+def _data_content_preview(path: Path, raw: dict[str, Any], max_chars: int) -> dict[str, Any]:
+    max_rows = _max_preview_rows(raw)
+    table, profile_extras = _data_table_preview(path, raw, max_rows=max_rows)
+    if table:
+        text = _table_to_text(table)
+    elif path.suffix.lower() in {".xlsx", ".xls"}:
+        text = ""
+    else:
+        text = _read_text_preview(path, max_chars=max_chars)
+    content: dict[str, Any] = {"text": text[:max_chars]}
+    if table:
+        content["table"] = table
+    content["data_profile_evidence"] = _data_profile_evidence(path, text, table, profile_extras)
+    return content
+
+
+def _max_preview_rows(raw: dict[str, Any]) -> int:
+    try:
+        value = int(raw.get("max_rows", 100))
+    except (TypeError, ValueError):
+        value = 100
+    return max(1, min(value, 500))
+
+
+def _data_table_preview(
+    path: Path,
+    raw: dict[str, Any],
+    max_rows: int,
+) -> tuple[dict[str, Any] | None, dict[str, Any]]:
+    suffix = path.suffix.lower()
+    if suffix in {".csv", ".tsv"}:
+        text = _read_text(path)
+        return _delimited_table_preview(path, text, max_rows=max_rows), {
+            "format": suffix.lstrip("."),
+            "analysis_method": "local_delimited_table_profile_v0",
+        }
+    if suffix == ".json":
+        text = _read_text(path)
+        return _json_table_preview(text, max_rows=max_rows), {
+            "format": "json",
+            "analysis_method": "local_json_table_profile_v0",
+        }
+    if suffix == ".jsonl":
+        text = _read_text(path)
+        return _jsonl_table_preview(text, max_rows=max_rows), {
+            "format": "jsonl",
+            "analysis_method": "local_jsonl_table_profile_v0",
+        }
+    if suffix == ".xlsx":
+        return _xlsx_table_preview(path, sheet=str(raw["sheet"]) if raw.get("sheet") else None, max_rows=max_rows)
+    if suffix == ".xls":
+        return None, {
+            "format": "xls",
+            "analysis_method": "local_data_profile_metadata_v0",
+            "limitation": "legacy_xls_binary_not_parsed",
+        }
+    text = _read_text_preview(path, max_chars=12000)
+    return _delimited_table_preview(path, text, max_rows=max_rows), {
+        "format": suffix.lstrip(".") or "data",
+        "analysis_method": "local_data_profile_metadata_v0",
+    }
+
+
+def _delimited_table_preview(path: Path, text: str, max_rows: int) -> dict[str, Any] | None:
+    suffix = path.suffix.lower()
+    if suffix not in {".csv", ".tsv"} or not text.strip():
+        return None
+    delimiter = "\t" if suffix == ".tsv" else ","
+    rows = [[str(cell) for cell in row] for row in csv.reader(text.splitlines(), delimiter=delimiter)]
+    return _rows_to_table(rows, max_rows=max_rows)
+
+
+def _json_table_preview(text: str, max_rows: int) -> dict[str, Any] | None:
+    try:
+        payload = json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise AgentPDFException("invalid_context_item", "JSON data source is not parseable.") from exc
+    if isinstance(payload, list):
+        return _records_to_table(payload, max_rows=max_rows)
+    if isinstance(payload, dict):
+        for value in payload.values():
+            if isinstance(value, list):
+                table = _records_to_table(value, max_rows=max_rows)
+                if table:
+                    return table
+        scalar_rows = [[str(key), _json_scalar_preview(value)] for key, value in payload.items()]
+        return _rows_to_table([["key", "value"], *scalar_rows], max_rows=max_rows)
+    return None
+
+
+def _jsonl_table_preview(text: str, max_rows: int) -> dict[str, Any] | None:
+    records: list[Any] = []
+    for line_number, line in enumerate(text.splitlines(), start=1):
+        if not line.strip():
+            continue
+        try:
+            records.append(json.loads(line))
+        except json.JSONDecodeError as exc:
+            raise AgentPDFException(
+                "invalid_context_item",
+                f"JSONL data source is not parseable on line {line_number}.",
+            ) from exc
+    return _records_to_table(records, max_rows=max_rows)
+
+
+def _records_to_table(records: list[Any], max_rows: int) -> dict[str, Any] | None:
+    if not records:
+        return None
+    if all(isinstance(record, dict) for record in records):
+        columns: list[str] = []
+        for record in records[:max_rows]:
+            for key in record.keys():
+                column = str(key)
+                if column not in columns:
+                    columns.append(column)
+        rows = [
+            [_json_scalar_preview(record.get(column)) for column in columns]
+            for record in records[:max_rows]
+            if isinstance(record, dict)
+        ]
+        table = {"columns": columns, "rows": rows, "preview_row_count": len(records)}
+        table["table_evidence"] = _table_evidence(table)
+        return table
+    if all(isinstance(record, list) for record in records):
+        width = max((len(record) for record in records if isinstance(record, list)), default=0)
+        rows = [
+            [_json_scalar_preview(record[index]) if index < len(record) else "" for index in range(width)]
+            for record in records[:max_rows]
+            if isinstance(record, list)
+        ]
+        return _rows_to_table([[f"column_{index + 1}" for index in range(width)], *rows], max_rows=max_rows)
+    return _rows_to_table([["value"], *[[_json_scalar_preview(record)] for record in records]], max_rows=max_rows)
+
+
+def _json_scalar_preview(value: Any) -> str:
+    if isinstance(value, (dict, list)):
+        return json.dumps(value, ensure_ascii=False, sort_keys=True)[:240]
+    if value is None:
+        return ""
+    return str(value)
+
+
+def _xlsx_table_preview(path: Path, sheet: str | None, max_rows: int) -> tuple[dict[str, Any] | None, dict[str, Any]]:
+    try:
+        with ZipFile(path) as archive:
+            shared_strings = _xlsx_shared_strings(archive)
+            sheets = _xlsx_sheets(archive)
+            if not sheets:
+                return None, {
+                    "format": "xlsx",
+                    "analysis_method": "local_xlsx_sheet_profile_v0",
+                    "sheet_count": 0,
+                }
+            selected_sheet = _select_xlsx_sheet(sheets, sheet)
+            worksheet_xml = archive.read(selected_sheet["path"])
+    except KeyError as exc:
+        raise AgentPDFException("invalid_context_item", f"XLSX workbook is missing a required part: {path}") from exc
+    except BadZipFile as exc:
+        raise AgentPDFException("invalid_context_item", f"XLSX workbook is not a readable ZIP: {path}") from exc
+
+    rows = _xlsx_rows(worksheet_xml, shared_strings)
+    table = _rows_to_table(rows, max_rows=max_rows)
+    return table, {
+        "format": "xlsx",
+        "analysis_method": "local_xlsx_sheet_profile_v0",
+        "sheet_name": selected_sheet["name"],
+        "sheet_count": len(sheets),
+        "worksheet_path": selected_sheet["path"],
+    }
+
+
+def _xlsx_shared_strings(archive: ZipFile) -> list[str]:
+    try:
+        xml_data = archive.read("xl/sharedStrings.xml")
+    except KeyError:
+        return []
+    root = ET.fromstring(xml_data)
+    ns = {"s": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
+    strings: list[str] = []
+    for item in root.findall(".//s:si", ns):
+        parts = [node.text or "" for node in item.findall(".//s:t", ns)]
+        strings.append("".join(parts))
+    return strings
+
+
+def _xlsx_sheets(archive: ZipFile) -> list[dict[str, str]]:
+    workbook_root = ET.fromstring(archive.read("xl/workbook.xml"))
+    rels_root = ET.fromstring(archive.read("xl/_rels/workbook.xml.rels"))
+    ns = {
+        "s": "http://schemas.openxmlformats.org/spreadsheetml/2006/main",
+        "r": "http://schemas.openxmlformats.org/officeDocument/2006/relationships",
+        "pr": "http://schemas.openxmlformats.org/package/2006/relationships",
+    }
+    rel_targets = {
+        str(rel.attrib.get("Id")): str(rel.attrib.get("Target"))
+        for rel in rels_root.findall(".//pr:Relationship", ns)
+        if rel.attrib.get("Id") and rel.attrib.get("Target")
+    }
+    sheets: list[dict[str, str]] = []
+    for sheet in workbook_root.findall(".//s:sheet", ns):
+        rel_id = str(sheet.attrib.get(f"{{{ns['r']}}}id") or "")
+        target = rel_targets.get(rel_id)
+        if not target:
+            continue
+        path = target if target.startswith("xl/") else f"xl/{target.lstrip('/')}"
+        sheets.append({"name": str(sheet.attrib.get("name") or rel_id), "path": path})
+    return sheets
+
+
+def _select_xlsx_sheet(sheets: list[dict[str, str]], requested: str | None) -> dict[str, str]:
+    if requested:
+        for sheet in sheets:
+            if sheet["name"] == requested:
+                return sheet
+        raise AgentPDFException("invalid_context_item", f"XLSX sheet not found: {requested}")
+    return sheets[0]
+
+
+def _xlsx_rows(xml_data: bytes, shared_strings: list[str]) -> list[list[str]]:
+    root = ET.fromstring(xml_data)
+    ns = {"s": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
+    rows: list[list[str]] = []
+    for row in root.findall(".//s:row", ns):
+        values: list[str] = []
+        for cell in row.findall("s:c", ns):
+            column_index = _xlsx_column_index(str(cell.attrib.get("r") or "")) or len(values) + 1
+            while len(values) < column_index - 1:
+                values.append("")
+            values.append(_xlsx_cell_value(cell, shared_strings, ns))
+        if any(value != "" for value in values):
+            rows.append(values)
+    return rows
+
+
+def _xlsx_cell_value(cell: ET.Element, shared_strings: list[str], ns: dict[str, str]) -> str:
+    cell_type = cell.attrib.get("t")
+    if cell_type == "inlineStr":
+        return "".join(node.text or "" for node in cell.findall(".//s:t", ns))
+    value_node = cell.find("s:v", ns)
+    value = value_node.text if value_node is not None and value_node.text is not None else ""
+    if cell_type == "s" and value:
+        try:
+            return shared_strings[int(value)]
+        except (IndexError, ValueError):
+            return ""
+    return value
+
+
+def _xlsx_column_index(cell_ref: str) -> int | None:
+    match = re.match(r"^([A-Z]+)", cell_ref.upper())
+    if not match:
+        return None
+    index = 0
+    for char in match.group(1):
+        index = index * 26 + (ord(char) - 64)
+    return index
+
+
+def _rows_to_table(rows: list[list[str]], max_rows: int) -> dict[str, Any] | None:
+    rows = [[str(cell) for cell in row] for row in rows if any(str(cell).strip() for cell in row)]
+    if not rows:
+        return None
+    columns = [str(column) if str(column).strip() else f"column_{index + 1}" for index, column in enumerate(rows[0])]
+    data_rows = []
+    for row in rows[1 : max_rows + 1]:
+        normalized = row + [""] * (len(columns) - len(row))
+        data_rows.append([str(cell) for cell in normalized[: len(columns)]])
+    table = {
+        "columns": columns,
+        "rows": data_rows,
+        "preview_row_count": max(len(rows) - 1, 0),
+    }
+    table["table_evidence"] = _table_evidence(table)
+    return table
+
+
+def _data_profile_evidence(
+    path: Path,
+    text: str,
+    table: dict[str, Any] | None,
+    extras: dict[str, Any],
+) -> dict[str, Any]:
+    table_evidence = table.get("table_evidence") if isinstance(table, dict) else None
+    evidence = {
+        "format": extras.get("format") or path.suffix.lower().lstrip(".") or "data",
+        "has_table": isinstance(table_evidence, dict),
+        "row_count": table_evidence.get("row_count", 0) if isinstance(table_evidence, dict) else 0,
+        "column_count": table_evidence.get("column_count", 0) if isinstance(table_evidence, dict) else 0,
+        "preview_row_count": table_evidence.get("preview_row_count", 0) if isinstance(table_evidence, dict) else 0,
+        "text_char_count": len(text),
+        "analysis_method": extras.get("analysis_method") or "local_data_profile_metadata_v0",
+    }
+    for key in ("sheet_name", "sheet_count", "worksheet_path", "limitation"):
+        if extras.get(key) is not None:
+            evidence[key] = extras[key]
+    if isinstance(table_evidence, dict):
+        evidence["column_types"] = table_evidence["column_types"]
+        evidence["table_hash"] = table_evidence["table_hash"]
+    return evidence
 
 
 def _table_preview(path: Path, text: str) -> dict[str, Any] | None:
@@ -526,6 +1226,68 @@ def _read_text_preview(path: Path, max_chars: int) -> str:
     return _read_text(path)[:max_chars]
 
 
+def _document_text(path: Path) -> str:
+    if path.suffix.lower() == ".docx":
+        return _read_docx_text(path)
+    return _read_text_preview(path, max_chars=12000)
+
+
+def _document_evidence(path: Path, text: str) -> dict[str, Any]:
+    extension = path.suffix.lower()
+    if extension == ".docx":
+        paragraphs = [line for line in text.splitlines() if line.strip()]
+        return {
+            "format": "docx",
+            "paragraph_count": len(paragraphs),
+            "text_char_count": len(text),
+            "has_text": bool(text.strip()),
+            "analysis_method": "local_docx_xml_text_v0",
+        }
+    return {
+        "format": extension.lstrip(".") or "text",
+        "line_count": len(text.splitlines()),
+        "text_char_count": len(text),
+        "has_text": bool(text.strip()),
+        "analysis_method": "local_plaintext_preview_v0",
+    }
+
+
+def _read_docx_text(path: Path) -> str:
+    try:
+        with ZipFile(path) as archive:
+            try:
+                document_xml = archive.read("word/document.xml")
+            except KeyError as exc:
+                raise AgentPDFException(
+                    "invalid_context_item",
+                    f"DOCX document is missing word/document.xml: {path}",
+                ) from exc
+    except BadZipFile as exc:
+        raise AgentPDFException("invalid_context_item", f"DOCX document is not a readable ZIP: {path}") from exc
+
+    try:
+        root = ET.fromstring(document_xml)
+    except ET.ParseError as exc:
+        raise AgentPDFException("invalid_context_item", f"DOCX document XML is not parseable: {path}") from exc
+
+    ns = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
+    paragraphs: list[str] = []
+    for paragraph in root.findall(".//w:p", ns):
+        parts: list[str] = []
+        for node in paragraph.iter():
+            tag = node.tag.rsplit("}", 1)[-1] if "}" in node.tag else node.tag
+            if tag == "t" and node.text:
+                parts.append(node.text)
+            elif tag == "tab":
+                parts.append("\t")
+            elif tag in {"br", "cr"}:
+                parts.append("\n")
+        text = "".join(parts).strip()
+        if text:
+            paragraphs.append(text)
+    return "\n".join(paragraphs)
+
+
 def _read_text(path: Path) -> str:
     try:
         return path.read_text(encoding="utf-8")
@@ -558,14 +1320,17 @@ def _build_source_graph(items: list[dict[str, Any]]) -> dict[str, Any]:
                         "domain",
                         "citation_evidence",
                         "code_evidence",
+                        "code_snapshot_evidence",
                         "line_count",
                         "width",
                         "height",
                         "visual_evidence",
+                        "document_evidence",
                         "size_bytes",
                         "row_count",
                         "column_count",
                         "table_evidence",
+                        "data_profile_evidence",
                         "duration_seconds",
                         "transcript_char_count",
                         "chapter_count",

@@ -57,6 +57,7 @@ def test_registry_loads_complete_public_manifest() -> None:
     assert get_tool("pdf.compose.from_context").implemented is True
     assert get_tool("pdf.target.profiles").implemented is True
     assert get_tool("pdf.target.validate_profile").implemented is True
+    assert get_tool("pdf.evidence.map_sources").implemented is True
     assert get_tool("pdf.evidence.coverage_report").implemented is True
     assert get_tool("pdf.artifacts.export_bundle").implemented is True
     assert get_tool("pdf.patch.plan").implemented is True
@@ -94,6 +95,16 @@ def test_stable_tools_are_implemented() -> None:
     assert stable_unimplemented == []
 
 
+def test_raw_manifest_implemented_flags_match_registry() -> None:
+    manifest_path = REPO_ROOT / "schemas" / "tool-manifest.full.json"
+    manifest_json = json.loads(manifest_path.read_text(encoding="utf-8"))
+    raw_implemented_tools = {
+        tool["name"] for tool in manifest_json["tools"] if tool.get("implemented") is True
+    }
+
+    assert raw_implemented_tools == IMPLEMENTED_TOOLS
+
+
 def test_registry_keeps_planned_tools_discoverable() -> None:
     tool = get_tool("pdf.ai.parse.agentic")
 
@@ -121,6 +132,7 @@ def test_registry_marks_local_create_agent_as_beta() -> None:
 def test_implemented_tools_are_known_names() -> None:
     assert IMPLEMENTED_TOOLS == {
         "agent.setup.claude_code",
+        "agent.setup.codex",
         "pdf.inspect.document",
         "pdf.inspect.pages",
         "pdf.organize.merge",
@@ -145,9 +157,12 @@ def test_implemented_tools_are_known_names() -> None:
         "pdf.metadata.read",
         "pdf.metadata.update",
         "pdf.metadata.remove",
+        "pdf.metadata.page_info",
         "pdf.validation.validate_output",
+        "pdf.validation.page_count_check",
         "pdf.validation.render_check",
         "pdf.validation.blank_page_check",
+        "pdf.security.remove_metadata",
         "pdf.ai.parse.lite",
         "pdf.ai.create.from_prompt",
         "pdf.ai.create.template_preview",
@@ -167,13 +182,33 @@ def test_implemented_tools_are_known_names() -> None:
         "pdf.workflow.plan",
         "pdf.workflow.run",
         "pdf.workflow.report",
+        "pdf.context.ingest",
+        "pdf.context.packet",
         "pdf.context.build_packet",
+        "pdf.context.classify",
+        "pdf.context.code_snapshot",
+        "pdf.context.data_profile",
+        "pdf.compose.plan",
         "pdf.compose.from_context",
+        "pdf.compose.render_ir",
+        "pdf.compose.add_code_block",
+        "pdf.compose.add_figure",
+        "pdf.compose.add_table",
+        "pdf.compose.add_appendix",
+        "pdf.compose.add_citation",
+        "pdf.compose.add_media_reference",
+        "pdf.compose.add_slide",
         "pdf.target.profiles",
+        "pdf.target.select_profile",
         "pdf.target.validate_profile",
+        "pdf.evidence.map_sources",
         "pdf.evidence.coverage_report",
+        "pdf.evidence.context_packet_report",
         "pdf.artifacts.export_bundle",
         "pdf.artifacts.verify_bundle",
+        "pdf.metadata.page_info",
+        "pdf.security.remove_metadata",
+        "pdf.validation.page_count_check",
         "pdf.patch.plan",
         "pdf.patch.preview",
         "pdf.patch.apply",

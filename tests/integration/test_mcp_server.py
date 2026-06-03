@@ -28,15 +28,20 @@ from agentpdf.mcp.server import (
     pdf_inspect_document,
     pdf_inspect_pages,
     pdf_merge,
+    pdf_evidence_map_sources,
+    pdf_metadata_page_info,
     pdf_metadata_read,
     pdf_pdf_to_markdown,
     pdf_pdf_to_json,
     pdf_insert_blank_pages,
     pdf_optimize_compress,
     pdf_optimize_repair,
+    pdf_page_count_check,
     pdf_render_pages,
     pdf_render_check,
     pdf_reorder_pages,
+    pdf_security_remove_metadata,
+    pdf_target_select_profile,
     pdf_validate_output,
     pdf_watermark,
     pdf_workflow_plan,
@@ -64,14 +69,17 @@ def test_mcp_server_exposes_local_pdf_tools() -> None:
     assert "pdf_extract_images" in tool_names
     assert "pdf_extract_text" in tool_names
     assert "pdf_metadata_read" in tool_names
+    assert "pdf_metadata_page_info" in tool_names
     assert "pdf_metadata_update" in tool_names
     assert "pdf_metadata_remove" in tool_names
+    assert "pdf_security_remove_metadata" in tool_names
     assert "pdf_create_text" in tool_names
     assert "pdf_create_markdown" in tool_names
     assert "pdf_image_to_pdf" in tool_names
     assert "pdf_watermark" in tool_names
     assert "pdf_add_page_numbers" in tool_names
     assert "pdf_validate_output" in tool_names
+    assert "pdf_page_count_check" in tool_names
     assert "pdf_render_check" in tool_names
     assert "pdf_blank_page_check" in tool_names
     assert "pdf_ai_parse_lite" in tool_names
@@ -96,6 +104,8 @@ def test_mcp_server_exposes_local_pdf_tools() -> None:
     assert "pdf_workflow_report" in tool_names
     assert "pdf_artifacts_export_bundle" in tool_names
     assert "agentpdf_tool_manifest" in tool_names
+    assert "pdf_target_select_profile" in tool_names
+    assert "pdf_evidence_map_sources" in tool_names
 
 
 def test_static_mcp_catalog_matches_server_tools() -> None:
@@ -245,10 +255,48 @@ def test_mcp_optimize_compress_and_repair(two_page_pdf: Path, tmp_path: Path) ->
 def test_mcp_text_and_metadata_tools(text_pdf: Path, metadata_pdf: Path) -> None:
     text = json.loads(pdf_extract_text(str(text_pdf), pages="1"))
     metadata = json.loads(pdf_metadata_read(str(metadata_pdf)))
+    page_info = json.loads(pdf_metadata_page_info(str(text_pdf), pages="1"))
 
     assert text["tool"] == "pdf.convert.pdf_to_text"
     assert "AgentPDF local text layer" in text["usage"]["text"]
     assert metadata["usage"]["metadata"]["Title"] == "Original Title"
+    assert page_info["tool"] == "pdf.metadata.page_info"
+    assert page_info["usage"]["selected_pages"] == [1]
+
+
+def test_mcp_target_page_count_and_security_helpers(metadata_pdf: Path, tmp_path: Path) -> None:
+    selected = json.loads(pdf_target_select_profile("Create a slide deck from source notes."))
+    mapped = json.loads(
+        pdf_evidence_map_sources(
+            blocks=[{"block_id": "blk_001", "type": "section", "source_refs": ["ctx_001"]}],
+            context_packet={
+                "context_packet_id": "ctxpkt_mcp",
+                "items": [
+                    {
+                        "context_item_id": "ctx_001",
+                        "source_ref": "ctx_001",
+                        "type": "text",
+                        "role": "source",
+                        "label": "Source note",
+                        "metadata": {"preview": "MCP source note"},
+                        "content": {"text": "MCP source note"},
+                    }
+                ],
+            },
+        )
+    )
+    page_count = json.loads(pdf_page_count_check(str(metadata_pdf), expected_pages=1))
+    cleaned = tmp_path / "security-clean.pdf"
+    security = json.loads(pdf_security_remove_metadata(str(metadata_pdf), str(cleaned)))
+
+    assert selected["tool"] == "pdf.target.select_profile"
+    assert selected["usage"]["selected_profile_id"] == "slide_deck"
+    assert mapped["tool"] == "pdf.evidence.map_sources"
+    assert mapped["usage"]["source_map"][0]["source_match_status"] == "matched"
+    assert page_count["tool"] == "pdf.validation.page_count_check"
+    assert page_count["usage"]["actual_pages"] == 1
+    assert security["tool"] == "pdf.security.remove_metadata"
+    assert cleaned.exists()
 
 
 def test_mcp_create_text_and_markdown(tmp_path: Path) -> None:
