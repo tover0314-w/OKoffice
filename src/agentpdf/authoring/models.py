@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 AuthoringFormat = Literal["html", "docx", "pptx", "markdown", "reportlab", "pdf_native"]
 Confidence = Literal["high", "medium", "low"]
 DeliverableKind = Literal["deck", "report", "whitepaper", "form", "existing_pdf_operation"]
+SourceType = Literal["official", "report", "media", "blog", "paper", "documentation", "dataset", "other"]
 HEX_COLOR_RE = re.compile(r"^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")
 FONT_FORBIDDEN_MARKERS = ("<", ">", "{", "}", ";", "url(", "@import", "javascript:", "data:", "</style", "<script")
 
@@ -81,6 +82,33 @@ class EvidenceCard(AuthoringModel):
         if not normalized:
             raise ValueError("field must not be empty")
         return normalized
+
+
+class SourceCard(AuthoringModel):
+    id: str
+    title: str
+    publisher: str | None = None
+    source_date: str | None = None
+    source_url: str | None = None
+    source_type: SourceType = "other"
+    reliability: Confidence = "medium"
+    summary: str = ""
+    key_points: list[str] = Field(default_factory=list)
+    useful_for: list[str] = Field(default_factory=list)
+    fetch_status: Literal["not_fetched"] = "not_fetched"
+
+    @field_validator("id", "title")
+    @classmethod
+    def source_required_text_must_not_be_empty(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("field must not be empty")
+        return normalized
+
+    @field_validator("summary")
+    @classmethod
+    def source_summary_must_be_string(cls, value: str) -> str:
+        return value.strip()
 
 
 class StoryboardPage(AuthoringModel):

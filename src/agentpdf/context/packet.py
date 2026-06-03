@@ -1432,18 +1432,39 @@ def _pdf_text_evidence(path: Path, max_pages: int = 5, max_chars_per_page: int =
 
 
 def _web_citation_evidence(uri: str, raw: dict[str, Any]) -> dict[str, Any]:
-    parsed = urlparse(uri.strip())
-    scheme = (parsed.scheme or "https").lower()
-    netloc = parsed.netloc.lower()
-    path = parsed.path or ("/" if netloc else "")
+    original_url = uri.strip()
+    if not original_url:
+        raise AgentPDFException("invalid_context_item", "Web context link cannot be empty.")
+
+    parsed = urlparse(original_url)
+    if not parsed.scheme:
+        parsed = urlparse(f"https://{original_url}")
+    scheme = parsed.scheme.lower()
+    if scheme not in {"http", "https"}:
+        raise AgentPDFException("unsafe_input_rejected", "Web context links must use http:// or https:// URLs.")
+    if parsed.username or parsed.password:
+        raise AgentPDFException("unsafe_input_rejected", "Web context links must not include credentials.")
+
+    domain = (parsed.hostname or "").lower()
+    if not domain:
+        raise AgentPDFException("unsafe_input_rejected", "Web context link must include a host.")
+    try:
+        port = parsed.port
+    except ValueError as exc:
+        raise AgentPDFException("unsafe_input_rejected", "Web context link has an invalid port.") from exc
+
+    netloc = f"[{domain}]" if ":" in domain and not domain.startswith("[") else domain
+    if port is not None:
+        netloc = f"{netloc}:{port}"
+    path = parsed.path or "/"
     normalized_url = urlunparse((scheme, netloc, path, "", parsed.query, parsed.fragment))
     title = str(raw.get("title") or raw.get("label") or raw.get("name") or normalized_url)
     snippet = str(raw.get("snippet") or raw.get("description") or raw.get("summary") or "").strip()
     evidence: dict[str, Any] = {
-        "url": uri.strip(),
+        "url": original_url,
         "normalized_url": normalized_url,
         "scheme": scheme,
-        "domain": netloc,
+        "domain": domain,
         "path": path,
         "query": parsed.query,
         "fragment": parsed.fragment,

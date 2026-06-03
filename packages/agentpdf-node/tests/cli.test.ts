@@ -168,6 +168,21 @@ test("runCli exposes context ingest and packet commands", async () => {
   assert.equal(JSON.parse(output[1] ?? "{}").tool, "pdf.context.packet");
 });
 
+test("runCli help documents web link context options", async () => {
+  const output: string[] = [];
+
+  const code = await runCli(["--help"], {
+    stdout: (line) => output.push(line),
+    stderr: (line) => output.push(`ERR:${line}`),
+  });
+  const help = output.join("\n");
+
+  assert.equal(code, 0);
+  assert.match(help, /context-build .*--link LINK/);
+  assert.match(help, /context-ingest .*--link LINK/);
+  assert.match(help, /context-packet .*--link LINK/);
+});
+
 test("runCli exposes context classify command", async () => {
   const output: string[] = [];
   let postedBody: unknown;
@@ -894,6 +909,9 @@ test("runCli exposes authoring workflow commands", async () => {
   const tempDir = await mkdtemp(join(tmpdir(), "agentpdf-node-authoring-"));
   const briefPath = join(tempDir, "brief.json");
   const evidencePath = join(tempDir, "evidence.json");
+  const sourcesPath = join(tempDir, "sources.json");
+  const sourceCardsPath = join(tempDir, "source-cards.json");
+  const pageDocumentPath = join(tempDir, "pages.json");
   const calls: Array<{ url: string; body: unknown }> = [];
 
   await writeFile(
@@ -914,6 +932,35 @@ test("runCli exposes authoring workflow commands", async () => {
         source_title: "State of Mobile 2026",
       },
     ]),
+  );
+  await writeFile(
+    sourcesPath,
+    JSON.stringify([
+      {
+        title: "State of Mobile 2026",
+        source_type: "report",
+        summary: "Revenue growth continues while downloads flatten.",
+      },
+    ]),
+  );
+  await writeFile(
+    sourceCardsPath,
+    JSON.stringify([
+      {
+        id: "source_001",
+        title: "State of Mobile 2026",
+        summary: "Revenue growth continues while downloads flatten.",
+        key_points: ["Revenue growth continues while downloads flatten."],
+      },
+    ]),
+  );
+  await writeFile(
+    pageDocumentPath,
+    JSON.stringify({
+      page_document_id: "pages_1",
+      page_count: 1,
+      pages: [{ page_number: 1, layout: "cover", title: "Old" }],
+    }),
   );
 
   async function invoke(args: string[]): Promise<number> {
@@ -939,12 +986,33 @@ test("runCli exposes authoring workflow commands", async () => {
 
   try {
     assert.equal(await invoke(["authoring-plan", "--brief", briefPath]), 0);
+    assert.equal(await invoke(["research-plan", "--brief", briefPath]), 0);
+    assert.equal(await invoke(["research-source-cards", "--brief", briefPath, "--sources", sourcesPath]), 0);
+    assert.equal(await invoke(["research-evidence-cards", "--source-cards", sourceCardsPath]), 0);
+    assert.equal(await invoke(["design-tokens", "--theme", "consulting", "--color", "primary_color=#123456"]), 0);
+    assert.equal(await invoke(["storyboard-plan", "--brief", briefPath, "--evidence", evidencePath]), 0);
+    assert.equal(
+      await invoke(["pages-revise", "--page-document", pageDocumentPath, "--revision", '{"page_number":1,"title":"New"}']),
+      0,
+    );
+    assert.equal(
+      await invoke([
+        "create-html-package",
+        "--html",
+        "<main><h1>HTML First</h1><p>Node CLI raw HTML package.</p></main>",
+        "--html-output",
+        "raw.html",
+        "--title",
+        "HTML First",
+      ]),
+      0,
+    );
     assert.equal(
       await invoke([
         "workflow-research-deck",
         "--brief",
         briefPath,
-        "--evidence-cards",
+        "--evidence",
         evidencePath,
         "--html-output",
         "deck.html",
@@ -962,6 +1030,13 @@ test("runCli exposes authoring workflow commands", async () => {
 
   assert.deepEqual(calls.map((call) => call.url), [
     "http://127.0.0.1:7331/v1/tools/pdf.authoring.plan/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.research.plan/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.research.source_cards/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.research.evidence_cards/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.design.tokens/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.storyboard.plan/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.pages.revise/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.create.html_package/run",
     "http://127.0.0.1:7331/v1/tools/pdf.workflow.research_deck/run",
   ]);
   assert.deepEqual(calls[0]?.body, {
@@ -971,7 +1046,31 @@ test("runCli exposes authoring workflow commands", async () => {
       deliverable: "deck",
     },
   });
-  assert.deepEqual(calls[1]?.body, {
+  assert.deepEqual(calls[4]?.body, {
+    theme: "consulting",
+    overrides: { primary_color: "#123456" },
+  });
+  assert.deepEqual(calls[5]?.body, {
+    brief: {
+      topic: "Independent developers going global",
+      page_count: 4,
+      deliverable: "deck",
+    },
+    evidence_cards: [
+      {
+        id: "ev_market",
+        claim: "Mobile monetization remains strong.",
+        evidence: "Revenue growth continues while downloads flatten.",
+        source_title: "State of Mobile 2026",
+      },
+    ],
+  });
+  assert.deepEqual(calls[7]?.body, {
+    html: "<main><h1>HTML First</h1><p>Node CLI raw HTML package.</p></main>",
+    html_output_path: "raw.html",
+    title: "HTML First",
+  });
+  assert.deepEqual(calls[8]?.body, {
     brief: {
       topic: "Independent developers going global",
       page_count: 4,

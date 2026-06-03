@@ -906,7 +906,7 @@
     },
     {
       "name": "pdf.research.plan",
-      "status": "planned",
+      "status": "beta",
       "description": "Plan a source-gathering strategy for an agent-authored PDF without performing network research in the OSS core.",
       "category": "research",
       "interfaces": [
@@ -915,13 +915,13 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
-      "oss_default": false,
-      "requires_model": true
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
     },
     {
       "name": "pdf.research.source_cards",
-      "status": "planned",
+      "status": "beta",
       "description": "Normalize researched sources into structured source cards for authoring workflows.",
       "category": "research",
       "interfaces": [
@@ -930,13 +930,13 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
-      "oss_default": false,
-      "requires_model": true
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
     },
     {
       "name": "pdf.research.evidence_cards",
-      "status": "planned",
+      "status": "beta",
       "description": "Turn source cards into evidence cards with claims, confidence, and usable page targets.",
       "category": "research",
       "interfaces": [
@@ -945,9 +945,9 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
-      "oss_default": false,
-      "requires_model": true
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
     },
     {
       "name": "pdf.insights.synthesize",
@@ -966,7 +966,7 @@
     },
     {
       "name": "pdf.design.tokens",
-      "status": "planned",
+      "status": "beta",
       "description": "Generate or select reusable design tokens for authoring source packages.",
       "category": "authoring",
       "interfaces": [
@@ -975,13 +975,13 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
-      "oss_default": false,
+      "implemented": true,
+      "oss_default": true,
       "requires_model": false
     },
     {
       "name": "pdf.pages.revise",
-      "status": "planned",
+      "status": "beta",
       "description": "Revise generated page JSON while preserving source references and validation evidence.",
       "category": "authoring",
       "interfaces": [
@@ -990,9 +990,9 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
-      "oss_default": false,
-      "requires_model": true
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
     },
     {
       "name": "pdf.inspect.document",

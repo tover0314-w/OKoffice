@@ -84,7 +84,9 @@ from agentpdf.tools.runner import (
     run_patch_plan,
     run_patch_preview,
     run_patch_verify,
+    run_design_tokens,
     run_pages_write,
+    run_pages_revise,
     run_parse_charts,
     run_parse_figures,
     run_parse_formulas,
@@ -105,6 +107,9 @@ from agentpdf.tools.runner import (
     run_rag_query,
     run_rag_search,
     run_qa_visual_report,
+    run_research_evidence_cards,
+    run_research_plan,
+    run_research_source_cards,
     run_remove_pages,
     run_render_html_package,
     run_remove_unused_objects,
@@ -178,6 +183,11 @@ def create_mcp_server() -> FastMCP:
     server.tool(name="pdf_authoring_plan")(pdf_authoring_plan)
     server.tool(name="pdf_storyboard_plan")(pdf_storyboard_plan)
     server.tool(name="pdf_pages_write")(pdf_pages_write)
+    server.tool(name="pdf_research_plan")(pdf_research_plan)
+    server.tool(name="pdf_research_source_cards")(pdf_research_source_cards)
+    server.tool(name="pdf_research_evidence_cards")(pdf_research_evidence_cards)
+    server.tool(name="pdf_design_tokens")(pdf_design_tokens)
+    server.tool(name="pdf_pages_revise")(pdf_pages_revise)
     server.tool(name="pdf_create_html_package")(pdf_create_html_package)
     server.tool(name="pdf_qa_visual_report")(pdf_qa_visual_report)
     server.tool(name="pdf_merge")(pdf_merge)
@@ -474,16 +484,59 @@ def pdf_pages_write(
     ).model_dump_json()
 
 
-def pdf_create_html_package(
+def pdf_research_plan(brief: dict[str, object]) -> str:
+    """Plan local source gathering without fetching or using a model."""
+    return run_research_plan(brief=brief).model_dump_json()
+
+
+def pdf_research_source_cards(
+    sources: list[dict[str, object]],
+    brief: dict[str, object] | None = None,
+) -> str:
+    """Normalize agent-supplied sources into local source cards."""
+    return run_research_source_cards(sources=sources, brief=brief).model_dump_json()
+
+
+def pdf_research_evidence_cards(source_cards: list[dict[str, object]]) -> str:
+    """Extract evidence cards from normalized source cards."""
+    return run_research_evidence_cards(source_cards=source_cards).model_dump_json()
+
+
+def pdf_design_tokens(
+    theme: str = "business_tech",
+    overrides: dict[str, object] | None = None,
+) -> str:
+    """Select safe local design tokens for authoring packages."""
+    return run_design_tokens(theme=theme, overrides=overrides).model_dump_json()
+
+
+def pdf_pages_revise(
     page_document: dict[str, object],
+    revisions: list[dict[str, object]] | None = None,
+    design_tokens: dict[str, object] | None = None,
+) -> str:
+    """Revise generated page JSON while preserving source refs by default."""
+    return run_pages_revise(
+        page_document=page_document,
+        revisions=revisions,
+        design_tokens=design_tokens,
+    ).model_dump_json()
+
+
+def pdf_create_html_package(
+    page_document: dict[str, object] | None,
     html_output_path: str,
     title: str | None = None,
+    html: str | None = None,
+    html_path: str | None = None,
 ) -> str:
     """Write a local self-contained HTML/CSS source package."""
     return run_create_html_package(
         page_document=page_document,
         html_output_path=html_output_path,
         title=title,
+        html=html,
+        html_path=html_path,
     ).model_dump_json()
 
 
@@ -1508,7 +1561,7 @@ def pdf_artifacts_manifest(
     title: str | None = None,
     metadata: dict[str, object] | None = None,
 ) -> str:
-    """Create a local artifact manifest with checksums, evidence links, and source refs."""
+    """Create a local artifact manifest with checksums, source refs, and HTML/context evidence."""
     return run_artifacts_manifest(
         artifact_paths=artifact_paths,
         output_path=output_path,
@@ -1523,7 +1576,7 @@ def pdf_artifacts_graph(
     output_path: str | None = None,
     title: str | None = None,
 ) -> str:
-    """Create a local artifact lineage graph from a manifest or artifact files."""
+    """Create a local artifact lineage graph with source-ref and HTML/context evidence."""
     return run_artifacts_graph(
         artifact_manifest_path=artifact_manifest_path,
         artifact_paths=artifact_paths or [],

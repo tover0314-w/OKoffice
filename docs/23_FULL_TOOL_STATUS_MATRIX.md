@@ -65,12 +65,12 @@ Total tools specified: **240**
 | `pdf.pages.write` | authoring | beta | yes |
 | `pdf.create.html_package` | authoring | beta | yes |
 | `pdf.qa.visual_report` | validation | beta | yes |
-| `pdf.research.plan` | research | planned | no |
-| `pdf.research.source_cards` | research | planned | no |
-| `pdf.research.evidence_cards` | research | planned | no |
+| `pdf.research.plan` | research | beta | yes |
+| `pdf.research.source_cards` | research | beta | yes |
+| `pdf.research.evidence_cards` | research | beta | yes |
 | `pdf.insights.synthesize` | insights | planned | no |
-| `pdf.design.tokens` | authoring | planned | no |
-| `pdf.pages.revise` | authoring | planned | no |
+| `pdf.design.tokens` | authoring | beta | yes |
+| `pdf.pages.revise` | authoring | beta | yes |
 | `pdf.inspect.document` | inspect | stable | yes |
 | `pdf.inspect.pages` | inspect | stable | yes |
 | `pdf.inspect.permissions` | inspect | beta | yes |

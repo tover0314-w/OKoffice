@@ -45,8 +45,13 @@ SUPPORTED_LOCAL_WORKFLOW_TOOLS = {
     "pdf.ai.rag.export_report",
     "pdf.ai.rag.highlight_sources",
     "pdf.authoring.plan",
+    "pdf.research.plan",
+    "pdf.research.source_cards",
+    "pdf.research.evidence_cards",
+    "pdf.design.tokens",
     "pdf.storyboard.plan",
     "pdf.pages.write",
+    "pdf.pages.revise",
     "pdf.create.html_package",
     "pdf.render.html_package",
     "pdf.qa.visual_report",
@@ -255,6 +260,26 @@ def _run_local_step(tool: str, payload: dict[str, Any]) -> ToolResult:
 
     if tool == "pdf.authoring.plan":
         return runner.run_authoring_plan(brief=dict(payload.get("brief", {})))
+    if tool == "pdf.research.plan":
+        return runner.run_research_plan(brief=dict(payload.get("brief", {})))
+    if tool == "pdf.research.source_cards":
+        sources = payload.get("sources")
+        brief = payload.get("brief")
+        return runner.run_research_source_cards(
+            sources=sources if isinstance(sources, list) else None,
+            brief=brief if isinstance(brief, dict) else None,
+        )
+    if tool == "pdf.research.evidence_cards":
+        source_cards = payload.get("source_cards")
+        return runner.run_research_evidence_cards(
+            source_cards=source_cards if isinstance(source_cards, list) else None,
+        )
+    if tool == "pdf.design.tokens":
+        overrides = payload.get("overrides")
+        return runner.run_design_tokens(
+            theme=str(payload.get("theme", "business_tech")),
+            overrides=overrides if isinstance(overrides, dict) else None,
+        )
     if tool == "pdf.storyboard.plan":
         authoring_plan = payload.get("authoring_plan")
         evidence_cards = payload.get("evidence_cards")
@@ -272,11 +297,22 @@ def _run_local_step(tool: str, payload: dict[str, Any]) -> ToolResult:
             evidence_cards=evidence_cards if isinstance(evidence_cards, list) else None,
             design_tokens=design_tokens if isinstance(design_tokens, dict) else None,
         )
-    if tool == "pdf.create.html_package":
-        return runner.run_create_html_package(
+    if tool == "pdf.pages.revise":
+        revisions = payload.get("revisions")
+        design_tokens = payload.get("design_tokens")
+        return runner.run_pages_revise(
             page_document=dict(payload.get("page_document", {})),
+            revisions=revisions if isinstance(revisions, list) else None,
+            design_tokens=design_tokens if isinstance(design_tokens, dict) else None,
+        )
+    if tool == "pdf.create.html_package":
+        page_document = payload.get("page_document")
+        return runner.run_create_html_package(
+            page_document=page_document if isinstance(page_document, dict) else None,
             html_output_path=payload.get("html_output_path", "deck.html"),
             title=str(payload["title"]) if payload.get("title") is not None else None,
+            html=str(payload["html"]) if payload.get("html") is not None else None,
+            html_path=payload.get("html_path") or payload.get("html_input_path"),
         )
     if tool == "pdf.render.html_package":
         return runner.run_render_html_package(

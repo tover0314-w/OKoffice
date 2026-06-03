@@ -100,6 +100,41 @@ curl -X POST http://127.0.0.1:7331/v1/tools/pdf.authoring.plan/run \
     }
   }'
 
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.research.source_cards/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "brief": {
+      "topic": "Independent developers going global in 2026",
+      "page_count": 6,
+      "deliverable": "deck"
+    },
+    "sources": [
+      {
+        "title": "State of Mobile 2026",
+        "source_type": "report",
+        "summary": "Revenue growth continues while downloads flatten.",
+        "key_points": ["Revenue growth continues while downloads flatten."],
+        "usable_for": ["market_context"]
+      }
+    ]
+  }'
+
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.research.evidence_cards/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "source_cards": [
+      {
+        "id": "source_001",
+        "title": "State of Mobile 2026",
+        "source_type": "report",
+        "reliability": "high",
+        "summary": "Revenue growth continues while downloads flatten.",
+        "key_points": ["Revenue growth continues while downloads flatten."],
+        "fetch_status": "not_fetched"
+      }
+    ]
+  }'
+
 curl -X POST http://127.0.0.1:7331/v1/tools/pdf.workflow.research_deck/run \
   -H 'Content-Type: application/json' \
   -d '{
@@ -546,6 +581,31 @@ curl -X POST http://127.0.0.1:7331/v1/tools/pdf.render.html_package/run \
   -d '{
     "package_path": ".agentpdf-out/technical-audit.html-manifest.json",
     "output_path": ".agentpdf-out/technical-audit-rendered.pdf"
+  }'
+```
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.create.html_package/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "html": "<main><h1>HTML First</h1><p>Inspectable source before PDF.</p></main>",
+    "html_output_path": ".agentpdf-out/html-first.html",
+    "title": "HTML First"
+  }'
+
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.render.html_package/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "package_path": ".agentpdf-out/html-first.html-manifest.json",
+    "output_path": ".agentpdf-out/html-first.pdf"
+  }'
+
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.qa.visual_report/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "input_path": ".agentpdf-out/html-first.pdf",
+    "html_package_manifest_path": ".agentpdf-out/html-first.html-manifest.json",
+    "pages": "1"
   }'
 ```
 

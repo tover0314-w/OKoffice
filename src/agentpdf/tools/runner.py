@@ -14,9 +14,12 @@ from agentpdf.artifacts.bundle import (
     export_artifact_bundle,
     verify_artifact_bundle,
 )
-from agentpdf.authoring.html_deck import write_authoring_html_package
+from agentpdf.authoring.design import select_design_tokens
+from agentpdf.authoring.html_deck import write_authoring_html_package, write_raw_html_package
 from agentpdf.authoring.pages import write_pages_from_storyboard
 from agentpdf.authoring.qa import visual_report
+from agentpdf.authoring.research import extract_evidence_cards, normalize_source_cards, plan_research
+from agentpdf.authoring.revise import revise_pages
 from agentpdf.authoring.router import plan_authoring_route
 from agentpdf.authoring.storyboard import plan_storyboard
 from agentpdf.authoring.workflow import plan_research_deck_workflow
@@ -2323,14 +2326,69 @@ def run_pages_write(
         return _failed("pdf.pages.write", exc.to_error())
 
 
-def run_create_html_package(
-    page_document: dict[str, object],
-    html_output_path: str | Path,
-    title: str | None = None,
+def run_research_plan(brief: dict[str, object]) -> ToolResult:
+    try:
+        return plan_research(brief)
+    except AgentPDFException as exc:
+        return _failed("pdf.research.plan", exc.to_error())
+
+
+def run_research_source_cards(
+    sources: list[dict[str, object]] | None = None,
+    brief: dict[str, object] | None = None,
 ) -> ToolResult:
     try:
-        return write_authoring_html_package(
+        return normalize_source_cards(brief=brief, sources=sources)
+    except AgentPDFException as exc:
+        return _failed("pdf.research.source_cards", exc.to_error())
+
+
+def run_research_evidence_cards(source_cards: list[dict[str, object]] | None = None) -> ToolResult:
+    try:
+        return extract_evidence_cards(source_cards=source_cards)
+    except AgentPDFException as exc:
+        return _failed("pdf.research.evidence_cards", exc.to_error())
+
+
+def run_design_tokens(
+    theme: str = "business_tech",
+    overrides: dict[str, object] | None = None,
+) -> ToolResult:
+    return select_design_tokens(theme=theme, overrides=overrides)
+
+
+def run_pages_revise(
+    page_document: dict[str, object],
+    revisions: list[dict[str, object]] | None = None,
+    design_tokens: dict[str, object] | None = None,
+) -> ToolResult:
+    try:
+        return revise_pages(
             page_document=page_document,
+            revisions=revisions,
+            design_tokens=design_tokens,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.pages.revise", exc.to_error())
+
+
+def run_create_html_package(
+    page_document: dict[str, object] | None,
+    html_output_path: str | Path,
+    title: str | None = None,
+    html: str | None = None,
+    html_path: str | Path | None = None,
+) -> ToolResult:
+    try:
+        if page_document:
+            return write_authoring_html_package(
+                page_document=page_document,
+                html_output_path=html_output_path,
+                title=title,
+            )
+        return write_raw_html_package(
+            html_source=html,
+            html_input_path=html_path,
             html_output_path=html_output_path,
             title=title,
         )

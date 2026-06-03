@@ -116,7 +116,7 @@ Inspect artifact lineage and manifests.
 
 | Tool | Status | Description |
 |---|---:|---|
-| `pdf.artifacts.manifest` | beta target | Return artifact metadata, checksums, source refs, validation links, and retention hints. |
+| `pdf.artifacts.manifest` | beta target | Return artifact metadata, checksums, source refs, HTML package refs, Context Packet refs, validation links, and retention hints. |
 | `pdf.artifacts.graph` | beta target | Return parent/child artifact lineage for a workflow or output. |
 | `pdf.artifacts.source_map` | beta target | Return generated PDF block/page refs mapped back to sources. |
 | `pdf.artifacts.export_bundle` | beta/local | Export PDF, manifests, validations, source maps, and reports as a portable audit ZIP with checksums. |
@@ -140,14 +140,14 @@ Inspect artifact lineage and manifests.
 | `pdf.authoring.plan` | beta | Choose the safest local source format before rendering a new PDF artifact. |
 | `pdf.storyboard.plan` | beta | Create a deterministic page-by-page storyboard from a brief and optional evidence cards. |
 | `pdf.pages.write` | beta | Convert storyboard pages into page JSON blocks with source footers and design tokens. |
-| `pdf.create.html_package` | beta | Write a self-contained local HTML/CSS source package from page JSON. |
-| `pdf.qa.visual_report` | beta | Combine page-count, renderability, blank-page, and HTML package manifest checks for generated PDFs. |
-| `pdf.research.plan` | planned | Plan source gathering for an agent-authored PDF without performing network research in the OSS core. |
-| `pdf.research.source_cards` | planned | Normalize researched sources into structured source cards for authoring workflows. |
-| `pdf.research.evidence_cards` | planned | Turn source cards into evidence cards with claims, confidence, and usable page targets. |
+| `pdf.create.html_package` | beta | Write a self-contained local HTML/CSS source package from page JSON, a raw HTML string, or a local HTML file. |
+| `pdf.qa.visual_report` | beta | Combine page-count, renderability, blank-page, and authoring/raw HTML package manifest checks for generated PDFs. |
+| `pdf.research.plan` | beta | Plan source gathering for an agent-authored PDF without performing network research in the OSS core. |
+| `pdf.research.source_cards` | beta | Normalize researched sources into structured source cards for authoring workflows. |
+| `pdf.research.evidence_cards` | beta | Turn source cards into evidence cards with claims, confidence, and usable page targets. |
 | `pdf.insights.synthesize` | planned | Synthesize source-backed insights behind an explicit model-enabled boundary. |
-| `pdf.design.tokens` | planned | Generate or select reusable design tokens for authoring source packages. |
-| `pdf.pages.revise` | planned | Revise generated page JSON while preserving source references and validation evidence. |
+| `pdf.design.tokens` | beta | Generate or select reusable design tokens for authoring source packages. |
+| `pdf.pages.revise` | beta | Revise generated page JSON while preserving source references and validation evidence. |
 
 ### `pdf.inspect`
 

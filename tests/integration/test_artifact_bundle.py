@@ -13,6 +13,8 @@ from agentpdf.cli.main import app
 from agentpdf.core.pdf import create_text_pdf
 from agentpdf.mcp import server as mcp_server
 from agentpdf.mcp.server import pdf_artifacts_export_bundle
+from agentpdf.renderers.html_package import render_html_package
+from agentpdf.tools.runner import run_create_html_package
 
 
 runner = CliRunner()
@@ -85,6 +87,165 @@ def test_artifact_manifest_collects_metadata_source_refs_and_evidence_links(tmp_
     assert saved["manifest_id"].startswith("artifact_manifest_")
     assert saved["safety"]["mutates_inputs"] is False
     assert result.next_recommended_tools == ["pdf.artifacts.export_bundle", "pdf.artifacts.graph"]
+
+
+def test_artifact_manifest_indexes_context_packet_evidence_for_audit_graph(tmp_path: Path) -> None:
+    pdf_path = tmp_path / "report.pdf"
+    composition_path = tmp_path / "report.composition.json"
+    context_packet_path = tmp_path / "report.context.packet.json"
+    manifest_path = tmp_path / "report.artifacts.json"
+    graph_path = tmp_path / "report.artifact-graph.json"
+    create_text_pdf("Context packet evidence should remain auditable through artifact manifests.", pdf_path)
+    composition_path.write_text(
+        json.dumps(
+            {
+                "composition_id": "cmp_context_audit",
+                "composition_ir": {
+                    "blocks": [
+                        {"block_id": "blk_citation", "type": "section", "source_refs": ["ctx_web"]},
+                        {"block_id": "blk_code", "type": "code", "source_refs": ["ctx_code"]},
+                    ]
+                },
+                "source_map": [
+                    {"block_id": "blk_citation", "source_ref": "ctx_web", "page_number": 1},
+                    {"block_id": "blk_code", "source_ref": "ctx_code", "page_number": 1},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    context_packet_path.write_text(
+        json.dumps(
+            {
+                "context_packet_version": "0.1",
+                "context_packet_id": "ctxpkt_audit",
+                "items": [
+                    {
+                        "context_item_id": "ctx_001",
+                        "source_ref": "ctx_web",
+                        "type": "web_link",
+                        "role": "citation",
+                        "label": "Context Docs",
+                        "uri": "https://okpdf.dev/docs/context",
+                        "metadata": {
+                            "citation_evidence": {
+                                "normalized_url": "https://okpdf.dev/docs/context",
+                                "domain": "okpdf.dev",
+                                "fetch_status": "not_fetched",
+                                "analysis_method": "local_url_metadata_v0",
+                            }
+                        },
+                    },
+                    {
+                        "context_item_id": "ctx_002",
+                        "source_ref": "ctx_code",
+                        "type": "code",
+                        "role": "code_evidence",
+                        "label": "Renderer",
+                        "metadata": {
+                            "code_evidence": {
+                                "language": "python",
+                                "analysis_method": "local_code_symbol_scan_v0",
+                            }
+                        },
+                    },
+                ],
+                "source_graph": {"source_graph_id": "srcgraph_audit", "nodes": [], "edges": []},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    manifest_result = artifact_bundle.create_artifact_manifest(
+        artifact_paths=[pdf_path, composition_path, context_packet_path],
+        output_path=manifest_path,
+        title="Context Audit Manifest",
+    )
+
+    manifest = manifest_result.usage["artifact_manifest"]
+    assert manifest["context_packet_count"] == 1
+    assert manifest["source_graph_ids"] == ["srcgraph_audit"]
+    assert manifest["context_packet_refs"] == [
+        {
+            "context_packet_id": "ctxpkt_audit",
+            "path": context_packet_path.resolve().as_posix(),
+            "source_graph_id": "srcgraph_audit",
+            "item_count": 2,
+            "source_ref_count": 2,
+        }
+    ]
+    assert manifest["context_evidence_index"]["ctx_web"]["context_item_type"] == "web_link"
+    assert manifest["context_evidence_index"]["ctx_web"]["primary_evidence_kind"] == "citation_evidence"
+    assert manifest["context_evidence_index"]["ctx_web"]["fetch_status"] == "not_fetched"
+    assert manifest["context_evidence_index"]["ctx_code"]["context_item_type"] == "code"
+    assert manifest["context_evidence_index"]["ctx_code"]["primary_evidence_kind"] == "code_evidence"
+
+    graph_result = artifact_bundle.build_artifact_graph(
+        artifact_manifest_path=manifest_path,
+        output_path=graph_path,
+        title="Context Audit Graph",
+    )
+
+    graph = graph_result.usage["artifact_graph"]
+    assert graph["source_ref_index"]["ctx_web"]["context_packet_ids"] == ["ctxpkt_audit"]
+    assert graph["source_ref_index"]["ctx_web"]["context_item_type"] == "web_link"
+    assert graph["source_ref_index"]["ctx_web"]["primary_evidence_kind"] == "citation_evidence"
+    assert graph["source_ref_index"]["ctx_code"]["context_item_type"] == "code"
+
+
+def test_artifact_manifest_tracks_html_first_package_lineage(tmp_path: Path) -> None:
+    html_path = tmp_path / "html-first.html"
+    pdf_path = tmp_path / "html-first.pdf"
+    manifest_path = tmp_path / "html-first.artifacts.json"
+    graph_path = tmp_path / "html-first.artifact-graph.json"
+
+    html_package = run_create_html_package(
+        page_document=None,
+        html="<main><h1>HTML First</h1><p>Auditable HTML source before PDF.</p></main>",
+        html_output_path=html_path,
+        title="HTML First",
+    )
+    html_package_manifest_path = Path(html_package.usage["html_package_manifest_path"])
+    rendered = render_html_package(html_package_manifest_path, pdf_path)
+
+    result = artifact_bundle.create_artifact_manifest(
+        artifact_paths=[html_path, html_package_manifest_path, pdf_path],
+        output_path=manifest_path,
+        title="HTML First Artifact Manifest",
+        metadata={"workflow": "html-first-createpdf"},
+    )
+
+    manifest = result.usage["artifact_manifest"]
+    assert rendered.status == "succeeded"
+    assert manifest["html_package_count"] == 1
+    assert manifest["evidence_links"]["html"] == [html_path.resolve().as_posix()]
+    assert manifest["evidence_links"]["html_package"] == [html_package_manifest_path.resolve().as_posix()]
+    assert manifest["html_package_refs"] == [
+        {
+            "html_package_id": html_package.usage["html_package_manifest"]["html_package_id"],
+            "path": html_package_manifest_path.resolve().as_posix(),
+            "html_path": html_path.resolve().as_posix(),
+            "renderer_contract": "html-package-v0",
+            "source_format": "raw_html",
+            "asset_count": 0,
+            "validation_status": "passed",
+        }
+    ]
+    html_package_entry = next(entry for entry in manifest["artifacts"] if entry["artifact_kind"] == "html_package")
+    assert html_package_entry["renderer_contract"] == "html-package-v0"
+    assert html_package_entry["source_format"] == "raw_html"
+    assert html_package_entry["validation_status"] == "passed"
+
+    graph_result = artifact_bundle.build_artifact_graph(
+        artifact_manifest_path=manifest_path,
+        output_path=graph_path,
+        title="HTML First Artifact Graph",
+    )
+
+    graph = graph_result.usage["artifact_graph"]
+    assert graph["html_package_refs"] == manifest["html_package_refs"]
+    relations = {edge["relation"] for edge in graph["edges"]}
+    assert {"describes_html_source", "renders_to_pdf"} <= relations
 
 
 def test_artifact_manifest_cli_api_and_mcp_are_exposed(tmp_path: Path) -> None:

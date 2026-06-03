@@ -23,8 +23,10 @@ from agentpdf.mcp.server import (
     pdf_add_shape,
     pdf_blank_page_check,
     pdf_context_image_analyze,
+    pdf_create_html_package,
     pdf_create_markdown,
     pdf_create_text,
+    pdf_design_tokens,
     pdf_extract_images,
     pdf_extract_fonts,
     pdf_extract_text,
@@ -53,6 +55,10 @@ from agentpdf.mcp.server import (
     pdf_page_count_check,
     pdf_render_pages,
     pdf_render_check,
+    pdf_research_evidence_cards,
+    pdf_research_plan,
+    pdf_research_source_cards,
+    pdf_pages_revise,
     pdf_reorder_pages,
     pdf_resize_pages,
     pdf_security_remove_metadata,
@@ -179,6 +185,11 @@ def test_mcp_authoring_tools_are_exposed() -> None:
         "pdf_create_html_package",
         "pdf_qa_visual_report",
         "pdf_workflow_research_deck",
+        "pdf_research_plan",
+        "pdf_research_source_cards",
+        "pdf_research_evidence_cards",
+        "pdf_design_tokens",
+        "pdf_pages_revise",
     }.issubset(tool_names)
 
 
@@ -188,6 +199,43 @@ def test_mcp_authoring_plan_returns_route() -> None:
     assert payload["tool"] == "pdf.authoring.plan"
     assert payload["usage"]["authoring_plan"]["recommended_authoring_format"] == "html"
     assert payload["next_recommended_tools"] == ["pdf.storyboard.plan"]
+
+
+def test_mcp_local_research_design_and_pages_revise() -> None:
+    brief = _authoring_brief()
+    source_payload = [
+        {
+            "title": "State of Mobile 2026",
+            "source_type": "report",
+            "summary": "Revenue growth continues while downloads flatten.",
+            "key_points": ["Revenue growth continues while downloads flatten."],
+        }
+    ]
+    research = json.loads(pdf_research_plan(brief))
+    sources = json.loads(pdf_research_source_cards(brief=brief, sources=source_payload))
+    evidence = json.loads(pdf_research_evidence_cards(source_cards=sources["usage"]["source_cards"]))
+    design = json.loads(pdf_design_tokens(theme="consulting", overrides={"primary_color": "#123456"}))
+    revised = json.loads(
+        pdf_pages_revise(
+            page_document={
+                "page_document_id": "pages_test",
+                "page_count": 1,
+                "pages": [{"page_number": 1, "layout": "cover", "title": "Old title"}],
+            },
+            revisions=[{"page_number": 1, "title": "New title"}],
+        )
+    )
+
+    assert research["tool"] == "pdf.research.plan"
+    assert research["usage"]["research_plan"]["requires_network"] is False
+    assert sources["tool"] == "pdf.research.source_cards"
+    assert sources["usage"]["source_cards"][0]["fetch_status"] == "not_fetched"
+    assert evidence["tool"] == "pdf.research.evidence_cards"
+    assert evidence["usage"]["evidence_cards"][0]["source_title"] == "State of Mobile 2026"
+    assert design["tool"] == "pdf.design.tokens"
+    assert design["usage"]["design_tokens"]["primary_color"] == "#123456"
+    assert revised["tool"] == "pdf.pages.revise"
+    assert revised["usage"]["page_document"]["pages"][0]["title"] == "New title"
 
 
 def test_mcp_workflow_research_deck_returns_steps() -> None:
@@ -209,6 +257,23 @@ def test_mcp_workflow_research_deck_returns_steps() -> None:
         "pdf.render.html_package",
         "pdf.qa.visual_report",
     ]
+
+
+def test_mcp_create_html_package_accepts_raw_html(tmp_path: Path) -> None:
+    output = tmp_path / "raw.html"
+
+    payload = json.loads(
+        pdf_create_html_package(
+            page_document=None,
+            html_output_path=str(output),
+            title="Raw HTML",
+            html="<main><h1>Raw HTML</h1><p>MCP creation keeps the source package.</p></main>",
+        )
+    )
+
+    assert payload["tool"] == "pdf.create.html_package"
+    assert payload["usage"]["source_format"] == "raw_html"
+    assert output.exists()
 
 
 def test_mcp_workflow_research_deck_execute_mode(tmp_path: Path) -> None:

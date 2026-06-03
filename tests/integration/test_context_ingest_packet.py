@@ -14,6 +14,7 @@ from agentpdf.context.packet import (
     ingest_context_item,
     profile_data_source,
 )
+from agentpdf.schemas.errors import AgentPDFException
 from agentpdf.mcp.server import (
     pdf_context_code_snapshot,
     pdf_context_data_profile,
@@ -102,6 +103,36 @@ def test_context_packet_accepts_preingested_items_and_validates_schema(tmp_path:
     schema = json.loads(Path("schemas/context-packet.schema.json").read_text(encoding="utf-8"))
     packet = json.loads(packet_path.read_text(encoding="utf-8"))
     assert list(Draft202012Validator(schema).iter_errors(packet)) == []
+
+
+def test_context_web_link_normalizes_bare_domain_without_fetching() -> None:
+    result = ingest_context_item(
+        {
+            "url": "OKPDF.dev/docs/context?ref=agent#source",
+            "label": "Context Docs",
+            "snippet": "Traceable PDF context packets for agents.",
+        }
+    )
+    item = result.usage["context_item"]
+    citation = item["metadata"]["citation_evidence"]
+
+    assert item["type"] == "web_link"
+    assert item["uri"] == "https://okpdf.dev/docs/context?ref=agent#source"
+    assert citation["normalized_url"] == "https://okpdf.dev/docs/context?ref=agent#source"
+    assert citation["domain"] == "okpdf.dev"
+    assert citation["fetch_status"] == "not_fetched"
+    assert citation["analysis_method"] == "local_url_metadata_v0"
+    assert result.usage["source_graph_node"]["evidence"]["citation_evidence"]["domain"] == "okpdf.dev"
+
+
+def test_context_web_link_rejects_unsafe_schemes() -> None:
+    for url in ("javascript:alert(1)", "file:///etc/passwd", "ftp://example.com/source"):
+        try:
+            ingest_context_item({"url": url, "label": "Unsafe link"})
+        except AgentPDFException as exc:
+            assert exc.code == "unsafe_input_rejected"
+        else:  # pragma: no cover - defensive assertion for clearer test failures
+            raise AssertionError(f"Expected unsafe_input_rejected for {url}")
 
 
 def test_context_ingest_extracts_docx_text_evidence_for_packets(tmp_path: Path) -> None:

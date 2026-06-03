@@ -21,6 +21,7 @@ import type {
   ContextPacketReportInput,
   CreateAgentInput,
   CreateHtmlPackageInput,
+  DesignTokensInput,
   CreateMarkdownPdfInput,
   CreateFromPromptInput,
   CreateFromTemplatePackInput,
@@ -64,6 +65,7 @@ import type {
   MarkBboxInput,
   PageNumbersInput,
   PageCountCheckInput,
+  PagesReviseInput,
   PagesWriteInput,
   PlanTemplatePackInput,
   RenderHtmlPackageInput,
@@ -86,6 +88,9 @@ import type {
   RenderCheckInput,
   ReorderPagesInput,
   ResizePagesInput,
+  ResearchEvidenceCardsInput,
+  ResearchPlanInput,
+  ResearchSourceCardsInput,
   SecurityAuthorizedPasswordInput,
   SecurityMalwareScanInput,
   SecurityPasswordInput,
@@ -276,6 +281,32 @@ export class AgentPDFClient {
     });
   }
 
+  async researchPlan(input: ResearchPlanInput): Promise<ToolResult> {
+    return this.runTool("pdf.research.plan", {
+      brief: input.brief,
+    });
+  }
+
+  async researchSourceCards(input: ResearchSourceCardsInput): Promise<ToolResult> {
+    return this.runTool("pdf.research.source_cards", {
+      sources: input.sources,
+      ...(input.brief ? { brief: input.brief } : {}),
+    });
+  }
+
+  async researchEvidenceCards(input: ResearchEvidenceCardsInput): Promise<ToolResult> {
+    return this.runTool("pdf.research.evidence_cards", {
+      source_cards: input.sourceCards,
+    });
+  }
+
+  async designTokens(input: DesignTokensInput): Promise<ToolResult> {
+    return this.runTool("pdf.design.tokens", {
+      ...(input.theme ? { theme: input.theme } : {}),
+      ...(input.overrides ? { overrides: input.overrides } : {}),
+    });
+  }
+
   async storyboardPlan(input: StoryboardPlanInput): Promise<ToolResult> {
     return this.runTool("pdf.storyboard.plan", {
       brief: input.brief,
@@ -293,9 +324,19 @@ export class AgentPDFClient {
     });
   }
 
+  async pagesRevise(input: PagesReviseInput): Promise<ToolResult> {
+    return this.runTool("pdf.pages.revise", {
+      page_document: input.pageDocument,
+      ...(input.revisions ? { revisions: input.revisions } : {}),
+      ...(input.designTokens ? { design_tokens: input.designTokens } : {}),
+    });
+  }
+
   async createHtmlPackage(input: CreateHtmlPackageInput): Promise<ToolResult> {
     return this.runTool("pdf.create.html_package", {
-      page_document: input.pageDocument,
+      ...(input.pageDocument ? { page_document: input.pageDocument } : {}),
+      ...(input.html ? { html: input.html } : {}),
+      ...(input.htmlPath ? { html_path: input.htmlPath } : {}),
       html_output_path: input.htmlOutputPath,
       ...(input.title ? { title: input.title } : {}),
     });

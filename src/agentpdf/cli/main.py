@@ -86,7 +86,9 @@ from agentpdf.tools.runner import (
     run_patch_plan,
     run_patch_preview,
     run_patch_verify,
+    run_design_tokens,
     run_pages_write,
+    run_pages_revise,
     run_parse_charts,
     run_parse_figures,
     run_parse_formulas,
@@ -107,6 +109,9 @@ from agentpdf.tools.runner import (
     run_rag_query,
     run_rag_search,
     run_qa_visual_report,
+    run_research_evidence_cards,
+    run_research_plan,
+    run_research_source_cards,
     run_remove_pages,
     run_render_html_package,
     run_remove_unused_objects,
@@ -174,6 +179,8 @@ compare_app = typer.Typer(help="Compare local PDF versions.")
 rag_app = typer.Typer(help="Local document retrieval tools.")
 workflow_app = typer.Typer(help="Plan local agent PDF workflows.")
 authoring_app = typer.Typer(help="Plan authoring routes before PDF creation.")
+research_app = typer.Typer(help="Plan and normalize local authoring research inputs.")
+design_app = typer.Typer(help="Resolve safe local authoring design tokens.")
 storyboard_app = typer.Typer(help="Plan page-by-page deck and report structures.")
 pages_app = typer.Typer(help="Write page JSON from storyboards and evidence.")
 qa_app = typer.Typer(help="Run authoring and visual QA reports.")
@@ -195,6 +202,8 @@ app.add_typer(compare_app, name="compare")
 app.add_typer(rag_app, name="rag")
 app.add_typer(workflow_app, name="workflow")
 app.add_typer(authoring_app, name="authoring")
+app.add_typer(research_app, name="research")
+app.add_typer(design_app, name="design")
 app.add_typer(storyboard_app, name="storyboard")
 app.add_typer(pages_app, name="pages")
 app.add_typer(qa_app, name="qa")
@@ -2124,7 +2133,7 @@ def artifacts_manifest(
     ] = None,
     json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
 ) -> None:
-    """Create a local artifact manifest with checksums, evidence links, and source refs."""
+    """Create a local artifact manifest with checksums, source refs, and HTML/context evidence."""
     _emit_result(
         run_artifacts_manifest(
             artifact_paths=artifact_paths or [],
@@ -2153,7 +2162,7 @@ def artifacts_graph(
     title: Annotated[str | None, typer.Option("--title", help="Optional graph title.")] = None,
     json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
 ) -> None:
-    """Create a local artifact lineage graph from a manifest or artifact files."""
+    """Create a local artifact lineage graph with source-ref and HTML/context evidence."""
     _emit_result(
         run_artifacts_graph(
             artifact_manifest_path=artifact_manifest_path,
@@ -3163,6 +3172,59 @@ def authoring_plan(
     _emit_result(run_authoring_plan(_read_json_object(brief_path)), json_output=json_output)
 
 
+@research_app.command("plan")
+def research_plan(
+    brief_path: Annotated[Path, typer.Argument(help="Authoring brief JSON path.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Plan local source gathering without fetching or using a model."""
+    _emit_result(run_research_plan(_read_json_object(brief_path)), json_output=json_output)
+
+
+@research_app.command("source-cards")
+def research_source_cards(
+    sources_path: Annotated[Path, typer.Option("--sources", help="Source list JSON array path.")],
+    brief_path: Annotated[Path | None, typer.Option("--brief", help="Optional authoring brief JSON path.")] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Normalize agent-supplied sources into source cards."""
+    _emit_result(
+        run_research_source_cards(
+            sources=_read_json_object_list(sources_path, "--sources"),
+            brief=_read_json_object(brief_path) if brief_path is not None else None,
+        ),
+        json_output=json_output,
+    )
+
+
+@research_app.command("evidence-cards")
+def research_evidence_cards(
+    source_cards_path: Annotated[Path, typer.Option("--source-cards", help="Source cards JSON array path.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Extract evidence cards from normalized source cards."""
+    _emit_result(
+        run_research_evidence_cards(_read_json_object_list(source_cards_path, "--source-cards")),
+        json_output=json_output,
+    )
+
+
+@design_app.command("tokens")
+def design_tokens(
+    theme: Annotated[str, typer.Option("--theme", help="Built-in local design theme.")] = "business_tech",
+    color_overrides: Annotated[
+        list[str] | None,
+        typer.Option("--color", help="Design token override such as primary_color=#123456."),
+    ] = None,
+    overrides_path: Annotated[Path | None, typer.Option("--overrides", help="Design token overrides JSON path.")] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Select safe local design tokens for authoring source packages."""
+    overrides = _read_json_object(overrides_path) if overrides_path is not None else {}
+    overrides.update(_parse_color_overrides(color_overrides or []))
+    _emit_result(run_design_tokens(theme=theme, overrides=overrides), json_output=json_output)
+
+
 @storyboard_app.command("plan")
 def storyboard_plan(
     brief_path: Annotated[Path, typer.Argument(help="Authoring brief JSON path.")],
@@ -3207,19 +3269,56 @@ def pages_write(
     )
 
 
+@pages_app.command("revise")
+def pages_revise(
+    page_document_path: Annotated[Path, typer.Argument(help="Page document JSON path.")],
+    revision_items: Annotated[
+        list[str] | None,
+        typer.Option("--revision", help="Revision JSON object or path. Can be repeated."),
+    ] = None,
+    revisions_path: Annotated[Path | None, typer.Option("--revisions", help="Revision JSON array path.")] = None,
+    design_tokens_path: Annotated[
+        Path | None,
+        typer.Option("--design-tokens", help="Optional design tokens JSON path."),
+    ] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Revise generated page JSON while preserving source refs by default."""
+    revisions: list[dict[str, object]] = []
+    if revisions_path is not None:
+        revisions.extend(_read_json_object_list(revisions_path, "--revisions"))
+    for item in revision_items or []:
+        revisions.append(_parse_json_object_value(item, "--revision"))
+    _emit_result(
+        run_pages_revise(
+            page_document=_read_json_object(page_document_path),
+            revisions=revisions,
+            design_tokens=_read_json_object(design_tokens_path) if design_tokens_path is not None else None,
+        ),
+        json_output=json_output,
+    )
+
+
 @create_app.command("html-package")
 def create_html_package(
-    page_document_path: Annotated[Path, typer.Argument(help="Page document JSON path.")],
     output_path: Annotated[Path, typer.Option("--output", "-o", help="Output HTML path.")],
+    page_document_path: Annotated[Path | None, typer.Argument(help="Optional page document JSON path.")] = None,
     title: Annotated[str | None, typer.Option("--title", help="Optional document title.")] = None,
+    html_source: Annotated[str | None, typer.Option("--html", help="Raw HTML string to package.")] = None,
+    html_input_path: Annotated[
+        Path | None,
+        typer.Option("--html-file", "--html-path", help="Raw HTML file to package."),
+    ] = None,
     json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
 ) -> None:
     """Write a local self-contained HTML/CSS source package."""
     _emit_result(
         run_create_html_package(
-            page_document=_read_json_object(page_document_path),
+            page_document=_read_json_object(page_document_path) if page_document_path is not None else None,
             html_output_path=output_path,
             title=title,
+            html=html_source,
+            html_path=html_input_path,
         ),
         json_output=json_output,
     )

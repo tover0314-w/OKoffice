@@ -14,6 +14,7 @@ from agentpdf.validation.pdf import blank_page_check_pdf, render_check_pdf, vali
 
 
 TOOL_NAME = "pdf.qa.visual_report"
+SUPPORTED_HTML_PACKAGE_CONTRACTS = {"authoring-html-package-v0", "html-package-v0"}
 
 
 def run_visual_qa(
@@ -147,8 +148,9 @@ def _manifest_check(path: str | Path | None) -> tuple[ValidationCheck, dict[str,
 
 def _manifest_failures(payload: dict[str, Any]) -> list[str]:
     failures: list[str] = []
-    if payload.get("renderer_contract") != "authoring-html-package-v0":
-        failures.append("Manifest renderer contract is not authoring-html-package-v0.")
+    if payload.get("renderer_contract") not in SUPPORTED_HTML_PACKAGE_CONTRACTS:
+        allowed = ", ".join(sorted(SUPPORTED_HTML_PACKAGE_CONTRACTS))
+        failures.append(f"Manifest renderer contract must be one of: {allowed}.")
     if payload.get("javascript_enabled") is not False:
         failures.append("Manifest must disable JavaScript.")
     if payload.get("remote_assets_enabled") is not False:

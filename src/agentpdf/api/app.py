@@ -88,7 +88,9 @@ from agentpdf.tools.runner import (
     run_patch_plan,
     run_patch_preview,
     run_patch_verify,
+    run_design_tokens,
     run_pages_write,
+    run_pages_revise,
     run_parse_charts,
     run_parse_figures,
     run_parse_formulas,
@@ -109,6 +111,9 @@ from agentpdf.tools.runner import (
     run_rag_query,
     run_rag_search,
     run_qa_visual_report,
+    run_research_evidence_cards,
+    run_research_plan,
+    run_research_source_cards,
     run_remove_pages,
     run_render_html_package,
     run_remove_unused_objects,
@@ -329,11 +334,40 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
             evidence_cards=evidence_cards if isinstance(evidence_cards, list) else None,
             design_tokens=design_tokens if isinstance(design_tokens, dict) else None,
         )
-    if tool_name == "pdf.create.html_package":
-        return run_create_html_package(
+    if tool_name == "pdf.research.plan":
+        return run_research_plan(brief=dict(payload.get("brief", {})))
+    if tool_name == "pdf.research.source_cards":
+        sources = payload.get("sources")
+        brief = payload.get("brief")
+        return run_research_source_cards(
+            sources=sources if isinstance(sources, list) else None,
+            brief=brief if isinstance(brief, dict) else None,
+        )
+    if tool_name == "pdf.research.evidence_cards":
+        source_cards = payload.get("source_cards")
+        return run_research_evidence_cards(source_cards=source_cards if isinstance(source_cards, list) else None)
+    if tool_name == "pdf.design.tokens":
+        overrides = payload.get("overrides")
+        return run_design_tokens(
+            theme=str(payload.get("theme", "business_tech")),
+            overrides=overrides if isinstance(overrides, dict) else None,
+        )
+    if tool_name == "pdf.pages.revise":
+        revisions = payload.get("revisions")
+        design_tokens = payload.get("design_tokens")
+        return run_pages_revise(
             page_document=dict(payload.get("page_document", {})),
+            revisions=revisions if isinstance(revisions, list) else None,
+            design_tokens=design_tokens if isinstance(design_tokens, dict) else None,
+        )
+    if tool_name == "pdf.create.html_package":
+        page_document = payload.get("page_document")
+        return run_create_html_package(
+            page_document=page_document if isinstance(page_document, dict) else None,
             html_output_path=str(payload.get("html_output_path", "deck.html")),
             title=str(payload["title"]) if payload.get("title") is not None else None,
+            html=str(payload["html"]) if payload.get("html") is not None else None,
+            html_path=payload.get("html_path") or payload.get("html_input_path"),
         )
     if tool_name == "pdf.qa.visual_report":
         expected_page_count, error = _coerce_optional_int(

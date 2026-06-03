@@ -3,6 +3,7 @@ import test from "node:test";
 
 import { AgentPDFClient } from "../src/index.js";
 import type { ToolManifest, ToolResult } from "../src/index.js";
+import type { AuthoringBrief, EvidenceCard, WorkflowResearchDeckRequest } from "../src/types.js";
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -1180,12 +1181,12 @@ test("AgentPDFClient exposes authoring workflow helpers", async () => {
       });
     },
   });
-  const brief = {
+  const brief: AuthoringBrief = {
     topic: "Independent developers going global",
     page_count: 4,
     deliverable: "deck",
   };
-  const evidenceCards = [
+  const evidenceCards: EvidenceCard[] = [
     {
       id: "ev_market",
       claim: "Mobile monetization remains strong.",
@@ -1195,6 +1196,28 @@ test("AgentPDFClient exposes authoring workflow helpers", async () => {
   ];
 
   await client.authoringPlan({ brief });
+  await client.researchPlan({ brief });
+  await client.researchSourceCards({
+    brief,
+    sources: [
+      {
+        title: "State of Mobile 2026",
+        source_type: "report",
+        summary: "Revenue growth continues while downloads flatten.",
+      },
+    ],
+  });
+  await client.researchEvidenceCards({
+    sourceCards: [
+      {
+        id: "source_001",
+        title: "State of Mobile 2026",
+        summary: "Revenue growth continues while downloads flatten.",
+        key_points: ["Revenue growth continues while downloads flatten."],
+      },
+    ],
+  });
+  await client.designTokens({ theme: "consulting", overrides: { primary_color: "#123456" } });
   await client.storyboardPlan({ brief, authoringPlan: { recommended_authoring_format: "html" }, evidenceCards });
   await client.pagesWrite({
     brief,
@@ -1202,10 +1225,19 @@ test("AgentPDFClient exposes authoring workflow helpers", async () => {
     evidenceCards,
     designTokens: { theme: "business_tech" },
   });
+  await client.pagesRevise({
+    pageDocument: { page_document_id: "pages_1", page_count: 1, pages: [{ page_number: 1, layout: "cover", title: "Old" }] },
+    revisions: [{ page_number: 1, title: "New" }],
+  });
   await client.createHtmlPackage({
     pageDocument: { page_document_id: "pages_1", page_count: 0, pages: [] },
     htmlOutputPath: "deck.html",
     title: "Independent developers going global",
+  });
+  await client.createHtmlPackage({
+    html: "<main><h1>HTML First</h1><p>Node SDK raw HTML package.</p></main>",
+    htmlOutputPath: "raw.html",
+    title: "HTML First",
   });
   await client.qaVisualReport({
     inputPath: "deck.pdf",
@@ -1213,30 +1245,43 @@ test("AgentPDFClient exposes authoring workflow helpers", async () => {
     htmlPackageManifestPath: "deck.html-manifest.json",
     pages: "all",
   });
-  await client.workflowResearchDeck({
+  const workflowRequest: WorkflowResearchDeckRequest = {
     brief,
     evidenceCards,
     htmlOutputPath: "deck.html",
     pdfOutputPath: "deck.pdf",
     artifactDir: "workflow-artifacts",
     execute: true,
-  });
+  };
+  await client.workflowResearchDeck(workflowRequest);
 
   assert.deepEqual(calls.map((call) => call.url), [
     "http://agentpdf.test/v1/tools/pdf.authoring.plan/run",
+    "http://agentpdf.test/v1/tools/pdf.research.plan/run",
+    "http://agentpdf.test/v1/tools/pdf.research.source_cards/run",
+    "http://agentpdf.test/v1/tools/pdf.research.evidence_cards/run",
+    "http://agentpdf.test/v1/tools/pdf.design.tokens/run",
     "http://agentpdf.test/v1/tools/pdf.storyboard.plan/run",
     "http://agentpdf.test/v1/tools/pdf.pages.write/run",
+    "http://agentpdf.test/v1/tools/pdf.pages.revise/run",
+    "http://agentpdf.test/v1/tools/pdf.create.html_package/run",
     "http://agentpdf.test/v1/tools/pdf.create.html_package/run",
     "http://agentpdf.test/v1/tools/pdf.qa.visual_report/run",
     "http://agentpdf.test/v1/tools/pdf.workflow.research_deck/run",
   ]);
   assert.deepEqual(calls[0]?.body, { brief });
-  assert.deepEqual(calls[3]?.body, {
+  assert.deepEqual(calls[4]?.body, { theme: "consulting", overrides: { primary_color: "#123456" } });
+  assert.deepEqual(calls[8]?.body, {
     page_document: { page_document_id: "pages_1", page_count: 0, pages: [] },
     html_output_path: "deck.html",
     title: "Independent developers going global",
   });
-  assert.deepEqual(calls[5]?.body, {
+  assert.deepEqual(calls[9]?.body, {
+    html: "<main><h1>HTML First</h1><p>Node SDK raw HTML package.</p></main>",
+    html_output_path: "raw.html",
+    title: "HTML First",
+  });
+  assert.deepEqual(calls[11]?.body, {
     brief,
     evidence_cards: evidenceCards,
     html_output_path: "deck.html",

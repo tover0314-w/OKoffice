@@ -115,14 +115,14 @@ def test_authoring_tools_are_in_registry() -> None:
         "pdf.render.html_package": "render",
         "pdf.qa.visual_report": "validation",
         "pdf.workflow.research_deck": "workflow",
+        "pdf.research.plan": "research",
+        "pdf.research.source_cards": "research",
+        "pdf.research.evidence_cards": "research",
+        "pdf.design.tokens": "authoring",
+        "pdf.pages.revise": "authoring",
     }
     planned_tools = {
-        "pdf.research.plan": ("research", True),
-        "pdf.research.source_cards": ("research", True),
-        "pdf.research.evidence_cards": ("research", True),
         "pdf.insights.synthesize": ("insights", True),
-        "pdf.design.tokens": ("authoring", False),
-        "pdf.pages.revise": ("authoring", True),
     }
 
     for name, category in implemented_tools.items():
@@ -323,8 +323,13 @@ def test_implemented_tools_are_known_names() -> None:
         "pdf.workflow.run",
         "pdf.workflow.report",
         "pdf.authoring.plan",
+        "pdf.research.plan",
+        "pdf.research.source_cards",
+        "pdf.research.evidence_cards",
         "pdf.storyboard.plan",
         "pdf.pages.write",
+        "pdf.design.tokens",
+        "pdf.pages.revise",
         "pdf.create.html_package",
         "pdf.qa.visual_report",
         "pdf.workflow.research_deck",

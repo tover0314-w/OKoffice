@@ -14,7 +14,7 @@ from agentpdf.artifacts.store import build_artifact
 from agentpdf.authoring.models import PageDocument
 from agentpdf.schemas.errors import AgentPDFException
 from agentpdf.schemas.models import ToolResult, ValidationCheck, ValidationReport
-from agentpdf.security.paths import resolve_output_path
+from agentpdf.security.paths import resolve_input_path, resolve_output_path
 
 
 TOOL_NAME = "pdf.create.html_package"
@@ -22,6 +22,20 @@ COLOR_TOKEN_FIELDS = {"primary_color", "accent_color", "warning_color", "backgro
 CSS_INJECTION_MARKERS = ("</style", "<script", "url(", "@import", "javascript:", "data:")
 FONT_FORBIDDEN_MARKERS = ("<", ">", "{", "}", ";", "url(", "@", "javascript:", "data:")
 HEX_COLOR_RE = re.compile(r"^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")
+RAW_HTML_FORBIDDEN_MARKERS = (
+    "<script",
+    "</script",
+    "<iframe",
+    "<object",
+    "<embed",
+    "<base",
+    "<link",
+    "javascript:",
+    "@import",
+)
+RAW_HTML_ASSET_RE = re.compile(r"\b(?:src|poster)\s*=\s*['\"]?\s*(?:https?:|file:|ftp:|javascript:)", re.I)
+RAW_HTML_EVENT_HANDLER_RE = re.compile(r"\son[a-z0-9_-]+\s*=", re.I)
+RAW_HTML_CSS_URL_RE = re.compile(r"url\(\s*['\"]?\s*(?:https?:|file:|ftp:|javascript:)", re.I)
 
 
 def write_authoring_html_package(
@@ -75,6 +89,56 @@ def write_authoring_html_package(
             code=_validation_error_code(exc),
             payload="page_document",
             validation_error=exc,
+        )
+
+
+def write_raw_html_package(
+    *,
+    html_source: str | None = None,
+    html_input_path: str | Path | None = None,
+    html_output_path: str | Path,
+    title: str | None = None,
+) -> ToolResult:
+    try:
+        raw_html = _raw_html_source(html_source=html_source, html_input_path=html_input_path)
+        _reject_unsafe_raw_html(raw_html)
+        output = resolve_output_path(html_output_path)
+        manifest_path = output.with_suffix(".html-manifest.json")
+        validation = _validate_raw_html()
+        document = _raw_html_document(raw_html, title=title or "AgentPDF HTML Package")
+        manifest = _raw_html_manifest(
+            output=output,
+            manifest_path=manifest_path,
+            validation=validation,
+            title=title,
+            source_path=str(resolve_input_path(html_input_path)) if html_input_path is not None else None,
+        )
+        output.write_text(document, encoding="utf-8")
+        manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+        return ToolResult(
+            job_id=_job_id(),
+            status="succeeded" if validation.status == "passed" else "failed",
+            tool=TOOL_NAME,
+            artifacts=[
+                build_artifact(output, source_tool=TOOL_NAME),
+                build_artifact(manifest_path, source_tool=TOOL_NAME),
+            ],
+            validation=validation,
+            usage={
+                "html_output_path": str(output.resolve()),
+                "html_package_manifest_path": str(manifest_path.resolve()),
+                "html_package_manifest": manifest,
+                "source_format": "raw_html",
+            },
+            next_recommended_tools=["pdf.render.html_package", "pdf.qa.visual_report"],
+        )
+    except AgentPDFException as exc:
+        return ToolResult(
+            job_id=_job_id(),
+            status="failed",
+            tool=TOOL_NAME,
+            warnings=[exc.message],
+            error=exc.to_error(),
         )
 
 
@@ -210,6 +274,159 @@ def _validate(document: PageDocument) -> ValidationReport:
         status="passed" if all(check.status == "passed" for check in checks) else "failed",
         checks=checks,
         page_count=document.page_count,
+    )
+
+
+def _raw_html_source(*, html_source: str | None, html_input_path: str | Path | None) -> str:
+    if html_source is not None and html_source.strip():
+        return html_source
+    if html_input_path is not None:
+        source = resolve_input_path(html_input_path)
+        return source.read_text(encoding="utf-8", errors="replace")
+    raise AgentPDFException(
+        "invalid_input",
+        "Provide page_document, html, or html_path when creating an HTML package.",
+    )
+
+
+def _raw_html_document(raw_html: str, *, title: str) -> str:
+    source = raw_html.strip()
+    if "<html" not in source.lower():
+        return "\n".join(
+            [
+                "<!doctype html>",
+                '<html lang="en">',
+                "<head>",
+                '  <meta charset="utf-8" />',
+                f"  {_csp_meta()}",
+                f"  <title>{html.escape(title)}</title>",
+                '  <meta name="agentpdf:renderer" content="html-package-v0" />',
+                "</head>",
+                '<body data-agentpdf-raw-html-document data-agentpdf-renderer="html-package-v0">',
+                source,
+                "</body>",
+                "</html>",
+            ]
+        )
+    document = source
+    if "content-security-policy" not in document.lower():
+        if re.search(r"<head\b[^>]*>", document, flags=re.I):
+            document = re.sub(r"(<head\b[^>]*>)", rf"\1\n  {_csp_meta()}", document, count=1, flags=re.I)
+        else:
+            document = re.sub(
+                r"(<html\b[^>]*>)",
+                rf"\1\n<head><meta charset=\"utf-8\" />\n  {_csp_meta()}\n"
+                f"  <title>{html.escape(title)}</title></head>",
+                document,
+                count=1,
+                flags=re.I,
+            )
+    if "agentpdf:renderer" not in document.lower() and re.search(r"</head>", document, flags=re.I):
+        document = re.sub(
+            r"(</head>)",
+            '  <meta name="agentpdf:renderer" content="html-package-v0" />\n\\1',
+            document,
+            count=1,
+            flags=re.I,
+        )
+    if "data-agentpdf-raw-html-document" not in document and re.search(r"<body\b[^>]*>", document, flags=re.I):
+        document = re.sub(
+            r"<body\b([^>]*)>",
+            r'<body\1 data-agentpdf-raw-html-document data-agentpdf-renderer="html-package-v0">',
+            document,
+            count=1,
+            flags=re.I,
+        )
+    return document
+
+
+def _raw_html_manifest(
+    *,
+    output: Path,
+    manifest_path: Path,
+    validation: ValidationReport,
+    title: str | None,
+    source_path: str | None,
+) -> dict[str, Any]:
+    manifest: dict[str, Any] = {
+        "html_package_version": "0.1",
+        "html_package_id": f"htmlpkg_{uuid4().hex[:16]}",
+        "source_tool": TOOL_NAME,
+        "renderer": "raw_html_package",
+        "renderer_contract": "html-package-v0",
+        "source_format": "raw_html",
+        "html_path": str(output.resolve()),
+        "manifest_path": str(manifest_path.resolve()),
+        "title": title,
+        "javascript_enabled": False,
+        "remote_assets_enabled": False,
+        "asset_count": 0,
+        "assets": [],
+        "validation": validation.model_dump(mode="json"),
+        "next_recommended_tools": ["pdf.render.html_package", "pdf.qa.visual_report"],
+    }
+    if source_path is not None:
+        manifest["source_path"] = source_path
+    return manifest
+
+
+def _validate_raw_html() -> ValidationReport:
+    checks = [
+        ValidationCheck(
+            name="html_package_manifest_valid",
+            status="passed",
+            details={"renderer_contract": "html-package-v0", "source_format": "raw_html"},
+        ),
+        ValidationCheck(
+            name="raw_html_source_present",
+            status="passed",
+            details={"source_format": "raw_html"},
+        ),
+        ValidationCheck(
+            name="no_javascript",
+            status="passed",
+            details={"javascript_enabled": False},
+        ),
+        ValidationCheck(
+            name="no_remote_assets",
+            status="passed",
+            details={"remote_assets_enabled": False},
+        ),
+        ValidationCheck(
+            name="no_forbidden_asset_paths",
+            status="passed",
+            details={"checked_assets": 0},
+        ),
+    ]
+    return ValidationReport(status="passed", checks=checks)
+
+
+def _reject_unsafe_raw_html(raw_html: str) -> None:
+    lowered = raw_html.lower()
+    if any(marker in lowered for marker in RAW_HTML_FORBIDDEN_MARKERS):
+        raise AgentPDFException(
+            "unsafe_input_rejected",
+            "Raw HTML packages must not contain scripts, remote stylesheets, or embedded active content.",
+            details={"html_package_error": "raw_html_unsafe"},
+        )
+    if RAW_HTML_EVENT_HANDLER_RE.search(raw_html):
+        raise AgentPDFException(
+            "unsafe_input_rejected",
+            "Raw HTML packages must not contain JavaScript event handlers.",
+            details={"html_package_error": "raw_html_event_handler"},
+        )
+    if RAW_HTML_ASSET_RE.search(raw_html) or RAW_HTML_CSS_URL_RE.search(raw_html):
+        raise AgentPDFException(
+            "unsafe_input_rejected",
+            "Raw HTML packages must not reference remote or file URL assets.",
+            details={"html_package_error": "raw_html_remote_asset"},
+        )
+
+
+def _csp_meta() -> str:
+    return (
+        "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; img-src 'self' data:; "
+        "style-src 'unsafe-inline'; font-src 'self' data:; script-src 'none';\" />"
     )
 
 

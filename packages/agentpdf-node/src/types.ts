@@ -125,34 +125,94 @@ export interface WorkflowReportInput {
   outputPath?: string;
 }
 
+export interface AuthoringBrief extends JsonObject {
+  topic?: string;
+  goal?: string;
+  audience?: string;
+  page_count?: number;
+  deliverable?: string;
+}
+
+export interface EvidenceCard extends JsonObject {
+  id?: string;
+  claim?: string;
+  evidence?: string;
+  source_title?: string;
+  source_url?: string;
+  confidence?: "high" | "medium" | "low";
+  usable_for?: string[];
+}
+
+export interface SourceCard extends JsonObject {
+  id?: string;
+  title?: string;
+  publisher?: string;
+  source_date?: string;
+  source_url?: string;
+  source_type?: string;
+  reliability?: string;
+  summary?: string;
+  key_points?: string[];
+  useful_for?: string[];
+  fetch_status?: string;
+}
+
+export interface ResearchPlanInput {
+  brief: AuthoringBrief;
+}
+
+export interface ResearchSourceCardsInput {
+  brief?: AuthoringBrief;
+  sources: JsonObject[];
+}
+
+export interface ResearchEvidenceCardsInput {
+  sourceCards: SourceCard[];
+}
+
+export interface DesignTokensInput {
+  theme?: string;
+  overrides?: JsonObject;
+}
+
 export interface WorkflowResearchDeckInput {
-  brief: JsonObject;
-  evidenceCards?: JsonObject[];
+  brief: AuthoringBrief;
+  evidenceCards?: EvidenceCard[];
   htmlOutputPath?: string;
   pdfOutputPath?: string;
   artifactDir?: string;
   execute?: boolean;
 }
 
+export interface WorkflowResearchDeckRequest extends WorkflowResearchDeckInput {}
+
 export interface AuthoringPlanInput {
-  brief: JsonObject;
+  brief: AuthoringBrief;
 }
 
 export interface StoryboardPlanInput {
-  brief: JsonObject;
+  brief: AuthoringBrief;
   authoringPlan?: JsonObject;
-  evidenceCards?: JsonObject[];
+  evidenceCards?: EvidenceCard[];
 }
 
 export interface PagesWriteInput {
-  brief: JsonObject;
+  brief: AuthoringBrief;
   storyboard: JsonObject;
-  evidenceCards?: JsonObject[];
+  evidenceCards?: EvidenceCard[];
+  designTokens?: JsonObject;
+}
+
+export interface PagesReviseInput {
+  pageDocument: JsonObject;
+  revisions?: JsonObject[];
   designTokens?: JsonObject;
 }
 
 export interface CreateHtmlPackageInput {
-  pageDocument: JsonObject;
+  pageDocument?: JsonObject;
+  html?: string;
+  htmlPath?: string;
   htmlOutputPath: string;
   title?: string;
 }

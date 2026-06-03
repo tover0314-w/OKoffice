@@ -148,6 +148,44 @@ def test_api_runs_storyboard_plan_tool() -> None:
     assert payload["usage"]["storyboard"]["pages"][0]["page_number"] == 1
 
 
+def test_api_runs_local_research_and_authoring_support_tools() -> None:
+    client = TestClient(create_app())
+
+    source_payload = {
+        "title": "State of Mobile 2026",
+        "source_type": "report",
+        "summary": "Revenue growth continues while downloads flatten.",
+        "key_points": ["Revenue growth continues while downloads flatten."],
+        "usable_for": ["market_context"],
+    }
+    plan_response = client.post("/v1/tools/pdf.research.plan/run", json={"brief": _authoring_brief()})
+    source_response = client.post(
+        "/v1/tools/pdf.research.source_cards/run",
+        json={"brief": _authoring_brief(), "sources": [source_payload]},
+    )
+    evidence_response = client.post(
+        "/v1/tools/pdf.research.evidence_cards/run",
+        json={"source_cards": source_response.json()["usage"]["source_cards"]},
+    )
+    design_response = client.post(
+        "/v1/tools/pdf.design.tokens/run",
+        json={"theme": "consulting", "overrides": {"primary_color": "#123456"}},
+    )
+
+    assert plan_response.status_code == 200
+    assert plan_response.json()["tool"] == "pdf.research.plan"
+    assert plan_response.json()["usage"]["research_plan"]["requires_network"] is False
+    assert source_response.status_code == 200
+    assert source_response.json()["tool"] == "pdf.research.source_cards"
+    assert source_response.json()["usage"]["source_cards"][0]["fetch_status"] == "not_fetched"
+    assert evidence_response.status_code == 200
+    assert evidence_response.json()["tool"] == "pdf.research.evidence_cards"
+    assert evidence_response.json()["usage"]["evidence_cards"][0]["source_title"] == "State of Mobile 2026"
+    assert design_response.status_code == 200
+    assert design_response.json()["tool"] == "pdf.design.tokens"
+    assert design_response.json()["usage"]["design_tokens"]["primary_color"] == "#123456"
+
+
 def test_api_runs_workflow_research_deck_tool(tmp_path: Path) -> None:
     client = TestClient(create_app())
 
@@ -277,8 +315,40 @@ def test_api_runs_authoring_workflow_tools(text_pdf: Path, tmp_path: Path) -> No
     assert Path(html_payload["usage"]["html_package_manifest_path"]).exists()
     assert qa_response.status_code == 200
     assert qa_response.json()["tool"] == "pdf.qa.visual_report"
+    revise_response = client.post(
+        "/v1/tools/pdf.pages.revise/run",
+        json={
+            "page_document": pages_payload["usage"]["page_document"],
+            "revisions": [{"page_number": 2, "title": "Revised Summary"}],
+        },
+    )
+    revise_payload = revise_response.json()
+    assert revise_response.status_code == 200
+    assert revise_payload["tool"] == "pdf.pages.revise"
+    assert revise_payload["usage"]["page_document"]["pages"][1]["title"] == "Revised Summary"
     assert workflow_response.status_code == 200
     assert workflow_response.json()["usage"]["workflow"]["steps"][-1]["tool"] == "pdf.qa.visual_report"
+
+
+def test_api_create_html_package_accepts_raw_html(tmp_path: Path) -> None:
+    client = TestClient(create_app())
+    output = tmp_path / "raw.html"
+
+    response = client.post(
+        "/v1/tools/pdf.create.html_package/run",
+        json={
+            "html": "<main><h1>Raw HTML</h1><p>REST creation keeps the HTML package.</p></main>",
+            "html_output_path": str(output),
+            "title": "Raw HTML",
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["tool"] == "pdf.create.html_package"
+    assert payload["usage"]["source_format"] == "raw_html"
+    assert Path(payload["usage"]["html_package_manifest_path"]).exists()
+    assert output.exists()
 
 
 def test_api_runs_workflow_run_tool(text_pdf: Path) -> None:

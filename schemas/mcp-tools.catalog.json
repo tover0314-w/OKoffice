@@ -78,6 +78,31 @@
       "status": "beta"
     },
     {
+      "name": "pdf_research_plan",
+      "maps_to": "pdf.research.plan",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_research_source_cards",
+      "maps_to": "pdf.research.source_cards",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_research_evidence_cards",
+      "maps_to": "pdf.research.evidence_cards",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_design_tokens",
+      "maps_to": "pdf.design.tokens",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_pages_revise",
+      "maps_to": "pdf.pages.revise",
+      "status": "beta"
+    },
+    {
       "name": "pdf_create_html_package",
       "maps_to": "pdf.create.html_package",
       "status": "beta"

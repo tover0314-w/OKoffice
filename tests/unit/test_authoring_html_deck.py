@@ -1,6 +1,10 @@
 import json
 from pathlib import Path
 
+import pytest
+
+from agentpdf.renderers.html_package import render_html_package
+from agentpdf.tools.runner import run_create_html_package
 from agentpdf.authoring.html_deck import write_authoring_html_package
 from agentpdf.authoring.models import DesignTokens, PageDocument, PageSpec
 
@@ -67,6 +71,58 @@ def test_write_authoring_html_package_writes_html_and_manifest(tmp_path: Path) -
     assert "AgentPDF Authoring" in html
     assert "Sources: AgentPDF Spec" in html
     assert any(str(artifact.path) == str(output.resolve()) for artifact in result.artifacts)
+
+
+def test_create_html_package_accepts_raw_html_then_renders_pdf(tmp_path: Path) -> None:
+    html_output = tmp_path / "brief.html"
+    pdf_output = tmp_path / "brief.pdf"
+
+    result = run_create_html_package(
+        page_document=None,
+        html="<html><body><main><h1>HTML First</h1><p>Auditable source package.</p></main></body></html>",
+        html_output_path=html_output,
+        title="HTML First",
+    )
+
+    manifest_path = html_output.with_suffix(".html-manifest.json")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    assert result.status == "succeeded"
+    assert result.tool == "pdf.create.html_package"
+    assert html_output.exists()
+    assert manifest["source_format"] == "raw_html"
+    assert manifest["renderer_contract"] == "html-package-v0"
+    assert manifest["remote_assets_enabled"] is False
+    assert manifest["javascript_enabled"] is False
+    assert result.usage["source_format"] == "raw_html"
+    assert result.next_recommended_tools == ["pdf.render.html_package", "pdf.qa.visual_report"]
+
+    rendered = render_html_package(manifest_path, pdf_output)
+
+    assert rendered.status == "succeeded"
+    assert pdf_output.exists()
+    assert rendered.usage["html_package_manifest"]["source_format"] == "raw_html"
+
+
+@pytest.mark.parametrize(
+    "raw_html",
+    [
+        "<main><script>alert('no')</script></main>",
+        '<main><img src="https://example.com/remote.png" /></main>',
+    ],
+)
+def test_create_html_package_rejects_unsafe_raw_html(tmp_path: Path, raw_html: str) -> None:
+    result = run_create_html_package(
+        page_document=None,
+        html=raw_html,
+        html_output_path=tmp_path / "unsafe.html",
+    )
+
+    assert result.status == "failed"
+    assert result.error is not None
+    assert result.error.code == "unsafe_input_rejected"
+    assert not (tmp_path / "unsafe.html").exists()
+    assert not (tmp_path / "unsafe.html-manifest.json").exists()
 
 
 def test_write_authoring_html_package_rejects_remote_assets(tmp_path: Path) -> None:
