@@ -204,6 +204,33 @@ def test_cli_workflow_research_deck(tmp_path: Path) -> None:
     assert payload["usage"]["workflow"]["steps"][-1]["tool"] == "pdf.qa.visual_report"
 
 
+def test_cli_createpdf_html_first_workflow(tmp_path: Path) -> None:
+    html_output = tmp_path / "createpdf.html"
+    pdf_output = tmp_path / "createpdf.pdf"
+
+    result = runner.invoke(
+        app,
+        [
+            "createpdf",
+            "--html",
+            "<main><h1>CreatePDF</h1><p>CLI wraps HTML package, render, QA, and audit.</p></main>",
+            "--html-output",
+            str(html_output),
+            "--pdf-output",
+            str(pdf_output),
+            "--artifact-dir",
+            str(tmp_path / "audit"),
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["tool"] == "pdf.workflow.createpdf"
+    assert pdf_output.exists()
+    assert Path(payload["usage"]["createpdf"]["qa_report_path"]).exists()
+
+
 def test_cli_create_html_package_accepts_raw_html(tmp_path: Path) -> None:
     html_output = tmp_path / "raw.html"
 

@@ -58,6 +58,11 @@
       "status": "beta"
     },
     {
+      "name": "pdf_workflow_createpdf",
+      "maps_to": "pdf.workflow.createpdf",
+      "status": "beta"
+    },
+    {
       "name": "pdf_workflow_research_deck",
       "maps_to": "pdf.workflow.research_deck",
       "status": "beta"

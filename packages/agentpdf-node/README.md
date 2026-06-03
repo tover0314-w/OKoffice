@@ -602,6 +602,7 @@ agentpdf-node render-html-package html-first.html-manifest.json -o html-first.pd
 agentpdf-node qa-visual-report --input html-first.pdf --html-package-manifest html-first.html-manifest.json --pages 1
 agentpdf-node artifact-manifest --file html-first.pdf --file html-first.html --file html-first.html-manifest.json -o html-first.artifacts.json --title "HTML First Artifacts" --metadata workflow=html-first-createpdf
 agentpdf-node artifact-graph --manifest html-first.artifacts.json -o html-first.artifact-graph.json --title "HTML First Artifact Graph"
+agentpdf-node createpdf --html "<main><h1>CreatePDF</h1><p>HTML-first workflow with audit evidence.</p></main>" --html-output createpdf.html --pdf-output createpdf.pdf --artifact-dir createpdf-audit --title "CreatePDF"
 agentpdf-node authoring-plan --brief examples/research_deck_brief.json
 agentpdf-node research-plan --brief examples/research_deck_brief.json
 agentpdf-node research-source-cards --brief examples/research_deck_brief.json --sources examples/research_deck_sources.json

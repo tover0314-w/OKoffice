@@ -157,6 +157,7 @@ from agentpdf.tools.runner import (
     run_url_to_pdf,
     run_watermark,
     run_workflow_plan,
+    run_workflow_createpdf,
     run_workflow_research_deck,
     run_workflow_report,
     run_workflow_run,
@@ -304,6 +305,20 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
         return run_workflow_report(
             workflow_run=workflow_run if isinstance(workflow_run, dict) else {},
             output_path=payload.get("output_path"),
+        )
+    if tool_name == "pdf.workflow.createpdf":
+        page_document = payload.get("page_document")
+        expected_page_count = payload.get("expected_page_count")
+        return run_workflow_createpdf(
+            pdf_output_path=str(payload.get("pdf_output_path", "createpdf.pdf")),
+            html_output_path=payload.get("html_output_path"),
+            html=str(payload["html"]) if payload.get("html") is not None else None,
+            html_path=payload.get("html_path") or payload.get("html_input_path"),
+            page_document=page_document if isinstance(page_document, dict) else None,
+            title=str(payload["title"]) if payload.get("title") is not None else None,
+            artifact_dir=payload.get("artifact_dir"),
+            expected_page_count=expected_page_count if isinstance(expected_page_count, int) else None,
+            pages=str(payload.get("pages", "all")),
         )
     if tool_name == "pdf.workflow.research_deck":
         evidence_cards = payload.get("evidence_cards")

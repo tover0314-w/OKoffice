@@ -153,6 +153,7 @@ from agentpdf.tools.runner import (
     run_url_to_pdf,
     run_watermark,
     run_workflow_plan,
+    run_workflow_createpdf,
     run_workflow_research_deck,
     run_workflow_report,
     run_workflow_run,
@@ -179,6 +180,7 @@ def create_mcp_server() -> FastMCP:
     server.tool(name="pdf_workflow_plan")(pdf_workflow_plan)
     server.tool(name="pdf_workflow_run")(pdf_workflow_run)
     server.tool(name="pdf_workflow_report")(pdf_workflow_report)
+    server.tool(name="pdf_workflow_createpdf")(pdf_workflow_createpdf)
     server.tool(name="pdf_workflow_research_deck")(pdf_workflow_research_deck)
     server.tool(name="pdf_authoring_plan")(pdf_authoring_plan)
     server.tool(name="pdf_storyboard_plan")(pdf_storyboard_plan)
@@ -430,6 +432,31 @@ def pdf_workflow_run(workflow: dict[str, object], dry_run: bool = False) -> str:
 def pdf_workflow_report(workflow_run: dict[str, object], output_path: str | None = None) -> str:
     """Summarize a local workflow run with audit evidence."""
     return run_workflow_report(workflow_run=workflow_run, output_path=output_path).model_dump_json()
+
+
+def pdf_workflow_createpdf(
+    pdf_output_path: str,
+    html_output_path: str | None = None,
+    html: str | None = None,
+    html_path: str | None = None,
+    page_document: dict[str, object] | None = None,
+    title: str | None = None,
+    artifact_dir: str | None = None,
+    expected_page_count: int | None = None,
+    pages: str = "all",
+) -> str:
+    """Create a validated PDF through the local HTML-first workflow."""
+    return run_workflow_createpdf(
+        pdf_output_path=pdf_output_path,
+        html_output_path=html_output_path,
+        html=html,
+        html_path=html_path,
+        page_document=page_document,
+        title=title,
+        artifact_dir=artifact_dir,
+        expected_page_count=expected_page_count,
+        pages=pages,
+    ).model_dump_json()
 
 
 def pdf_workflow_research_deck(

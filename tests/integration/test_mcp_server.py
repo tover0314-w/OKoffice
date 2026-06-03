@@ -69,6 +69,7 @@ from agentpdf.mcp.server import (
     pdf_validate_output,
     pdf_watermark,
     pdf_workflow_plan,
+    pdf_workflow_createpdf,
     pdf_workflow_research_deck,
     pdf_workflow_report,
     pdf_workflow_run,
@@ -139,6 +140,7 @@ def test_mcp_server_exposes_local_pdf_tools() -> None:
     assert "pdf_pdf_to_json" in tool_names
     assert "pdf_pdf_to_markdown" in tool_names
     assert "pdf_workflow_plan" in tool_names
+    assert "pdf_workflow_createpdf" in tool_names
     assert "pdf_workflow_run" in tool_names
     assert "pdf_workflow_report" in tool_names
     assert "pdf_authoring_plan" in tool_names
@@ -257,6 +259,22 @@ def test_mcp_workflow_research_deck_returns_steps() -> None:
         "pdf.render.html_package",
         "pdf.qa.visual_report",
     ]
+
+
+def test_mcp_workflow_createpdf_generates_audited_pdf(tmp_path: Path) -> None:
+    pdf_output = tmp_path / "mcp-createpdf.pdf"
+    payload = json.loads(
+        pdf_workflow_createpdf(
+            pdf_output_path=str(pdf_output),
+            html_output_path=str(tmp_path / "mcp-createpdf.html"),
+            html="<main><h1>CreatePDF</h1><p>MCP workflow creates audit artifacts.</p></main>",
+            artifact_dir=str(tmp_path / "audit"),
+        )
+    )
+
+    assert payload["tool"] == "pdf.workflow.createpdf"
+    assert pdf_output.exists()
+    assert Path(payload["usage"]["createpdf"]["qa_report_path"]).exists()
 
 
 def test_mcp_create_html_package_accepts_raw_html(tmp_path: Path) -> None:

@@ -1,6 +1,6 @@
 # 23 — Full Tool Status Matrix
 
-Total tools specified: **240**
+Total tools specified: **241**
 
 | Tool | Category | Status | OSS default |
 |---|---|---:|---:|
@@ -59,6 +59,7 @@ Total tools specified: **240**
 | `pdf.workflow.plan` | workflow | beta | yes |
 | `pdf.workflow.run` | workflow | beta | yes |
 | `pdf.workflow.report` | workflow | beta | yes |
+| `pdf.workflow.createpdf` | workflow | beta | yes |
 | `pdf.workflow.research_deck` | workflow | beta | yes |
 | `pdf.authoring.plan` | authoring | beta | yes |
 | `pdf.storyboard.plan` | authoring | beta | yes |

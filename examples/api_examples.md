@@ -585,6 +585,19 @@ curl -X POST http://127.0.0.1:7331/v1/tools/pdf.render.html_package/run \
 ```
 
 ```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.workflow.createpdf/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "html": "<main><h1>CreatePDF</h1><p>HTML-first workflow with audit evidence.</p></main>",
+    "html_output_path": ".agentpdf-out/createpdf.html",
+    "pdf_output_path": ".agentpdf-out/createpdf.pdf",
+    "artifact_dir": ".agentpdf-out/createpdf-audit",
+    "title": "CreatePDF",
+    "expected_page_count": 1
+  }'
+```
+
+```bash
 curl -X POST http://127.0.0.1:7331/v1/tools/pdf.create.html_package/run \
   -H 'Content-Type: application/json' \
   -d '{

@@ -1254,6 +1254,14 @@ test("AgentPDFClient exposes authoring workflow helpers", async () => {
     execute: true,
   };
   await client.workflowResearchDeck(workflowRequest);
+  await client.workflowCreatePdf({
+    html: "<main><h1>CreatePDF</h1><p>Node SDK creates audited PDFs.</p></main>",
+    htmlOutputPath: "createpdf.html",
+    pdfOutputPath: "createpdf.pdf",
+    artifactDir: "audit",
+    expectedPageCount: 1,
+    pages: "1",
+  });
 
   assert.deepEqual(calls.map((call) => call.url), [
     "http://agentpdf.test/v1/tools/pdf.authoring.plan/run",
@@ -1268,6 +1276,7 @@ test("AgentPDFClient exposes authoring workflow helpers", async () => {
     "http://agentpdf.test/v1/tools/pdf.create.html_package/run",
     "http://agentpdf.test/v1/tools/pdf.qa.visual_report/run",
     "http://agentpdf.test/v1/tools/pdf.workflow.research_deck/run",
+    "http://agentpdf.test/v1/tools/pdf.workflow.createpdf/run",
   ]);
   assert.deepEqual(calls[0]?.body, { brief });
   assert.deepEqual(calls[4]?.body, { theme: "consulting", overrides: { primary_color: "#123456" } });
@@ -1288,6 +1297,14 @@ test("AgentPDFClient exposes authoring workflow helpers", async () => {
     pdf_output_path: "deck.pdf",
     artifact_dir: "workflow-artifacts",
     execute: true,
+  });
+  assert.deepEqual(calls[12]?.body, {
+    html: "<main><h1>CreatePDF</h1><p>Node SDK creates audited PDFs.</p></main>",
+    html_output_path: "createpdf.html",
+    pdf_output_path: "createpdf.pdf",
+    artifact_dir: "audit",
+    expected_page_count: 1,
+    pages: "1",
   });
 });
 

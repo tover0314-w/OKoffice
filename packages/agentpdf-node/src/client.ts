@@ -123,6 +123,7 @@ import type {
   VisualDiffInput,
   VerifyBundleInput,
   WatermarkInput,
+  WorkflowCreatePdfInput,
   WorkflowPlanInput,
   WorkflowResearchDeckInput,
   WorkflowReportInput,
@@ -261,6 +262,20 @@ export class AgentPDFClient {
     return this.runTool("pdf.workflow.report", {
       workflow_run: input.workflowRun,
       ...(input.outputPath ? { output_path: input.outputPath } : {}),
+    });
+  }
+
+  async workflowCreatePdf(input: WorkflowCreatePdfInput): Promise<ToolResult> {
+    return this.runTool("pdf.workflow.createpdf", {
+      pdf_output_path: input.pdfOutputPath,
+      ...(input.htmlOutputPath ? { html_output_path: input.htmlOutputPath } : {}),
+      ...(input.html ? { html: input.html } : {}),
+      ...(input.htmlPath ? { html_path: input.htmlPath } : {}),
+      ...(input.pageDocument ? { page_document: input.pageDocument } : {}),
+      ...(input.title ? { title: input.title } : {}),
+      ...(input.artifactDir ? { artifact_dir: input.artifactDir } : {}),
+      ...(input.expectedPageCount !== undefined ? { expected_page_count: input.expectedPageCount } : {}),
+      ...(input.pages ? { pages: input.pages } : {}),
     });
   }
 

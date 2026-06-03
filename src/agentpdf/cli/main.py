@@ -154,6 +154,7 @@ from agentpdf.tools.runner import (
     run_url_to_pdf,
     run_watermark,
     run_workflow_plan,
+    run_workflow_createpdf,
     run_workflow_research_deck,
     run_workflow_report,
     run_workflow_run,
@@ -3379,6 +3380,97 @@ def workflow_research_deck(
             pdf_output_path=str(pdf_output_path),
             artifact_dir=artifact_dir,
             execute=execute,
+        ),
+        json_output=json_output,
+    )
+
+
+@app.command("createpdf")
+@workflow_app.command("createpdf")
+def workflow_createpdf(
+    pdf_output_path: Annotated[Path, typer.Option("--pdf-output", "-o", help="Output PDF path.")],
+    html_output_path: Annotated[
+        Path | None,
+        typer.Option("--html-output", help="Output HTML package path. Defaults next to the PDF."),
+    ] = None,
+    page_document_path: Annotated[
+        Path | None,
+        typer.Option("--page-document", help="Optional page document JSON path."),
+    ] = None,
+    title: Annotated[str | None, typer.Option("--title", help="Optional document title.")] = None,
+    html_source: Annotated[str | None, typer.Option("--html", help="Raw HTML string to package.")] = None,
+    html_input_path: Annotated[
+        Path | None,
+        typer.Option("--html-file", "--html-path", help="Raw HTML file to package."),
+    ] = None,
+    artifact_dir: Annotated[
+        Path | None,
+        typer.Option("--artifact-dir", help="Directory for QA and artifact reports."),
+    ] = None,
+    expected_page_count: Annotated[
+        int | None,
+        typer.Option("--expected-page-count", help="Expected generated PDF page count."),
+    ] = None,
+    pages: Annotated[str, typer.Option("--pages", help="Pages to render/check during QA.")] = "all",
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Create a validated PDF through the local HTML-first workflow."""
+    _emit_result(
+        run_workflow_createpdf(
+            pdf_output_path=pdf_output_path,
+            html_output_path=html_output_path,
+            html=html_source,
+            html_path=html_input_path,
+            page_document=_read_json_object(page_document_path) if page_document_path is not None else None,
+            title=title,
+            artifact_dir=artifact_dir,
+            expected_page_count=expected_page_count,
+            pages=pages,
+        ),
+        json_output=json_output,
+    )
+
+
+@app.command("createpdf")
+def createpdf(
+    pdf_output_path: Annotated[Path, typer.Option("--pdf-output", "-o", help="Output PDF path.")],
+    html_output_path: Annotated[
+        Path | None,
+        typer.Option("--html-output", help="Output HTML package path. Defaults next to the PDF."),
+    ] = None,
+    page_document_path: Annotated[
+        Path | None,
+        typer.Option("--page-document", help="Optional page document JSON path."),
+    ] = None,
+    title: Annotated[str | None, typer.Option("--title", help="Optional document title.")] = None,
+    html_source: Annotated[str | None, typer.Option("--html", help="Raw HTML string to package.")] = None,
+    html_input_path: Annotated[
+        Path | None,
+        typer.Option("--html-file", "--html-path", help="Raw HTML file to package."),
+    ] = None,
+    artifact_dir: Annotated[
+        Path | None,
+        typer.Option("--artifact-dir", help="Directory for QA and artifact reports."),
+    ] = None,
+    expected_page_count: Annotated[
+        int | None,
+        typer.Option("--expected-page-count", help="Expected generated PDF page count."),
+    ] = None,
+    pages: Annotated[str, typer.Option("--pages", help="Pages to render/check during QA.")] = "all",
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Create a validated PDF through the local HTML-first workflow."""
+    _emit_result(
+        run_workflow_createpdf(
+            pdf_output_path=pdf_output_path,
+            html_output_path=html_output_path,
+            html=html_source,
+            html_path=html_input_path,
+            page_document=_read_json_object(page_document_path) if page_document_path is not None else None,
+            title=title,
+            artifact_dir=artifact_dir,
+            expected_page_count=expected_page_count,
+            pages=pages,
         ),
         json_output=json_output,
     )

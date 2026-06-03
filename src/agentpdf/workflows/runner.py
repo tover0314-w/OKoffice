@@ -55,6 +55,7 @@ SUPPORTED_LOCAL_WORKFLOW_TOOLS = {
     "pdf.create.html_package",
     "pdf.render.html_package",
     "pdf.qa.visual_report",
+    "pdf.workflow.createpdf",
 }
 
 
@@ -331,6 +332,26 @@ def _run_local_step(tool: str, payload: dict[str, Any]) -> ToolResult:
             input_path=payload.get("input_path", payload.get("path", "")),
             expected_page_count=expected_page_count,
             html_package_manifest_path=payload.get("html_package_manifest_path"),
+            pages=str(payload.get("pages", "all")),
+        )
+    if tool == "pdf.workflow.createpdf":
+        page_document = payload.get("page_document")
+        expected_page_count, error = _coerce_optional_int(
+            payload.get("expected_page_count"),
+            field_name="expected_page_count",
+            tool=tool,
+        )
+        if error is not None:
+            return error
+        return runner.run_workflow_createpdf(
+            pdf_output_path=payload.get("pdf_output_path", "createpdf.pdf"),
+            html_output_path=payload.get("html_output_path"),
+            html=str(payload["html"]) if payload.get("html") is not None else None,
+            html_path=payload.get("html_path") or payload.get("html_input_path"),
+            page_document=page_document if isinstance(page_document, dict) else None,
+            title=str(payload["title"]) if payload.get("title") is not None else None,
+            artifact_dir=payload.get("artifact_dir"),
+            expected_page_count=expected_page_count,
             pages=str(payload.get("pages", "all")),
         )
     if tool == "pdf.inspect.document":

@@ -170,6 +170,7 @@ from agentpdf.validation.pdf import (
 )
 from agentpdf.workflows.planner import plan_workflow
 from agentpdf.workflows.reporter import create_workflow_report
+from agentpdf.workflows.createpdf import createpdf_html_first
 from agentpdf.workflows.runner import run_workflow
 
 
@@ -2285,6 +2286,34 @@ def run_workflow_report(
     output_path: str | Path | None = None,
 ) -> ToolResult:
     return create_workflow_report(workflow_run=workflow_run, output_path=output_path)
+
+
+def run_workflow_createpdf(
+    *,
+    pdf_output_path: str | Path,
+    html_output_path: str | Path | None = None,
+    html: str | None = None,
+    html_path: str | Path | None = None,
+    page_document: dict[str, object] | None = None,
+    title: str | None = None,
+    artifact_dir: str | Path | None = None,
+    expected_page_count: int | None = None,
+    pages: str = "all",
+) -> ToolResult:
+    try:
+        return createpdf_html_first(
+            pdf_output_path=pdf_output_path,
+            html_output_path=html_output_path,
+            html=html,
+            html_path=html_path,
+            page_document=page_document,
+            title=title,
+            artifact_dir=artifact_dir,
+            expected_page_count=expected_page_count,
+            pages=pages,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.workflow.createpdf", exc.to_error())
 
 
 def run_authoring_plan(brief: dict[str, object]) -> ToolResult:

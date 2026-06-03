@@ -207,6 +207,22 @@ export async function runCli(
         stdout,
       );
     }
+    if (command === "createpdf" || command === "workflow-createpdf") {
+      return emitResult(
+        await client.workflowCreatePdf({
+          pdfOutputPath: takeRequiredOption(args, ["--pdf-output", "--output", "-o"]),
+          htmlOutputPath: takeOption(args, ["--html-output"]),
+          html: takeOption(args, ["--html"]),
+          htmlPath: takeOption(args, ["--html-file", "--html-path"]),
+          pageDocument: await parseOptionalObject(takeOption(args, ["--page-document"])),
+          title: takeOption(args, ["--title"]),
+          artifactDir: takeOption(args, ["--artifact-dir"]),
+          expectedPageCount: takeIntegerOption(args, ["--expected-page-count"]),
+          pages: takeOption(args, ["--pages"]),
+        }),
+        stdout,
+      );
+    }
     if (command === "workflow-research-deck") {
       return emitResult(
         await client.workflowResearchDeck({
@@ -2385,6 +2401,8 @@ function helpText(): string {
     "  agentpdf-node workflow-plan --goal GOAL [--input-path FILE]",
     "  agentpdf-node workflow-run --payload '{...}' [--binding KEY=VALUE] [--dry-run]",
     "  agentpdf-node workflow-report --payload '{...}' [-o report.md]",
+    "  agentpdf-node createpdf --html '<main>...</main>' --pdf-output out.pdf [--html-output out.html --artifact-dir audit]",
+    "  agentpdf-node workflow-createpdf --html '<main>...</main>' --pdf-output out.pdf [--html-output out.html --artifact-dir audit]",
     "  agentpdf-node workflow-research-deck --brief brief.json [--evidence evidence.json] [--html-output deck.html --pdf-output deck.pdf] [--execute --artifact-dir workflow-artifacts]",
     "  agentpdf-node authoring-plan --brief brief.json",
     "  agentpdf-node research-plan --brief brief.json",

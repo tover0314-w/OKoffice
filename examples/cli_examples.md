@@ -50,6 +50,7 @@ okpdf render-html-package html-first.html-manifest.json -o html-first.pdf --json
 okpdf qa visual-report html-first.pdf --html-package-manifest html-first.html-manifest.json --pages 1 --json
 okpdf artifacts manifest --file html-first.pdf --file html-first.html --file html-first.html-manifest.json -o html-first.artifacts.json --title "HTML First Artifacts" --metadata workflow=html-first-createpdf --json
 okpdf artifacts graph --manifest html-first.artifacts.json -o html-first.artifact-graph.json --title "HTML First Artifact Graph" --json
+okpdf createpdf --html "<main><h1>CreatePDF</h1><p>HTML-first workflow with audit evidence.</p></main>" --html-output createpdf.html --pdf-output createpdf.pdf --artifact-dir createpdf-audit --title "CreatePDF" --json
 okpdf context ingest --file src/agentpdf/compose/context.py --role code_evidence --label "Composer Source" -o composer.context-item.json --json
 okpdf context code-snapshot src/agentpdf/compose/context.py --line-start 1 --line-end 80 --repository-root . -o composer.snapshot.context-item.json --json
 okpdf context data-profile examples/create-data/metrics.csv --label "Runtime Metrics" -o metrics.profile.context-item.json --json

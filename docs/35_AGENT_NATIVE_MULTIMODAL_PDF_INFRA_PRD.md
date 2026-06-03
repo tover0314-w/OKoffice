@@ -515,7 +515,7 @@ Recommended families:
 - `pdf.compose.*`: plan, create, compile, and render composition IR into PDF artifacts.
 - `pdf.patch.*`: preview, apply, verify, and roll back structured PDF edits.
 - `pdf.present.*`: create slide-like PDF decks, speaker notes, handouts, and appendix packs.
-- `pdf.workflow.*`: plan and execute document workflows with roles and validation.
+- `pdf.workflow.*`: plan and execute document workflows with roles and validation, including `pdf.workflow.createpdf` for a local HTML-first create -> render -> visual QA -> artifact lineage path.
 - `pdf.artifacts.*`: inspect artifact lineage, source graph, manifests, checksums, and retention.
 
 RAG tools remain useful, but they are a subset of `pdf.evidence.*`. RAG should not be the top-level product story.

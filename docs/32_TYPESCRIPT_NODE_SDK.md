@@ -99,6 +99,7 @@ node packages/agentpdf-node/dist/src/cli.js render-html-package .agentpdf-out/ht
 node packages/agentpdf-node/dist/src/cli.js qa-visual-report --input .agentpdf-out/html-first.pdf --html-package-manifest .agentpdf-out/html-first.html-manifest.json --pages 1
 node packages/agentpdf-node/dist/src/cli.js artifact-manifest --file .agentpdf-out/html-first.pdf --file .agentpdf-out/html-first.html --file .agentpdf-out/html-first.html-manifest.json -o .agentpdf-out/html-first.artifacts.json --title "HTML First Artifacts" --metadata workflow=html-first-createpdf
 node packages/agentpdf-node/dist/src/cli.js artifact-graph --manifest .agentpdf-out/html-first.artifacts.json -o .agentpdf-out/html-first.artifact-graph.json --title "HTML First Artifact Graph"
+node packages/agentpdf-node/dist/src/cli.js createpdf --html "<main><h1>CreatePDF</h1><p>HTML-first workflow with audit evidence.</p></main>" --html-output .agentpdf-out/createpdf.html --pdf-output .agentpdf-out/createpdf.pdf --artifact-dir .agentpdf-out/createpdf-audit --title "CreatePDF"
 node packages/agentpdf-node/dist/src/cli.js authoring-plan --brief examples/research_deck_brief.json
 node packages/agentpdf-node/dist/src/cli.js research-plan --brief examples/research_deck_brief.json
 node packages/agentpdf-node/dist/src/cli.js research-source-cards --brief examples/research_deck_brief.json --sources examples/research_deck_sources.json

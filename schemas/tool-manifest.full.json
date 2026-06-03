@@ -1,6 +1,6 @@
 {
   "manifest_version": "0.1-full",
-  "tool_count": 240,
+  "tool_count": 241,
   "tools": [
     {
       "name": "agent.setup.claude_code",
@@ -803,6 +803,21 @@
       "name": "pdf.workflow.report",
       "status": "beta",
       "description": "Summarize workflow artifacts, warnings, validation, and step evidence.",
+      "category": "workflow",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.workflow.createpdf",
+      "status": "beta",
+      "description": "Create a validated PDF through a local HTML-first workflow with visual QA and artifact lineage reports.",
       "category": "workflow",
       "interfaces": [
         "cli",

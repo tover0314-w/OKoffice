@@ -133,6 +133,7 @@ export type {
   VisualDiffInput,
   WatermarkInput,
   WorkflowPlanInput,
+  WorkflowCreatePdfInput,
   WorkflowResearchDeckInput,
   WorkflowResearchDeckRequest,
   WorkflowReportInput,

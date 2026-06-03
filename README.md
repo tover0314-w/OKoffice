@@ -32,7 +32,7 @@ The public CLI is `okpdf`. The legacy/internal command `agentpdf` still works fo
 
 ## Why Star This
 
-- Complete public tool map from day one: 240 public tool names are discoverable now.
+- Complete public tool map from day one: 241 public tool names are discoverable now.
 - Local-first by default: no hosted URL, paid key, or cloud dependency required.
 - Agent-first outputs: every tool returns structured JSON with artifacts, validation, warnings, and next recommended tools.
 - Bigger than RAG: the product direction covers context packets, target PDF profiles, source graphs, composition IR, PDF patch transactions, evidence coverage, and multimodal context-to-PDF workflows.
@@ -153,6 +153,7 @@ okpdf render-html-package .agentpdf-out/html-first.html-manifest.json -o .agentp
 okpdf qa visual-report .agentpdf-out/html-first.pdf --html-package-manifest .agentpdf-out/html-first.html-manifest.json --pages 1 --json
 okpdf artifacts manifest --file .agentpdf-out/html-first.pdf --file .agentpdf-out/html-first.html --file .agentpdf-out/html-first.html-manifest.json -o .agentpdf-out/html-first.artifacts.json --title "HTML First Artifacts" --metadata workflow=html-first-createpdf --json
 okpdf artifacts graph --manifest .agentpdf-out/html-first.artifacts.json -o .agentpdf-out/html-first.artifact-graph.json --title "HTML First Artifact Graph" --json
+okpdf createpdf --html "<main><h1>CreatePDF</h1><p>HTML-first workflow with audit evidence.</p></main>" --html-output .agentpdf-out/createpdf.html --pdf-output .agentpdf-out/createpdf.pdf --artifact-dir .agentpdf-out/createpdf-audit --title "CreatePDF" --json
 okpdf create templates --json
 okpdf create template-packs -o .agentpdf-out/template-packs.json --json
 okpdf create validate-template-pack examples/template-packs/local-agent-starter.json -o .agentpdf-out/template-pack.validation.json --json

@@ -131,6 +131,7 @@ Inspect artifact lineage and manifests.
 | `pdf.workflow.plan` | beta target | Plan a local-first agent workflow with roles, steps, validation, and cloud boundary. |
 | `pdf.workflow.run` | beta target | Execute a local workflow manifest and return per-step evidence. |
 | `pdf.workflow.report` | beta target | Summarize workflow artifacts, warnings, validation, and step evidence. |
+| `pdf.workflow.createpdf` | beta target | Create a validated PDF through a local HTML-first workflow with visual QA and artifact lineage reports. |
 | `pdf.workflow.research_deck` | beta target | Plan or execute a local research-to-deck workflow from brief and evidence cards through authoring, storyboard, page JSON, HTML package, render, and visual QA steps. |
 
 ### Authoring workflow

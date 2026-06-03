@@ -186,6 +186,18 @@ export interface WorkflowResearchDeckInput {
 
 export interface WorkflowResearchDeckRequest extends WorkflowResearchDeckInput {}
 
+export interface WorkflowCreatePdfInput {
+  pdfOutputPath: string;
+  htmlOutputPath?: string;
+  html?: string;
+  htmlPath?: string;
+  pageDocument?: JsonObject;
+  title?: string;
+  artifactDir?: string;
+  expectedPageCount?: number;
+  pages?: string;
+}
+
 export interface AuthoringPlanInput {
   brief: AuthoringBrief;
 }

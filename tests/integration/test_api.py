@@ -212,6 +212,27 @@ def test_api_runs_workflow_research_deck_tool(tmp_path: Path) -> None:
     ]
 
 
+def test_api_runs_workflow_createpdf_tool(tmp_path: Path) -> None:
+    client = TestClient(create_app())
+    pdf_output = tmp_path / "api-createpdf.pdf"
+
+    response = client.post(
+        "/v1/tools/pdf.workflow.createpdf/run",
+        json={
+            "html": "<main><h1>CreatePDF</h1><p>REST workflow creates audited PDFs.</p></main>",
+            "html_output_path": str(tmp_path / "api-createpdf.html"),
+            "pdf_output_path": str(pdf_output),
+            "artifact_dir": str(tmp_path / "audit"),
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["tool"] == "pdf.workflow.createpdf"
+    assert pdf_output.exists()
+    assert Path(payload["usage"]["createpdf"]["artifact_graph_path"]).exists()
+
+
 def test_api_runs_workflow_research_deck_execute_mode(tmp_path: Path) -> None:
     client = TestClient(create_app())
 

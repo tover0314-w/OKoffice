@@ -16,9 +16,11 @@ okpdf research evidence-cards --source-cards examples/research_deck_source_cards
 okpdf design tokens --theme consulting --color primary_color=#123456 --json
 okpdf storyboard plan examples/research_deck_brief.json --evidence-cards examples/research_deck_evidence.json --json
 okpdf workflow research-deck examples/research_deck_brief.json --evidence-cards examples/research_deck_evidence.json --html-output output/deck.html --pdf-output output/deck.pdf --artifact-dir output/research-deck-artifacts --execute --json
+okpdf createpdf --html "<main><h1>CreatePDF</h1><p>HTML-first source package.</p></main>" --html-output output/createpdf.html --pdf-output output/createpdf.pdf --artifact-dir output/createpdf-audit --json
 ```
 
 Without `--execute`, `workflow research-deck` returns the workflow plan only. With `--execute`, it runs the planned local steps and returns `usage.workflow_run` plus PDF, HTML manifest, and QA artifacts.
+Use `okpdf createpdf` when the agent already has HTML or page JSON and wants a single local workflow that writes the HTML package, renders the PDF, runs visual QA, and emits an artifact manifest plus graph.
 
 The `pdf.research.*` tools are local normalizers: they do not browse, fetch, summarize remote pages, or create fresh claims from the web. Agents should provide source metadata gathered elsewhere, then let AgentPDF preserve source ids, confidence, useful page targets, and `fetch_status=not_fetched`.
 
@@ -36,6 +38,10 @@ curl -s http://127.0.0.1:7331/v1/tools/pdf.research.source_cards/run \
 curl -s http://127.0.0.1:7331/v1/tools/pdf.workflow.research_deck/run \
   -H "content-type: application/json" \
   -d '{"brief":{"topic":"AgentPDF authoring","page_count":6,"deliverable":"deck"},"evidence_cards":[],"html_output_path":"output/deck.html","pdf_output_path":"output/deck.pdf","artifact_dir":"output/research-deck-artifacts","execute":true}'
+
+curl -s http://127.0.0.1:7331/v1/tools/pdf.workflow.createpdf/run \
+  -H "content-type: application/json" \
+  -d '{"html":"<main><h1>CreatePDF</h1><p>HTML-first source package.</p></main>","html_output_path":"output/createpdf.html","pdf_output_path":"output/createpdf.pdf","artifact_dir":"output/createpdf-audit"}'
 ```
 
 ## MCP Example
@@ -54,6 +60,18 @@ curl -s http://127.0.0.1:7331/v1/tools/pdf.workflow.research_deck/run \
     "pdf_output_path": "output/deck.pdf",
     "artifact_dir": "output/research-deck-artifacts",
     "execute": true
+  }
+}
+```
+
+```json
+{
+  "tool": "pdf_workflow_createpdf",
+  "arguments": {
+    "html": "<main><h1>CreatePDF</h1><p>HTML-first source package.</p></main>",
+    "html_output_path": "output/createpdf.html",
+    "pdf_output_path": "output/createpdf.pdf",
+    "artifact_dir": "output/createpdf-audit"
   }
 }
 ```

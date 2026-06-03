@@ -1091,6 +1091,61 @@ test("runCli exposes authoring workflow commands", async () => {
   });
 });
 
+test("runCli exposes createpdf workflow command", async () => {
+  const calls: Array<{ url: string; body: unknown }> = [];
+
+  const code = await runCli(
+    [
+      "createpdf",
+      "--html",
+      "<main><h1>CreatePDF</h1><p>Node CLI wraps audited PDF creation.</p></main>",
+      "--html-output",
+      "createpdf.html",
+      "--pdf-output",
+      "createpdf.pdf",
+      "--artifact-dir",
+      "audit",
+      "--expected-page-count",
+      "1",
+      "--pages",
+      "1",
+    ],
+    {
+      fetch: async (input, init) => {
+        calls.push({ url: String(input), body: JSON.parse(String(init?.body)) });
+        return jsonResponse({
+          job_id: "job_cli_createpdf",
+          status: "succeeded",
+          tool: "pdf.workflow.createpdf",
+          artifacts: [],
+          validation: null,
+          warnings: [],
+          usage: {},
+          next_recommended_tools: [],
+          error: null,
+        });
+      },
+      stdout: () => undefined,
+      stderr: () => undefined,
+    },
+  );
+
+  assert.equal(code, 0);
+  assert.deepEqual(calls, [
+    {
+      url: "http://127.0.0.1:7331/v1/tools/pdf.workflow.createpdf/run",
+      body: {
+        html: "<main><h1>CreatePDF</h1><p>Node CLI wraps audited PDF creation.</p></main>",
+        html_output_path: "createpdf.html",
+        pdf_output_path: "createpdf.pdf",
+        artifact_dir: "audit",
+        expected_page_count: 1,
+        pages: "1",
+      },
+    },
+  ]);
+});
+
 test("runCli exposes artifact bundle export command", async () => {
   const output: string[] = [];
   let postedBody: unknown;
