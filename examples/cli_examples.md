@@ -55,13 +55,15 @@ okpdf context classify context.packet.json --profile technical_audit -o context.
 okpdf evidence context-packet-report context.packet.json -o context-report.pdf --report-output context-report.json --json
 okpdf create plan-template-pack examples/template-packs/local-agent-starter.json --target-profile technical_audit --context-packet context.packet.json --planned-output board-audit-from-context.pdf -o board-audit-from-context.plan.json --json
 okpdf create agent examples/template-packs/local-agent-starter.json --target-profile technical_audit --context-packet context.packet.json -o board-audit-agent.pdf --plan-output board-audit-agent.plan.json --coverage-output board-audit-agent.coverage.json --context-classification-output board-audit-agent.context-classification.json --context-report-output board-audit-agent.context-report.pdf --context-report-json-output board-audit-agent.context-report.json --bundle-output board-audit-agent.agentpdf-bundle.zip --json
-okpdf create from-template-pack examples/template-packs/local-agent-starter.json --template board_audit --color-scheme executive_blue --context-packet context.packet.json -o board-audit-from-context.pdf --json
+okpdf create from-template-pack examples/template-packs/local-agent-starter.json --template board_audit --color-scheme executive_blue --context-packet context.packet.json -o board-audit-from-context.pdf --renderer html --html-output board-audit-from-context.html --json
 okpdf target profiles -o target-profiles.json --json
 okpdf target validate --profile-json examples/target-profiles/media-learning-deck.json -o media-learning-deck.validation.json --json
 okpdf compose plan context.packet.json --profile technical_audit -o technical-audit.plan.json --json
 okpdf compose render-ir technical-audit.plan.json -o technical-audit-from-ir.pdf --json
 okpdf compose from-context context.packet.json --profile technical_audit -o technical-audit.pdf --renderer html --html-output technical-audit.html --json
 okpdf render-html-package technical-audit.html-manifest.json -o technical-audit-rendered.pdf --json
+okpdf authoring plan examples/research_deck_brief.json --json
+okpdf workflow research-deck examples/research_deck_brief.json --evidence-cards examples/research_deck_evidence.json --html-output research-deck.html --pdf-output research-deck.pdf --artifact-dir research-deck-artifacts --execute --json
 okpdf compose from-context context.packet.json --profile slide_deck -o agent-review-deck.pdf --json
 okpdf compose from-context context.packet.json --profile-json examples/target-profiles/media-learning-deck.json -o media-learning-deck.pdf --json
 okpdf compose add-code-block technical-audit.pdf --title "Risk Function" --code "def risky_total(items): return sum(items)" --language python --source-ref ctx_002 --target-slot code_review -o technical-audit.code.pdf --json

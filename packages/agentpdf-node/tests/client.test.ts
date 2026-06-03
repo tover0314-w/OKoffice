@@ -1105,6 +1105,8 @@ test("AgentPDFClient exposes template pack helpers", async () => {
     colorScheme: "executive_blue",
     contextPacketPath: "context.packet.json",
     outputPath: "board-audit.pdf",
+    renderer: "html",
+    htmlOutputPath: "board-audit.html",
   });
 
   assert.deepEqual(calls, [
@@ -1152,9 +1154,96 @@ test("AgentPDFClient exposes template pack helpers", async () => {
         output_path: "board-audit.pdf",
         color_scheme: "executive_blue",
         context_packet_path: "context.packet.json",
+        renderer: "html",
+        html_output_path: "board-audit.html",
       },
     },
   ]);
+});
+
+test("AgentPDFClient exposes authoring workflow helpers", async () => {
+  const calls: Array<{ url: string; body: unknown }> = [];
+  const client = new AgentPDFClient({
+    baseUrl: "http://agentpdf.test",
+    fetch: async (input, init) => {
+      calls.push({ url: String(input), body: JSON.parse(String(init?.body)) });
+      return jsonResponse({
+        job_id: "job_authoring",
+        status: "succeeded",
+        tool: calls.at(-1)?.url.split("/v1/tools/")[1]?.split("/run")[0] ?? "unknown",
+        artifacts: [],
+        validation: null,
+        warnings: [],
+        usage: {},
+        next_recommended_tools: [],
+        error: null,
+      });
+    },
+  });
+  const brief = {
+    topic: "Independent developers going global",
+    page_count: 4,
+    deliverable: "deck",
+  };
+  const evidenceCards = [
+    {
+      id: "ev_market",
+      claim: "Mobile monetization remains strong.",
+      evidence: "Revenue growth continues while downloads flatten.",
+      source_title: "State of Mobile 2026",
+    },
+  ];
+
+  await client.authoringPlan({ brief });
+  await client.storyboardPlan({ brief, authoringPlan: { recommended_authoring_format: "html" }, evidenceCards });
+  await client.pagesWrite({
+    brief,
+    storyboard: { storyboard_id: "storyboard_1", page_count: 1, pages: [] },
+    evidenceCards,
+    designTokens: { theme: "business_tech" },
+  });
+  await client.createHtmlPackage({
+    pageDocument: { page_document_id: "pages_1", page_count: 0, pages: [] },
+    htmlOutputPath: "deck.html",
+    title: "Independent developers going global",
+  });
+  await client.qaVisualReport({
+    inputPath: "deck.pdf",
+    expectedPageCount: 4,
+    htmlPackageManifestPath: "deck.html-manifest.json",
+    pages: "all",
+  });
+  await client.workflowResearchDeck({
+    brief,
+    evidenceCards,
+    htmlOutputPath: "deck.html",
+    pdfOutputPath: "deck.pdf",
+    artifactDir: "workflow-artifacts",
+    execute: true,
+  });
+
+  assert.deepEqual(calls.map((call) => call.url), [
+    "http://agentpdf.test/v1/tools/pdf.authoring.plan/run",
+    "http://agentpdf.test/v1/tools/pdf.storyboard.plan/run",
+    "http://agentpdf.test/v1/tools/pdf.pages.write/run",
+    "http://agentpdf.test/v1/tools/pdf.create.html_package/run",
+    "http://agentpdf.test/v1/tools/pdf.qa.visual_report/run",
+    "http://agentpdf.test/v1/tools/pdf.workflow.research_deck/run",
+  ]);
+  assert.deepEqual(calls[0]?.body, { brief });
+  assert.deepEqual(calls[3]?.body, {
+    page_document: { page_document_id: "pages_1", page_count: 0, pages: [] },
+    html_output_path: "deck.html",
+    title: "Independent developers going global",
+  });
+  assert.deepEqual(calls[5]?.body, {
+    brief,
+    evidence_cards: evidenceCards,
+    html_output_path: "deck.html",
+    pdf_output_path: "deck.pdf",
+    artifact_dir: "workflow-artifacts",
+    execute: true,
+  });
 });
 
 test("AgentPDFClient exposes artifact bundle export helper", async () => {

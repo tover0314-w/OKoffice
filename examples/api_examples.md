@@ -79,7 +79,47 @@ curl -X POST http://127.0.0.1:7331/v1/tools/pdf.ai.create.from_template_pack/run
     "template_id": "board_audit",
     "color_scheme": "executive_blue",
     "context_packet_path": ".agentpdf-out/context.packet.json",
-    "output_path": ".agentpdf-out/board-audit-from-context.pdf"
+    "output_path": ".agentpdf-out/board-audit-from-context.pdf",
+    "renderer": "html",
+    "html_output_path": ".agentpdf-out/board-audit-from-context.html"
+  }'
+```
+
+Authoring workflows start by choosing a source format, then can plan a full research-to-deck workflow. Add `execute: true` to create the HTML package, render the PDF, and run visual QA in the same call.
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.authoring.plan/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "brief": {
+      "topic": "Independent developers going global in 2026",
+      "goal": "Create a concise strategy deck",
+      "audience": "founders",
+      "page_count": 6,
+      "deliverable": "deck"
+    }
+  }'
+
+curl -X POST http://127.0.0.1:7331/v1/tools/pdf.workflow.research_deck/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "brief": {
+      "topic": "Independent developers going global in 2026",
+      "page_count": 6,
+      "deliverable": "deck"
+    },
+    "evidence_cards": [
+      {
+        "id": "ev_market",
+        "claim": "Mobile monetization remains strong.",
+        "evidence": "Revenue growth continues while downloads flatten.",
+        "source_title": "State of Mobile 2026"
+      }
+    ],
+    "html_output_path": ".agentpdf-out/research-deck.html",
+    "pdf_output_path": ".agentpdf-out/research-deck.pdf",
+    "artifact_dir": ".agentpdf-out/research-deck-artifacts",
+    "execute": true
   }'
 ```
 

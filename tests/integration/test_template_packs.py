@@ -585,6 +585,134 @@ def test_template_pack_renders_image_and_citation_blocks_with_evidence(tmp_path:
     } <= set(result.usage["evidence_coverage"]["covered_source_refs"])
 
 
+def test_template_pack_html_renderer_writes_html_package_and_pdf(tmp_path: Path) -> None:
+    pack_path = tmp_path / "template-pack.json"
+    output_path = tmp_path / "board-audit-html.pdf"
+    html_output = tmp_path / "board-audit-html.html"
+    image_path = tmp_path / "agent-figure.png"
+    Image.new("RGB", (64, 32), color=(31, 58, 95)).save(image_path)
+    pack_path.write_text(json.dumps(_example_pack()), encoding="utf-8")
+    data = {
+        "title": "HTML Template Pack Audit",
+        "blocks": [
+            {
+                "block_id": "blk_agent_image",
+                "type": "image",
+                "title": "Architecture Figure",
+                "target_slot": "evidence",
+                "path": str(image_path),
+                "caption": "Local visual evidence rendered through the HTML package.",
+                "source_refs": ["path://agent-figure.png"],
+            }
+        ],
+    }
+
+    result = create_pdf_from_template_pack(
+        pack_path,
+        template_id="board_audit",
+        output_path=output_path,
+        color_scheme="executive_blue",
+        data=data,
+        renderer="html",
+        html_output_path=html_output,
+    )
+
+    manifest_path = html_output.with_suffix(".html-manifest.json")
+    html_text = html_output.read_text(encoding="utf-8")
+    pdf_text = "\n".join(page.extract_text() or "" for page in PdfReader(output_path).pages)
+
+    assert result.status == "succeeded"
+    assert result.tool == "pdf.ai.create.from_template_pack"
+    assert output_path.exists()
+    assert html_output.exists()
+    assert manifest_path.exists()
+    assert result.usage["renderer"] == "html_package"
+    assert result.usage["html_output_path"] == str(html_output.resolve())
+    assert result.usage["html_package_manifest_path"] == str(manifest_path.resolve())
+    assert result.usage["html_package_manifest"]["asset_count"] == 1
+    assert result.usage["html_package_manifest"]["assets"][0]["source_path"] == str(image_path.resolve())
+    assert result.usage["html_package_validation"]["status"] == "passed"
+    assert any(check.name == "html_package_manifest_valid" for check in result.validation.checks)
+    assert any(check.name == "all_assets_resolved" for check in result.validation.checks)
+    assert any(str(artifact.path).endswith(".html") for artifact in result.artifacts)
+    assert any(str(artifact.path).endswith(".html-manifest.json") for artifact in result.artifacts)
+    assert '<img src="./board-audit-html.assets/' in html_text
+    assert "HTML Template Pack Audit" in pdf_text
+    assert "Architecture Figure" in pdf_text
+    assert "Local visual evidence rendered through the HTML package" in pdf_text
+
+
+def test_template_pack_html_renderer_is_exposed_to_cli_rest_mcp(tmp_path: Path) -> None:
+    pack_path = tmp_path / "template-pack.json"
+    pack_path.write_text(json.dumps(_example_pack()), encoding="utf-8")
+    cli_pdf = tmp_path / "cli-board-audit-html.pdf"
+    cli_html = tmp_path / "cli-board-audit-html.html"
+    api_pdf = tmp_path / "api-board-audit-html.pdf"
+    api_html = tmp_path / "api-board-audit-html.html"
+    mcp_pdf = tmp_path / "mcp-board-audit-html.pdf"
+    mcp_html = tmp_path / "mcp-board-audit-html.html"
+
+    cli_result = runner.invoke(
+        app,
+        [
+            "create",
+            "from-template-pack",
+            str(pack_path),
+            "--template",
+            "board_audit",
+            "--color-scheme",
+            "executive_blue",
+            "-o",
+            str(cli_pdf),
+            "--renderer",
+            "html",
+            "--html-output",
+            str(cli_html),
+            "--json",
+        ],
+    )
+    api = TestClient(create_app())
+    api_response = api.post(
+        "/v1/tools/pdf.ai.create.from_template_pack/run",
+        json={
+            "template_pack": str(pack_path),
+            "template_id": "board_audit",
+            "color_scheme": "executive_blue",
+            "output_path": str(api_pdf),
+            "renderer": "html",
+            "html_output_path": str(api_html),
+        },
+    )
+    mcp_payload = json.loads(
+        pdf_ai_create_from_template_pack(
+            str(pack_path),
+            template_id="board_audit",
+            output_path=str(mcp_pdf),
+            color_scheme="executive_blue",
+            renderer="html",
+            html_output_path=str(mcp_html),
+        )
+    )
+
+    assert cli_result.exit_code == 0
+    cli_payload = json.loads(cli_result.stdout)
+    assert cli_payload["tool"] == "pdf.ai.create.from_template_pack"
+    assert cli_payload["usage"]["renderer"] == "html_package"
+    assert cli_pdf.exists()
+    assert cli_html.exists()
+    assert cli_html.with_suffix(".html-manifest.json").exists()
+    assert api_response.status_code == 200
+    assert api_response.json()["usage"]["renderer"] == "html_package"
+    assert api_pdf.exists()
+    assert api_html.exists()
+    assert api_html.with_suffix(".html-manifest.json").exists()
+    assert mcp_payload["tool"] == "pdf.ai.create.from_template_pack"
+    assert mcp_payload["usage"]["renderer"] == "html_package"
+    assert mcp_pdf.exists()
+    assert mcp_html.exists()
+    assert mcp_html.with_suffix(".html-manifest.json").exists()
+
+
 def test_template_pack_maps_context_packet_to_agent_blocks(tmp_path: Path) -> None:
     pack_path = tmp_path / "template-pack.json"
     output_path = tmp_path / "board-audit-context.pdf"

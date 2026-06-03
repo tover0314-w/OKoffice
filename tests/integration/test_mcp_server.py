@@ -17,6 +17,7 @@ from agentpdf.mcp.server import (
     pdf_ai_rag_ingest,
     pdf_ai_rag_query,
     pdf_ai_rag_search,
+    pdf_authoring_plan,
     pdf_add_page_numbers,
     pdf_add_margin,
     pdf_add_shape,
@@ -62,6 +63,7 @@ from agentpdf.mcp.server import (
     pdf_validate_output,
     pdf_watermark,
     pdf_workflow_plan,
+    pdf_workflow_research_deck,
     pdf_workflow_report,
     pdf_workflow_run,
 )
@@ -133,6 +135,12 @@ def test_mcp_server_exposes_local_pdf_tools() -> None:
     assert "pdf_workflow_plan" in tool_names
     assert "pdf_workflow_run" in tool_names
     assert "pdf_workflow_report" in tool_names
+    assert "pdf_authoring_plan" in tool_names
+    assert "pdf_storyboard_plan" in tool_names
+    assert "pdf_pages_write" in tool_names
+    assert "pdf_create_html_package" in tool_names
+    assert "pdf_qa_visual_report" in tool_names
+    assert "pdf_workflow_research_deck" in tool_names
     assert "pdf_artifacts_export_bundle" in tool_names
     assert "agentpdf_tool_manifest" in tool_names
     assert "pdf_target_select_profile" in tool_names
@@ -158,6 +166,99 @@ def test_mcp_workflow_plan_returns_agent_steps() -> None:
 
     assert payload["tool"] == "pdf.workflow.plan"
     assert payload["usage"]["workflow"]["steps"][0]["tool"] == "pdf.inspect.document"
+
+
+def test_mcp_authoring_tools_are_exposed() -> None:
+    server = create_mcp_server()
+    tool_names = {tool.name for tool in asyncio.run(server.list_tools())}
+
+    assert {
+        "pdf_authoring_plan",
+        "pdf_storyboard_plan",
+        "pdf_pages_write",
+        "pdf_create_html_package",
+        "pdf_qa_visual_report",
+        "pdf_workflow_research_deck",
+    }.issubset(tool_names)
+
+
+def test_mcp_authoring_plan_returns_route() -> None:
+    payload = json.loads(pdf_authoring_plan(_authoring_brief()))
+
+    assert payload["tool"] == "pdf.authoring.plan"
+    assert payload["usage"]["authoring_plan"]["recommended_authoring_format"] == "html"
+    assert payload["next_recommended_tools"] == ["pdf.storyboard.plan"]
+
+
+def test_mcp_workflow_research_deck_returns_steps() -> None:
+    payload = json.loads(
+        pdf_workflow_research_deck(
+            _authoring_brief(),
+            evidence_cards=_evidence_cards(),
+            html_output_path="deck.html",
+            pdf_output_path="deck.pdf",
+        )
+    )
+
+    assert payload["tool"] == "pdf.workflow.research_deck"
+    assert [step["tool"] for step in payload["usage"]["workflow"]["steps"]] == [
+        "pdf.authoring.plan",
+        "pdf.storyboard.plan",
+        "pdf.pages.write",
+        "pdf.create.html_package",
+        "pdf.render.html_package",
+        "pdf.qa.visual_report",
+    ]
+
+
+def test_mcp_workflow_research_deck_execute_mode(tmp_path: Path) -> None:
+    payload = json.loads(
+        pdf_workflow_research_deck(
+            _authoring_brief(),
+            evidence_cards=_evidence_cards(),
+            html_output_path=str(tmp_path / "deck.html"),
+            pdf_output_path=str(tmp_path / "deck.pdf"),
+            artifact_dir=str(tmp_path / "workflow-artifacts"),
+            execute=True,
+        )
+    )
+
+    run = payload["usage"]["workflow_run"]
+    assert payload["tool"] == "pdf.workflow.research_deck"
+    assert run["executed_steps"] == 6
+    assert Path(run["bindings"]["<final.pdf>"]).exists()
+
+
+def test_mcp_authoring_plan_and_research_deck_workflow() -> None:
+    brief = {
+        "topic": "Independent developers going global",
+        "goal": "Create a concise strategy deck",
+        "audience": "founders",
+        "page_count": 4,
+        "deliverable": "deck",
+    }
+
+    plan_payload = json.loads(pdf_authoring_plan(brief))
+    workflow_payload = json.loads(
+        pdf_workflow_research_deck(
+            brief,
+            evidence_cards=[
+                {
+                    "id": "ev_market",
+                    "claim": "Mobile monetization remains strong.",
+                    "evidence": "Revenue growth continues while downloads flatten.",
+                    "source_title": "State of Mobile 2026",
+                }
+            ],
+            html_output_path="deck.html",
+            pdf_output_path="deck.pdf",
+        )
+    )
+
+    assert plan_payload["tool"] == "pdf.authoring.plan"
+    assert plan_payload["usage"]["authoring_plan"]["recommended_authoring_format"] == "html"
+    assert workflow_payload["tool"] == "pdf.workflow.research_deck"
+    assert workflow_payload["usage"]["workflow"]["steps"][0]["tool"] == "pdf.authoring.plan"
 
 
 def test_mcp_workflow_run_returns_step_evidence(text_pdf: Path) -> None:
@@ -603,6 +704,27 @@ def _write_image_pdf(path: Path, image_path: Path) -> None:
     document.drawImage(str(image_path), 24, 120, width=32, height=24)
     document.showPage()
     document.save()
+
+
+def _authoring_brief() -> dict[str, object]:
+    return {
+        "topic": "Independent developers going global",
+        "goal": "Create a concise strategy deck",
+        "audience": "founders",
+        "page_count": 4,
+        "deliverable": "deck",
+    }
+
+
+def _evidence_cards() -> list[dict[str, object]]:
+    return [
+        {
+            "id": "ev_market",
+            "claim": "Mobile monetization remains strong.",
+            "evidence": "Revenue growth continues while downloads flatten.",
+            "source_title": "State of Mobile 2026",
+        }
+    ]
 
 
 def _fake_tesseract_tsv(

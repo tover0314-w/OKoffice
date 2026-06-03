@@ -44,6 +44,12 @@ SUPPORTED_LOCAL_WORKFLOW_TOOLS = {
     "pdf.ai.rag.chat",
     "pdf.ai.rag.export_report",
     "pdf.ai.rag.highlight_sources",
+    "pdf.authoring.plan",
+    "pdf.storyboard.plan",
+    "pdf.pages.write",
+    "pdf.create.html_package",
+    "pdf.render.html_package",
+    "pdf.qa.visual_report",
 }
 
 
@@ -247,6 +253,50 @@ def _failed_step(step_id: str, tool: str, message: str, code: str) -> dict[str, 
 def _run_local_step(tool: str, payload: dict[str, Any]) -> ToolResult:
     from agentpdf.tools import runner
 
+    if tool == "pdf.authoring.plan":
+        return runner.run_authoring_plan(brief=dict(payload.get("brief", {})))
+    if tool == "pdf.storyboard.plan":
+        authoring_plan = payload.get("authoring_plan")
+        evidence_cards = payload.get("evidence_cards")
+        return runner.run_storyboard_plan(
+            brief=dict(payload.get("brief", {})),
+            authoring_plan=authoring_plan if isinstance(authoring_plan, dict) else None,
+            evidence_cards=evidence_cards if isinstance(evidence_cards, list) else None,
+        )
+    if tool == "pdf.pages.write":
+        evidence_cards = payload.get("evidence_cards")
+        design_tokens = payload.get("design_tokens")
+        return runner.run_pages_write(
+            brief=dict(payload.get("brief", {})),
+            storyboard=dict(payload.get("storyboard", {})),
+            evidence_cards=evidence_cards if isinstance(evidence_cards, list) else None,
+            design_tokens=design_tokens if isinstance(design_tokens, dict) else None,
+        )
+    if tool == "pdf.create.html_package":
+        return runner.run_create_html_package(
+            page_document=dict(payload.get("page_document", {})),
+            html_output_path=payload.get("html_output_path", "deck.html"),
+            title=str(payload["title"]) if payload.get("title") is not None else None,
+        )
+    if tool == "pdf.render.html_package":
+        return runner.run_render_html_package(
+            package_path=payload.get("package_path", payload.get("input_path", "")),
+            output_path=payload.get("output_path", "deck.pdf"),
+        )
+    if tool == "pdf.qa.visual_report":
+        expected_page_count, error = _coerce_optional_int(
+            payload.get("expected_page_count"),
+            field_name="expected_page_count",
+            tool=tool,
+        )
+        if error is not None:
+            return error
+        return runner.run_qa_visual_report(
+            input_path=payload.get("input_path", payload.get("path", "")),
+            expected_page_count=expected_page_count,
+            html_package_manifest_path=payload.get("html_package_manifest_path"),
+            pages=str(payload.get("pages", "all")),
+        )
     if tool == "pdf.inspect.document":
         return runner.run_inspect(payload.get("path", payload.get("input_path", "")))
     if tool == "pdf.inspect.pages":
@@ -487,11 +537,11 @@ def _summarize_result(result: ToolResult) -> dict[str, Any]:
     return summary
 
 
-def _initial_bindings(workflow: Mapping[str, Any]) -> dict[str, str]:
+def _initial_bindings(workflow: Mapping[str, Any]) -> dict[str, Any]:
     raw_bindings = workflow.get("bindings", {})
-    bindings: dict[str, str] = {}
+    bindings: dict[str, Any] = {}
     if isinstance(raw_bindings, Mapping):
-        bindings.update({str(key): str(value) for key, value in raw_bindings.items()})
+        bindings.update({str(key): value for key, value in raw_bindings.items()})
     input_path = workflow.get("input_path")
     if input_path:
         bindings.setdefault("<input.pdf>", str(input_path))
@@ -502,7 +552,7 @@ def _initial_bindings(workflow: Mapping[str, Any]) -> dict[str, str]:
 
 def _auto_bind_placeholders(
     value: Any,
-    bindings: dict[str, str],
+    bindings: dict[str, Any],
     artifact_dir: Path,
 ) -> None:
     for placeholder in _collect_placeholders(value):
@@ -534,9 +584,9 @@ def _collect_placeholders(value: Any) -> set[str]:
 
 def _generated_placeholder_value(
     placeholder: str,
-    bindings: dict[str, str],
+    bindings: dict[str, Any],
     artifact_dir: Path,
-) -> str | None:
+) -> Any | None:
     if placeholder == "<final.pdf>":
         return bindings.get("<last.pdf>") or bindings.get("<input.pdf>")
     if placeholder == "<compressed-or-input.pdf>":
@@ -547,6 +597,8 @@ def _generated_placeholder_value(
         "<compressed.pdf>": "compressed.pdf",
         "<repaired.pdf>": "repaired.pdf",
         "<output.pdf>": "output.pdf",
+        "<deck.html>": "deck.html",
+        "<deck.pdf>": "deck.pdf",
         "<highlighted.pdf>": "highlighted.pdf",
         "<rag-report.pdf>": "rag-report.pdf",
     }
@@ -561,7 +613,7 @@ def _generated_placeholder_value(
     return None
 
 
-def _resolve_placeholders(value: Any, bindings: dict[str, str]) -> Any:
+def _resolve_placeholders(value: Any, bindings: dict[str, Any]) -> Any:
     if isinstance(value, str):
         return bindings.get(value.strip(), value)
     if isinstance(value, Mapping):
@@ -571,7 +623,28 @@ def _resolve_placeholders(value: Any, bindings: dict[str, str]) -> Any:
     return value
 
 
-def _record_result_bindings(tool: str, result: ToolResult, bindings: dict[str, str]) -> None:
+def _record_result_bindings(tool: str, result: ToolResult, bindings: dict[str, Any]) -> None:
+    if tool == "pdf.authoring.plan":
+        plan = result.usage.get("authoring_plan", {})
+        if isinstance(plan, Mapping):
+            bindings["<authoring_plan>"] = dict(plan)
+    if tool == "pdf.storyboard.plan":
+        storyboard = result.usage.get("storyboard", {})
+        if isinstance(storyboard, Mapping):
+            bindings["<storyboard>"] = dict(storyboard)
+    if tool == "pdf.pages.write":
+        page_document = result.usage.get("page_document", {})
+        if isinstance(page_document, Mapping):
+            bindings["<page_document>"] = dict(page_document)
+    if tool == "pdf.create.html_package":
+        manifest_path = result.usage.get("html_package_manifest_path")
+        if manifest_path:
+            bindings["<html_package_manifest_path>"] = str(manifest_path)
+    if tool == "pdf.render.html_package":
+        if result.validation and result.validation.page_count is not None:
+            bindings["<rendered_page_count>"] = result.validation.page_count
+        if result.artifacts:
+            bindings["<final.pdf>"] = str(result.artifacts[0].path)
     for artifact in result.artifacts:
         path = str(artifact.path)
         if artifact.mime_type == "application/pdf":
@@ -607,13 +680,29 @@ def _find_unresolved_placeholder(value: Any) -> str | None:
     return None
 
 
+def _coerce_optional_int(value: Any, field_name: str, tool: str) -> tuple[int | None, ToolResult | None]:
+    if value is None:
+        return None, None
+    try:
+        return int(value), None
+    except (TypeError, ValueError):
+        message = f"{field_name} must be an integer."
+        return None, ToolResult(
+            job_id=f"job_{uuid4().hex[:16]}",
+            status="failed",
+            tool=tool,
+            error=AgentPDFError(code="unsafe_input_rejected", message=message),
+            warnings=[message],
+        )
+
+
 def _failed_result(
     run_id: str,
     error: AgentPDFError,
     step_results: list[dict[str, Any]],
     artifacts: list[Artifact] | None = None,
     warnings: list[str] | None = None,
-    bindings: dict[str, str] | None = None,
+    bindings: dict[str, Any] | None = None,
     executed_steps: int = 0,
     failed_steps: int = 1,
     dry_run: bool = False,
@@ -652,7 +741,7 @@ def _workflow_usage(
     executed_steps: int,
     failed_steps: int,
     step_results: list[dict[str, Any]],
-    bindings: dict[str, str],
+    bindings: dict[str, Any],
 ) -> dict[str, Any]:
     return {
         "run_id": run_id,

@@ -58,6 +58,36 @@
       "status": "beta"
     },
     {
+      "name": "pdf_workflow_research_deck",
+      "maps_to": "pdf.workflow.research_deck",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_authoring_plan",
+      "maps_to": "pdf.authoring.plan",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_storyboard_plan",
+      "maps_to": "pdf.storyboard.plan",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_pages_write",
+      "maps_to": "pdf.pages.write",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_create_html_package",
+      "maps_to": "pdf.create.html_package",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_qa_visual_report",
+      "maps_to": "pdf.qa.visual_report",
+      "status": "beta"
+    },
+    {
       "name": "pdf_context_build_packet",
       "maps_to": "pdf.context.build_packet",
       "status": "beta"

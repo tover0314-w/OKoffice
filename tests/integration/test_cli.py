@@ -52,6 +52,165 @@ def test_workflow_plan_cli_returns_agent_steps() -> None:
     ]
 
 
+def test_authoring_plan_cli_from_brief_json(tmp_path: Path) -> None:
+    brief_path = tmp_path / "brief.json"
+    brief_path.write_text(
+        json.dumps(
+            {
+                "topic": "Independent developers going global",
+                "goal": "Create a concise strategy deck",
+                "audience": "founders",
+                "page_count": 4,
+                "deliverable": "deck",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(app, ["authoring", "plan", str(brief_path), "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["tool"] == "pdf.authoring.plan"
+    assert payload["usage"]["authoring_plan"]["recommended_authoring_format"] == "html"
+
+
+def test_cli_authoring_plan_from_brief_json(tmp_path: Path) -> None:
+    brief_path = _write_authoring_brief(tmp_path)
+
+    result = runner.invoke(app, ["authoring", "plan", str(brief_path), "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["tool"] == "pdf.authoring.plan"
+    assert payload["usage"]["authoring_plan"]["recommended_authoring_format"] == "html"
+
+
+def test_cli_storyboard_plan_from_brief_json(tmp_path: Path) -> None:
+    brief_path = _write_authoring_brief(tmp_path)
+    evidence_path = _write_evidence_cards(tmp_path)
+
+    result = runner.invoke(
+        app,
+        ["storyboard", "plan", str(brief_path), "--evidence", str(evidence_path), "--json"],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["tool"] == "pdf.storyboard.plan"
+    assert payload["usage"]["storyboard"]["page_count"] == 4
+
+
+def test_cli_workflow_research_deck(tmp_path: Path) -> None:
+    brief_path = _write_authoring_brief(tmp_path)
+    evidence_path = _write_evidence_cards(tmp_path)
+
+    result = runner.invoke(
+        app,
+        [
+            "workflow",
+            "research-deck",
+            str(brief_path),
+            "--evidence",
+            str(evidence_path),
+            "--html-output",
+            str(tmp_path / "deck.html"),
+            "--pdf-output",
+            str(tmp_path / "deck.pdf"),
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["tool"] == "pdf.workflow.research_deck"
+    assert payload["usage"]["workflow"]["steps"][0]["tool"] == "pdf.authoring.plan"
+    assert payload["usage"]["workflow"]["steps"][-1]["tool"] == "pdf.qa.visual_report"
+
+
+def test_workflow_research_deck_cli_returns_authoring_steps(tmp_path: Path) -> None:
+    brief_path = tmp_path / "brief.json"
+    evidence_path = tmp_path / "evidence.json"
+    brief_path.write_text(
+        json.dumps(
+            {
+                "topic": "Independent developers going global",
+                "goal": "Create a concise strategy deck",
+                "audience": "founders",
+                "page_count": 4,
+                "deliverable": "deck",
+            }
+        ),
+        encoding="utf-8",
+    )
+    evidence_path.write_text(
+        json.dumps(
+            [
+                {
+                    "id": "ev_market",
+                    "claim": "Mobile monetization remains strong.",
+                    "evidence": "Revenue growth continues while downloads flatten.",
+                    "source_title": "State of Mobile 2026",
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "workflow",
+            "research-deck",
+            str(brief_path),
+            "--evidence-cards",
+            str(evidence_path),
+            "--html-output",
+            str(tmp_path / "deck.html"),
+            "--pdf-output",
+            str(tmp_path / "deck.pdf"),
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["tool"] == "pdf.workflow.research_deck"
+    assert payload["usage"]["workflow"]["steps"][0]["tool"] == "pdf.authoring.plan"
+    assert payload["usage"]["workflow"]["steps"][-1]["tool"] == "pdf.qa.visual_report"
+
+
+def test_workflow_research_deck_cli_can_execute_to_pdf(tmp_path: Path) -> None:
+    brief_path = _write_authoring_brief(tmp_path)
+    evidence_path = _write_evidence_cards(tmp_path)
+
+    result = runner.invoke(
+        app,
+        [
+            "workflow",
+            "research-deck",
+            str(brief_path),
+            "--evidence-cards",
+            str(evidence_path),
+            "--html-output",
+            str(tmp_path / "deck.html"),
+            "--pdf-output",
+            str(tmp_path / "deck.pdf"),
+            "--artifact-dir",
+            str(tmp_path / "workflow-artifacts"),
+            "--execute",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    run = payload["usage"]["workflow_run"]
+    assert payload["tool"] == "pdf.workflow.research_deck"
+    assert run["executed_steps"] == 6
+    assert Path(run["bindings"]["<final.pdf>"]).exists()
+
+
 def test_workflow_run_cli_executes_workflow_file(text_pdf: Path, tmp_path: Path) -> None:
     workflow_path = tmp_path / "workflow.json"
     workflow_path.write_text(
@@ -833,6 +992,43 @@ def test_serve_api_accepts_host_and_port_for_containers(monkeypatch) -> None:
     assert called["app_path"] == "agentpdf.api.app:create_app"
     assert called["kwargs"]["host"] == "0.0.0.0"
     assert called["kwargs"]["port"] == 7332
+
+
+def _write_authoring_brief(tmp_path: Path) -> Path:
+    brief_path = tmp_path / "brief.json"
+    brief_path.write_text(
+        json.dumps(
+            {
+                "topic": "Independent developers going global",
+                "goal": "Create a concise strategy deck",
+                "audience": "founders",
+                "page_count": 4,
+                "deliverable": "deck",
+            }
+        ),
+        encoding="utf-8",
+    )
+    return brief_path
+
+
+def _write_evidence_cards(tmp_path: Path) -> Path:
+    evidence_path = tmp_path / "evidence.json"
+    evidence_path.write_text(
+        json.dumps(
+            {
+                "evidence_cards": [
+                    {
+                        "id": "ev_market",
+                        "claim": "Mobile monetization remains strong.",
+                        "evidence": "Revenue growth continues while downloads flatten.",
+                        "source_title": "State of Mobile 2026",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    return evidence_path
 
 
 def _write_image_pdf(path: Path, image_path: Path) -> None:

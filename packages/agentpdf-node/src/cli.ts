@@ -207,6 +207,69 @@ export async function runCli(
         stdout,
       );
     }
+    if (command === "workflow-research-deck") {
+      return emitResult(
+        await client.workflowResearchDeck({
+          brief: await parseRequiredObject(takeRequiredOption(args, ["--brief"]), "--brief"),
+          evidenceCards: await parseOptionalObjectList(takeOption(args, ["--evidence-cards"])),
+          htmlOutputPath: takeOption(args, ["--html-output"]),
+          pdfOutputPath: takeOption(args, ["--pdf-output"]),
+          artifactDir: takeOption(args, ["--artifact-dir"]),
+          execute: takeFlag(args, ["--execute"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "authoring-plan") {
+      return emitResult(
+        await client.authoringPlan({
+          brief: await parseRequiredObject(takeRequiredOption(args, ["--brief"]), "--brief"),
+        }),
+        stdout,
+      );
+    }
+    if (command === "storyboard-plan") {
+      return emitResult(
+        await client.storyboardPlan({
+          brief: await parseRequiredObject(takeRequiredOption(args, ["--brief"]), "--brief"),
+          authoringPlan: await parseOptionalObject(takeOption(args, ["--authoring-plan"])),
+          evidenceCards: await parseOptionalObjectList(takeOption(args, ["--evidence-cards"])),
+        }),
+        stdout,
+      );
+    }
+    if (command === "pages-write") {
+      return emitResult(
+        await client.pagesWrite({
+          brief: await parseRequiredObject(takeRequiredOption(args, ["--brief"]), "--brief"),
+          storyboard: await parseRequiredObject(takeRequiredOption(args, ["--storyboard"]), "--storyboard"),
+          evidenceCards: await parseOptionalObjectList(takeOption(args, ["--evidence-cards"])),
+          designTokens: await parseOptionalObject(takeOption(args, ["--design-tokens"])),
+        }),
+        stdout,
+      );
+    }
+    if (command === "create-html-package") {
+      return emitResult(
+        await client.createHtmlPackage({
+          pageDocument: await parseRequiredObject(takeRequiredOption(args, ["--page-document"]), "--page-document"),
+          htmlOutputPath: takeRequiredOption(args, ["--html-output"]),
+          title: takeOption(args, ["--title"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "qa-visual-report") {
+      return emitResult(
+        await client.qaVisualReport({
+          inputPath: takeRequiredOption(args, ["--input", "--input-path"]),
+          expectedPageCount: takeIntegerOption(args, ["--expected-page-count"]),
+          htmlPackageManifestPath: takeOption(args, ["--html-package-manifest"]),
+          pages: takeOption(args, ["--pages"]),
+        }),
+        stdout,
+      );
+    }
     if (command === "context-build") {
       return emitResult(
         await client.buildContextPacket({
@@ -1878,6 +1941,8 @@ export async function runCli(
           title: takeOption(args, ["--title"]),
           prompt: takeOption(args, ["--prompt"]),
           stylePack: takeOption(args, ["--style-pack"]),
+          renderer: takeOption(args, ["--renderer"]),
+          htmlOutputPath: takeOption(args, ["--html-output"]),
         }),
         stdout,
       );
@@ -2262,6 +2327,12 @@ function helpText(): string {
     "  agentpdf-node workflow-plan --goal GOAL [--input-path FILE]",
     "  agentpdf-node workflow-run --payload '{...}' [--binding KEY=VALUE] [--dry-run]",
     "  agentpdf-node workflow-report --payload '{...}' [-o report.md]",
+    "  agentpdf-node workflow-research-deck --brief brief.json [--evidence-cards evidence.json] [--html-output deck.html --pdf-output deck.pdf] [--execute --artifact-dir workflow-artifacts]",
+    "  agentpdf-node authoring-plan --brief brief.json",
+    "  agentpdf-node storyboard-plan --brief brief.json [--authoring-plan route.json] [--evidence-cards evidence.json]",
+    "  agentpdf-node pages-write --brief brief.json --storyboard storyboard.json [--evidence-cards evidence.json] [--design-tokens tokens.json]",
+    "  agentpdf-node create-html-package --page-document pages.json --html-output deck.html [--title TITLE]",
+    "  agentpdf-node qa-visual-report --input deck.pdf [--expected-page-count 8] [--html-package-manifest deck.html-manifest.json]",
     "  agentpdf-node context-build --text TEXT --file FILE --item-json '{...}' -o context.packet.json",
     "  agentpdf-node context-ingest --file FILE [-o context-item.json] [--role ROLE] [--label LABEL]",
     "  agentpdf-node context-packet --item-json context-item.json --file FILE -o context.packet.json",
@@ -2374,7 +2445,7 @@ function helpText(): string {
     "  agentpdf-node create-validate-template-pack PACK.json [-o validation.json]",
     "  agentpdf-node create-plan-template-pack PACK.json --profile technical_audit --context-packet context.packet.json --planned-output OUT.pdf [-o plan.json]",
     "  agentpdf-node create-agent PACK.json --profile technical_audit --context-packet context.packet.json -o OUT.pdf [--plan-output plan.json] [--coverage-output coverage.json] [--context-classification-output classification.json] [--context-report-output context-report.pdf] [--bundle-output audit-bundle.zip]",
-    "  agentpdf-node create-from-template-pack PACK.json --template board_audit -o OUT.pdf [--color-scheme executive_blue] [--context-packet context.packet.json]",
+    "  agentpdf-node create-from-template-pack PACK.json --template board_audit -o OUT.pdf [--color-scheme executive_blue] [--context-packet context.packet.json] [--renderer html --html-output OUT.html]",
     "  agentpdf-node create-template-preview --template invoice -o preview.pdf",
   ].join("\n");
 }

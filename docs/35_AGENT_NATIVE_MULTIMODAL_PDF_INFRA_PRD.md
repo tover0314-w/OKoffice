@@ -6,6 +6,8 @@ This document updates the product direction for AgentPDF/okpdf beyond a basic PD
 
 The open-source harness still starts with local deterministic PDF operations, CLI, MCP, REST, SDKs, schemas, artifacts, and validation. The larger product ambition is now explicit: AgentPDF should become agent-native multimodal document infrastructure where PDF is the durable, inspectable, verifiable delivery artifact.
 
+Implementation status: the OSS MVP includes deterministic local authoring route planning, storyboard scaffolding, page JSON, HTML source packages, HTML package rendering, and visual QA. Live research, LLM synthesis, and managed browser rendering remain explicit cloud or optional-worker candidates.
+
 ## Product thesis
 
 AgentPDF is the operating layer for agents that need to understand, compose, operate on, and verify PDF artifacts.

@@ -32,7 +32,7 @@ The public CLI is `okpdf`. The legacy/internal command `agentpdf` still works fo
 
 ## Why Star This
 
-- Complete public tool map from day one: 228 public tool names are discoverable now.
+- Complete public tool map from day one: 240 public tool names are discoverable now.
 - Local-first by default: no hosted URL, paid key, or cloud dependency required.
 - Agent-first outputs: every tool returns structured JSON with artifacts, validation, warnings, and next recommended tools.
 - Bigger than RAG: the product direction covers context packets, target PDF profiles, source graphs, composition IR, PDF patch transactions, evidence coverage, and multimodal context-to-PDF workflows.
@@ -90,6 +90,23 @@ okpdf agent setup openclaw -o .agentpdf-out/openclaw.mcp.json --safe-root . --js
 
 That is the happy path: install, check the environment, generate a validated PDF.
 The doctor report separates required runtime checks from optional capabilities such as Tesseract OCR and CJK fonts, so local agents can tell whether scan/OCR and multilingual output are fully enabled.
+
+### Authoring Workflow: Brief to Verified PDF
+
+AgentPDF can plan a local authoring route, build a storyboard, write page JSON, create an HTML/CSS source package, render that package to PDF, and run visual QA. By default `workflow research-deck` returns the plan; add `--execute` to run the HTML-to-PDF chain immediately.
+
+```bash
+okpdf authoring plan examples/research_deck_brief.json --json
+okpdf workflow research-deck examples/research_deck_brief.json \
+  --evidence-cards examples/research_deck_evidence.json \
+  --html-output output/deck.html \
+  --pdf-output output/deck.pdf \
+  --artifact-dir output/research-deck-artifacts \
+  --execute \
+  --json
+```
+
+The OSS path is local-first and deterministic. Hosted research, LLM synthesis, and managed browser renderers are future cloud or optional-worker candidates, not default core behavior.
 
 ## Docker
 
@@ -150,7 +167,7 @@ okpdf context build --text "Create a technical audit PDF from code, metrics, vis
 okpdf context classify .agentpdf-out/context.packet.json --profile technical_audit -o .agentpdf-out/context.classification.json --json
 okpdf evidence context-packet-report .agentpdf-out/context.packet.json -o .agentpdf-out/context-report.pdf --report-output .agentpdf-out/context-report.json --json
 okpdf create agent examples/template-packs/local-agent-starter.json --profile technical_audit --context-packet .agentpdf-out/context.packet.json -o .agentpdf-out/board-audit-agent.pdf --plan-output .agentpdf-out/board-audit-agent.plan.json --coverage-output .agentpdf-out/board-audit-agent.coverage.json --context-classification-output .agentpdf-out/board-audit-agent.context-classification.json --context-report-output .agentpdf-out/board-audit-agent.context-report.pdf --context-report-json-output .agentpdf-out/board-audit-agent.context-report.json --bundle-output .agentpdf-out/board-audit-agent.agentpdf-bundle.zip --json
-okpdf create from-template-pack examples/template-packs/local-agent-starter.json --template board_audit --color-scheme executive_blue --context-packet .agentpdf-out/context.packet.json -o .agentpdf-out/board-audit-from-context.pdf --json
+okpdf create from-template-pack examples/template-packs/local-agent-starter.json --template board_audit --color-scheme executive_blue --context-packet .agentpdf-out/context.packet.json -o .agentpdf-out/board-audit-from-context.pdf --renderer html --html-output .agentpdf-out/board-audit-from-context.html --json
 okpdf target profiles -o .agentpdf-out/target-profiles.json --json
 okpdf target validate --profile-json examples/target-profiles/media-learning-deck.json -o .agentpdf-out/media-learning-deck.validation.json --json
 okpdf compose plan .agentpdf-out/context.packet.json --profile technical_audit -o .agentpdf-out/technical-audit.plan.json --json

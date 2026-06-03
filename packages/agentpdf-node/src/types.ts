@@ -125,6 +125,45 @@ export interface WorkflowReportInput {
   outputPath?: string;
 }
 
+export interface WorkflowResearchDeckInput {
+  brief: JsonObject;
+  evidenceCards?: JsonObject[];
+  htmlOutputPath?: string;
+  pdfOutputPath?: string;
+  artifactDir?: string;
+  execute?: boolean;
+}
+
+export interface AuthoringPlanInput {
+  brief: JsonObject;
+}
+
+export interface StoryboardPlanInput {
+  brief: JsonObject;
+  authoringPlan?: JsonObject;
+  evidenceCards?: JsonObject[];
+}
+
+export interface PagesWriteInput {
+  brief: JsonObject;
+  storyboard: JsonObject;
+  evidenceCards?: JsonObject[];
+  designTokens?: JsonObject;
+}
+
+export interface CreateHtmlPackageInput {
+  pageDocument: JsonObject;
+  htmlOutputPath: string;
+  title?: string;
+}
+
+export interface QaVisualReportInput {
+  inputPath: string;
+  expectedPageCount?: number;
+  htmlPackageManifestPath?: string;
+  pages?: string;
+}
+
 export interface BuildContextPacketInput {
   contextItems: JsonObject[];
   outputPath: string;
@@ -634,6 +673,8 @@ export interface CreateFromTemplatePackInput {
   title?: string;
   prompt?: string;
   stylePack?: string;
+  renderer?: "markdown" | "html" | string;
+  htmlOutputPath?: string;
 }
 
 export interface ValidateOutputInput {

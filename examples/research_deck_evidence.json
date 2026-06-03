@@ -1,0 +1,13 @@
+[
+  {
+    "id": "ev_market",
+    "claim": "Mobile monetization remains strong.",
+    "evidence": "Revenue growth continues while downloads flatten.",
+    "source_title": "State of Mobile 2026",
+    "source_url": "https://example.com/mobile",
+    "source_date": "2026-01-01",
+    "publisher": "Example Research",
+    "confidence": "medium",
+    "usable_for": ["market_context", "executive_summary"]
+  }
+]

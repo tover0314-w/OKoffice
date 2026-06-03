@@ -18,6 +18,7 @@ from agentpdf.tools.runner import (
     run_artifacts_manifest,
     run_artifacts_source_map,
     run_artifacts_verify_bundle,
+    run_authoring_plan,
     run_blank_page_check,
     run_booklet,
     run_build_context_packet,
@@ -40,6 +41,7 @@ from agentpdf.tools.runner import (
     run_create_agent,
     run_create_from_prompt,
     run_create_from_template_pack,
+    run_create_html_package,
     run_plan_template_pack_creation,
     run_create_template_preview,
     run_create_template_packs,
@@ -82,6 +84,7 @@ from agentpdf.tools.runner import (
     run_patch_plan,
     run_patch_preview,
     run_patch_verify,
+    run_pages_write,
     run_parse_charts,
     run_parse_figures,
     run_parse_formulas,
@@ -101,6 +104,7 @@ from agentpdf.tools.runner import (
     run_rag_ingest,
     run_rag_query,
     run_rag_search,
+    run_qa_visual_report,
     run_remove_pages,
     run_render_html_package,
     run_remove_unused_objects,
@@ -131,6 +135,7 @@ from agentpdf.tools.runner import (
     run_select_target_profile,
     run_split,
     run_strikeout,
+    run_storyboard_plan,
     run_subset_fonts,
     run_target_profiles,
     run_underline,
@@ -143,6 +148,7 @@ from agentpdf.tools.runner import (
     run_url_to_pdf,
     run_watermark,
     run_workflow_plan,
+    run_workflow_research_deck,
     run_workflow_report,
     run_workflow_run,
     run_xlsx_to_pdf,
@@ -168,6 +174,12 @@ def create_mcp_server() -> FastMCP:
     server.tool(name="pdf_workflow_plan")(pdf_workflow_plan)
     server.tool(name="pdf_workflow_run")(pdf_workflow_run)
     server.tool(name="pdf_workflow_report")(pdf_workflow_report)
+    server.tool(name="pdf_workflow_research_deck")(pdf_workflow_research_deck)
+    server.tool(name="pdf_authoring_plan")(pdf_authoring_plan)
+    server.tool(name="pdf_storyboard_plan")(pdf_storyboard_plan)
+    server.tool(name="pdf_pages_write")(pdf_pages_write)
+    server.tool(name="pdf_create_html_package")(pdf_create_html_package)
+    server.tool(name="pdf_qa_visual_report")(pdf_qa_visual_report)
     server.tool(name="pdf_merge")(pdf_merge)
     server.tool(name="pdf_split")(pdf_split)
     server.tool(name="pdf_extract_pages")(pdf_extract_pages)
@@ -408,6 +420,86 @@ def pdf_workflow_run(workflow: dict[str, object], dry_run: bool = False) -> str:
 def pdf_workflow_report(workflow_run: dict[str, object], output_path: str | None = None) -> str:
     """Summarize a local workflow run with audit evidence."""
     return run_workflow_report(workflow_run=workflow_run, output_path=output_path).model_dump_json()
+
+
+def pdf_workflow_research_deck(
+    brief: dict[str, object],
+    evidence_cards: list[dict[str, object]] | None = None,
+    html_output_path: str = "<deck.html>",
+    pdf_output_path: str = "<deck.pdf>",
+    artifact_dir: str | None = None,
+    execute: bool = False,
+) -> str:
+    """Plan a local research-to-deck workflow."""
+    return run_workflow_research_deck(
+        brief=brief,
+        evidence_cards=evidence_cards,
+        html_output_path=html_output_path,
+        pdf_output_path=pdf_output_path,
+        artifact_dir=artifact_dir,
+        execute=execute,
+    ).model_dump_json()
+
+
+def pdf_authoring_plan(brief: dict[str, object]) -> str:
+    """Plan the best local authoring route before PDF creation."""
+    return run_authoring_plan(brief).model_dump_json()
+
+
+def pdf_storyboard_plan(
+    brief: dict[str, object],
+    authoring_plan: dict[str, object] | None = None,
+    evidence_cards: list[dict[str, object]] | None = None,
+) -> str:
+    """Create a deterministic page-by-page storyboard."""
+    return run_storyboard_plan(
+        brief=brief,
+        authoring_plan=authoring_plan,
+        evidence_cards=evidence_cards,
+    ).model_dump_json()
+
+
+def pdf_pages_write(
+    brief: dict[str, object],
+    storyboard: dict[str, object],
+    evidence_cards: list[dict[str, object]] | None = None,
+    design_tokens: dict[str, object] | None = None,
+) -> str:
+    """Write page JSON from storyboard and evidence cards."""
+    return run_pages_write(
+        brief=brief,
+        storyboard=storyboard,
+        evidence_cards=evidence_cards,
+        design_tokens=design_tokens,
+    ).model_dump_json()
+
+
+def pdf_create_html_package(
+    page_document: dict[str, object],
+    html_output_path: str,
+    title: str | None = None,
+) -> str:
+    """Write a local self-contained HTML/CSS source package."""
+    return run_create_html_package(
+        page_document=page_document,
+        html_output_path=html_output_path,
+        title=title,
+    ).model_dump_json()
+
+
+def pdf_qa_visual_report(
+    input_path: str,
+    expected_page_count: int | None = None,
+    html_package_manifest_path: str | None = None,
+    pages: str = "all",
+) -> str:
+    """Run visual QA checks over a generated PDF."""
+    return run_qa_visual_report(
+        input_path=input_path,
+        expected_page_count=expected_page_count,
+        html_package_manifest_path=html_package_manifest_path,
+        pages=pages,
+    ).model_dump_json()
 
 
 def pdf_merge(input_paths: list[str], output_path: str) -> str:
@@ -847,6 +939,8 @@ def pdf_ai_create_agent(
     title: str | None = None,
     prompt: str | None = None,
     style_pack: str | None = None,
+    renderer: str = "markdown",
+    html_output_path: str | None = None,
 ) -> str:
     """Run the local create agent: plan, create, render-check, blank-check, and coverage."""
     return run_create_agent(
@@ -866,6 +960,8 @@ def pdf_ai_create_agent(
         title=title,
         prompt=prompt,
         style_pack=style_pack,
+        renderer=renderer,
+        html_output_path=html_output_path,
     ).model_dump_json()
 
 
@@ -880,6 +976,8 @@ def pdf_ai_create_from_template_pack(
     title: str | None = None,
     prompt: str | None = None,
     style_pack: str | None = None,
+    renderer: str = "markdown",
+    html_output_path: str | None = None,
 ) -> str:
     """Create a validated local PDF from a template pack."""
     return run_create_from_template_pack(
@@ -893,6 +991,8 @@ def pdf_ai_create_from_template_pack(
         title=title,
         prompt=prompt,
         style_pack=style_pack,
+        renderer=renderer,
+        html_output_path=html_output_path,
     ).model_dump_json()
 
 

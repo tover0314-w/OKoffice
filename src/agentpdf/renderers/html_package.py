@@ -17,6 +17,9 @@ from agentpdf.schemas.models import ToolResult, ValidationCheck, ValidationRepor
 from agentpdf.security.paths import resolve_input_path, resolve_output_path
 
 
+SUPPORTED_RENDERER_CONTRACTS = {"html-package-v0", "authoring-html-package-v0"}
+
+
 def write_composition_html_package(
     *,
     composition_ir: dict[str, Any],
@@ -194,6 +197,9 @@ def _block_html(block: dict[str, Any], asset: dict[str, Any] | None = None) -> s
     target_slot = str(block.get("target_slot") or "body")
     source_refs = [str(ref) for ref in block.get("source_refs", [])]
     hints = block.get("render_hints") if isinstance(block.get("render_hints"), dict) else {}
+    data = block.get("data") if isinstance(block.get("data"), dict) else {}
+    if data and block_type == "image":
+        hints = {**data, **hints}
     return "\n".join(
         [
             f'    <article class="agentpdf-block block-{_class_token(block_type)}" data-block-id="{_attr(block_id)}" data-block-type="{_attr(block_type)}" data-slot="{_attr(target_slot)}" data-source-refs="{_attr(" ".join(source_refs))}">',
@@ -283,7 +289,15 @@ def _image_asset_ref(block: dict[str, Any]) -> str | None:
     if str(block.get("type") or "") != "image":
         return None
     hints = block.get("render_hints") if isinstance(block.get("render_hints"), dict) else {}
-    raw = hints.get("path") or hints.get("image_path") or block.get("path") or block.get("image_path")
+    data = block.get("data") if isinstance(block.get("data"), dict) else {}
+    raw = (
+        hints.get("path")
+        or hints.get("image_path")
+        or block.get("path")
+        or block.get("image_path")
+        or data.get("path")
+        or data.get("image_path")
+    )
     if raw is None:
         return None
     value = str(raw).strip()
@@ -347,7 +361,7 @@ def _load_html_package_manifest(manifest_path: Path) -> dict[str, Any]:
             "HTML package manifest must be a JSON object.",
             details={"manifest_path": str(manifest_path)},
         )
-    if payload.get("renderer_contract") != "html-package-v0":
+    if payload.get("renderer_contract") not in SUPPORTED_RENDERER_CONTRACTS:
         raise AgentPDFException(
             "html_invalid_package",
             "HTML package manifest has an unsupported renderer contract.",
@@ -384,6 +398,8 @@ def _validate_existing_html_package_manifest(
                 details={"manifest_path": str(manifest_path)},
             )
         _validate_manifest_asset(asset, manifest_path=manifest_path)
+    remote_assets_enabled = bool(manifest.get("remote_assets_enabled", False))
+    javascript_enabled = bool(manifest.get("javascript_enabled", False))
     checks = [
         ValidationCheck(
             name="html_package_manifest_valid",
@@ -401,8 +417,15 @@ def _validate_existing_html_package_manifest(
         ),
         ValidationCheck(
             name="no_remote_assets",
-            status="passed",
-            details={"remote_assets_enabled": bool(manifest.get("remote_assets_enabled", False))},
+            status="failed" if remote_assets_enabled else "passed",
+            details={"remote_assets_enabled": remote_assets_enabled},
+            message="HTML packages must not rely on remote assets." if remote_assets_enabled else None,
+        ),
+        ValidationCheck(
+            name="no_javascript",
+            status="failed" if javascript_enabled else "passed",
+            details={"javascript_enabled": javascript_enabled},
+            message="HTML package rendering disables JavaScript." if javascript_enabled else None,
         ),
         ValidationCheck(
             name="no_forbidden_asset_paths",
@@ -410,7 +433,10 @@ def _validate_existing_html_package_manifest(
             details={"checked_assets": len(assets)},
         ),
     ]
-    return ValidationReport(status="passed", checks=checks)
+    return ValidationReport(
+        status="failed" if any(check.status == "failed" for check in checks) else "passed",
+        checks=checks,
+    )
 
 
 def _validate_manifest_asset(asset: dict[str, Any], *, manifest_path: Path) -> None:

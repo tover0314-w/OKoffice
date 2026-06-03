@@ -1,5 +1,6 @@
 import type {
   AddMarginInput,
+  AuthoringPlanInput,
   BookletInput,
   BlankPageCheckInput,
   BuildContextPacketInput,
@@ -19,6 +20,7 @@ import type {
   ContextPacketInput,
   ContextPacketReportInput,
   CreateAgentInput,
+  CreateHtmlPackageInput,
   CreateMarkdownPdfInput,
   CreateFromPromptInput,
   CreateFromTemplatePackInput,
@@ -62,6 +64,7 @@ import type {
   MarkBboxInput,
   PageNumbersInput,
   PageCountCheckInput,
+  PagesWriteInput,
   PlanTemplatePackInput,
   RenderHtmlPackageInput,
   PatchApplyInput,
@@ -79,6 +82,7 @@ import type {
   RagIngestInput,
   RagQueryInput,
   RagSearchInput,
+  QaVisualReportInput,
   RenderCheckInput,
   ReorderPagesInput,
   ResizePagesInput,
@@ -115,8 +119,10 @@ import type {
   VerifyBundleInput,
   WatermarkInput,
   WorkflowPlanInput,
+  WorkflowResearchDeckInput,
   WorkflowReportInput,
   WorkflowRunInput,
+  StoryboardPlanInput,
 } from "./types.js";
 
 export type AgentPDFFetch = (input: string | URL, init?: RequestInit) => Promise<Response>;
@@ -250,6 +256,57 @@ export class AgentPDFClient {
     return this.runTool("pdf.workflow.report", {
       workflow_run: input.workflowRun,
       ...(input.outputPath ? { output_path: input.outputPath } : {}),
+    });
+  }
+
+  async workflowResearchDeck(input: WorkflowResearchDeckInput): Promise<ToolResult> {
+    return this.runTool("pdf.workflow.research_deck", {
+      brief: input.brief,
+      ...(input.evidenceCards ? { evidence_cards: input.evidenceCards } : {}),
+      ...(input.htmlOutputPath ? { html_output_path: input.htmlOutputPath } : {}),
+      ...(input.pdfOutputPath ? { pdf_output_path: input.pdfOutputPath } : {}),
+      ...(input.artifactDir ? { artifact_dir: input.artifactDir } : {}),
+      ...(input.execute !== undefined ? { execute: input.execute } : {}),
+    });
+  }
+
+  async authoringPlan(input: AuthoringPlanInput): Promise<ToolResult> {
+    return this.runTool("pdf.authoring.plan", {
+      brief: input.brief,
+    });
+  }
+
+  async storyboardPlan(input: StoryboardPlanInput): Promise<ToolResult> {
+    return this.runTool("pdf.storyboard.plan", {
+      brief: input.brief,
+      ...(input.authoringPlan ? { authoring_plan: input.authoringPlan } : {}),
+      ...(input.evidenceCards ? { evidence_cards: input.evidenceCards } : {}),
+    });
+  }
+
+  async pagesWrite(input: PagesWriteInput): Promise<ToolResult> {
+    return this.runTool("pdf.pages.write", {
+      brief: input.brief,
+      storyboard: input.storyboard,
+      ...(input.evidenceCards ? { evidence_cards: input.evidenceCards } : {}),
+      ...(input.designTokens ? { design_tokens: input.designTokens } : {}),
+    });
+  }
+
+  async createHtmlPackage(input: CreateHtmlPackageInput): Promise<ToolResult> {
+    return this.runTool("pdf.create.html_package", {
+      page_document: input.pageDocument,
+      html_output_path: input.htmlOutputPath,
+      ...(input.title ? { title: input.title } : {}),
+    });
+  }
+
+  async qaVisualReport(input: QaVisualReportInput): Promise<ToolResult> {
+    return this.runTool("pdf.qa.visual_report", {
+      input_path: input.inputPath,
+      ...(input.expectedPageCount !== undefined ? { expected_page_count: input.expectedPageCount } : {}),
+      ...(input.htmlPackageManifestPath ? { html_package_manifest_path: input.htmlPackageManifestPath } : {}),
+      ...(input.pages ? { pages: input.pages } : {}),
     });
   }
 
@@ -906,6 +963,8 @@ export class AgentPDFClient {
       ...(input.title ? { title: input.title } : {}),
       ...(input.prompt ? { prompt: input.prompt } : {}),
       ...(input.stylePack ? { style_pack: input.stylePack } : {}),
+      ...(input.renderer ? { renderer: input.renderer } : {}),
+      ...(input.htmlOutputPath ? { html_output_path: input.htmlOutputPath } : {}),
     });
   }
 

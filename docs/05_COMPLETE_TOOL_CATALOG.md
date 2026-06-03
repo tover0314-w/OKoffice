@@ -131,6 +131,23 @@ Inspect artifact lineage and manifests.
 | `pdf.workflow.plan` | beta target | Plan a local-first agent workflow with roles, steps, validation, and cloud boundary. |
 | `pdf.workflow.run` | beta target | Execute a local workflow manifest and return per-step evidence. |
 | `pdf.workflow.report` | beta target | Summarize workflow artifacts, warnings, validation, and step evidence. |
+| `pdf.workflow.research_deck` | beta target | Plan or execute a local research-to-deck workflow from brief and evidence cards through authoring, storyboard, page JSON, HTML package, render, and visual QA steps. |
+
+### Authoring workflow
+
+| Tool | Status | Description |
+|---|---:|---|
+| `pdf.authoring.plan` | beta | Choose the safest local source format before rendering a new PDF artifact. |
+| `pdf.storyboard.plan` | beta | Create a deterministic page-by-page storyboard from a brief and optional evidence cards. |
+| `pdf.pages.write` | beta | Convert storyboard pages into page JSON blocks with source footers and design tokens. |
+| `pdf.create.html_package` | beta | Write a self-contained local HTML/CSS source package from page JSON. |
+| `pdf.qa.visual_report` | beta | Combine page-count, renderability, blank-page, and HTML package manifest checks for generated PDFs. |
+| `pdf.research.plan` | planned | Plan source gathering for an agent-authored PDF without performing network research in the OSS core. |
+| `pdf.research.source_cards` | planned | Normalize researched sources into structured source cards for authoring workflows. |
+| `pdf.research.evidence_cards` | planned | Turn source cards into evidence cards with claims, confidence, and usable page targets. |
+| `pdf.insights.synthesize` | planned | Synthesize source-backed insights behind an explicit model-enabled boundary. |
+| `pdf.design.tokens` | planned | Generate or select reusable design tokens for authoring source packages. |
+| `pdf.pages.revise` | planned | Revise generated page JSON while preserving source references and validation evidence. |
 
 ### `pdf.inspect`
 
@@ -364,7 +381,7 @@ RAG tools are useful evidence helpers, but the broader product layer is `pdf.evi
 | `pdf.ai.create.validate_template_pack` | beta target | Validate a local template pack contract, including layout slots and supported agent blocks. |
 | `pdf.ai.create.plan_template_pack` | beta target | Recommend a local template-pack create payload from a target profile and Context Packet. |
 | `pdf.ai.create.agent` | beta target | Run the local create agent: plan a template, classify Context Packet routing, create the PDF, write a Context Packet report, render-check, blank-check, write coverage evidence, and optionally export/verify an audit bundle. |
-| `pdf.ai.create.from_template_pack` | beta target | Create and validate a PDF from a local template pack entry, color scheme, optional slot-targeted `data.blocks`, or a Context Packet auto-mapped into blocks with a slot routing plan. |
+| `pdf.ai.create.from_template_pack` | beta target | Create and validate a PDF from a local template pack entry, color scheme, optional slot-targeted `data.blocks`, or a Context Packet auto-mapped into blocks with a slot routing plan; `renderer=html` also writes an HTML package, asset manifest, and package validation evidence before rendering the PDF. |
 | `pdf.ai.create.report` | beta/cloud | Dedicated report creation endpoint; local report templates are available through `pdf.ai.create.from_prompt`. |
 | `pdf.ai.create.paper` | planned/cloud | Create academic paper format. |
 | `pdf.ai.create.resume` | beta/cloud | Dedicated resume endpoint; local structured resume templates are available through `pdf.ai.create.from_prompt`. |

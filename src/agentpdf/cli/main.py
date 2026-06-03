@@ -20,6 +20,7 @@ from agentpdf.tools.runner import (
     run_artifacts_manifest,
     run_artifacts_source_map,
     run_artifacts_verify_bundle,
+    run_authoring_plan,
     run_blank_page_check,
     run_booklet,
     run_build_context_packet,
@@ -42,6 +43,7 @@ from agentpdf.tools.runner import (
     run_create_agent,
     run_create_from_prompt,
     run_create_from_template_pack,
+    run_create_html_package,
     run_plan_template_pack_creation,
     run_create_template_preview,
     run_create_template_packs,
@@ -84,6 +86,7 @@ from agentpdf.tools.runner import (
     run_patch_plan,
     run_patch_preview,
     run_patch_verify,
+    run_pages_write,
     run_parse_charts,
     run_parse_figures,
     run_parse_formulas,
@@ -103,6 +106,7 @@ from agentpdf.tools.runner import (
     run_rag_ingest,
     run_rag_query,
     run_rag_search,
+    run_qa_visual_report,
     run_remove_pages,
     run_render_html_package,
     run_remove_unused_objects,
@@ -132,6 +136,7 @@ from agentpdf.tools.runner import (
     run_security_verify_signature,
     run_split,
     run_strikeout,
+    run_storyboard_plan,
     run_subset_fonts,
     run_target_profiles,
     run_underline,
@@ -144,6 +149,7 @@ from agentpdf.tools.runner import (
     run_url_to_pdf,
     run_watermark,
     run_workflow_plan,
+    run_workflow_research_deck,
     run_workflow_report,
     run_workflow_run,
     run_xlsx_to_pdf,
@@ -167,6 +173,10 @@ artifacts_app = typer.Typer(help="Export and inspect local artifact lineage.")
 compare_app = typer.Typer(help="Compare local PDF versions.")
 rag_app = typer.Typer(help="Local document retrieval tools.")
 workflow_app = typer.Typer(help="Plan local agent PDF workflows.")
+authoring_app = typer.Typer(help="Plan authoring routes before PDF creation.")
+storyboard_app = typer.Typer(help="Plan page-by-page deck and report structures.")
+pages_app = typer.Typer(help="Write page JSON from storyboards and evidence.")
+qa_app = typer.Typer(help="Run authoring and visual QA reports.")
 app.add_typer(agent_app, name="agent")
 agent_app.add_typer(agent_setup_app, name="setup")
 app.add_typer(tools_app, name="tools")
@@ -184,6 +194,10 @@ app.add_typer(artifacts_app, name="artifacts")
 app.add_typer(compare_app, name="compare")
 app.add_typer(rag_app, name="rag")
 app.add_typer(workflow_app, name="workflow")
+app.add_typer(authoring_app, name="authoring")
+app.add_typer(storyboard_app, name="storyboard")
+app.add_typer(pages_app, name="pages")
+app.add_typer(qa_app, name="qa")
 
 
 @app.callback()
@@ -1141,6 +1155,11 @@ def create_agent(
         str | None,
         typer.Option("--style-pack", help="Optional style pack override."),
     ] = None,
+    renderer: Annotated[str, typer.Option("--renderer", help="Renderer mode: markdown or html.")] = "markdown",
+    html_output_path: Annotated[
+        Path | None,
+        typer.Option("--html-output", help="Optional HTML package output path when --renderer html is used."),
+    ] = None,
     json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
 ) -> None:
     """Run the local create agent: plan, create, render-check, blank-check, and coverage."""
@@ -1169,6 +1188,8 @@ def create_agent(
             title=title,
             prompt=prompt,
             style_pack=style_pack,
+            renderer=renderer,
+            html_output_path=html_output_path,
         ),
         json_output=json_output,
     )
@@ -1197,6 +1218,11 @@ def create_from_template_pack(
         str | None,
         typer.Option("--style-pack", help="Optional style pack override."),
     ] = None,
+    renderer: Annotated[str, typer.Option("--renderer", help="Renderer mode: markdown or html.")] = "markdown",
+    html_output_path: Annotated[
+        Path | None,
+        typer.Option("--html-output", help="Optional HTML package output path when --renderer html is used."),
+    ] = None,
     json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
 ) -> None:
     """Create a validated PDF from a local template pack."""
@@ -1212,6 +1238,8 @@ def create_from_template_pack(
             title=title,
             prompt=prompt,
             style_pack=style_pack,
+            renderer=renderer,
+            html_output_path=html_output_path,
         ),
         json_output=json_output,
     )
@@ -3126,6 +3154,137 @@ def rag_export_report(
     )
 
 
+@authoring_app.command("plan")
+def authoring_plan(
+    brief_path: Annotated[Path, typer.Argument(help="Authoring brief JSON path.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Plan the best local authoring route before PDF creation."""
+    _emit_result(run_authoring_plan(_read_json_object(brief_path)), json_output=json_output)
+
+
+@storyboard_app.command("plan")
+def storyboard_plan(
+    brief_path: Annotated[Path, typer.Argument(help="Authoring brief JSON path.")],
+    evidence_cards_path: Annotated[
+        Path | None,
+        typer.Option("--evidence", "--evidence-cards", help="Evidence cards JSON array path."),
+    ] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Create a deterministic page-by-page storyboard."""
+    _emit_result(
+        run_storyboard_plan(
+            brief=_read_json_object(brief_path),
+            evidence_cards=_read_json_object_list(evidence_cards_path, "--evidence")
+            if evidence_cards_path
+            else None,
+        ),
+        json_output=json_output,
+    )
+
+
+@pages_app.command("write")
+def pages_write(
+    brief_path: Annotated[Path, typer.Argument(help="Authoring brief JSON path.")],
+    storyboard_path: Annotated[Path, typer.Argument(help="Storyboard JSON path.")],
+    evidence_cards_path: Annotated[
+        Path | None,
+        typer.Option("--evidence", "--evidence-cards", help="Evidence cards JSON array path."),
+    ] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Write page JSON from storyboard and evidence cards."""
+    _emit_result(
+        run_pages_write(
+            brief=_read_json_object(brief_path),
+            storyboard=_read_json_object(storyboard_path),
+            evidence_cards=_read_json_object_list(evidence_cards_path, "--evidence")
+            if evidence_cards_path
+            else None,
+        ),
+        json_output=json_output,
+    )
+
+
+@create_app.command("html-package")
+def create_html_package(
+    page_document_path: Annotated[Path, typer.Argument(help="Page document JSON path.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output HTML path.")],
+    title: Annotated[str | None, typer.Option("--title", help="Optional document title.")] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Write a local self-contained HTML/CSS source package."""
+    _emit_result(
+        run_create_html_package(
+            page_document=_read_json_object(page_document_path),
+            html_output_path=output_path,
+            title=title,
+        ),
+        json_output=json_output,
+    )
+
+
+@qa_app.command("visual-report")
+def qa_visual_report(
+    input_path: Annotated[Path, typer.Argument(help="Input generated PDF path.")],
+    expected_page_count: Annotated[
+        int | None,
+        typer.Option("--expected-page-count", help="Expected PDF page count."),
+    ] = None,
+    html_package_manifest_path: Annotated[
+        Path | None,
+        typer.Option("--html-package-manifest", help="HTML package manifest path."),
+    ] = None,
+    pages: Annotated[str, typer.Option("--pages", help="Pages to render/check.")] = "all",
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Run visual QA checks over a generated PDF."""
+    _emit_result(
+        run_qa_visual_report(
+            input_path=input_path,
+            expected_page_count=expected_page_count,
+            html_package_manifest_path=html_package_manifest_path,
+            pages=pages,
+        ),
+        json_output=json_output,
+    )
+
+
+@workflow_app.command("research-deck")
+def workflow_research_deck(
+    brief_path: Annotated[Path, typer.Argument(help="Authoring brief JSON path.")],
+    evidence_cards_path: Annotated[
+        Path | None,
+        typer.Option("--evidence", "--evidence-cards", help="Evidence cards JSON array path."),
+    ] = None,
+    html_output_path: Annotated[Path, typer.Option("--html-output", help="Output HTML package path.")] = Path(
+        "deck.html"
+    ),
+    pdf_output_path: Annotated[Path, typer.Option("--pdf-output", help="Output PDF path.")] = Path("deck.pdf"),
+    artifact_dir: Annotated[
+        Path | None,
+        typer.Option("--artifact-dir", help="Directory for auto-generated workflow artifacts when executing."),
+    ] = None,
+    execute: Annotated[bool, typer.Option("--execute", help="Run the workflow immediately.")] = False,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Plan a local research-to-deck workflow."""
+    _emit_result(
+        run_workflow_research_deck(
+            brief=_read_json_object(brief_path),
+            evidence_cards=_read_json_object_list(evidence_cards_path, "--evidence")
+            if evidence_cards_path
+            else None,
+            html_output_path=str(html_output_path),
+            pdf_output_path=str(pdf_output_path),
+            artifact_dir=artifact_dir,
+            execute=execute,
+        ),
+        json_output=json_output,
+    )
+
+
 @workflow_app.command("plan")
 def workflow_plan(
     goal: Annotated[str, typer.Option("--goal", help="Workflow goal to plan.")],
@@ -3233,6 +3392,8 @@ def _read_json_object(path: Path) -> dict[str, object]:
 
 def _read_json_object_list(path: Path, option_name: str) -> list[dict[str, object]]:
     payload = _read_json_value(path)
+    if isinstance(payload, dict) and isinstance(payload.get("evidence_cards"), list):
+        payload = payload["evidence_cards"]
     if not isinstance(payload, list) or not all(isinstance(item, dict) for item in payload):
         raise typer.BadParameter(f"{option_name} must point to a JSON array of objects.")
     return list(payload)

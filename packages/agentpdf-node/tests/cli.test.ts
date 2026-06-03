@@ -815,6 +815,10 @@ test("runCli exposes template pack commands", async () => {
         "context.packet.json",
         "-o",
         "board-audit.pdf",
+        "--renderer",
+        "html",
+        "--html-output",
+        "board-audit.html",
       ]),
       0,
     );
@@ -867,6 +871,8 @@ test("runCli exposes template pack commands", async () => {
         output_path: "board-audit.pdf",
         color_scheme: "executive_blue",
         context_packet_path: "context.packet.json",
+        renderer: "html",
+        html_output_path: "board-audit.html",
         data: {
           title: "Agent Block Audit",
           blocks: [
@@ -882,6 +888,108 @@ test("runCli exposes template pack commands", async () => {
       },
     },
   ]);
+});
+
+test("runCli exposes authoring workflow commands", async () => {
+  const tempDir = await mkdtemp(join(tmpdir(), "agentpdf-node-authoring-"));
+  const briefPath = join(tempDir, "brief.json");
+  const evidencePath = join(tempDir, "evidence.json");
+  const calls: Array<{ url: string; body: unknown }> = [];
+
+  await writeFile(
+    briefPath,
+    JSON.stringify({
+      topic: "Independent developers going global",
+      page_count: 4,
+      deliverable: "deck",
+    }),
+  );
+  await writeFile(
+    evidencePath,
+    JSON.stringify([
+      {
+        id: "ev_market",
+        claim: "Mobile monetization remains strong.",
+        evidence: "Revenue growth continues while downloads flatten.",
+        source_title: "State of Mobile 2026",
+      },
+    ]),
+  );
+
+  async function invoke(args: string[]): Promise<number> {
+    return runCli(args, {
+      fetch: async (input, init) => {
+        calls.push({ url: String(input), body: JSON.parse(String(init?.body)) });
+        return jsonResponse({
+          job_id: "job_cli_authoring",
+          status: "succeeded",
+          tool: calls.at(-1)?.url.split("/v1/tools/")[1]?.split("/run")[0] ?? "unknown",
+          artifacts: [],
+          validation: null,
+          warnings: [],
+          usage: {},
+          next_recommended_tools: [],
+          error: null,
+        });
+      },
+      stdout: () => undefined,
+      stderr: () => undefined,
+    });
+  }
+
+  try {
+    assert.equal(await invoke(["authoring-plan", "--brief", briefPath]), 0);
+    assert.equal(
+      await invoke([
+        "workflow-research-deck",
+        "--brief",
+        briefPath,
+        "--evidence-cards",
+        evidencePath,
+        "--html-output",
+        "deck.html",
+        "--pdf-output",
+        "deck.pdf",
+        "--artifact-dir",
+        "workflow-artifacts",
+        "--execute",
+      ]),
+      0,
+    );
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+
+  assert.deepEqual(calls.map((call) => call.url), [
+    "http://127.0.0.1:7331/v1/tools/pdf.authoring.plan/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.workflow.research_deck/run",
+  ]);
+  assert.deepEqual(calls[0]?.body, {
+    brief: {
+      topic: "Independent developers going global",
+      page_count: 4,
+      deliverable: "deck",
+    },
+  });
+  assert.deepEqual(calls[1]?.body, {
+    brief: {
+      topic: "Independent developers going global",
+      page_count: 4,
+      deliverable: "deck",
+    },
+    evidence_cards: [
+      {
+        id: "ev_market",
+        claim: "Mobile monetization remains strong.",
+        evidence: "Revenue growth continues while downloads flatten.",
+        source_title: "State of Mobile 2026",
+      },
+    ],
+    html_output_path: "deck.html",
+    pdf_output_path: "deck.pdf",
+    artifact_dir: "workflow-artifacts",
+    execute: true,
+  });
 });
 
 test("runCli exposes artifact bundle export command", async () => {

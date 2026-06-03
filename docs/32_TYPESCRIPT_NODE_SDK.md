@@ -39,7 +39,7 @@ node packages/agentpdf-node/dist/src/cli.js create-markdown --markdown-file exam
 node packages/agentpdf-node/dist/src/cli.js create-template-packs -o .agentpdf-out/template-packs.json
 node packages/agentpdf-node/dist/src/cli.js create-validate-template-pack examples/template-packs/local-agent-starter.json -o .agentpdf-out/template-pack.validation.json
 node packages/agentpdf-node/dist/src/cli.js create-from-template-pack examples/template-packs/local-agent-starter.json --template board_audit --color-scheme executive_blue --data examples/create-data/agent-block-audit.json -o .agentpdf-out/board-audit.pdf
-node packages/agentpdf-node/dist/src/cli.js create-from-template-pack examples/template-packs/local-agent-starter.json --template board_audit --color-scheme executive_blue --context-packet .agentpdf-out/context.packet.json -o .agentpdf-out/board-audit-from-context.pdf
+node packages/agentpdf-node/dist/src/cli.js create-from-template-pack examples/template-packs/local-agent-starter.json --template board_audit --color-scheme executive_blue --context-packet .agentpdf-out/context.packet.json -o .agentpdf-out/board-audit-from-context.pdf --renderer html --html-output .agentpdf-out/board-audit-from-context.html
 node packages/agentpdf-node/dist/src/cli.js inspect-pages .agentpdf-out/node-report.pdf --pages 1 --render-check
 node packages/agentpdf-node/dist/src/cli.js reorder-pages .agentpdf-out/node-report.pdf --order 1 -o .agentpdf-out/node-report-reordered.pdf
 node packages/agentpdf-node/dist/src/cli.js insert-blank-pages .agentpdf-out/node-report-reordered.pdf --after-page 1 --count 1 -o .agentpdf-out/node-report-blank.pdf
@@ -93,6 +93,8 @@ node packages/agentpdf-node/dist/src/cli.js compose-plan .agentpdf-out/context.p
 node packages/agentpdf-node/dist/src/cli.js compose-render-ir .agentpdf-out/technical-audit.plan.json -o .agentpdf-out/technical-audit-from-ir.pdf
 node packages/agentpdf-node/dist/src/cli.js compose-from-context .agentpdf-out/context.packet.json --profile technical_audit -o .agentpdf-out/technical-audit.pdf --renderer html --html-output .agentpdf-out/technical-audit.html
 node packages/agentpdf-node/dist/src/cli.js render-html-package .agentpdf-out/technical-audit.html-manifest.json -o .agentpdf-out/technical-audit-rendered.pdf
+node packages/agentpdf-node/dist/src/cli.js authoring-plan --brief examples/research_deck_brief.json
+node packages/agentpdf-node/dist/src/cli.js workflow-research-deck --brief examples/research_deck_brief.json --evidence-cards examples/research_deck_evidence.json --html-output .agentpdf-out/research-deck.html --pdf-output .agentpdf-out/research-deck.pdf --artifact-dir .agentpdf-out/research-deck-artifacts --execute
 node packages/agentpdf-node/dist/src/cli.js compose-from-context .agentpdf-out/context.packet.json --profile slide_deck -o .agentpdf-out/agent-review-deck.pdf
 node packages/agentpdf-node/dist/src/cli.js compose-add-code-block .agentpdf-out/technical-audit.pdf --title "Risk Function" --code "def risky_total(items): return sum(items)" --language python --source-ref ctx_002 --target-slot code_review -o .agentpdf-out/technical-audit.code.pdf
 node packages/agentpdf-node/dist/src/cli.js compose-add-table .agentpdf-out/technical-audit.pdf --title "Runtime Metrics" --columns metric,value --row latency_ms,42 --source-ref ctx_003 -o .agentpdf-out/technical-audit.table.pdf
