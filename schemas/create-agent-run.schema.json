@@ -44,6 +44,10 @@
     "template_layer_manifest_path": {"type": "string"},
     "plan_path": {"type": "string"},
     "coverage_path": {"type": "string"},
+    "context_classification_path": {"type": "string"},
+    "context_report_path": {"type": "string"},
+    "context_report_json_path": {"type": "string"},
+    "bundle_path": {"type": "string"},
     "plan": {"type": "object"},
     "create_result": {"type": "object"},
     "render_check": {
@@ -63,6 +67,10 @@
       }
     },
     "coverage_report": {"type": "object"},
+    "context_classification": {"type": "object"},
+    "context_packet_report": {"type": "object"},
+    "bundle_export": {"type": "object"},
+    "bundle_verification": {"type": "object"},
     "slot_routing_plan": {"type": "object"},
     "template_layer_manifest": {"type": "object"},
     "evidence_coverage": {"type": "object"},
@@ -73,7 +81,10 @@
         "create_pdf": {"type": "string"},
         "render_check": {"type": "string"},
         "blank_page_check": {"type": "string"},
-        "coverage_ratio": {"type": "number"}
+        "coverage_ratio": {"type": "number"},
+        "context_classification": {"type": "string"},
+        "context_packet_report": {"type": "string"},
+        "bundle_verification": {"type": "string"}
       }
     }
   }

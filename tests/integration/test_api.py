@@ -315,6 +315,10 @@ def test_api_runs_text_and_metadata_tools(text_pdf: Path, metadata_pdf: Path, tm
         json={"input_path": str(text_pdf), "pages": "1"},
     )
     read = client.post("/v1/tools/pdf.metadata.read/run", json={"input_path": str(metadata_pdf)})
+    page_info = client.post(
+        "/v1/tools/pdf.metadata.page_info/run",
+        json={"input_path": str(text_pdf), "pages": "1"},
+    )
     update = client.post(
         "/v1/tools/pdf.metadata.update/run",
         json={
@@ -327,15 +331,23 @@ def test_api_runs_text_and_metadata_tools(text_pdf: Path, metadata_pdf: Path, tm
         "/v1/tools/pdf.metadata.remove/run",
         json={"input_path": str(metadata_pdf), "output_path": str(tmp_path / "clean.pdf")},
     )
+    security_remove = client.post(
+        "/v1/tools/pdf.security.remove_metadata/run",
+        json={"input_path": str(metadata_pdf), "output_path": str(tmp_path / "security-clean.pdf")},
+    )
 
     assert text.status_code == 200
     assert "AgentPDF local text layer" in text.json()["usage"]["text"]
     assert read.status_code == 200
     assert read.json()["usage"]["metadata"]["Title"] == "Original Title"
+    assert page_info.status_code == 200
+    assert page_info.json()["tool"] == "pdf.metadata.page_info"
     assert update.status_code == 200
     assert update.json()["tool"] == "pdf.metadata.update"
     assert remove.status_code == 200
     assert remove.json()["tool"] == "pdf.metadata.remove"
+    assert security_remove.status_code == 200
+    assert security_remove.json()["tool"] == "pdf.security.remove_metadata"
 
 
 def test_api_runs_create_text_and_markdown_tools(tmp_path: Path) -> None:
@@ -444,6 +456,10 @@ def test_api_runs_image_watermark_page_numbers_and_validate(tmp_path: Path) -> N
         "/v1/tools/pdf.validation.validate_output/run",
         json={"path": str(numbered), "expected_pages": 1},
     )
+    page_count = client.post(
+        "/v1/tools/pdf.validation.page_count_check/run",
+        json={"path": str(numbered), "expected_pages": 1},
+    )
     render_check = client.post(
         "/v1/tools/pdf.validation.render_check/run",
         json={"path": str(numbered), "pages": "1"},
@@ -460,6 +476,8 @@ def test_api_runs_image_watermark_page_numbers_and_validate(tmp_path: Path) -> N
     assert page_numbers.status_code == 200
     assert page_numbers.json()["tool"] == "pdf.edit.page_numbers"
     assert validate.status_code == 200
+    assert page_count.status_code == 200
+    assert page_count.json()["tool"] == "pdf.validation.page_count_check"
     assert render_check.status_code == 200
     assert render_check.json()["tool"] == "pdf.validation.render_check"
     assert blank_check.status_code == 200

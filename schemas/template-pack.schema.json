@@ -76,7 +76,17 @@
             "type": "array",
             "items": {
               "type": "string",
-              "enum": ["section", "code", "table", "image", "slide", "citation"]
+              "enum": [
+                "section",
+                "code",
+                "table",
+                "image",
+                "slide",
+                "audio_reference",
+                "video_reference",
+                "media_reference",
+                "citation"
+              ]
             },
             "description": "Agent-supplied block types this template accepts in data.blocks."
           },

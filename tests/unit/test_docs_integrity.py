@@ -43,3 +43,18 @@ def test_complete_tool_catalog_covers_full_manifest() -> None:
 
     assert sorted(manifest_tools - catalog_tools) == []
     assert sorted(catalog_tools - manifest_tools) == []
+
+
+def test_example_tool_manifest_statuses_match_full_manifest() -> None:
+    full_manifest = json.loads(
+        (REPO_ROOT / "schemas" / "tool-manifest.full.json").read_text(encoding="utf-8")
+    )
+    example_manifest = json.loads(
+        (REPO_ROOT / "schemas" / "tool-manifest.example.json").read_text(encoding="utf-8")
+    )
+    full_by_name = {tool["name"]: tool for tool in full_manifest["tools"]}
+
+    for example_tool in example_manifest["tools"]:
+        full_tool = full_by_name[example_tool["name"]]
+        assert example_tool["status"] == full_tool["status"]
+        assert example_tool["implemented"] == full_tool["implemented"]

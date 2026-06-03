@@ -46,6 +46,7 @@ def test_claude_code_setup_cli_writes_project_mcp_config(tmp_path: Path) -> None
     assert server["args"] == ["serve", "--mcp", "--safe-root", "${CLAUDE_PROJECT_DIR:-.}"]
     assert "pdf_context_build_packet" in payload["usage"]["recommended_mcp_tools"]
     assert "pdf_compose_from_context" in payload["usage"]["recommended_mcp_tools"]
+    assert "pdf_evidence_context_packet_report" in payload["usage"]["recommended_mcp_tools"]
     assert "pdf_ai_create_from_prompt" in payload["usage"]["recommended_mcp_tools"]
     assert payload["next_recommended_tools"] == ["agentpdf_tool_manifest", "pdf_target_profiles"]
 
@@ -82,3 +83,73 @@ def test_claude_code_setup_rest_and_mcp_are_exposed(tmp_path: Path) -> None:
     tool_names = {tool.name for tool in asyncio.run(create_mcp_server().list_tools())}
     assert "agent_setup_claude_code" in tool_names
     assert get_tool("agent.setup.claude_code").implemented is True
+
+
+def test_codex_setup_cli_writes_local_mcp_config(tmp_path: Path) -> None:
+    output_path = tmp_path / "codex.mcp.json"
+
+    result = runner.invoke(
+        app,
+        [
+            "agent",
+            "setup",
+            "codex",
+            "--output",
+            str(output_path),
+            "--safe-root",
+            ".",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    config = json.loads(output_path.read_text(encoding="utf-8"))
+    server = config["mcpServers"]["agentpdf"]
+
+    assert payload["tool"] == "agent.setup.codex"
+    assert payload["usage"]["agent"] == "codex"
+    assert payload["usage"]["config_path"] == output_path.as_posix()
+    assert payload["usage"]["mcp_config"] == config
+    assert server["command"] == "okpdf"
+    assert server["args"] == ["serve", "--mcp", "--safe-root", "."]
+    assert "AGENTS.md" in payload["usage"]["recommended_workspace_files"]
+    assert "pdf_context_build_packet" in payload["usage"]["recommended_mcp_tools"]
+    assert "pdf_ai_create_agent" in payload["usage"]["recommended_mcp_tools"]
+    assert "pdf_evidence_context_packet_report" in payload["usage"]["recommended_mcp_tools"]
+    assert "pdf_patch_plan" in payload["usage"]["recommended_mcp_tools"]
+    assert payload["next_recommended_tools"] == ["agentpdf_tool_manifest", "pdf_target_profiles"]
+
+
+def test_codex_setup_rest_and_mcp_are_exposed(tmp_path: Path) -> None:
+    output_path = tmp_path / "codex.mcp.json"
+    client = TestClient(create_app())
+
+    response = client.post(
+        "/v1/tools/agent.setup.codex/run",
+        json={
+            "output_path": str(output_path),
+            "safe_root": ".",
+            "command": "python",
+            "args_prefix": ["-m", "agentpdf.cli"],
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    config = json.loads(output_path.read_text(encoding="utf-8"))
+
+    assert payload["tool"] == "agent.setup.codex"
+    assert config["mcpServers"]["agentpdf"]["command"] == "python"
+    assert config["mcpServers"]["agentpdf"]["args"] == [
+        "-m",
+        "agentpdf.cli",
+        "serve",
+        "--mcp",
+        "--safe-root",
+        ".",
+    ]
+
+    tool_names = {tool.name for tool in asyncio.run(create_mcp_server().list_tools())}
+    assert "agent_setup_codex" in tool_names
+    assert get_tool("agent.setup.codex").implemented is True

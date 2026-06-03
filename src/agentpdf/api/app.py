@@ -11,11 +11,21 @@ from agentpdf.schemas.models import AgentPDFError, ToolResult
 from agentpdf.tools.registry import get_tool, load_tool_manifest
 from agentpdf.tools.runner import (
     run_agent_setup_claude_code,
+    run_agent_setup_codex,
     run_artifacts_export_bundle,
     run_artifacts_verify_bundle,
     run_blank_page_check,
     run_build_context_packet,
+    run_compose_add_appendix,
+    run_compose_add_citation,
+    run_compose_add_code_block,
+    run_compose_add_figure,
+    run_compose_add_media_reference,
+    run_compose_add_slide,
+    run_compose_add_table,
     run_compose_from_context,
+    run_compose_plan,
+    run_compose_render_ir,
     run_compress,
     run_create_markdown,
     run_create_text,
@@ -26,8 +36,15 @@ from agentpdf.tools.runner import (
     run_create_template_preview,
     run_create_template_packs,
     run_create_templates,
+    run_context_packet_report,
+    run_context_classify,
+    run_context_code_snapshot,
+    run_context_data_profile,
+    run_context_ingest,
+    run_context_packet,
     run_validate_template_pack,
     run_evidence_coverage_report,
+    run_evidence_map_sources,
     run_extract_images,
     run_extract_pages,
     run_extract_text,
@@ -36,6 +53,7 @@ from agentpdf.tools.runner import (
     run_inspect_pages,
     run_insert_blank_pages,
     run_metadata_read,
+    run_metadata_page_info,
     run_metadata_remove,
     run_metadata_update,
     run_merge,
@@ -60,6 +78,9 @@ from agentpdf.tools.runner import (
     run_repair,
     run_reorder_pages,
     run_rotate_pages,
+    run_page_count_check,
+    run_security_remove_metadata,
+    run_select_target_profile,
     run_split,
     run_target_profiles,
     run_validate_output,
@@ -157,6 +178,15 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
             args_prefix=[str(arg) for arg in args_prefix] if isinstance(args_prefix, list) else None,
             server_name=str(payload.get("server_name", "agentpdf")),
             scope=str(payload.get("scope", "project")),
+        )
+    if tool_name == "agent.setup.codex":
+        args_prefix = payload.get("args_prefix")
+        return run_agent_setup_codex(
+            output_path=payload.get("output_path"),
+            safe_root=str(payload.get("safe_root", ".")),
+            command=str(payload.get("command", "okpdf")),
+            args_prefix=[str(arg) for arg in args_prefix] if isinstance(args_prefix, list) else None,
+            server_name=str(payload.get("server_name", "agentpdf")),
         )
     if tool_name == "pdf.inspect.document":
         return run_inspect(payload.get("path", ""))
@@ -314,6 +344,10 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
             output_path=payload.get("output_path", ""),
             plan_output_path=payload.get("plan_output_path"),
             coverage_output_path=payload.get("coverage_output_path"),
+            context_classification_output_path=payload.get("context_classification_output_path"),
+            context_report_output_path=payload.get("context_report_output_path"),
+            context_report_json_output_path=payload.get("context_report_json_output_path"),
+            bundle_output_path=payload.get("bundle_output_path"),
             preferred_template_id=payload.get("preferred_template_id") or payload.get("preferred_template"),
             preferred_color_scheme=payload.get("preferred_color_scheme") or payload.get("preferred_color"),
             title=payload.get("title"),
@@ -355,6 +389,74 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
             title=payload.get("title"),
             intent=payload.get("intent"),
         )
+    if tool_name == "pdf.context.ingest":
+        context_item = payload.get("context_item")
+        if not isinstance(context_item, dict):
+            context_item = {
+                key: value
+                for key, value in payload.items()
+                if key not in {"output_path", "output"}
+            }
+        return run_context_ingest(
+            context_item,
+            output_path=payload.get("output_path") or payload.get("output"),
+        )
+    if tool_name == "pdf.context.packet":
+        context_items = payload.get("context_items", [])
+        return run_context_packet(
+            context_items if isinstance(context_items, list) else [],
+            output_path=payload.get("output_path", ""),
+            title=payload.get("title"),
+            intent=payload.get("intent"),
+        )
+    if tool_name == "pdf.context.classify":
+        context_packet = payload.get("context_packet") or payload.get("context_packet_path", "")
+        target_profile = payload.get("target_profile") or payload.get("profile")
+        return run_context_classify(
+            context_packet=context_packet,
+            target_profile=target_profile if isinstance(target_profile, (dict, str)) else None,
+            output_path=payload.get("output_path"),
+        )
+    if tool_name == "pdf.context.code_snapshot":
+        return run_context_code_snapshot(
+            path=payload.get("path", ""),
+            output_path=payload.get("output_path"),
+            label=payload.get("label"),
+            role=str(payload.get("role", "code_evidence")),
+            context_item_id=payload.get("context_item_id"),
+            line_start=_optional_int(payload.get("line_start")),
+            line_end=_optional_int(payload.get("line_end")),
+            repository_root=payload.get("repository_root"),
+            include_dependencies=bool(payload.get("include_dependencies", False)),
+        )
+    if tool_name == "pdf.context.data_profile":
+        return run_context_data_profile(
+            path=payload.get("path", ""),
+            output_path=payload.get("output_path"),
+            label=payload.get("label"),
+            role=str(payload.get("role", "data_evidence")),
+            context_item_id=payload.get("context_item_id"),
+            sheet=payload.get("sheet"),
+            max_rows=_optional_int(payload.get("max_rows")) or 100,
+        )
+    if tool_name == "pdf.compose.plan":
+        context_packet = payload.get("context_packet") or payload.get("context_packet_path", "")
+        target_profile = payload.get("target_profile") or payload.get("profile") or "research_brief"
+        return run_compose_plan(
+            context_packet=context_packet,
+            target_profile=target_profile if isinstance(target_profile, (dict, str)) else "research_brief",
+            output_path=payload.get("output_path"),
+            style_pack=payload.get("style_pack"),
+            title=payload.get("title"),
+        )
+    if tool_name == "pdf.compose.render_ir":
+        composition = payload.get("composition") or payload.get("composition_path", "")
+        return run_compose_render_ir(
+            composition=composition,
+            output_path=payload.get("output_path", ""),
+            style_pack=payload.get("style_pack"),
+            title=payload.get("title"),
+        )
     if tool_name == "pdf.compose.from_context":
         context_packet = payload.get("context_packet") or payload.get("context_packet_path", "")
         target_profile = payload.get("target_profile") or payload.get("profile") or "research_brief"
@@ -365,8 +467,123 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
             style_pack=payload.get("style_pack"),
             title=payload.get("title"),
         )
+    if tool_name == "pdf.compose.add_code_block":
+        return run_compose_add_code_block(
+            input_path=payload.get("input_path", ""),
+            output_path=payload.get("output_path", ""),
+            title=str(payload.get("title", "Code Block")),
+            code=str(payload.get("code", "")),
+            language=str(payload.get("language", "text")),
+            source_refs=_string_list(payload.get("source_refs")),
+            block_id=payload.get("block_id"),
+            target_slot=payload.get("target_slot"),
+            composition_path=payload.get("composition_path"),
+            layer_manifest_path=payload.get("layer_manifest_path") or payload.get("layers_path"),
+            manifest_output_path=payload.get("manifest_output_path"),
+        )
+    if tool_name == "pdf.compose.add_table":
+        rows = payload.get("rows", [])
+        return run_compose_add_table(
+            input_path=payload.get("input_path", ""),
+            output_path=payload.get("output_path", ""),
+            title=str(payload.get("title", "Table")),
+            columns=_string_list(payload.get("columns")),
+            rows=rows if isinstance(rows, list) else [],
+            source_refs=_string_list(payload.get("source_refs")),
+            block_id=payload.get("block_id"),
+            target_slot=payload.get("target_slot"),
+            composition_path=payload.get("composition_path"),
+            layer_manifest_path=payload.get("layer_manifest_path") or payload.get("layers_path"),
+            manifest_output_path=payload.get("manifest_output_path"),
+        )
+    if tool_name == "pdf.compose.add_figure":
+        return run_compose_add_figure(
+            input_path=payload.get("input_path", ""),
+            output_path=payload.get("output_path", ""),
+            title=str(payload.get("title", "Figure")),
+            image_path=payload.get("image_path") or payload.get("path", ""),
+            caption=payload.get("caption"),
+            source_refs=_string_list(payload.get("source_refs")),
+            block_id=payload.get("block_id"),
+            target_slot=payload.get("target_slot"),
+            composition_path=payload.get("composition_path"),
+            layer_manifest_path=payload.get("layer_manifest_path") or payload.get("layers_path"),
+            manifest_output_path=payload.get("manifest_output_path"),
+        )
+    if tool_name == "pdf.compose.add_appendix":
+        return run_compose_add_appendix(
+            input_path=payload.get("input_path", ""),
+            output_path=payload.get("output_path", ""),
+            title=str(payload.get("title", "Appendix")),
+            markdown=str(payload.get("markdown", "")),
+            source_refs=_string_list(payload.get("source_refs")),
+            block_id=payload.get("block_id"),
+            target_slot=payload.get("target_slot"),
+            composition_path=payload.get("composition_path"),
+            layer_manifest_path=payload.get("layer_manifest_path") or payload.get("layers_path"),
+            manifest_output_path=payload.get("manifest_output_path"),
+        )
+    if tool_name == "pdf.compose.add_citation":
+        return run_compose_add_citation(
+            input_path=payload.get("input_path", ""),
+            output_path=payload.get("output_path", ""),
+            title=str(payload.get("title", "Citation")),
+            source=str(payload.get("source", "")),
+            quote=payload.get("quote"),
+            page=payload.get("page"),
+            source_refs=_string_list(payload.get("source_refs")),
+            block_id=payload.get("block_id"),
+            target_slot=payload.get("target_slot"),
+            composition_path=payload.get("composition_path"),
+            layer_manifest_path=payload.get("layer_manifest_path") or payload.get("layers_path"),
+            manifest_output_path=payload.get("manifest_output_path"),
+        )
+    if tool_name == "pdf.compose.add_media_reference":
+        return run_compose_add_media_reference(
+            input_path=payload.get("input_path", ""),
+            output_path=payload.get("output_path", ""),
+            title=str(payload.get("title", "Media Reference")),
+            media_path=payload.get("media_path") or payload.get("media") or payload.get("path", ""),
+            media_kind=str(payload.get("media_kind", "media")),
+            transcript_excerpt=payload.get("transcript_excerpt"),
+            duration_seconds=payload.get("duration_seconds"),
+            chapter_count=payload.get("chapter_count"),
+            keyframe_count=payload.get("keyframe_count"),
+            source_refs=_string_list(payload.get("source_refs")),
+            block_id=payload.get("block_id"),
+            target_slot=payload.get("target_slot"),
+            composition_path=payload.get("composition_path"),
+            layer_manifest_path=payload.get("layer_manifest_path") or payload.get("layers_path"),
+            manifest_output_path=payload.get("manifest_output_path"),
+        )
+    if tool_name == "pdf.compose.add_slide":
+        table = payload.get("table")
+        return run_compose_add_slide(
+            input_path=payload.get("input_path", ""),
+            output_path=payload.get("output_path", ""),
+            title=str(payload.get("title", "Slide")),
+            subtitle=payload.get("subtitle"),
+            body=_string_list(payload.get("body")),
+            code=payload.get("code"),
+            table=table if isinstance(table, dict) else None,
+            image_path=payload.get("image_path") or payload.get("image"),
+            source_refs=_string_list(payload.get("source_refs")),
+            block_id=payload.get("block_id"),
+            target_slot=payload.get("target_slot"),
+            composition_path=payload.get("composition_path"),
+            layer_manifest_path=payload.get("layer_manifest_path") or payload.get("layers_path"),
+            manifest_output_path=payload.get("manifest_output_path"),
+        )
     if tool_name == "pdf.target.profiles":
         return run_target_profiles(output_path=payload.get("output_path"))
+    if tool_name == "pdf.target.select_profile":
+        context_packet = payload.get("context_packet")
+        return run_select_target_profile(
+            goal=str(payload.get("goal", "")),
+            context_packet=context_packet if isinstance(context_packet, dict) else payload.get("context_packet_path"),
+            preferred_profile=payload.get("preferred_profile") or payload.get("profile"),
+            output_path=payload.get("output_path"),
+        )
     if tool_name == "pdf.target.validate_profile":
         target_profile = payload.get("target_profile") or payload.get("profile") or "research_brief"
         return run_validate_target_profile(
@@ -377,6 +594,24 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
         return run_evidence_coverage_report(
             payload.get("composition") or payload.get("composition_path", ""),
             output_path=payload.get("output_path"),
+        )
+    if tool_name == "pdf.evidence.map_sources":
+        context_packet = payload.get("context_packet")
+        return run_evidence_map_sources(
+            composition=payload.get("composition") or payload.get("composition_path"),
+            blocks=_object_list(payload.get("blocks")),
+            claims=_object_list(payload.get("claims")),
+            context_packet=context_packet if isinstance(context_packet, dict) else payload.get("context_packet_path"),
+            output_path=payload.get("output_path"),
+        )
+    if tool_name == "pdf.evidence.context_packet_report":
+        context_packet = payload.get("context_packet") or payload.get("context_packet_path", "")
+        return run_context_packet_report(
+            context_packet=context_packet,
+            output_path=payload.get("output_path", ""),
+            report_output_path=payload.get("report_output_path"),
+            title=payload.get("title"),
+            style_pack=str(payload.get("style_pack", "paper_ink")),
         )
     if tool_name == "pdf.artifacts.export_bundle":
         artifact_paths = payload.get("artifact_paths") or payload.get("files") or []
@@ -446,6 +681,11 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
         )
     if tool_name == "pdf.metadata.read":
         return run_metadata_read(payload.get("input_path", ""))
+    if tool_name == "pdf.metadata.page_info":
+        return run_metadata_page_info(
+            payload.get("input_path", payload.get("path", "")),
+            pages=str(payload.get("pages", "all")),
+        )
     if tool_name == "pdf.metadata.update":
         return run_metadata_update(
             payload.get("input_path", ""),
@@ -457,11 +697,21 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
             payload.get("input_path", ""),
             output_path=payload.get("output_path", ""),
         )
+    if tool_name == "pdf.security.remove_metadata":
+        return run_security_remove_metadata(
+            payload.get("input_path", ""),
+            output_path=payload.get("output_path", ""),
+        )
     if tool_name == "pdf.validation.validate_output":
         expected_pages = payload.get("expected_pages")
         return run_validate_output(
             payload.get("path", ""),
             expected_pages=int(expected_pages) if expected_pages is not None else None,
+        )
+    if tool_name == "pdf.validation.page_count_check":
+        return run_page_count_check(
+            payload.get("path", payload.get("input_path", "")),
+            expected_pages=int(payload.get("expected_pages", 0)),
         )
     if tool_name == "pdf.validation.render_check":
         return run_render_check(
@@ -559,6 +809,33 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
             message=f"No local runner is registered for tool: {tool_name}",
         ),
     )
+
+
+def _string_list(value: object) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, list):
+        return [str(item) for item in value]
+    return [str(value)]
+
+
+def _object_list(value: object) -> list[dict[str, object]] | None:
+    if value is None:
+        return None
+    if isinstance(value, list) and all(isinstance(item, dict) for item in value):
+        return value
+    return None
+
+
+def _optional_int(value: object) -> int | None:
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def _failed(tool: str, error: AgentPDFError) -> ToolResult:

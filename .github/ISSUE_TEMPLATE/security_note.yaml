@@ -1,0 +1,39 @@
+name: Security note
+description: Ask a non-sensitive security design question
+title: "security: "
+labels: ["security", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not disclose vulnerabilities, exploit details, private documents, secrets, or document-leak examples here. For vulnerabilities, follow SECURITY.md and report privately.
+  - type: textarea
+    id: topic
+    attributes:
+      label: Topic
+      description: Describe the security design question without sensitive exploit details.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Path safety
+        - PDF parsing / rendering
+        - Metadata removal
+        - Redaction
+        - Dependencies
+        - Docker / sandboxing
+        - MCP / REST exposure
+        - AI / optional workers
+        - Other
+    validations:
+      required: true
+  - type: checkboxes
+    id: disclosure
+    attributes:
+      label: Disclosure check
+      options:
+        - label: This issue does not contain a vulnerability disclosure, exploit, secret, or private document content.
+          required: true

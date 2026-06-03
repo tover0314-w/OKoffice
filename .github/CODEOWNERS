@@ -1,0 +1,16 @@
+# Default review ownership for repository-wide changes.
+* @tover0314-w
+
+# Public contracts and tool surfaces need careful review.
+/schemas/ @tover0314-w
+/src/agentpdf/tools/ @tover0314-w
+/src/agentpdf/schemas/ @tover0314-w
+/src/agentpdf/mcp/ @tover0314-w
+/src/agentpdf/api/ @tover0314-w
+
+# Community, safety, dependency, and translation policy.
+/SECURITY.md @tover0314-w
+/CONTRIBUTING.md @tover0314-w
+/community/ @tover0314-w
+/docs/i18n/ @tover0314-w
+/.github/ @tover0314-w

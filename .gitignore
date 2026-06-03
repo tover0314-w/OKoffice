@@ -8,6 +8,8 @@ __pycache__/
 venv/
 env/
 ENV/
+.tox/
+.nox/
 build/
 dist/
 *.egg-info/
@@ -22,17 +24,36 @@ packages/*/dist/
 .pytest-tmp/
 .ruff_cache/
 .mypy_cache/
+.pyre/
+.hypothesis/
+.cache/
 .coverage
 htmlcov/
+coverage.xml
 
 # Local AgentPDF outputs
 .agentpdf-out/
 renders/
+/outputs/
+/artifacts/
+/artifact-bundles/
+*.agentpdf-bundle.zip
 
 # Environment and secrets
 .env
 .env.*
 !.env.example
+.envrc
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Local agent/editor integration files
+.mcp.json
+.claude/
+.cursor/
+codex.local.toml
 
 # Editors and OS files
 .idea/
@@ -42,5 +63,13 @@ Thumbs.db
 
 # Temporary files
 tmp/
+temp/
 *.tmp
 *.log
+*.sqlite
+*.sqlite3
+*.db
+*.zip
+*.tar
+*.tar.gz
+*.tgz

@@ -7,11 +7,21 @@ from mcp.server.fastmcp import FastMCP
 from agentpdf.tools.registry import load_tool_manifest
 from agentpdf.tools.runner import (
     run_agent_setup_claude_code,
+    run_agent_setup_codex,
     run_artifacts_export_bundle,
     run_artifacts_verify_bundle,
     run_blank_page_check,
     run_build_context_packet,
+    run_compose_add_appendix,
+    run_compose_add_citation,
+    run_compose_add_code_block,
+    run_compose_add_figure,
+    run_compose_add_media_reference,
+    run_compose_add_slide,
+    run_compose_add_table,
     run_compose_from_context,
+    run_compose_plan,
+    run_compose_render_ir,
     run_compress,
     run_create_markdown,
     run_create_text,
@@ -22,8 +32,15 @@ from agentpdf.tools.runner import (
     run_create_template_preview,
     run_create_template_packs,
     run_create_templates,
+    run_context_packet_report,
+    run_context_classify,
+    run_context_code_snapshot,
+    run_context_data_profile,
+    run_context_ingest,
+    run_context_packet,
     run_validate_template_pack,
     run_evidence_coverage_report,
+    run_evidence_map_sources,
     run_extract_images,
     run_extract_pages,
     run_extract_text,
@@ -32,6 +49,7 @@ from agentpdf.tools.runner import (
     run_inspect_pages,
     run_insert_blank_pages,
     run_metadata_read,
+    run_metadata_page_info,
     run_metadata_remove,
     run_metadata_update,
     run_merge,
@@ -56,6 +74,9 @@ from agentpdf.tools.runner import (
     run_repair,
     run_reorder_pages,
     run_rotate_pages,
+    run_page_count_check,
+    run_security_remove_metadata,
+    run_select_target_profile,
     run_split,
     run_target_profiles,
     run_validate_output,
@@ -77,6 +98,7 @@ def create_mcp_server() -> FastMCP:
     )
     server.tool(name="agentpdf_tool_manifest")(agentpdf_tool_manifest)
     server.tool(name="agent_setup_claude_code")(agent_setup_claude_code)
+    server.tool(name="agent_setup_codex")(agent_setup_codex)
     server.tool(name="pdf_inspect_document")(pdf_inspect_document)
     server.tool(name="pdf_inspect_pages")(pdf_inspect_pages)
     server.tool(name="pdf_workflow_plan")(pdf_workflow_plan)
@@ -105,10 +127,27 @@ def create_mcp_server() -> FastMCP:
     server.tool(name="pdf_ai_create_agent")(pdf_ai_create_agent)
     server.tool(name="pdf_ai_create_from_template_pack")(pdf_ai_create_from_template_pack)
     server.tool(name="pdf_context_build_packet")(pdf_context_build_packet)
+    server.tool(name="pdf_context_ingest")(pdf_context_ingest)
+    server.tool(name="pdf_context_packet")(pdf_context_packet)
+    server.tool(name="pdf_context_classify")(pdf_context_classify)
+    server.tool(name="pdf_context_code_snapshot")(pdf_context_code_snapshot)
+    server.tool(name="pdf_context_data_profile")(pdf_context_data_profile)
+    server.tool(name="pdf_compose_plan")(pdf_compose_plan)
+    server.tool(name="pdf_compose_render_ir")(pdf_compose_render_ir)
     server.tool(name="pdf_compose_from_context")(pdf_compose_from_context)
+    server.tool(name="pdf_compose_add_code_block")(pdf_compose_add_code_block)
+    server.tool(name="pdf_compose_add_table")(pdf_compose_add_table)
+    server.tool(name="pdf_compose_add_figure")(pdf_compose_add_figure)
+    server.tool(name="pdf_compose_add_appendix")(pdf_compose_add_appendix)
+    server.tool(name="pdf_compose_add_citation")(pdf_compose_add_citation)
+    server.tool(name="pdf_compose_add_media_reference")(pdf_compose_add_media_reference)
+    server.tool(name="pdf_compose_add_slide")(pdf_compose_add_slide)
     server.tool(name="pdf_target_profiles")(pdf_target_profiles)
+    server.tool(name="pdf_target_select_profile")(pdf_target_select_profile)
     server.tool(name="pdf_target_validate_profile")(pdf_target_validate_profile)
+    server.tool(name="pdf_evidence_map_sources")(pdf_evidence_map_sources)
     server.tool(name="pdf_evidence_coverage_report")(pdf_evidence_coverage_report)
+    server.tool(name="pdf_evidence_context_packet_report")(pdf_evidence_context_packet_report)
     server.tool(name="pdf_artifacts_export_bundle")(pdf_artifacts_export_bundle)
     server.tool(name="pdf_artifacts_verify_bundle")(pdf_artifacts_verify_bundle)
     server.tool(name="pdf_patch_plan")(pdf_patch_plan)
@@ -121,9 +160,12 @@ def create_mcp_server() -> FastMCP:
     server.tool(name="pdf_pdf_to_json")(pdf_pdf_to_json)
     server.tool(name="pdf_pdf_to_markdown")(pdf_pdf_to_markdown)
     server.tool(name="pdf_metadata_read")(pdf_metadata_read)
+    server.tool(name="pdf_metadata_page_info")(pdf_metadata_page_info)
     server.tool(name="pdf_metadata_update")(pdf_metadata_update)
     server.tool(name="pdf_metadata_remove")(pdf_metadata_remove)
+    server.tool(name="pdf_security_remove_metadata")(pdf_security_remove_metadata)
     server.tool(name="pdf_validate_output")(pdf_validate_output)
+    server.tool(name="pdf_page_count_check")(pdf_page_count_check)
     server.tool(name="pdf_render_check")(pdf_render_check)
     server.tool(name="pdf_blank_page_check")(pdf_blank_page_check)
     server.tool(name="pdf_ai_parse_lite")(pdf_ai_parse_lite)
@@ -158,6 +200,23 @@ def agent_setup_claude_code(
         args_prefix=args_prefix,
         server_name=server_name,
         scope=scope,
+    ).model_dump_json()
+
+
+def agent_setup_codex(
+    output_path: str | None = None,
+    safe_root: str = ".",
+    command: str = "okpdf",
+    args_prefix: list[str] | None = None,
+    server_name: str = "agentpdf",
+) -> str:
+    """Generate a Codex MCP config for local AgentPDF tools."""
+    return run_agent_setup_codex(
+        output_path=output_path,
+        safe_root=safe_root,
+        command=command,
+        args_prefix=args_prefix,
+        server_name=server_name,
     ).model_dump_json()
 
 
@@ -386,6 +445,10 @@ def pdf_ai_create_agent(
     output_path: str = ".agentpdf-out/create-agent.pdf",
     plan_output_path: str | None = None,
     coverage_output_path: str | None = None,
+    context_classification_output_path: str | None = None,
+    context_report_output_path: str | None = None,
+    context_report_json_output_path: str | None = None,
+    bundle_output_path: str | None = None,
     preferred_template_id: str | None = None,
     preferred_color_scheme: str | None = None,
     title: str | None = None,
@@ -401,6 +464,10 @@ def pdf_ai_create_agent(
         output_path=output_path,
         plan_output_path=plan_output_path,
         coverage_output_path=coverage_output_path,
+        context_classification_output_path=context_classification_output_path,
+        context_report_output_path=context_report_output_path,
+        context_report_json_output_path=context_report_json_output_path,
+        bundle_output_path=bundle_output_path,
         preferred_template_id=preferred_template_id,
         preferred_color_scheme=preferred_color_scheme,
         title=title,
@@ -468,6 +535,123 @@ def pdf_context_build_packet(
     ).model_dump_json()
 
 
+def pdf_context_ingest(
+    context_item: dict[str, object],
+    output_path: str | None = None,
+) -> str:
+    """Normalize one local source into an agent context item."""
+    return run_context_ingest(
+        context_item,
+        output_path=output_path,
+    ).model_dump_json()
+
+
+def pdf_context_packet(
+    context_items: list[dict[str, object]],
+    output_path: str,
+    title: str | None = None,
+    intent: str | None = None,
+) -> str:
+    """Build a reusable Context Packet from raw or pre-ingested context items."""
+    return run_context_packet(
+        context_items,
+        output_path=output_path,
+        title=title,
+        intent=intent,
+    ).model_dump_json()
+
+
+def pdf_context_classify(
+    context_packet: dict[str, object] | str,
+    target_profile: dict[str, object] | str | None = None,
+    output_path: str | None = None,
+) -> str:
+    """Classify context items for agent routing into target PDF blocks and slots."""
+    return run_context_classify(
+        context_packet,
+        target_profile=target_profile,
+        output_path=output_path,
+    ).model_dump_json()
+
+
+def pdf_context_code_snapshot(
+    path: str,
+    output_path: str | None = None,
+    label: str | None = None,
+    role: str = "code_evidence",
+    context_item_id: str | None = None,
+    line_start: int | None = None,
+    line_end: int | None = None,
+    repository_root: str | None = None,
+    include_dependencies: bool = False,
+) -> str:
+    """Create a code context item with local symbol, range, hash, and source refs."""
+    return run_context_code_snapshot(
+        path=path,
+        output_path=output_path,
+        label=label,
+        role=role,
+        context_item_id=context_item_id,
+        line_start=line_start,
+        line_end=line_end,
+        repository_root=repository_root,
+        include_dependencies=include_dependencies,
+    ).model_dump_json()
+
+
+def pdf_context_data_profile(
+    path: str,
+    output_path: str | None = None,
+    label: str | None = None,
+    role: str = "data_evidence",
+    context_item_id: str | None = None,
+    sheet: str | None = None,
+    max_rows: int = 100,
+) -> str:
+    """Create a data context item with local table/profile evidence."""
+    return run_context_data_profile(
+        path=path,
+        output_path=output_path,
+        label=label,
+        role=role,
+        context_item_id=context_item_id,
+        sheet=sheet,
+        max_rows=max_rows,
+    ).model_dump_json()
+
+
+def pdf_compose_plan(
+    context_packet: dict[str, object] | str,
+    target_profile: dict[str, object] | str = "research_brief",
+    output_path: str | None = None,
+    style_pack: str | None = None,
+    title: str | None = None,
+) -> str:
+    """Plan composition IR, source map, coverage, and render payload without writing a PDF."""
+    return run_compose_plan(
+        context_packet,
+        target_profile=target_profile,
+        output_path=output_path,
+        style_pack=style_pack,
+        title=title,
+    ).model_dump_json()
+
+
+def pdf_compose_render_ir(
+    composition: dict[str, object] | str,
+    output_path: str,
+    style_pack: str | None = None,
+    title: str | None = None,
+) -> str:
+    """Render a composition plan or IR payload into a validated PDF artifact."""
+    return run_compose_render_ir(
+        composition,
+        output_path=output_path,
+        style_pack=style_pack,
+        title=title,
+    ).model_dump_json()
+
+
 def pdf_compose_from_context(
     context_packet: dict[str, object] | str,
     output_path: str,
@@ -485,9 +669,241 @@ def pdf_compose_from_context(
     ).model_dump_json()
 
 
+def pdf_compose_add_code_block(
+    input_path: str,
+    output_path: str,
+    title: str,
+    code: str,
+    language: str = "text",
+    source_refs: list[str] | None = None,
+    block_id: str | None = None,
+    target_slot: str | None = None,
+    composition_path: str | None = None,
+    layer_manifest_path: str | None = None,
+    manifest_output_path: str | None = None,
+) -> str:
+    """Append a source-backed code block page to a new PDF artifact."""
+    return run_compose_add_code_block(
+        input_path=input_path,
+        output_path=output_path,
+        title=title,
+        code=code,
+        language=language,
+        source_refs=source_refs,
+        block_id=block_id,
+        target_slot=target_slot,
+        composition_path=composition_path,
+        layer_manifest_path=layer_manifest_path,
+        manifest_output_path=manifest_output_path,
+    ).model_dump_json()
+
+
+def pdf_compose_add_table(
+    input_path: str,
+    output_path: str,
+    title: str,
+    columns: list[str],
+    rows: list[list[object]],
+    source_refs: list[str] | None = None,
+    block_id: str | None = None,
+    target_slot: str | None = None,
+    composition_path: str | None = None,
+    layer_manifest_path: str | None = None,
+    manifest_output_path: str | None = None,
+) -> str:
+    """Append a source-backed table page to a new PDF artifact."""
+    return run_compose_add_table(
+        input_path=input_path,
+        output_path=output_path,
+        title=title,
+        columns=columns,
+        rows=rows,
+        source_refs=source_refs,
+        block_id=block_id,
+        target_slot=target_slot,
+        composition_path=composition_path,
+        layer_manifest_path=layer_manifest_path,
+        manifest_output_path=manifest_output_path,
+    ).model_dump_json()
+
+
+def pdf_compose_add_figure(
+    input_path: str,
+    output_path: str,
+    title: str,
+    image_path: str,
+    caption: str | None = None,
+    source_refs: list[str] | None = None,
+    block_id: str | None = None,
+    target_slot: str | None = None,
+    composition_path: str | None = None,
+    layer_manifest_path: str | None = None,
+    manifest_output_path: str | None = None,
+) -> str:
+    """Append a source-backed figure page to a new PDF artifact."""
+    return run_compose_add_figure(
+        input_path=input_path,
+        output_path=output_path,
+        title=title,
+        image_path=image_path,
+        caption=caption,
+        source_refs=source_refs,
+        block_id=block_id,
+        target_slot=target_slot,
+        composition_path=composition_path,
+        layer_manifest_path=layer_manifest_path,
+        manifest_output_path=manifest_output_path,
+    ).model_dump_json()
+
+
+def pdf_compose_add_appendix(
+    input_path: str,
+    output_path: str,
+    title: str,
+    markdown: str,
+    source_refs: list[str] | None = None,
+    block_id: str | None = None,
+    target_slot: str | None = None,
+    composition_path: str | None = None,
+    layer_manifest_path: str | None = None,
+    manifest_output_path: str | None = None,
+) -> str:
+    """Append a source-backed Markdown appendix to a new PDF artifact."""
+    return run_compose_add_appendix(
+        input_path=input_path,
+        output_path=output_path,
+        title=title,
+        markdown=markdown,
+        source_refs=source_refs,
+        block_id=block_id,
+        target_slot=target_slot,
+        composition_path=composition_path,
+        layer_manifest_path=layer_manifest_path,
+        manifest_output_path=manifest_output_path,
+    ).model_dump_json()
+
+
+def pdf_compose_add_citation(
+    input_path: str,
+    output_path: str,
+    title: str,
+    source: str,
+    quote: str | None = None,
+    page: str | None = None,
+    source_refs: list[str] | None = None,
+    block_id: str | None = None,
+    target_slot: str | None = None,
+    composition_path: str | None = None,
+    layer_manifest_path: str | None = None,
+    manifest_output_path: str | None = None,
+) -> str:
+    """Append a source-backed citation page to a new PDF artifact."""
+    return run_compose_add_citation(
+        input_path=input_path,
+        output_path=output_path,
+        title=title,
+        source=source,
+        quote=quote,
+        page=page,
+        source_refs=source_refs,
+        block_id=block_id,
+        target_slot=target_slot,
+        composition_path=composition_path,
+        layer_manifest_path=layer_manifest_path,
+        manifest_output_path=manifest_output_path,
+    ).model_dump_json()
+
+
+def pdf_compose_add_media_reference(
+    input_path: str,
+    output_path: str,
+    title: str,
+    media_path: str,
+    media_kind: str = "media",
+    transcript_excerpt: str | None = None,
+    duration_seconds: float | None = None,
+    chapter_count: int | None = None,
+    keyframe_count: int | None = None,
+    source_refs: list[str] | None = None,
+    block_id: str | None = None,
+    target_slot: str | None = None,
+    composition_path: str | None = None,
+    layer_manifest_path: str | None = None,
+    manifest_output_path: str | None = None,
+) -> str:
+    """Append a source-backed media reference page to a new PDF artifact."""
+    return run_compose_add_media_reference(
+        input_path=input_path,
+        output_path=output_path,
+        title=title,
+        media_path=media_path,
+        media_kind=media_kind,
+        transcript_excerpt=transcript_excerpt,
+        duration_seconds=duration_seconds,
+        chapter_count=chapter_count,
+        keyframe_count=keyframe_count,
+        source_refs=source_refs,
+        block_id=block_id,
+        target_slot=target_slot,
+        composition_path=composition_path,
+        layer_manifest_path=layer_manifest_path,
+        manifest_output_path=manifest_output_path,
+    ).model_dump_json()
+
+
+def pdf_compose_add_slide(
+    input_path: str,
+    output_path: str,
+    title: str,
+    body: list[str] | None = None,
+    subtitle: str | None = None,
+    code: str | None = None,
+    table: dict[str, object] | None = None,
+    image_path: str | None = None,
+    source_refs: list[str] | None = None,
+    block_id: str | None = None,
+    target_slot: str | None = None,
+    composition_path: str | None = None,
+    layer_manifest_path: str | None = None,
+    manifest_output_path: str | None = None,
+) -> str:
+    """Append a source-backed slide-like page to a new PDF artifact."""
+    return run_compose_add_slide(
+        input_path=input_path,
+        output_path=output_path,
+        title=title,
+        body=body,
+        subtitle=subtitle,
+        code=code,
+        table=table,
+        image_path=image_path,
+        source_refs=source_refs,
+        block_id=block_id,
+        target_slot=target_slot,
+        composition_path=composition_path,
+        layer_manifest_path=layer_manifest_path,
+        manifest_output_path=manifest_output_path,
+    ).model_dump_json()
+
+
 def pdf_target_profiles(output_path: str | None = None) -> str:
     """List built-in target PDF profiles with layout slots and accepted block types."""
     return run_target_profiles(output_path=output_path).model_dump_json()
+
+
+def pdf_target_select_profile(
+    goal: str = "",
+    context_packet: dict[str, object] | str | None = None,
+    preferred_profile: str | None = None,
+    output_path: str | None = None,
+) -> str:
+    """Select a local target PDF profile from a goal and optional Context Packet."""
+    return run_select_target_profile(
+        goal=goal,
+        context_packet=context_packet,
+        preferred_profile=preferred_profile,
+        output_path=output_path,
+    ).model_dump_json()
 
 
 def pdf_target_validate_profile(
@@ -504,6 +920,40 @@ def pdf_evidence_coverage_report(
 ) -> str:
     """Create an evidence coverage report from a composition artifact."""
     return run_evidence_coverage_report(composition, output_path=output_path).model_dump_json()
+
+
+def pdf_evidence_map_sources(
+    composition: dict[str, object] | str | None = None,
+    blocks: list[dict[str, object]] | None = None,
+    claims: list[dict[str, object]] | None = None,
+    context_packet: dict[str, object] | str | None = None,
+    output_path: str | None = None,
+) -> str:
+    """Map generated blocks or claims back to Context Packet source refs."""
+    return run_evidence_map_sources(
+        composition=composition,
+        blocks=blocks,
+        claims=claims,
+        context_packet=context_packet,
+        output_path=output_path,
+    ).model_dump_json()
+
+
+def pdf_evidence_context_packet_report(
+    context_packet: dict[str, object] | str,
+    output_path: str,
+    report_output_path: str | None = None,
+    title: str | None = None,
+    style_pack: str = "paper_ink",
+) -> str:
+    """Create a validated PDF/JSON report for a Context Packet and source graph."""
+    return run_context_packet_report(
+        context_packet=context_packet,
+        output_path=output_path,
+        report_output_path=report_output_path,
+        title=title,
+        style_pack=style_pack,
+    ).model_dump_json()
 
 
 def pdf_artifacts_export_bundle(
@@ -600,6 +1050,11 @@ def pdf_metadata_read(input_path: str) -> str:
     return run_metadata_read(input_path).model_dump_json()
 
 
+def pdf_metadata_page_info(input_path: str, pages: str = "all") -> str:
+    """Return local PDF page size, rotation, text-layer, and image facts."""
+    return run_metadata_page_info(input_path, pages=pages).model_dump_json()
+
+
 def pdf_metadata_update(input_path: str, metadata: dict[str, object], output_path: str) -> str:
     """Update local PDF metadata and write a new PDF."""
     return run_metadata_update(input_path, metadata=metadata, output_path=output_path).model_dump_json()
@@ -610,9 +1065,19 @@ def pdf_metadata_remove(input_path: str, output_path: str) -> str:
     return run_metadata_remove(input_path, output_path=output_path).model_dump_json()
 
 
+def pdf_security_remove_metadata(input_path: str, output_path: str) -> str:
+    """Remove local PDF metadata under the security namespace and write a new PDF."""
+    return run_security_remove_metadata(input_path, output_path=output_path).model_dump_json()
+
+
 def pdf_validate_output(path: str, expected_pages: int | None = None) -> str:
     """Validate generated local PDF output."""
     return run_validate_output(path, expected_pages=expected_pages).model_dump_json()
+
+
+def pdf_page_count_check(path: str, expected_pages: int) -> str:
+    """Compare a local PDF page count with an expected count."""
+    return run_page_count_check(path, expected_pages=expected_pages).model_dump_json()
 
 
 def pdf_render_check(path: str, pages: str = "all") -> str:

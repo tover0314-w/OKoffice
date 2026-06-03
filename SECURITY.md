@@ -8,7 +8,9 @@ The initial pre-alpha harness has no supported production version. Once released
 
 ## Reporting vulnerabilities
 
-Do not open public issues for vulnerabilities. Report privately to the security contact listed by the maintainers after launch.
+Do not open public issues for vulnerabilities, exploit details, private documents, or document-leak examples. Use GitHub private vulnerability reporting when it is enabled for the repository, or report privately to the security contact listed by the maintainers after launch.
+
+Public issues may be used for non-sensitive security design questions only when they do not disclose an exploit or sensitive document content.
 
 ## Security principles
 

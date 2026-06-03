@@ -106,6 +106,8 @@ def test_patch_transaction_appends_structured_blocks_without_mutating_input(tmp_
     original_pages = len(PdfReader(source_pdf).pages)
     image_path = tmp_path / "architecture.png"
     Image.new("RGB", (120, 80), color=(20, 100, 90)).save(image_path)
+    media_path = tmp_path / "meeting.mp3"
+    media_path.write_bytes(b"ID3 local media fixture")
     manifest_path = tmp_path / "structured.patch.json"
     patched_pdf = tmp_path / "structured-patched.pdf"
 
@@ -132,6 +134,32 @@ def test_patch_transaction_appends_structured_blocks_without_mutating_input(tmp_
             "source_refs": ["ctx_001"],
         },
         {
+            "op": "append_citation",
+            "title": "Source Citation",
+            "quote": "Patch transactions keep citation evidence traceable.",
+            "source": "https://example.com/research",
+            "page": "section 2",
+            "source_refs": ["ctx_001"],
+            "citation_evidence": {
+                "domain": "example.com",
+                "fetch_status": "not_fetched",
+            },
+        },
+        {
+            "op": "append_media_reference",
+            "title": "Meeting Audio",
+            "media_path": str(media_path),
+            "media_kind": "audio",
+            "transcript_excerpt": "00:00 Keep local provenance explicit.",
+            "duration_seconds": 18,
+            "source_refs": ["ctx_001"],
+            "media_evidence": {
+                "filename": "meeting.mp3",
+                "exists": True,
+                "fetch_status": "not_fetched",
+            },
+        },
+        {
             "op": "append_slide",
             "title": "Slide Appendix",
             "body": ["Patch transactions can append slide-like pages."],
@@ -151,20 +179,28 @@ def test_patch_transaction_appends_structured_blocks_without_mutating_input(tmp_
     verified = verify_patch_transaction(manifest_path, patched_pdf)
 
     manifest = plan.usage["patch_manifest"]
-    assert manifest["operation_count"] == 4
+    assert manifest["operation_count"] == 6
     assert manifest["safety"]["supported_operations"] == [
         "append_markdown",
         "append_code_block",
         "append_table",
         "append_image",
         "append_slide",
+        "append_citation",
+        "append_media_reference",
+        "regenerate_block",
     ]
     assert [item["op"] for item in preview.usage["operation_summary"]] == [
         "append_code_block",
         "append_table",
         "append_image",
+        "append_citation",
+        "append_media_reference",
         "append_slide",
     ]
+    assert manifest["operations"][3]["citation_evidence"]["fetch_status"] == "not_fetched"
+    assert manifest["operations"][4]["media_kind"] == "audio"
+    assert manifest["operations"][4]["media_evidence"]["fetch_status"] == "not_fetched"
 
     assert applied.status == "succeeded"
     assert applied.validation is not None
@@ -179,6 +215,12 @@ def test_patch_transaction_appends_structured_blocks_without_mutating_input(tmp_
     assert "Runtime Metrics" in patched_text
     assert "latency_ms" in patched_text
     assert "Architecture Figure" in patched_text
+    assert "Source Citation" in patched_text
+    assert "Patch transactions keep citation evidence traceable." in patched_text
+    assert "https://example.com/research" in patched_text
+    assert "Meeting Audio" in patched_text
+    assert "meeting.mp3" in patched_text
+    assert "00:00 Keep local provenance explicit." in patched_text
     assert "Slide Appendix" in patched_text
     assert "Patch Evidence" in patched_text
     page_report = inspect_pdf_pages(patched_pdf, pages="all")

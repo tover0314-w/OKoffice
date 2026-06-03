@@ -27,7 +27,13 @@ Use an MCP server or local REST API wrapper. See `examples/openai-agents/openai_
 
 ## Codex
 
-Codex should read `AGENTS.md` and use CLI/API/MCP examples to implement and test the project.
+Generate a Codex-friendly local MCP config, then point Codex at the workspace `AGENTS.md` and the generated config:
+
+```bash
+okpdf agent setup codex -o codex.mcp.json --safe-root . --json
+```
+
+The same setup is available as REST tool `agent.setup.codex`, MCP tool `agent_setup_codex`, and Node command `agentpdf-node agent-setup-codex`.
 
 ## LangChain
 

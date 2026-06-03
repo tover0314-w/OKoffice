@@ -221,6 +221,19 @@ def inspect_pdf_pages(path: str | Path, pages: str = "all") -> dict[str, Any]:
     }
 
 
+def page_info_pdf(path: str | Path, pages: str = "all") -> ToolResult:
+    tool = "pdf.metadata.page_info"
+    info = inspect_pdf_pages(path, pages=pages)
+    return ToolResult(
+        job_id=_job_id(),
+        status="succeeded",
+        tool=tool,
+        warnings=list(info.get("warnings", [])),
+        usage=info,
+        next_recommended_tools=["pdf.inspect.pages", "pdf.validation.render_check"],
+    )
+
+
 def merge_pdfs(input_paths: list[str | Path], output_path: str | Path) -> ToolResult:
     tool = "pdf.organize.merge"
     writer = PdfWriter()
@@ -909,8 +922,11 @@ def update_metadata_pdf(
     )
 
 
-def remove_metadata_pdf(input_path: str | Path, output_path: str | Path) -> ToolResult:
-    tool = "pdf.metadata.remove"
+def remove_metadata_pdf(
+    input_path: str | Path,
+    output_path: str | Path,
+    tool: str = "pdf.metadata.remove",
+) -> ToolResult:
     resolved = resolve_input_path(input_path)
     reader = _reader_for_operation(resolved)
     writer = _writer_from_reader_pages(reader)

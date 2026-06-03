@@ -1,28 +1,72 @@
 name: Bug report
-description: Report a reproducible bug
+description: Report a reproducible okpdf bug
 title: "bug: "
-labels: ["bug"]
+labels: ["bug", "needs-triage"]
 body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping make okpdf better. If this is a vulnerability or document-leak risk, do not file a public issue; follow SECURITY.md instead.
   - type: textarea
     id: summary
     attributes:
       label: Summary
       description: What happened?
+      placeholder: "okpdf render-check fails on a one-page PDF with..."
+    validations:
+      required: true
+  - type: dropdown
+    id: interface
+    attributes:
+      label: Interface
+      options:
+        - CLI
+        - MCP
+        - REST API
+        - Python library
+        - TypeScript / Node SDK
+        - Docker
+        - Documentation / examples
+        - Not sure
     validations:
       required: true
   - type: textarea
     id: reproduce
     attributes:
-      label: Reproduction steps
-      description: Include CLI/API/MCP command and minimal PDF fixture if possible.
+      label: Reproduction
+      description: Include the exact command or request body and a minimal fixture if it is safe to share.
+      render: bash
     validations:
       required: true
   - type: textarea
     id: expected
     attributes:
       label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual output
+      description: Paste the structured `ToolResult`, traceback, warning, or validation report.
+      render: json
   - type: textarea
     id: environment
     attributes:
       label: Environment
-      description: OS, Python version, AgentPDF version.
+      description: OS, Python version, Node version, okpdf version or commit SHA, install method.
+      placeholder: |
+        OS:
+        Python:
+        Node:
+        okpdf commit/version:
+        Install method:
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety check
+      options:
+        - label: I removed secrets, private URLs, and sensitive document content from this issue.
+          required: true

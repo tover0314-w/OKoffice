@@ -4,9 +4,33 @@ from pathlib import Path
 from uuid import uuid4
 
 from agentpdf.agents.claude_code import setup_claude_code
+from agentpdf.agents.codex import setup_codex
 from agentpdf.artifacts.bundle import export_artifact_bundle, verify_artifact_bundle
-from agentpdf.compose.context import compose_from_context, list_target_profiles, validate_target_profile
-from agentpdf.context.packet import build_context_packet
+from agentpdf.compose.blocks import (
+    add_appendix_to_pdf,
+    add_citation_to_pdf,
+    add_code_block_to_pdf,
+    add_figure_to_pdf,
+    add_media_reference_to_pdf,
+    add_slide_to_pdf,
+    add_table_to_pdf,
+)
+from agentpdf.compose.context import (
+    compose_from_context,
+    list_target_profiles,
+    plan_composition,
+    render_composition_ir,
+    select_target_profile,
+    validate_target_profile,
+)
+from agentpdf.context.classify import classify_context
+from agentpdf.context.packet import (
+    build_context_packet,
+    build_reusable_context_packet,
+    create_code_snapshot,
+    ingest_context_item,
+    profile_data_source,
+)
 from agentpdf.creation.agent import (
     create_pdf_from_prompt,
     create_pdf_from_template_pack,
@@ -18,6 +42,8 @@ from agentpdf.creation.agent import (
     validate_template_pack,
 )
 from agentpdf.evidence.coverage import create_coverage_report
+from agentpdf.evidence.context_packet_report import create_context_packet_report
+from agentpdf.evidence.source_map import map_sources
 from agentpdf.patch.transaction import (
     apply_patch_transaction,
     plan_patch_transaction,
@@ -38,6 +64,7 @@ from agentpdf.core.pdf import (
     inspect_pdf_pages,
     insert_blank_pages_pdf,
     merge_pdfs,
+    page_info_pdf,
     read_metadata_pdf,
     remove_pages_pdf,
     remove_metadata_pdf,
@@ -368,6 +395,10 @@ def run_create_agent(
     output_path: str | Path = ".agentpdf-out/create-agent.pdf",
     plan_output_path: str | Path | None = None,
     coverage_output_path: str | Path | None = None,
+    context_classification_output_path: str | Path | None = None,
+    context_report_output_path: str | Path | None = None,
+    context_report_json_output_path: str | Path | None = None,
+    bundle_output_path: str | Path | None = None,
     preferred_template_id: str | None = None,
     preferred_color_scheme: str | None = None,
     title: str | None = None,
@@ -383,6 +414,10 @@ def run_create_agent(
             output_path=output_path,
             plan_output_path=plan_output_path,
             coverage_output_path=coverage_output_path,
+            context_classification_output_path=context_classification_output_path,
+            context_report_output_path=context_report_output_path,
+            context_report_json_output_path=context_report_json_output_path,
+            bundle_output_path=bundle_output_path,
             preferred_template_id=preferred_template_id,
             preferred_color_scheme=preferred_color_scheme,
             title=title,
@@ -439,6 +474,101 @@ def run_build_context_packet(
         return _failed("pdf.context.build_packet", exc.to_error())
 
 
+def run_context_ingest(
+    context_item: dict[str, object],
+    output_path: str | Path | None = None,
+) -> ToolResult:
+    try:
+        return ingest_context_item(
+            context_item,
+            output_path=output_path,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.context.ingest", exc.to_error())
+
+
+def run_context_packet(
+    context_items: list[dict[str, object]],
+    output_path: str | Path,
+    title: str | None = None,
+    intent: str | None = None,
+) -> ToolResult:
+    try:
+        return build_reusable_context_packet(
+            context_items,
+            output_path=output_path,
+            title=title,
+            intent=intent,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.context.packet", exc.to_error())
+
+
+def run_context_classify(
+    context_packet: dict[str, object] | str | Path,
+    target_profile: dict[str, object] | str | None = None,
+    output_path: str | Path | None = None,
+) -> ToolResult:
+    try:
+        return classify_context(
+            context_packet,
+            target_profile=target_profile,
+            output_path=output_path,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.context.classify", exc.to_error())
+
+
+def run_context_code_snapshot(
+    path: str | Path,
+    output_path: str | Path | None = None,
+    label: str | None = None,
+    role: str = "code_evidence",
+    context_item_id: str | None = None,
+    line_start: int | None = None,
+    line_end: int | None = None,
+    repository_root: str | Path | None = None,
+    include_dependencies: bool = False,
+) -> ToolResult:
+    try:
+        return create_code_snapshot(
+            path=path,
+            output_path=output_path,
+            label=label,
+            role=role,
+            context_item_id=context_item_id,
+            line_start=line_start,
+            line_end=line_end,
+            repository_root=repository_root,
+            include_dependencies=include_dependencies,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.context.code_snapshot", exc.to_error())
+
+
+def run_context_data_profile(
+    path: str | Path,
+    output_path: str | Path | None = None,
+    label: str | None = None,
+    role: str = "data_evidence",
+    context_item_id: str | None = None,
+    sheet: str | None = None,
+    max_rows: int = 100,
+) -> ToolResult:
+    try:
+        return profile_data_source(
+            path=path,
+            output_path=output_path,
+            label=label,
+            role=role,
+            context_item_id=context_item_id,
+            sheet=sheet,
+            max_rows=max_rows,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.context.data_profile", exc.to_error())
+
+
 def run_compose_from_context(
     context_packet: dict[str, object] | str | Path,
     target_profile: dict[str, object] | str,
@@ -458,11 +588,295 @@ def run_compose_from_context(
         return _failed("pdf.compose.from_context", exc.to_error())
 
 
+def run_compose_plan(
+    context_packet: dict[str, object] | str | Path,
+    target_profile: dict[str, object] | str,
+    output_path: str | Path | None = None,
+    style_pack: str | None = None,
+    title: str | None = None,
+) -> ToolResult:
+    try:
+        return plan_composition(
+            context_packet,
+            target_profile=target_profile,
+            output_path=output_path,
+            style_pack=style_pack,
+            title=title,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.compose.plan", exc.to_error())
+
+
+def run_compose_render_ir(
+    composition: dict[str, object] | str | Path,
+    output_path: str | Path,
+    style_pack: str | None = None,
+    title: str | None = None,
+) -> ToolResult:
+    try:
+        return render_composition_ir(
+            composition,
+            output_path=output_path,
+            style_pack=style_pack,
+            title=title,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.compose.render_ir", exc.to_error())
+
+
+def run_compose_add_code_block(
+    input_path: str | Path,
+    output_path: str | Path,
+    title: str,
+    code: str,
+    language: str = "text",
+    source_refs: list[str] | None = None,
+    block_id: str | None = None,
+    target_slot: str | None = None,
+    composition_path: str | Path | None = None,
+    layer_manifest_path: str | Path | None = None,
+    manifest_output_path: str | Path | None = None,
+) -> ToolResult:
+    try:
+        return add_code_block_to_pdf(
+            input_path=input_path,
+            output_path=output_path,
+            title=title,
+            code=code,
+            language=language,
+            source_refs=source_refs,
+            block_id=block_id,
+            target_slot=target_slot,
+            composition_path=composition_path,
+            layer_manifest_path=layer_manifest_path,
+            manifest_output_path=manifest_output_path,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.compose.add_code_block", exc.to_error())
+
+
+def run_compose_add_table(
+    input_path: str | Path,
+    output_path: str | Path,
+    title: str,
+    columns: list[str],
+    rows: list[list[object]],
+    source_refs: list[str] | None = None,
+    block_id: str | None = None,
+    target_slot: str | None = None,
+    composition_path: str | Path | None = None,
+    layer_manifest_path: str | Path | None = None,
+    manifest_output_path: str | Path | None = None,
+) -> ToolResult:
+    try:
+        return add_table_to_pdf(
+            input_path=input_path,
+            output_path=output_path,
+            title=title,
+            columns=columns,
+            rows=rows,
+            source_refs=source_refs,
+            block_id=block_id,
+            target_slot=target_slot,
+            composition_path=composition_path,
+            layer_manifest_path=layer_manifest_path,
+            manifest_output_path=manifest_output_path,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.compose.add_table", exc.to_error())
+
+
+def run_compose_add_figure(
+    input_path: str | Path,
+    output_path: str | Path,
+    title: str,
+    image_path: str | Path,
+    caption: str | None = None,
+    source_refs: list[str] | None = None,
+    block_id: str | None = None,
+    target_slot: str | None = None,
+    composition_path: str | Path | None = None,
+    layer_manifest_path: str | Path | None = None,
+    manifest_output_path: str | Path | None = None,
+) -> ToolResult:
+    try:
+        return add_figure_to_pdf(
+            input_path=input_path,
+            output_path=output_path,
+            title=title,
+            image_path=image_path,
+            caption=caption,
+            source_refs=source_refs,
+            block_id=block_id,
+            target_slot=target_slot,
+            composition_path=composition_path,
+            layer_manifest_path=layer_manifest_path,
+            manifest_output_path=manifest_output_path,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.compose.add_figure", exc.to_error())
+
+
+def run_compose_add_appendix(
+    input_path: str | Path,
+    output_path: str | Path,
+    title: str,
+    markdown: str,
+    source_refs: list[str] | None = None,
+    block_id: str | None = None,
+    target_slot: str | None = None,
+    composition_path: str | Path | None = None,
+    layer_manifest_path: str | Path | None = None,
+    manifest_output_path: str | Path | None = None,
+) -> ToolResult:
+    try:
+        return add_appendix_to_pdf(
+            input_path=input_path,
+            output_path=output_path,
+            title=title,
+            markdown=markdown,
+            source_refs=source_refs,
+            block_id=block_id,
+            target_slot=target_slot,
+            composition_path=composition_path,
+            layer_manifest_path=layer_manifest_path,
+            manifest_output_path=manifest_output_path,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.compose.add_appendix", exc.to_error())
+
+
+def run_compose_add_citation(
+    input_path: str | Path,
+    output_path: str | Path,
+    title: str,
+    source: str,
+    quote: str | None = None,
+    page: str | None = None,
+    source_refs: list[str] | None = None,
+    block_id: str | None = None,
+    target_slot: str | None = None,
+    composition_path: str | Path | None = None,
+    layer_manifest_path: str | Path | None = None,
+    manifest_output_path: str | Path | None = None,
+) -> ToolResult:
+    try:
+        return add_citation_to_pdf(
+            input_path=input_path,
+            output_path=output_path,
+            title=title,
+            source=source,
+            quote=quote,
+            page=page,
+            source_refs=source_refs,
+            block_id=block_id,
+            target_slot=target_slot,
+            composition_path=composition_path,
+            layer_manifest_path=layer_manifest_path,
+            manifest_output_path=manifest_output_path,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.compose.add_citation", exc.to_error())
+
+
+def run_compose_add_media_reference(
+    input_path: str | Path,
+    output_path: str | Path,
+    title: str,
+    media_path: str | Path,
+    media_kind: str = "media",
+    transcript_excerpt: str | None = None,
+    duration_seconds: float | int | None = None,
+    chapter_count: int | None = None,
+    keyframe_count: int | None = None,
+    source_refs: list[str] | None = None,
+    block_id: str | None = None,
+    target_slot: str | None = None,
+    composition_path: str | Path | None = None,
+    layer_manifest_path: str | Path | None = None,
+    manifest_output_path: str | Path | None = None,
+) -> ToolResult:
+    try:
+        return add_media_reference_to_pdf(
+            input_path=input_path,
+            output_path=output_path,
+            title=title,
+            media_path=media_path,
+            media_kind=media_kind,
+            transcript_excerpt=transcript_excerpt,
+            duration_seconds=duration_seconds,
+            chapter_count=chapter_count,
+            keyframe_count=keyframe_count,
+            source_refs=source_refs,
+            block_id=block_id,
+            target_slot=target_slot,
+            composition_path=composition_path,
+            layer_manifest_path=layer_manifest_path,
+            manifest_output_path=manifest_output_path,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.compose.add_media_reference", exc.to_error())
+
+
+def run_compose_add_slide(
+    input_path: str | Path,
+    output_path: str | Path,
+    title: str,
+    body: list[str] | None = None,
+    subtitle: str | None = None,
+    code: str | None = None,
+    table: dict[str, object] | None = None,
+    image_path: str | Path | None = None,
+    source_refs: list[str] | None = None,
+    block_id: str | None = None,
+    target_slot: str | None = None,
+    composition_path: str | Path | None = None,
+    layer_manifest_path: str | Path | None = None,
+    manifest_output_path: str | Path | None = None,
+) -> ToolResult:
+    try:
+        return add_slide_to_pdf(
+            input_path=input_path,
+            output_path=output_path,
+            title=title,
+            body=body,
+            subtitle=subtitle,
+            code=code,
+            table=table,
+            image_path=image_path,
+            source_refs=source_refs,
+            block_id=block_id,
+            target_slot=target_slot,
+            composition_path=composition_path,
+            layer_manifest_path=layer_manifest_path,
+            manifest_output_path=manifest_output_path,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.compose.add_slide", exc.to_error())
+
+
 def run_target_profiles(output_path: str | Path | None = None) -> ToolResult:
     try:
         return list_target_profiles(output_path=output_path)
     except AgentPDFException as exc:
         return _failed("pdf.target.profiles", exc.to_error())
+
+
+def run_select_target_profile(
+    goal: str = "",
+    context_packet: dict[str, object] | str | Path | None = None,
+    preferred_profile: str | None = None,
+    output_path: str | Path | None = None,
+) -> ToolResult:
+    try:
+        return select_target_profile(
+            goal=goal,
+            context_packet=context_packet,
+            preferred_profile=preferred_profile,
+            output_path=output_path,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.target.select_profile", exc.to_error())
 
 
 def run_validate_target_profile(
@@ -496,6 +910,25 @@ def run_agent_setup_claude_code(
         return _failed("agent.setup.claude_code", exc.to_error())
 
 
+def run_agent_setup_codex(
+    output_path: str | Path | None = None,
+    safe_root: str = ".",
+    command: str = "okpdf",
+    args_prefix: list[str] | None = None,
+    server_name: str = "agentpdf",
+) -> ToolResult:
+    try:
+        return setup_codex(
+            output_path=output_path,
+            safe_root=safe_root,
+            command=command,
+            args_prefix=args_prefix,
+            server_name=server_name,
+        )
+    except AgentPDFException as exc:
+        return _failed("agent.setup.codex", exc.to_error())
+
+
 def run_evidence_coverage_report(
     composition: dict[str, object] | str | Path,
     output_path: str | Path | None = None,
@@ -504,6 +937,44 @@ def run_evidence_coverage_report(
         return create_coverage_report(composition, output_path=output_path)
     except AgentPDFException as exc:
         return _failed("pdf.evidence.coverage_report", exc.to_error())
+
+
+def run_evidence_map_sources(
+    composition: dict[str, object] | str | Path | None = None,
+    blocks: list[dict[str, object]] | None = None,
+    claims: list[dict[str, object]] | None = None,
+    context_packet: dict[str, object] | str | Path | None = None,
+    output_path: str | Path | None = None,
+) -> ToolResult:
+    try:
+        return map_sources(
+            composition=composition,
+            blocks=blocks,
+            claims=claims,
+            context_packet=context_packet,
+            output_path=output_path,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.evidence.map_sources", exc.to_error())
+
+
+def run_context_packet_report(
+    context_packet: dict[str, object] | str | Path,
+    output_path: str | Path,
+    report_output_path: str | Path | None = None,
+    title: str | None = None,
+    style_pack: str = "paper_ink",
+) -> ToolResult:
+    try:
+        return create_context_packet_report(
+            context_packet,
+            output_path=output_path,
+            report_output_path=report_output_path,
+            title=title,
+            style_pack=style_pack,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.evidence.context_packet_report", exc.to_error())
 
 
 def run_artifacts_export_bundle(
@@ -649,6 +1120,13 @@ def run_metadata_read(input_path: str | Path) -> ToolResult:
         return _failed("pdf.metadata.read", exc.to_error())
 
 
+def run_metadata_page_info(input_path: str | Path, pages: str = "all") -> ToolResult:
+    try:
+        return page_info_pdf(input_path, pages=pages)
+    except AgentPDFException as exc:
+        return _failed("pdf.metadata.page_info", exc.to_error())
+
+
 def run_metadata_update(
     input_path: str | Path,
     metadata: dict[str, object],
@@ -667,6 +1145,24 @@ def run_metadata_remove(input_path: str | Path, output_path: str | Path) -> Tool
         return _failed("pdf.metadata.remove", exc.to_error())
 
 
+def run_security_remove_metadata(input_path: str | Path, output_path: str | Path) -> ToolResult:
+    tool = "pdf.security.remove_metadata"
+    try:
+        result = remove_metadata_pdf(input_path, output_path=output_path)
+    except AgentPDFException as exc:
+        return _failed(tool, exc.to_error())
+    return ToolResult(
+        job_id=result.job_id,
+        status=result.status,
+        tool=tool,
+        artifacts=[artifact.model_copy(update={"source_tool": tool}) for artifact in result.artifacts],
+        validation=result.validation,
+        warnings=result.warnings,
+        usage={**result.usage, "security_action": "remove_metadata"},
+        next_recommended_tools=["pdf.metadata.read", "pdf.validation.validate_output"],
+    )
+
+
 def run_validate_output(path: str | Path, expected_pages: int | None = None) -> ToolResult:
     tool = "pdf.validation.validate_output"
     try:
@@ -679,6 +1175,27 @@ def run_validate_output(path: str | Path, expected_pages: int | None = None) -> 
         tool=tool,
         validation=report,
         next_recommended_tools=["pdf.inspect.document"],
+    )
+
+
+def run_page_count_check(path: str | Path, expected_pages: int) -> ToolResult:
+    tool = "pdf.validation.page_count_check"
+    try:
+        report = validate_pdf(path, expected_pages=expected_pages)
+    except AgentPDFException as exc:
+        return _failed(tool, exc.to_error())
+    return ToolResult(
+        job_id=_job_id(),
+        status="succeeded" if report.status == "passed" else "failed",
+        tool=tool,
+        validation=report,
+        warnings=report.warnings,
+        usage={
+            "input": str(Path(path).resolve()),
+            "expected_pages": expected_pages,
+            "actual_pages": report.page_count,
+        },
+        next_recommended_tools=["pdf.inspect.document", "pdf.validation.render_check"],
     )
 
 

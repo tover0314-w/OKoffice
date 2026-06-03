@@ -6,17 +6,44 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  test:
+  python:
+    name: Python
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: "3.12"
+          cache: pip
       - name: Install
         run: |
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
-      - name: Test
+      - name: Doctor
+        run: python scripts/doctor.py
+      - name: Tests
         run: pytest -q
+      - name: Ruff
+        run: ruff check src tests scripts
+
+  node:
+    name: Node SDK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: Test Node SDK
+        run: npm --workspace @okpdf/agentpdf-node test

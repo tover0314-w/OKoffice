@@ -348,6 +348,7 @@ def test_text_and_metadata_cli(text_pdf: Path, metadata_pdf: Path, tmp_path: Pat
 
     text = runner.invoke(app, ["extract-text", str(text_pdf), "--pages", "1", "--json"])
     read = runner.invoke(app, ["metadata", "read", str(metadata_pdf), "--json"])
+    page_info = runner.invoke(app, ["metadata", "page-info", str(text_pdf), "--pages", "1", "--json"])
     update = runner.invoke(
         app,
         [
@@ -365,15 +366,24 @@ def test_text_and_metadata_cli(text_pdf: Path, metadata_pdf: Path, tmp_path: Pat
         app,
         ["metadata", "remove", str(metadata_pdf), "-o", str(cleaned), "--json"],
     )
+    security_cleaned = tmp_path / "security-cleaned.pdf"
+    security_remove = runner.invoke(
+        app,
+        ["security", "remove-metadata", str(metadata_pdf), "-o", str(security_cleaned), "--json"],
+    )
 
     assert text.exit_code == 0
     assert "AgentPDF local text layer" in json.loads(text.stdout)["usage"]["text"]
     assert read.exit_code == 0
     assert json.loads(read.stdout)["usage"]["metadata"]["Title"] == "Original Title"
+    assert page_info.exit_code == 0
+    assert json.loads(page_info.stdout)["tool"] == "pdf.metadata.page_info"
     assert update.exit_code == 0
     assert json.loads(update.stdout)["tool"] == "pdf.metadata.update"
     assert remove.exit_code == 0
     assert json.loads(remove.stdout)["tool"] == "pdf.metadata.remove"
+    assert security_remove.exit_code == 0
+    assert json.loads(security_remove.stdout)["tool"] == "pdf.security.remove_metadata"
 
 
 def test_create_text_and_markdown_cli(tmp_path: Path) -> None:
@@ -502,6 +512,7 @@ def test_image_watermark_page_numbers_and_validate_cli(tmp_path: Path) -> None:
         ["page-numbers", str(watermarked), "-o", str(numbered), "--json"],
     )
     validate_result = runner.invoke(app, ["validate", str(numbered), "--json"])
+    page_count = runner.invoke(app, ["page-count-check", str(numbered), "--expected-pages", "1", "--json"])
     render_check = runner.invoke(app, ["render-check", str(numbered), "--pages", "1", "--json"])
     blank_check = runner.invoke(app, ["blank-page-check", str(numbered), "--pages", "1", "--json"])
 
@@ -513,6 +524,8 @@ def test_image_watermark_page_numbers_and_validate_cli(tmp_path: Path) -> None:
     assert json.loads(page_numbers_result.stdout)["tool"] == "pdf.edit.page_numbers"
     assert validate_result.exit_code == 0
     assert json.loads(validate_result.stdout)["tool"] == "pdf.validation.validate_output"
+    assert page_count.exit_code == 0
+    assert json.loads(page_count.stdout)["tool"] == "pdf.validation.page_count_check"
     assert render_check.exit_code == 0
     assert json.loads(render_check.stdout)["tool"] == "pdf.validation.render_check"
     assert blank_check.exit_code == 0

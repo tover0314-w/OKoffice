@@ -256,6 +256,7 @@ def compose_from_context(
     if profile.get("layout_mode") == "slides":
         slides, composition_ir, source_map, coverage = _compose_slides(packet, profile)
         markdown = _slides_to_outline(slides)
+        render_plan = _render_plan(profile, markdown=markdown, slides=slides)
         rendered = create_slide_deck_pdf(
             slides,
             output_path=output_path,
@@ -265,6 +266,7 @@ def compose_from_context(
     else:
         markdown, composition_ir, source_map, coverage = _compose_markdown(packet, profile)
         slides = []
+        render_plan = _render_plan(profile, markdown=markdown, slides=slides)
         rendered = create_markdown_pdf(
             markdown,
             output_path=output_path,
@@ -282,6 +284,7 @@ def compose_from_context(
         "evidence_coverage": coverage,
         "target_profile": profile,
         "context_packet_id": packet["context_packet_id"],
+        "render_plan": render_plan,
     }
     if slides:
         ir_payload["slides"] = slides
@@ -301,8 +304,151 @@ def compose_from_context(
             "composition_ir": composition_ir,
             "source_map": source_map,
             "evidence_coverage": coverage,
+            "render_plan": render_plan,
             "generated_markdown": markdown,
             **({"slides": slides, "slide_count": len(slides)} if slides else {}),
+        },
+        next_recommended_tools=[
+            "pdf.validation.render_check",
+            "pdf.evidence.coverage_report",
+            "pdf.patch.plan",
+        ],
+    )
+
+
+def plan_composition(
+    context_packet: dict[str, Any] | str | Path,
+    target_profile: dict[str, Any] | str,
+    output_path: str | Path | None = None,
+    style_pack: str | None = None,
+    title: str | None = None,
+) -> ToolResult:
+    tool = "pdf.compose.plan"
+    packet = _load_context_packet(context_packet)
+    profile = _resolve_target_profile(target_profile)
+    if style_pack:
+        profile["style_pack"] = style_pack
+    if title:
+        profile["title"] = title
+
+    if profile.get("layout_mode") == "slides":
+        slides, composition_ir, source_map, coverage = _compose_slides(packet, profile)
+        markdown = _slides_to_outline(slides)
+    else:
+        markdown, composition_ir, source_map, coverage = _compose_markdown(packet, profile)
+        slides = []
+
+    render_plan = _render_plan(profile, markdown=markdown, slides=slides)
+    plan = {
+        "composition_plan_version": "0.1",
+        "composition_plan_id": f"cmpplan_{uuid4().hex[:16]}",
+        "context_packet_id": packet["context_packet_id"],
+        "target_profile": profile,
+        "composition_ir": composition_ir,
+        "source_map": source_map,
+        "evidence_coverage": coverage,
+        "render_plan": render_plan,
+        "validation_plan": {
+            "required": profile.get("validation_required", ["render_check", "evidence_coverage_report"]),
+            "output_must_be_new_artifact": True,
+            "recommended_tools": ["pdf.compose.render_ir", "pdf.validation.render_check", "pdf.evidence.coverage_report"],
+        },
+    }
+
+    artifacts = []
+    if output_path is not None:
+        destination = Path(output_path)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_text(json.dumps(plan, indent=2), encoding="utf-8")
+        artifacts.append(build_artifact(destination, source_tool=tool))
+
+    return ToolResult(
+        job_id=f"job_{uuid4().hex[:16]}",
+        status="succeeded",
+        tool=tool,
+        artifacts=artifacts,
+        warnings=_composition_warnings(packet),
+        usage={
+            "context_packet_id": packet["context_packet_id"],
+            "composition_plan_id": plan["composition_plan_id"],
+            "target_profile": profile,
+            "composition_ir": composition_ir,
+            "source_map": source_map,
+            "evidence_coverage": coverage,
+            "render_plan": render_plan,
+            "validation_plan": plan["validation_plan"],
+            "generated_markdown": markdown,
+            **({"slides": slides, "slide_count": len(slides)} if slides else {}),
+        },
+        next_recommended_tools=[
+            "pdf.compose.render_ir",
+            "pdf.evidence.coverage_report",
+            "pdf.validation.render_check",
+        ],
+    )
+
+
+def render_composition_ir(
+    composition: dict[str, Any] | str | Path,
+    output_path: str | Path,
+    style_pack: str | None = None,
+    title: str | None = None,
+) -> ToolResult:
+    tool = "pdf.compose.render_ir"
+    payload = _load_composition_payload(composition)
+    composition_ir = _composition_ir_from_payload(payload)
+    if not isinstance(composition_ir, dict):
+        raise AgentPDFException("invalid_input", "composition_ir must be present to render composition IR.")
+    render_plan = _render_plan_from_payload(payload)
+    target_profile = payload.get("target_profile") if isinstance(payload.get("target_profile"), dict) else {}
+    effective_style = style_pack or str(render_plan.get("style_pack") or target_profile.get("style_pack") or "paper_ink")
+    effective_title = title or str(render_plan.get("title") or target_profile.get("title") or target_profile.get("name") or "AgentPDF Composition")
+    layout_mode = str(render_plan.get("layout_mode") or target_profile.get("layout_mode") or "document")
+    warnings: list[str] = []
+
+    if layout_mode == "slides" and isinstance(render_plan.get("slides"), list):
+        slides = [slide for slide in render_plan["slides"] if isinstance(slide, dict)]
+        rendered = create_slide_deck_pdf(
+            slides,
+            output_path=output_path,
+            title=effective_title,
+            style_pack=effective_style,
+        )
+        generated_markdown = _slides_to_outline(slides)
+    else:
+        generated_markdown = str(render_plan.get("markdown") or "")
+        if not generated_markdown.strip():
+            generated_markdown = _fallback_markdown_from_ir(composition_ir, target_profile)
+            warnings.append("Composition IR did not include a render_plan markdown payload; rendered a structural fallback.")
+        rendered = create_markdown_pdf(
+            generated_markdown,
+            output_path=output_path,
+            title=effective_title,
+            style_pack=effective_style,
+        )
+
+    rendered_path = rendered.artifacts[0].path if rendered.artifacts else Path(output_path).resolve()
+    validation = validate_pdf(rendered_path)
+    pdf_artifact = build_artifact(rendered_path, source_tool=tool)
+    source_map = payload.get("source_map") if isinstance(payload.get("source_map"), list) else []
+    coverage = payload.get("evidence_coverage") if isinstance(payload.get("evidence_coverage"), dict) else {}
+
+    return ToolResult(
+        job_id=f"job_{uuid4().hex[:16]}",
+        status="succeeded" if validation.status == "passed" else "failed",
+        tool=tool,
+        artifacts=[pdf_artifact],
+        validation=validation,
+        warnings=[*warnings, *validation.warnings],
+        usage={
+            "composition_id": composition_ir.get("composition_id"),
+            "context_packet_id": composition_ir.get("context_packet_id") or payload.get("context_packet_id"),
+            "target_profile": target_profile,
+            "composition_ir": composition_ir,
+            "source_map": source_map,
+            "evidence_coverage": coverage,
+            "render_plan": render_plan,
+            "generated_markdown": generated_markdown,
         },
         next_recommended_tools=[
             "pdf.validation.render_check",
@@ -365,6 +511,148 @@ def validate_target_profile(
     )
 
 
+def select_target_profile(
+    goal: str = "",
+    context_packet: dict[str, Any] | str | Path | None = None,
+    preferred_profile: str | None = None,
+    output_path: str | Path | None = None,
+) -> ToolResult:
+    tool = "pdf.target.select_profile"
+    packet = _load_context_packet(context_packet) if context_packet is not None else None
+    context_types = [
+        str(item.get("type", "")).lower()
+        for item in (packet.get("items", []) if packet else [])
+        if isinstance(item, dict)
+    ]
+    candidates = _target_profile_candidates(
+        goal=goal,
+        context_types=context_types,
+        preferred_profile=preferred_profile,
+    )
+    selected_id = candidates[0]["profile_id"]
+    selected_profile = _profile_catalog_entry(DEFAULT_TARGET_PROFILES[selected_id])
+    selection = {
+        "selection_version": "0.1",
+        "selected_profile_id": selected_id,
+        "selected_profile": selected_profile,
+        "candidates": candidates,
+        "input_summary": {
+            "goal": goal,
+            "context_packet_id": packet.get("context_packet_id") if packet else None,
+            "context_types": context_types,
+            "preferred_profile": preferred_profile,
+        },
+        "selection_method": "local_deterministic_keyword_and_context_type_scoring",
+    }
+
+    artifacts = []
+    if output_path is not None:
+        destination = Path(output_path)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_text(json.dumps(selection, indent=2), encoding="utf-8")
+        artifacts.append(build_artifact(destination, source_tool=tool))
+
+    return ToolResult(
+        job_id=f"job_{uuid4().hex[:16]}",
+        status="succeeded",
+        tool=tool,
+        artifacts=artifacts,
+        usage=selection,
+        next_recommended_tools=["pdf.target.validate_profile", "pdf.compose.plan", "pdf.compose.from_context"],
+    )
+
+
+def _render_plan(profile: dict[str, Any], markdown: str, slides: list[dict[str, Any]]) -> dict[str, Any]:
+    layout_mode = str(profile.get("layout_mode") or "document")
+    plan = {
+        "render_plan_version": "0.1",
+        "layout_mode": layout_mode,
+        "title": str(profile.get("title") or profile.get("name") or "AgentPDF Composition"),
+        "style_pack": str(profile.get("style_pack") or "paper_ink"),
+        "renderer": "local_markdown_pdf" if layout_mode != "slides" else "local_slide_deck_pdf",
+    }
+    if layout_mode == "slides":
+        plan["slides"] = slides
+        plan["markdown_outline"] = markdown
+    else:
+        plan["markdown"] = markdown
+    return plan
+
+
+def _load_composition_payload(composition: dict[str, Any] | str | Path) -> dict[str, Any]:
+    if isinstance(composition, dict):
+        payload = composition
+    else:
+        payload = json.loads(Path(composition).read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise AgentPDFException("invalid_input", "Composition payload must be a JSON object.")
+    return payload
+
+
+def _composition_ir_from_payload(payload: dict[str, Any]) -> dict[str, Any] | None:
+    if isinstance(payload.get("composition_ir"), dict):
+        return payload["composition_ir"]
+    if payload.get("composition_id") and isinstance(payload.get("blocks"), list):
+        return payload
+    return None
+
+
+def _render_plan_from_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    if isinstance(payload.get("render_plan"), dict):
+        return payload["render_plan"]
+    render_plan: dict[str, Any] = {
+        "render_plan_version": "0.1",
+        "layout_mode": "document",
+        "title": "AgentPDF Composition",
+        "style_pack": "paper_ink",
+        "renderer": "local_markdown_pdf",
+    }
+    if isinstance(payload.get("slides"), list):
+        render_plan.update(
+            {
+                "layout_mode": "slides",
+                "slides": payload["slides"],
+                "renderer": "local_slide_deck_pdf",
+            }
+        )
+    if isinstance(payload.get("generated_markdown"), str):
+        render_plan["markdown"] = payload["generated_markdown"]
+    return render_plan
+
+
+def _fallback_markdown_from_ir(composition_ir: dict[str, Any], target_profile: dict[str, Any]) -> str:
+    title = str(target_profile.get("title") or target_profile.get("name") or "Composition IR")
+    lines = [
+        f"# {title}",
+        "",
+        "## Composition IR",
+        "",
+        f"Composition ID: `{composition_ir.get('composition_id', 'unknown')}`",
+        f"Target profile: `{composition_ir.get('target_profile_id', 'custom')}`",
+        "",
+        "| Block | Type | Source refs | Target slot |",
+        "|---|---|---|---|",
+    ]
+    blocks = composition_ir.get("blocks") if isinstance(composition_ir.get("blocks"), list) else []
+    for block in blocks:
+        if not isinstance(block, dict):
+            continue
+        refs = ", ".join(f"`{ref}`" for ref in _string_list(block.get("source_refs")))
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    f"`{block.get('block_id', '')}`",
+                    str(block.get("type", "")),
+                    refs,
+                    str(block.get("target_slot", "")),
+                ]
+            )
+            + " |"
+        )
+    return "\n".join(lines).strip() + "\n"
+
+
 def _load_context_packet(context_packet: dict[str, Any] | str | Path) -> dict[str, Any]:
     if isinstance(context_packet, dict):
         packet = context_packet
@@ -424,6 +712,69 @@ def _profile_catalog_entry(profile: dict[str, Any]) -> dict[str, Any]:
         "compose_tool": "pdf.compose.from_context",
         "schema": "schemas/target-pdf-profile.schema.json",
     }
+
+
+def _target_profile_candidates(
+    goal: str,
+    context_types: list[str],
+    preferred_profile: str | None,
+) -> list[dict[str, Any]]:
+    normalized_goal = goal.lower()
+    scored: list[dict[str, Any]] = []
+    keyword_scores = {
+        "slide_deck": ["slide", "slides", "deck", "presentation", "present"],
+        "resume_pdf": ["resume", "cv", "candidate", "career"],
+        "invoice_pdf": ["invoice", "billing", "bill", "payment", "line item"],
+        "proposal_pdf": ["proposal", "sales", "client", "deliverable"],
+        "technical_audit": ["audit", "code", "security", "architecture", "risk", "technical"],
+        "evidence_packet_pdf": ["evidence", "packet", "source", "citation", "appendix"],
+        "research_brief": ["research", "brief", "paper", "findings", "study"],
+        "training_handout": ["training", "lesson", "learning", "worksheet", "handout"],
+    }
+    type_boosts = {
+        "code": {"technical_audit": 3},
+        "data": {"technical_audit": 1, "invoice_pdf": 2, "research_brief": 1},
+        "image": {"slide_deck": 2, "evidence_packet_pdf": 1},
+        "audio": {"slide_deck": 2, "evidence_packet_pdf": 1, "training_handout": 1},
+        "video": {"slide_deck": 2, "evidence_packet_pdf": 1, "training_handout": 1},
+        "pdf": {"research_brief": 1, "evidence_packet_pdf": 2},
+        "web_link": {"research_brief": 1, "evidence_packet_pdf": 1},
+    }
+
+    for profile_id, profile in sorted(DEFAULT_TARGET_PROFILES.items()):
+        normalized = _normalize_target_profile(profile)
+        score = 1
+        reasons = ["available built-in target profile"]
+        if preferred_profile and preferred_profile == profile_id:
+            score += 10
+            reasons.append("preferred_profile matched")
+        for keyword in keyword_scores.get(profile_id, []):
+            if keyword in normalized_goal:
+                score += 4
+                reasons.append(f"goal keyword matched: {keyword}")
+        accepted_context_types = set(normalized["accepted_context_types"])
+        matched_types = sorted({item_type for item_type in context_types if item_type in accepted_context_types})
+        if matched_types:
+            score += len(matched_types) * 2
+            reasons.append("context types accepted: " + ", ".join(matched_types))
+        for item_type in context_types:
+            score += int(type_boosts.get(item_type, {}).get(profile_id, 0))
+        if normalized["layout_mode"] == "slides" and any(word in normalized_goal for word in ["slide", "deck", "presentation"]):
+            score += 3
+            reasons.append("slide layout requested")
+        scored.append(
+            {
+                "profile_id": profile_id,
+                "score": score,
+                "reasons": reasons,
+                "layout_mode": normalized["layout_mode"],
+                "style_pack": normalized["style_pack"],
+                "accepted_context_types": normalized["accepted_context_types"],
+            }
+        )
+
+    scored.sort(key=lambda item: (-int(item["score"]), str(item["profile_id"])))
+    return scored
 
 
 def _target_profile_validation_report(profile: dict[str, Any]) -> dict[str, Any]:

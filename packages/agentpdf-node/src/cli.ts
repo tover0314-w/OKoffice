@@ -61,6 +61,18 @@ export async function runCli(
         stdout,
       );
     }
+    if (command === "agent-setup-codex") {
+      return emitResult(
+        await client.setupCodex({
+          outputPath: takeOption(args, ["--output", "-o"]),
+          safeRoot: takeOption(args, ["--safe-root"]),
+          command: takeOption(args, ["--command"]),
+          argsPrefix: takeOptions(args, ["--arg-prefix"]),
+          serverName: takeOption(args, ["--server-name"]),
+        }),
+        stdout,
+      );
+    }
     if (command === "inspect") {
       const path = args.shift();
       if (!path) {
@@ -137,6 +149,96 @@ export async function runCli(
         stdout,
       );
     }
+    if (command === "context-ingest") {
+      const contextItem = await contextItemFromCli({
+        file: takeOption(args, ["--file"]),
+        text: takeOption(args, ["--text"]),
+        link: takeOption(args, ["--link"]),
+        itemJson: takeOption(args, ["--item-json"]),
+        role: takeOption(args, ["--role"]),
+        label: takeOption(args, ["--label"]),
+        itemType: takeOption(args, ["--type"]),
+        transcript: takeOption(args, ["--transcript"]),
+        durationSeconds: takeNumberOption(args, ["--duration-seconds"]),
+      });
+      return emitResult(
+        await client.ingestContext({
+          contextItem,
+          outputPath: takeOption(args, ["--output", "-o"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "context-packet") {
+      return emitResult(
+        await client.contextPacket({
+          contextItems: await contextItemsFromCli(
+            takeOptions(args, ["--file"]),
+            takeOptions(args, ["--text"]),
+            takeOptions(args, ["--link"]),
+            takeOptions(args, ["--item-json"]),
+          ),
+          outputPath: takeRequiredOption(args, ["--output", "-o"]),
+          title: takeOption(args, ["--title"]),
+          intent: takeOption(args, ["--intent"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "context-classify") {
+      const contextPacketPath = args.shift();
+      if (!contextPacketPath) {
+        throw new UsageError("Missing context packet path for context-classify.");
+      }
+      const targetProfile = await parseOptionalObject(takeOption(args, ["--target-profile"]));
+      return emitResult(
+        await client.classifyContext({
+          contextPacketPath,
+          targetProfile: targetProfile ?? undefined,
+          profile: takeOption(args, ["--profile"]),
+          outputPath: takeOption(args, ["--output", "-o"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "code-snapshot") {
+      const path = args.shift();
+      if (!path) {
+        throw new UsageError("Missing code path for code-snapshot.");
+      }
+      return emitResult(
+        await client.codeSnapshot({
+          path,
+          outputPath: takeOption(args, ["--output", "-o"]),
+          label: takeOption(args, ["--label"]),
+          role: takeOption(args, ["--role"]),
+          contextItemId: takeOption(args, ["--context-item-id"]),
+          lineStart: takeIntegerOption(args, ["--line-start"]),
+          lineEnd: takeIntegerOption(args, ["--line-end"]),
+          repositoryRoot: takeOption(args, ["--repository-root"]),
+          includeDependencies: takeFlag(args, ["--include-dependencies"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "data-profile") {
+      const path = args.shift();
+      if (!path) {
+        throw new UsageError("Missing data path for data-profile.");
+      }
+      return emitResult(
+        await client.dataProfile({
+          path,
+          outputPath: takeOption(args, ["--output", "-o"]),
+          label: takeOption(args, ["--label"]),
+          role: takeOption(args, ["--role"]),
+          contextItemId: takeOption(args, ["--context-item-id"]),
+          sheet: takeOption(args, ["--sheet"]),
+          maxRows: takeIntegerOption(args, ["--max-rows"]),
+        }),
+        stdout,
+      );
+    }
     if (command === "target-profiles") {
       return emitResult(
         await client.targetProfiles({
@@ -151,6 +253,39 @@ export async function runCli(
           targetProfile: await parseOptionalObject(takeOption(args, ["--target-profile"])),
           profile: takeOption(args, ["--profile"]),
           outputPath: takeOption(args, ["--output", "-o"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "compose-plan") {
+      const contextPacketPath = args.shift();
+      if (!contextPacketPath) {
+        throw new UsageError("Missing context packet path for compose-plan.");
+      }
+      const targetProfile = await parseOptionalObject(takeOption(args, ["--target-profile"]));
+      return emitResult(
+        await client.composePlan({
+          contextPacketPath,
+          targetProfile: targetProfile ?? undefined,
+          profile: takeOption(args, ["--profile"]),
+          outputPath: takeOption(args, ["--output", "-o"]),
+          stylePack: takeOption(args, ["--style-pack"]),
+          title: takeOption(args, ["--title"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "compose-render-ir") {
+      const compositionPath = args.shift();
+      if (!compositionPath) {
+        throw new UsageError("Missing composition plan/IR path for compose-render-ir.");
+      }
+      return emitResult(
+        await client.composeRenderIr({
+          compositionPath,
+          outputPath: takeRequiredOption(args, ["--output", "-o"]),
+          stylePack: takeOption(args, ["--style-pack"]),
+          title: takeOption(args, ["--title"]),
         }),
         stdout,
       );
@@ -173,6 +308,166 @@ export async function runCli(
         stdout,
       );
     }
+    if (command === "compose-add-code-block") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing PDF path for compose-add-code-block.");
+      }
+      return emitResult(
+        await client.composeAddCodeBlock({
+          inputPath,
+          outputPath: takeRequiredOption(args, ["--output", "-o"]),
+          title: takeOption(args, ["--title"]) ?? "Code Block",
+          code: takeRequiredOption(args, ["--code"]),
+          language: takeOption(args, ["--language"]),
+          sourceRefs: takeOptions(args, ["--source-ref"]),
+          blockId: takeOption(args, ["--block-id"]),
+          targetSlot: takeOption(args, ["--target-slot"]),
+          compositionPath: takeOption(args, ["--composition"]),
+          layerManifestPath: takeOption(args, ["--layers"]),
+          manifestOutputPath: takeOption(args, ["--manifest-output"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "compose-add-table") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing PDF path for compose-add-table.");
+      }
+      return emitResult(
+        await client.composeAddTable({
+          inputPath,
+          outputPath: takeRequiredOption(args, ["--output", "-o"]),
+          title: takeOption(args, ["--title"]) ?? "Table",
+          columns: parseCsvValues(takeRequiredOption(args, ["--columns"])),
+          rows: takeOptions(args, ["--row"]).map(parseCsvValues),
+          sourceRefs: takeOptions(args, ["--source-ref"]),
+          blockId: takeOption(args, ["--block-id"]),
+          targetSlot: takeOption(args, ["--target-slot"]),
+          compositionPath: takeOption(args, ["--composition"]),
+          layerManifestPath: takeOption(args, ["--layers"]),
+          manifestOutputPath: takeOption(args, ["--manifest-output"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "compose-add-figure") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing PDF path for compose-add-figure.");
+      }
+      return emitResult(
+        await client.composeAddFigure({
+          inputPath,
+          outputPath: takeRequiredOption(args, ["--output", "-o"]),
+          title: takeOption(args, ["--title"]) ?? "Figure",
+          imagePath: takeRequiredOption(args, ["--image"]),
+          caption: takeOption(args, ["--caption"]),
+          sourceRefs: takeOptions(args, ["--source-ref"]),
+          blockId: takeOption(args, ["--block-id"]),
+          targetSlot: takeOption(args, ["--target-slot"]),
+          compositionPath: takeOption(args, ["--composition"]),
+          layerManifestPath: takeOption(args, ["--layers"]),
+          manifestOutputPath: takeOption(args, ["--manifest-output"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "compose-add-appendix") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing PDF path for compose-add-appendix.");
+      }
+      return emitResult(
+        await client.composeAddAppendix({
+          inputPath,
+          outputPath: takeRequiredOption(args, ["--output", "-o"]),
+          title: takeOption(args, ["--title"]) ?? "Appendix",
+          markdown: takeRequiredOption(args, ["--markdown"]),
+          sourceRefs: takeOptions(args, ["--source-ref"]),
+          blockId: takeOption(args, ["--block-id"]),
+          targetSlot: takeOption(args, ["--target-slot"]),
+          compositionPath: takeOption(args, ["--composition"]),
+          layerManifestPath: takeOption(args, ["--layers"]),
+          manifestOutputPath: takeOption(args, ["--manifest-output"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "compose-add-citation") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing PDF path for compose-add-citation.");
+      }
+      return emitResult(
+        await client.composeAddCitation({
+          inputPath,
+          outputPath: takeRequiredOption(args, ["--output", "-o"]),
+          title: takeOption(args, ["--title"]) ?? "Citation",
+          source: takeRequiredOption(args, ["--source"]),
+          quote: takeOption(args, ["--quote"]),
+          page: takeOption(args, ["--page"]),
+          sourceRefs: takeOptions(args, ["--source-ref"]),
+          blockId: takeOption(args, ["--block-id"]),
+          targetSlot: takeOption(args, ["--target-slot"]),
+          compositionPath: takeOption(args, ["--composition"]),
+          layerManifestPath: takeOption(args, ["--layers"]),
+          manifestOutputPath: takeOption(args, ["--manifest-output"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "compose-add-media-reference") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing PDF path for compose-add-media-reference.");
+      }
+      return emitResult(
+        await client.composeAddMediaReference({
+          inputPath,
+          outputPath: takeRequiredOption(args, ["--output", "-o"]),
+          title: takeOption(args, ["--title"]) ?? "Media Reference",
+          mediaPath: takeRequiredOption(args, ["--media"]),
+          mediaKind: takeOption(args, ["--media-kind"]),
+          transcriptExcerpt: takeOption(args, ["--transcript-excerpt"]),
+          durationSeconds: takeNumberOption(args, ["--duration-seconds"]),
+          chapterCount: takeIntegerOption(args, ["--chapter-count"]),
+          keyframeCount: takeIntegerOption(args, ["--keyframe-count"]),
+          sourceRefs: takeOptions(args, ["--source-ref"]),
+          blockId: takeOption(args, ["--block-id"]),
+          targetSlot: takeOption(args, ["--target-slot"]),
+          compositionPath: takeOption(args, ["--composition"]),
+          layerManifestPath: takeOption(args, ["--layers"]),
+          manifestOutputPath: takeOption(args, ["--manifest-output"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "compose-add-slide") {
+      const inputPath = args.shift();
+      if (!inputPath) {
+        throw new UsageError("Missing PDF path for compose-add-slide.");
+      }
+      return emitResult(
+        await client.composeAddSlide({
+          inputPath,
+          outputPath: takeRequiredOption(args, ["--output", "-o"]),
+          title: takeOption(args, ["--title"]) ?? "Slide",
+          subtitle: takeOption(args, ["--subtitle"]),
+          body: takeOptions(args, ["--body"]),
+          code: takeOption(args, ["--code"]),
+          imagePath: takeOption(args, ["--image"]),
+          sourceRefs: takeOptions(args, ["--source-ref"]),
+          blockId: takeOption(args, ["--block-id"]),
+          targetSlot: takeOption(args, ["--target-slot"]),
+          compositionPath: takeOption(args, ["--composition"]),
+          layerManifestPath: takeOption(args, ["--layers"]),
+          manifestOutputPath: takeOption(args, ["--manifest-output"]),
+        }),
+        stdout,
+      );
+    }
     if (command === "evidence-coverage-report") {
       const compositionPath = args.shift();
       if (!compositionPath) {
@@ -182,6 +477,35 @@ export async function runCli(
         await client.evidenceCoverageReport({
           compositionPath,
           outputPath: takeOption(args, ["--output", "-o"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "evidence-map-sources") {
+      const compositionPath = args[0] && !args[0].startsWith("-") ? args.shift() : undefined;
+      return emitResult(
+        await client.evidenceMapSources({
+          compositionPath,
+          blocks: await parseOptionalObjectList(takeOption(args, ["--blocks"])),
+          claims: await parseOptionalObjectList(takeOption(args, ["--claims"])),
+          contextPacketPath: takeOption(args, ["--context-packet"]),
+          outputPath: takeOption(args, ["--output", "-o"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "evidence-context-packet-report") {
+      const contextPacketPath = args.shift();
+      if (!contextPacketPath) {
+        throw new UsageError("Missing context packet path for evidence-context-packet-report.");
+      }
+      return emitResult(
+        await client.contextPacketReport({
+          contextPacketPath,
+          outputPath: takeRequiredOption(args, ["--output", "-o"]),
+          reportOutputPath: takeOption(args, ["--report-output"]),
+          title: takeOption(args, ["--title"]),
+          stylePack: takeOption(args, ["--style-pack"]),
         }),
         stdout,
       );
@@ -661,6 +985,10 @@ export async function runCli(
           outputPath: takeRequiredOption(args, ["--output", "-o"]),
           planOutputPath: takeOption(args, ["--plan-output"]),
           coverageOutputPath: takeOption(args, ["--coverage-output"]),
+          contextClassificationOutputPath: takeOption(args, ["--context-classification-output"]),
+          contextReportOutputPath: takeOption(args, ["--context-report-output"]),
+          contextReportJsonOutputPath: takeOption(args, ["--context-report-json-output"]),
+          bundleOutputPath: takeOption(args, ["--bundle-output"]),
           preferredTemplateId: takeOption(args, ["--preferred-template"]),
           preferredColorScheme: takeOption(args, ["--preferred-color-scheme"]),
           title: takeOption(args, ["--title"]),
@@ -829,6 +1157,28 @@ async function parseOptionalObject(raw: string | undefined): Promise<JsonObject 
   }
 }
 
+async function parseOptionalObjectList(raw: string | undefined): Promise<JsonObject[] | undefined> {
+  if (raw === undefined) {
+    return undefined;
+  }
+  let payloadText = raw;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(payloadText) as unknown;
+  } catch {
+    try {
+      payloadText = await readFile(raw, "utf8");
+      parsed = JSON.parse(payloadText) as unknown;
+    } catch (error) {
+      throw new UsageError(`Expected a JSON array or readable JSON file: ${String(error)}`);
+    }
+  }
+  if (!Array.isArray(parsed) || !parsed.every(isJsonObject)) {
+    throw new UsageError("Expected a JSON array of objects.");
+  }
+  return parsed;
+}
+
 function parseScope(raw: string | undefined): "project" | "local" | "user" | undefined {
   if (raw === undefined) {
     return undefined;
@@ -865,6 +1215,49 @@ function parseColorOverrides(rawColors: string[]): Record<string, string> | unde
     colors[item.slice(0, separatorIndex)] = item.slice(separatorIndex + 1);
   }
   return colors;
+}
+
+function parseCsvValues(raw: string): string[] {
+  return raw.split(",").map((item) => item.trim()).filter(Boolean);
+}
+
+async function contextItemFromCli(input: {
+  file?: string;
+  text?: string;
+  link?: string;
+  itemJson?: string;
+  role?: string;
+  label?: string;
+  itemType?: string;
+  transcript?: string;
+  durationSeconds?: number;
+}): Promise<JsonObject> {
+  const items = await contextItemsFromCli(
+    input.file ? [input.file] : [],
+    input.text ? [input.text] : [],
+    input.link ? [input.link] : [],
+    input.itemJson ? [input.itemJson] : [],
+  );
+  if (items.length !== 1) {
+    throw new UsageError("context-ingest requires exactly one of --file, --text, --link, or --item-json.");
+  }
+  const item: JsonObject = { ...items[0] };
+  if (input.role !== undefined) {
+    item.role = input.role;
+  }
+  if (input.label !== undefined) {
+    item.label = input.label;
+  }
+  if (input.itemType !== undefined) {
+    item.type = input.itemType;
+  }
+  if (input.transcript !== undefined) {
+    item.transcript = input.transcript;
+  }
+  if (input.durationSeconds !== undefined) {
+    item.duration_seconds = input.durationSeconds;
+  }
+  return item;
 }
 
 async function contextItemsFromCli(
@@ -943,16 +1336,33 @@ function helpText(): string {
     "  agentpdf-node tools [--base-url URL]",
     "  agentpdf-node run TOOL --payload '{...}' [--base-url URL]",
     "  agentpdf-node agent-setup-claude-code [-o .mcp.json] [--safe-root '${CLAUDE_PROJECT_DIR:-.}']",
+    "  agentpdf-node agent-setup-codex [-o codex.mcp.json] [--safe-root .]",
     "  agentpdf-node inspect PATH [--base-url URL]",
     "  agentpdf-node inspect-pages PATH [--pages 1-3] [--render-check]",
     "  agentpdf-node workflow-plan --goal GOAL [--input-path FILE]",
     "  agentpdf-node workflow-run --payload '{...}' [--binding KEY=VALUE] [--dry-run]",
     "  agentpdf-node workflow-report --payload '{...}' [-o report.md]",
     "  agentpdf-node context-build --text TEXT --file FILE --item-json '{...}' -o context.packet.json",
+    "  agentpdf-node context-ingest --file FILE [-o context-item.json] [--role ROLE] [--label LABEL]",
+    "  agentpdf-node context-packet --item-json context-item.json --file FILE -o context.packet.json",
+    "  agentpdf-node context-classify context.packet.json [--profile technical_audit] [-o context.classification.json]",
+    "  agentpdf-node code-snapshot src/service.ts [--line-start 1 --line-end 20] [-o code.context-item.json]",
+    "  agentpdf-node data-profile metrics.csv [--sheet Sheet1] [-o data.context-item.json]",
     "  agentpdf-node target-profiles [-o profiles.json]",
     "  agentpdf-node target-validate --target-profile '{...}' [-o validation.json]",
+    "  agentpdf-node compose-plan context.packet.json --profile technical_audit [-o composition.plan.json]",
+    "  agentpdf-node compose-render-ir composition.plan.json -o report.pdf",
     "  agentpdf-node compose-from-context context.packet.json --profile technical_audit -o report.pdf",
+    "  agentpdf-node compose-add-code-block report.pdf --code 'print(1)' --source-ref ctx_code -o report.code.pdf",
+    "  agentpdf-node compose-add-table report.pdf --columns metric,value --row latency_ms,42 -o report.table.pdf",
+    "  agentpdf-node compose-add-figure report.pdf --image diagram.png --source-ref ctx_image -o report.figure.pdf",
+    "  agentpdf-node compose-add-appendix report.pdf --markdown '## Sources' --source-ref ctx_code -o report.appendix.pdf",
+    "  agentpdf-node compose-add-citation report.pdf --source https://example.com --quote 'Claim text' --source-ref ctx_web -o report.citation.pdf",
+    "  agentpdf-node compose-add-media-reference report.pdf --media meeting.mp3 --media-kind audio --transcript-excerpt '00:00 Kickoff' --source-ref ctx_audio -o report.media.pdf",
+    "  agentpdf-node compose-add-slide report.pdf --title 'Review Slide' --body 'Decision evidence' --source-ref ctx_slide -o report.slide.pdf",
     "  agentpdf-node evidence-coverage-report report.composition.json [-o coverage.json]",
+    "  agentpdf-node evidence-map-sources [report.composition.json] [--context-packet context.packet.json] [--blocks blocks.json] [-o source-map.json]",
+    "  agentpdf-node evidence-context-packet-report context.packet.json -o context-report.pdf [--report-output context-report.json]",
     "  agentpdf-node export-bundle --file OUT.pdf --file OUT.composition.json -o audit-bundle.zip",
     "  agentpdf-node verify-bundle audit-bundle.zip",
     "  agentpdf-node patch-plan report.pdf --operations '{...}' -o patch.json",
@@ -988,7 +1398,7 @@ function helpText(): string {
     "  agentpdf-node create-template-packs [-o packs.json]",
     "  agentpdf-node create-validate-template-pack PACK.json [-o validation.json]",
     "  agentpdf-node create-plan-template-pack PACK.json --profile technical_audit --context-packet context.packet.json --planned-output OUT.pdf [-o plan.json]",
-    "  agentpdf-node create-agent PACK.json --profile technical_audit --context-packet context.packet.json -o OUT.pdf [--plan-output plan.json] [--coverage-output coverage.json]",
+    "  agentpdf-node create-agent PACK.json --profile technical_audit --context-packet context.packet.json -o OUT.pdf [--plan-output plan.json] [--coverage-output coverage.json] [--context-classification-output classification.json] [--context-report-output context-report.pdf] [--bundle-output audit-bundle.zip]",
     "  agentpdf-node create-from-template-pack PACK.json --template board_audit -o OUT.pdf [--color-scheme executive_blue] [--context-packet context.packet.json]",
     "  agentpdf-node create-template-preview --template invoice -o preview.pdf",
   ].join("\n");

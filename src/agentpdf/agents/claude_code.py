@@ -20,6 +20,7 @@ RECOMMENDED_MCP_TOOLS = [
     "pdf_target_validate_profile",
     "pdf_compose_from_context",
     "pdf_evidence_coverage_report",
+    "pdf_evidence_context_packet_report",
     "pdf_patch_plan",
     "pdf_patch_apply",
     "pdf_patch_verify",

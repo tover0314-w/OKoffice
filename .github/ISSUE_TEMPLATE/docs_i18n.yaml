@@ -1,0 +1,40 @@
+name: Docs or translation
+description: Improve README, docs, examples, or translations
+title: "docs: "
+labels: ["documentation", "i18n", "needs-triage"]
+body:
+  - type: dropdown
+    id: docs-area
+    attributes:
+      label: Area
+      options:
+        - README
+        - Simplified Chinese README
+        - Docs page
+        - CLI examples
+        - MCP examples
+        - REST examples
+        - Node SDK examples
+        - Translation guide
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: issue
+    attributes:
+      label: What should change?
+      description: Link the section and explain what is unclear, outdated, mistranslated, or missing.
+    validations:
+      required: true
+  - type: textarea
+    id: suggested
+    attributes:
+      label: Suggested wording
+      description: Optional draft text.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: Commands, tool names, JSON fields, and file paths remain unchanged unless intentionally updated.
+        - label: The change does not introduce private URLs, secrets, or machine-specific paths.

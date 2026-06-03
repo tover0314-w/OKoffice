@@ -1,0 +1,48 @@
+name: Tool spec request
+description: Propose or refine a public PDF tool contract
+title: "tool: "
+labels: ["enhancement", "area:tooling", "needs-triage"]
+body:
+  - type: input
+    id: tool-name
+    attributes:
+      label: Tool name
+      description: Use the public namespace if known.
+      placeholder: "pdf.organize.crop"
+    validations:
+      required: true
+  - type: textarea
+    id: user-story
+    attributes:
+      label: Agent/user story
+      placeholder: "As an agent, I need to..."
+    validations:
+      required: true
+  - type: textarea
+    id: input
+    attributes:
+      label: Proposed input schema
+      render: json
+  - type: textarea
+    id: output
+    attributes:
+      label: Proposed output evidence
+      description: Include artifacts, validation, warnings, usage, and next recommended tools.
+      render: json
+  - type: checkboxes
+    id: interfaces
+    attributes:
+      label: Required surfaces
+      options:
+        - label: CLI example
+        - label: MCP example
+        - label: REST example
+        - label: Expected output example
+        - label: Error example
+        - label: Limitations
+        - label: Dependency/license note
+  - type: textarea
+    id: risks
+    attributes:
+      label: Safety, privacy, or license risks
+      description: Mention path safety, redaction, metadata, external calls, large files, or optional dependencies.

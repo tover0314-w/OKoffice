@@ -68,6 +68,10 @@ const agentRun = await client.createAgent({
   outputPath: ".agentpdf-out/board-audit.pdf",
   planOutputPath: ".agentpdf-out/board-audit.plan.json",
   coverageOutputPath: ".agentpdf-out/board-audit.coverage.json",
+  contextClassificationOutputPath: ".agentpdf-out/board-audit.context-classification.json",
+  contextReportOutputPath: ".agentpdf-out/board-audit.context-report.pdf",
+  contextReportJsonOutputPath: ".agentpdf-out/board-audit.context-report.json",
+  bundleOutputPath: ".agentpdf-out/board-audit.agentpdf-bundle.zip",
 });
 const boardAudit = await client.createFromTemplatePack({
   templatePackPath: "examples/template-packs/local-agent-starter.json",
@@ -117,6 +121,34 @@ const boardAudit = await client.createFromTemplatePack({
     ],
   },
 });
+const composerItem = await client.ingestContext({
+  contextItem: {
+    path: "src/agentpdf/compose/context.py",
+    role: "code_evidence",
+    label: "Composer Source",
+  },
+  outputPath: ".agentpdf-out/composer.context-item.json",
+});
+const codeSnapshot = await client.codeSnapshot({
+  path: "src/agentpdf/compose/context.py",
+  outputPath: ".agentpdf-out/composer.snapshot.context-item.json",
+  lineStart: 1,
+  lineEnd: 80,
+  repositoryRoot: ".",
+});
+const dataProfile = await client.dataProfile({
+  path: "examples/create-data/metrics.csv",
+  outputPath: ".agentpdf-out/metrics.profile.context-item.json",
+  label: "Runtime Metrics",
+});
+const agentPacket = await client.contextPacket({
+  contextItems: [
+    composerItem.usage.context_item,
+    { text: "Create a technical audit PDF from pre-ingested code evidence.", role: "brief" },
+  ],
+  outputPath: ".agentpdf-out/agent.context.packet.json",
+  title: "Agent Packet",
+});
 const packet = await client.buildContextPacket({
   contextItems: [
     { text: "Create a technical audit PDF.", role: "brief" },
@@ -154,8 +186,27 @@ const packet = await client.buildContextPacket({
   outputPath: ".agentpdf-out/context.packet.json",
   title: "Audit Context",
 });
+const classification = await client.classifyContext({
+  contextPacketPath: ".agentpdf-out/context.packet.json",
+  profile: "technical_audit",
+  outputPath: ".agentpdf-out/context.classification.json",
+});
+const compositionPlan = await client.composePlan({
+  contextPacketPath: ".agentpdf-out/context.packet.json",
+  profile: "technical_audit",
+  outputPath: ".agentpdf-out/technical-audit.plan.json",
+});
+const renderedFromIr = await client.composeRenderIr({
+  compositionPath: ".agentpdf-out/technical-audit.plan.json",
+  outputPath: ".agentpdf-out/technical-audit-from-ir.pdf",
+});
 const targetCatalog = await client.targetProfiles({
   outputPath: ".agentpdf-out/target-profiles.json",
+});
+const targetSelection = await client.selectTargetProfile({
+  goal: "Create a slide deck from meeting notes and source evidence.",
+  contextPacketPath: ".agentpdf-out/context.packet.json",
+  outputPath: ".agentpdf-out/selected-profile.json",
 });
 const targetValidation = await client.validateTargetProfile({
   targetProfile: {
@@ -176,6 +227,67 @@ const deck = await client.composeFromContext({
   contextPacketPath: ".agentpdf-out/context.packet.json",
   profile: "slide_deck",
   outputPath: ".agentpdf-out/agent-review-deck.pdf",
+});
+const codeBlock = await client.composeAddCodeBlock({
+  inputPath: ".agentpdf-out/technical-audit.pdf",
+  outputPath: ".agentpdf-out/technical-audit.code.pdf",
+  title: "Risky Function",
+  code: "def risky_total(items):\n    return sum(items)\n",
+  language: "python",
+  sourceRefs: ["ctx_002"],
+  targetSlot: "code_review",
+  compositionPath: ".agentpdf-out/technical-audit.composition.json",
+});
+await client.composeAddTable({
+  inputPath: ".agentpdf-out/technical-audit.pdf",
+  outputPath: ".agentpdf-out/technical-audit.table.pdf",
+  title: "Runtime Metrics",
+  columns: ["metric", "value"],
+  rows: [["latency_ms", "42"], ["error_rate", "0.01"]],
+  sourceRefs: ["ctx_003"],
+});
+await client.composeAddFigure({
+  inputPath: ".agentpdf-out/technical-audit.pdf",
+  outputPath: ".agentpdf-out/technical-audit.figure.pdf",
+  title: "Architecture Figure",
+  imagePath: "assets/brand/okpdf-logo.png",
+  caption: "Local visual evidence.",
+  sourceRefs: ["ctx_004"],
+});
+await client.composeAddAppendix({
+  inputPath: ".agentpdf-out/technical-audit.pdf",
+  outputPath: ".agentpdf-out/technical-audit.appendix.pdf",
+  title: "Source Appendix",
+  markdown: "## Sources\n\n- ctx_002\n- ctx_003\n- ctx_004",
+  sourceRefs: ["ctx_002", "ctx_003", "ctx_004"],
+});
+await client.composeAddCitation({
+  inputPath: ".agentpdf-out/technical-audit.pdf",
+  outputPath: ".agentpdf-out/technical-audit.citation.pdf",
+  title: "Source Citation",
+  quote: "Cited claim",
+  source: "https://example.com/research",
+  sourceRefs: ["ctx_web"],
+  targetSlot: "citations",
+});
+await client.composeAddMediaReference({
+  inputPath: ".agentpdf-out/technical-audit.pdf",
+  outputPath: ".agentpdf-out/technical-audit.media.pdf",
+  title: "Meeting Audio",
+  mediaPath: "meeting.mp3",
+  mediaKind: "audio",
+  transcriptExcerpt: "00:00 Kickoff",
+  sourceRefs: ["ctx_audio"],
+  targetSlot: "media_evidence",
+});
+await client.composeAddSlide({
+  inputPath: ".agentpdf-out/technical-audit.pdf",
+  outputPath: ".agentpdf-out/technical-audit.slide.pdf",
+  title: "Review Slide",
+  subtitle: "Decision evidence",
+  body: ["Patch transactions can append slide-like evidence pages."],
+  sourceRefs: ["ctx_slide"],
+  targetSlot: "evidence_slide",
 });
 const coverage = await client.evidenceCoverageReport({
   compositionPath: ".agentpdf-out/technical-audit.composition.json",
@@ -228,6 +340,25 @@ await client.patchVerify({
   patchManifestPath: ".agentpdf-out/technical-audit.patch.json",
   patchedPath: ".agentpdf-out/technical-audit-patched.pdf",
 });
+await client.patchPlan({
+  inputPath: ".agentpdf-out/board-audit.pdf",
+  operations: [
+    {
+      op: "regenerate_block",
+      title: "Regenerated Runtime Metrics Summary",
+      replacement_markdown:
+        "## Regenerated Runtime Metrics Summary\n\nRegenerated from ctx_metrics with layer evidence.",
+      source_refs: ["ctx_metrics"],
+      layer_id: "layer_blk_agent_table",
+      block_id: "blk_agent_table",
+      target_slot: "findings",
+    },
+  ],
+  outputPath: ".agentpdf-out/board-audit.regenerate.patch.json",
+  compositionPath: ".agentpdf-out/board-audit.composition.json",
+  layerManifestPath: ".agentpdf-out/board-audit.layers.json",
+  reason: "Regenerate a template block with layer evidence.",
+});
 const bundle = await client.exportBundle({
   artifactPaths: [
     ".agentpdf-out/technical-audit-patched.pdf",
@@ -276,7 +407,7 @@ console.log(result.status, result.artifacts[0]?.path);
 console.log(report.usage.style_pack, report.usage.colors);
 console.log(brief.usage.template_id, brief.validation?.status);
 console.log(catalog.usage.template_count);
-console.log(audit.artifacts[0]?.path, deck.usage.slide_count, targetCatalog.usage.profile_catalog.profile_count, targetValidation.usage.profile_validation.is_valid, coverage.usage.uncovered_block_count, patch.usage.operation_count, bundle.usage.bundle_entries.length);
+console.log(audit.artifacts[0]?.path, deck.usage.slide_count, codeBlock.usage.compose_block, targetCatalog.usage.profile_catalog.profile_count, targetSelection.usage.selected_profile_id, targetValidation.usage.profile_validation.is_valid, coverage.usage.uncovered_block_count, patch.usage.operation_count, bundle.usage.bundle_entries.length);
 ```
 
 ## CLI
@@ -284,6 +415,7 @@ console.log(audit.artifacts[0]?.path, deck.usage.slide_count, targetCatalog.usag
 ```bash
 agentpdf-node tools
 agentpdf-node agent-setup-claude-code -o .mcp.json --safe-root '${CLAUDE_PROJECT_DIR:-.}'
+agentpdf-node agent-setup-codex -o codex.mcp.json --safe-root .
 agentpdf-node run pdf.inspect.document --payload '{"path":"report.pdf"}'
 agentpdf-node inspect-pages report.pdf --pages 1 --render-check
 agentpdf-node workflow-plan --goal "Chat with this PDF and cite answers" --input-path report.pdf
@@ -315,15 +447,31 @@ agentpdf-node create-markdown --markdown-file report.md -o report.pdf
 agentpdf-node create-templates
 agentpdf-node create-template-packs -o template-packs.json
 agentpdf-node create-validate-template-pack examples/template-packs/local-agent-starter.json -o template-pack.validation.json
+agentpdf-node create-agent examples/template-packs/local-agent-starter.json --profile technical_audit --context-packet context.packet.json -o board-audit-agent.pdf --plan-output board-audit-agent.plan.json --coverage-output board-audit-agent.coverage.json --context-classification-output board-audit-agent.context-classification.json --context-report-output board-audit-agent.context-report.pdf --context-report-json-output board-audit-agent.context-report.json --bundle-output board-audit-agent.agentpdf-bundle.zip
 agentpdf-node create-from-template-pack examples/template-packs/local-agent-starter.json --template board_audit --color-scheme executive_blue --data examples/create-data/agent-block-audit.json -o board-audit.pdf
 agentpdf-node create-from-template-pack examples/template-packs/local-agent-starter.json --template board_audit --color-scheme executive_blue --context-packet context.packet.json -o board-audit-from-context.pdf
 agentpdf-node create-template-preview --template invoice -o invoice-preview.pdf
 agentpdf-node create-from-prompt --prompt "Create a research brief about local PDF agents." -o brief.pdf --template research_brief --style-pack paper_ink --color primary=#4f46e5
+agentpdf-node context-ingest --file src/agentpdf/compose/context.py --role code_evidence --label "Composer Source" -o composer.context-item.json
+agentpdf-node code-snapshot src/agentpdf/compose/context.py --line-start 1 --line-end 80 --repository-root . -o composer.snapshot.context-item.json
+agentpdf-node data-profile examples/create-data/metrics.csv --label "Runtime Metrics" -o metrics.profile.context-item.json
+agentpdf-node context-packet --item-json composer.context-item.json --text "Create a technical audit PDF from pre-ingested code evidence." -o agent.context.packet.json
 agentpdf-node context-build --text "Create a technical audit PDF." --file README.md --item-json examples/context/media-items.json -o context.packet.json
+agentpdf-node context-classify context.packet.json --profile technical_audit -o context.classification.json
 agentpdf-node target-profiles -o target-profiles.json
 agentpdf-node target-validate --target-profile '{"profile_id":"media_learning_deck","layout_mode":"slides","accepted_block_types":["slide","audio_reference","video_reference"],"accepted_context_types":["text","audio","video"],"validation_required":["render_check","evidence_coverage_report"]}' -o media-learning-deck.validation.json
+agentpdf-node compose-plan context.packet.json --profile technical_audit -o technical-audit.plan.json
+agentpdf-node compose-render-ir technical-audit.plan.json -o technical-audit-from-ir.pdf
 agentpdf-node compose-from-context context.packet.json --profile technical_audit -o technical-audit.pdf
 agentpdf-node compose-from-context context.packet.json --profile slide_deck -o agent-review-deck.pdf
+agentpdf-node compose-add-code-block technical-audit.pdf --title "Risk Function" --code "def risky_total(items): return sum(items)" --language python --source-ref ctx_002 --target-slot code_review -o technical-audit.code.pdf
+agentpdf-node compose-add-table technical-audit.pdf --title "Runtime Metrics" --columns metric,value --row latency_ms,42 --source-ref ctx_003 -o technical-audit.table.pdf
+agentpdf-node compose-add-figure technical-audit.pdf --title "Architecture Figure" --image assets/brand/okpdf-logo.png --caption "Local visual evidence." --source-ref ctx_004 -o technical-audit.figure.pdf
+agentpdf-node compose-add-appendix technical-audit.pdf --title "Source Appendix" --markdown "## Sources" --source-ref ctx_002 -o technical-audit.appendix.pdf
+agentpdf-node compose-add-citation technical-audit.pdf --title "Source Citation" --source https://example.com/research --quote "Cited claim" --source-ref ctx_web -o technical-audit.citation.pdf
+agentpdf-node compose-add-media-reference technical-audit.pdf --title "Meeting Audio" --media meeting.mp3 --media-kind audio --transcript-excerpt "00:00 Kickoff" --source-ref ctx_audio -o technical-audit.media.pdf
+agentpdf-node compose-add-slide technical-audit.pdf --title "Review Slide" --body "Decision evidence" --source-ref ctx_slide -o technical-audit.slide.pdf
+agentpdf-node evidence-context-packet-report context.packet.json -o context-report.pdf --report-output context-report.json
 agentpdf-node evidence-coverage-report technical-audit.composition.json -o technical-audit.coverage.json
 agentpdf-node patch-plan technical-audit.pdf --operations '[{"op":"append_table","title":"Runtime Metrics","columns":["metric","value"],"rows":[["latency_ms","42"]],"source_refs":["ctx_002"],"target_slot":"findings"}]' -o technical-audit.patch.json --composition technical-audit.composition.json --layers technical-audit.layers.json
 agentpdf-node patch-preview technical-audit.patch.json -o technical-audit.patch-preview.json
@@ -337,6 +485,6 @@ agentpdf-node verify-bundle technical-audit.agentpdf-bundle.zip
 
 - REST-first client for local and future hosted API compatibility.
 - Typed `ToolResult`, `Artifact`, `ValidationReport`, `ToolManifest`, and tool inputs.
-- Convenience wrappers for document/page inspect, workflow planning/execution/reporting, context packet building, context-to-PDF composition, template-pack creation with slot routing evidence and `.layers.json` edit manifests, evidence coverage, patch plan/preview/apply/verify, artifact bundle export/verify, merge, reorder, insert blank pages, compression, repair/rewrite, image-to-PDF, embedded image extraction, watermark, page numbers, text/Markdown/prompt-template creation, validation, render/blank checks, lite parse, and local RAG.
+- Convenience wrappers for Claude Code/Codex setup, document/page inspect, workflow planning/execution/reporting, context ingest, code snapshots, data profiles, context packet building, context classification, target profile catalog/selection/validation, composition planning, IR rendering, context packet PDF/JSON audit reports, context-to-PDF composition, one-step append-only compose blocks for code/table/figure/appendix evidence, template-pack creation with slot routing evidence and `.layers.json` edit manifests, evidence coverage, patch plan/preview/apply/verify, artifact bundle export/verify, merge, reorder, insert blank pages, compression, repair/rewrite, image-to-PDF, embedded image extraction, watermark, page numbers, metadata page info, security metadata removal, text/Markdown/prompt-template creation, validation/page-count checks, render/blank checks, lite parse, and local RAG.
 - Failed PDF tools still return structured failed `ToolResult` bodies instead of being hidden behind generic exceptions.
 - HTTP or non-AgentPDF failures throw `AgentPDFHttpError`.

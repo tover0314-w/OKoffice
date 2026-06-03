@@ -7,10 +7,13 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+from agentpdf.artifacts.bundle import export_artifact_bundle, verify_artifact_bundle
 from agentpdf.artifacts.store import build_artifact
 from agentpdf.compose.context import DEFAULT_TARGET_PROFILES
+from agentpdf.context.classify import classify_context
 from agentpdf.core.pdf import BUILTIN_STYLE_PACKS, SUPPORTED_IMAGE_SUFFIXES, create_markdown_pdf
 from agentpdf.evidence.coverage import create_coverage_report
+from agentpdf.evidence.context_packet_report import create_context_packet_report
 from agentpdf.schemas.errors import AgentPDFException
 from agentpdf.schemas.models import ToolResult, ValidationCheck, ValidationReport
 from agentpdf.security.paths import resolve_input_path
@@ -69,7 +72,17 @@ CREATE_TEMPLATES: dict[str, dict[str, Any]] = {
     },
 }
 
-SUPPORTED_AGENT_BLOCK_TYPES = ["section", "code", "table", "image", "slide", "citation"]
+SUPPORTED_AGENT_BLOCK_TYPES = [
+    "section",
+    "code",
+    "table",
+    "image",
+    "slide",
+    "audio_reference",
+    "video_reference",
+    "media_reference",
+    "citation",
+]
 
 
 CREATE_TEMPLATE_CONTRACTS: dict[str, dict[str, Any]] = {
@@ -221,7 +234,17 @@ BUILTIN_TEMPLATE_PACKS: dict[str, dict[str, Any]] = {
                     "optional": ["audience", "checklist", "risks"],
                 },
                 "layout_slots": ["cover", "executive_summary", "findings", "evidence", "recommendations"],
-                "supported_block_types": ["section", "code", "table", "image", "slide", "citation"],
+                "supported_block_types": [
+                    "section",
+                    "code",
+                    "table",
+                    "image",
+                    "slide",
+                    "audio_reference",
+                    "video_reference",
+                    "media_reference",
+                    "citation",
+                ],
                 "color_schemes": {
                     "executive_blue": {
                         "primary": "#1f3a5f",
@@ -262,7 +285,15 @@ BUILTIN_TEMPLATE_PACKS: dict[str, dict[str, Any]] = {
                     "optional": ["audience", "checklist", "citations"],
                 },
                 "layout_slots": ["cover", "research_question", "findings", "implications", "sources"],
-                "supported_block_types": ["section", "table", "image", "code", "citation"],
+                "supported_block_types": [
+                    "section",
+                    "table",
+                    "image",
+                    "code",
+                    "audio_reference",
+                    "video_reference",
+                    "citation",
+                ],
                 "color_schemes": {
                     "paper_blue": {
                         "primary": "#1d4ed8",
@@ -303,7 +334,17 @@ BUILTIN_TEMPLATE_PACKS: dict[str, dict[str, Any]] = {
                     "optional": ["audience", "checklist", "source_notes"],
                 },
                 "layout_slots": ["cover", "evidence_summary", "source_items", "source_map"],
-                "supported_block_types": ["section", "code", "table", "image", "slide", "citation"],
+                "supported_block_types": [
+                    "section",
+                    "code",
+                    "table",
+                    "image",
+                    "slide",
+                    "audio_reference",
+                    "video_reference",
+                    "media_reference",
+                    "citation",
+                ],
                 "color_schemes": {
                     "evidence_slate": {
                         "primary": "#334155",
@@ -441,7 +482,14 @@ BUILTIN_TEMPLATE_PACKS: dict[str, dict[str, Any]] = {
                     "optional": ["questions", "checklist"],
                 },
                 "layout_slots": ["title", "learning_goal", "practice", "checklist"],
-                "supported_block_types": ["section", "table", "citation"],
+                "supported_block_types": [
+                    "section",
+                    "table",
+                    "audio_reference",
+                    "video_reference",
+                    "media_reference",
+                    "citation",
+                ],
                 "color_schemes": {
                     "classroom_green": {
                         "primary": "#166534",
@@ -756,10 +804,10 @@ def plan_template_pack_creation(
             "Template pack failed validation.",
             details={"template_pack_validation": validation_report},
         )
-    packet = _load_context_packet_for_template(context_packet=context_packet, context_packet_path=context_packet_path)
-    context_blocks = _context_packet_agent_blocks(packet) if packet is not None else []
-    context_block_type_counts = _block_type_counts(context_blocks)
     target_profile_id = _target_profile_id(target_profile)
+    packet = _load_context_packet_for_template(context_packet=context_packet, context_packet_path=context_packet_path)
+    context_blocks = _context_packet_agent_blocks(packet, target_profile=target_profile) if packet is not None else []
+    context_block_type_counts = _block_type_counts(context_blocks)
     candidates = _rank_template_pack_candidates(
         pack=pack,
         target_profile_id=target_profile_id,
@@ -862,6 +910,10 @@ def create_pdf_with_agent(
     output_path: str | Path = ".agentpdf-out/create-agent.pdf",
     plan_output_path: str | Path | None = None,
     coverage_output_path: str | Path | None = None,
+    context_classification_output_path: str | Path | None = None,
+    context_report_output_path: str | Path | None = None,
+    context_report_json_output_path: str | Path | None = None,
+    bundle_output_path: str | Path | None = None,
     preferred_template_id: str | None = None,
     preferred_color_scheme: str | None = None,
     title: str | None = None,
@@ -880,6 +932,29 @@ def create_pdf_with_agent(
         if coverage_output_path is not None
         else resolved_output_path.with_suffix(".coverage.json")
     )
+    context_packet_source = _context_packet_source_for_report(context_packet, context_packet_path)
+    resolved_context_classification_path = (
+        (
+            Path(context_classification_output_path).expanduser().resolve()
+            if context_classification_output_path is not None
+            else resolved_output_path.with_suffix(".context-classification.json")
+        )
+        if context_packet_source is not None
+        else None
+    )
+    resolved_context_report_path = (
+        Path(context_report_output_path).expanduser().resolve()
+        if context_report_output_path is not None
+        else resolved_output_path.with_suffix(".context-report.pdf")
+    )
+    resolved_context_report_json_path = (
+        Path(context_report_json_output_path).expanduser().resolve()
+        if context_report_json_output_path is not None
+        else resolved_output_path.with_suffix(".context-report.json")
+    )
+    resolved_bundle_path = (
+        Path(bundle_output_path).expanduser().resolve() if bundle_output_path is not None else None
+    )
     plan_result = plan_template_pack_creation(
         template_pack=template_pack,
         target_profile=target_profile,
@@ -891,6 +966,25 @@ def create_pdf_with_agent(
         preferred_color_scheme=preferred_color_scheme,
     )
     plan = plan_result.usage["template_pack_plan"]
+    context_classification_result = (
+        classify_context(
+            context_packet_source,
+            target_profile=target_profile or plan.get("target_profile"),
+            output_path=resolved_context_classification_path,
+        )
+        if context_packet_source is not None
+        else None
+    )
+    context_report_result = (
+        create_context_packet_report(
+            context_packet_source,
+            output_path=resolved_context_report_path,
+            report_output_path=resolved_context_report_json_path,
+            title=f"{title or plan.get('selected_template_id') or 'Create Agent'} Context Packet Report",
+        )
+        if context_packet_source is not None
+        else None
+    )
     create_result = create_pdf_from_template_pack(
         template_pack=template_pack,
         template_id=str(plan["selected_template_id"]),
@@ -907,11 +1001,38 @@ def create_pdf_with_agent(
     render_report, render_usage = render_check_pdf(resolved_output_path, pages="all")
     blank_report, blank_usage = blank_page_check_pdf(resolved_output_path, pages="all")
     coverage_result = create_coverage_report(composition_path, output_path=resolved_coverage_path)
+    bundle_result = None
+    bundle_verification_result = None
+    if resolved_bundle_path is not None:
+        bundle_inputs = _create_agent_bundle_inputs(
+            output_path=resolved_output_path,
+            plan_path=resolved_plan_path,
+            composition_path=composition_path,
+            layer_path=layer_path,
+            coverage_path=resolved_coverage_path,
+            context_classification_result=context_classification_result,
+            context_report_result=context_report_result,
+        )
+        bundle_result = export_artifact_bundle(
+            artifact_paths=bundle_inputs,
+            output_path=resolved_bundle_path,
+            title=f"{title or plan.get('selected_template_id') or 'Create Agent'} Audit Bundle",
+            metadata={
+                "workflow": "pdf.ai.create.agent",
+                "context_packet_id": plan.get("context_packet_id"),
+                "selected_template_id": plan.get("selected_template_id"),
+                "selected_color_scheme": plan.get("selected_color_scheme"),
+            },
+        )
+        bundle_verification_result = verify_artifact_bundle(resolved_bundle_path)
     validation = _create_agent_validation_report(
         create_result=create_result,
         render_report=render_report,
         blank_report=blank_report,
         coverage_result=coverage_result,
+        context_classification_result=context_classification_result,
+        context_report_result=context_report_result,
+        bundle_verification_result=bundle_verification_result,
     )
     run_status = "succeeded" if validation.status in {"passed", "warning"} else "failed"
     create_agent_run = {
@@ -925,16 +1046,41 @@ def create_pdf_with_agent(
         "selected_style_pack": plan.get("selected_style_pack"),
         "step_order": [
             "pdf.ai.create.plan_template_pack",
+            *(
+                ["pdf.context.classify"]
+                if context_classification_result is not None
+                else []
+            ),
+            *(
+                ["pdf.evidence.context_packet_report"]
+                if context_report_result is not None
+                else []
+            ),
             "pdf.ai.create.from_template_pack",
             "pdf.validation.render_check",
             "pdf.validation.blank_page_check",
             "pdf.evidence.coverage_report",
+            *(["pdf.artifacts.export_bundle", "pdf.artifacts.verify_bundle"] if bundle_result is not None else []),
         ],
         "output_pdf_path": str(resolved_output_path),
         "composition_path": str(composition_path),
         "template_layer_manifest_path": str(layer_path),
         "plan_path": str(resolved_plan_path),
         "coverage_path": str(resolved_coverage_path),
+        **(
+            {"context_classification_path": str(resolved_context_classification_path)}
+            if context_classification_result is not None and resolved_context_classification_path is not None
+            else {}
+        ),
+        **(
+            {
+                "context_report_path": str(resolved_context_report_path),
+                "context_report_json_path": str(resolved_context_report_json_path),
+            }
+            if context_report_result is not None
+            else {}
+        ),
+        **({"bundle_path": str(resolved_bundle_path)} if resolved_bundle_path is not None else {}),
         "plan": plan,
         "create_result": create_result.model_dump(mode="json"),
         "render_check": {
@@ -946,6 +1092,22 @@ def create_pdf_with_agent(
             "usage": blank_usage,
         },
         "coverage_report": coverage_result.model_dump(mode="json"),
+        **(
+            {"context_classification": context_classification_result.model_dump(mode="json")}
+            if context_classification_result is not None
+            else {}
+        ),
+        **(
+            {"context_packet_report": context_report_result.model_dump(mode="json")}
+            if context_report_result is not None
+            else {}
+        ),
+        **({"bundle_export": bundle_result.model_dump(mode="json")} if bundle_result is not None else {}),
+        **(
+            {"bundle_verification": bundle_verification_result.model_dump(mode="json")}
+            if bundle_verification_result is not None
+            else {}
+        ),
         "slot_routing_plan": create_result.usage["slot_routing_plan"],
         "template_layer_manifest": create_result.usage["template_layer_manifest"],
         "evidence_coverage": create_result.usage["evidence_coverage"],
@@ -954,6 +1116,21 @@ def create_pdf_with_agent(
             "render_check": render_report.status,
             "blank_page_check": blank_report.status,
             "coverage_ratio": coverage_result.usage["coverage"].get("coverage_ratio"),
+            **(
+                {"context_classification": context_classification_result.status}
+                if context_classification_result is not None
+                else {}
+            ),
+            **(
+                {"context_packet_report": context_report_result.validation.status}
+                if context_report_result is not None and context_report_result.validation is not None
+                else {}
+            ),
+            **(
+                {"bundle_verification": bundle_verification_result.validation.status}
+                if bundle_verification_result is not None and bundle_verification_result.validation is not None
+                else {}
+            ),
         },
     }
     warnings = [
@@ -962,6 +1139,18 @@ def create_pdf_with_agent(
         *list(render_report.warnings),
         *list(blank_report.warnings),
         *list(coverage_result.warnings),
+        *(
+            list(context_classification_result.warnings)
+            if context_classification_result is not None
+            else []
+        ),
+        *(
+            list(context_report_result.warnings)
+            if context_report_result is not None
+            else []
+        ),
+        *(list(bundle_result.warnings) if bundle_result is not None else []),
+        *(list(bundle_verification_result.warnings) if bundle_verification_result is not None else []),
     ]
     return ToolResult(
         job_id=f"job_{uuid4().hex[:16]}",
@@ -969,8 +1158,19 @@ def create_pdf_with_agent(
         tool=tool,
         artifacts=[
             *list(plan_result.artifacts),
+            *(
+                list(context_classification_result.artifacts)
+                if context_classification_result is not None
+                else []
+            ),
+            *(
+                list(context_report_result.artifacts)
+                if context_report_result is not None
+                else []
+            ),
             *list(create_result.artifacts),
             *list(coverage_result.artifacts),
+            *(list(bundle_result.artifacts) if bundle_result is not None else []),
         ],
         validation=validation,
         warnings=warnings,
@@ -980,6 +1180,20 @@ def create_pdf_with_agent(
             "composition_path": str(composition_path),
             "template_layer_manifest_path": str(layer_path),
             "coverage_path": str(resolved_coverage_path),
+            **(
+                {"context_classification_path": str(resolved_context_classification_path)}
+                if context_classification_result is not None and resolved_context_classification_path is not None
+                else {}
+            ),
+            **(
+                {
+                    "context_report_path": str(resolved_context_report_path),
+                    "context_report_json_path": str(resolved_context_report_json_path),
+                }
+                if context_report_result is not None
+                else {}
+            ),
+            **({"bundle_path": str(resolved_bundle_path)} if resolved_bundle_path is not None else {}),
         },
         next_recommended_tools=[
             "pdf.patch.plan",
@@ -1017,8 +1231,13 @@ def create_pdf_from_template_pack(
             "invalid_template",
             f"Template pack entry {template_id} references unknown base template: {base_template}.",
         )
+    target_profile_id = str(template.get("target_profile") or base_template)
     packet = _load_context_packet_for_template(context_packet=context_packet, context_packet_path=context_packet_path)
-    context_blocks = _context_packet_agent_blocks(packet) if packet is not None else []
+    context_blocks = (
+        _context_packet_agent_blocks(packet, target_profile=target_profile_id)
+        if packet is not None
+        else []
+    )
     merged_data = deepcopy(template.get("sample_data") if isinstance(template.get("sample_data"), dict) else {})
     if data:
         merged_data.update(data)
@@ -1168,12 +1387,40 @@ def _create_agent_validation_report(
     render_report: ValidationReport,
     blank_report: ValidationReport,
     coverage_result: ToolResult,
+    context_classification_result: ToolResult | None = None,
+    context_report_result: ToolResult | None = None,
+    bundle_verification_result: ToolResult | None = None,
 ) -> ValidationReport:
     checks: list[ValidationCheck] = []
     if create_result.validation is not None:
         checks.extend(create_result.validation.checks)
     checks.extend(render_report.checks)
     checks.extend(blank_report.checks)
+    if context_classification_result is not None:
+        checks.append(
+            ValidationCheck(
+                name="context_classification_completed",
+                status="passed" if context_classification_result.status == "succeeded" else "failed",
+                details={
+                    "tool": context_classification_result.tool,
+                    "classification_count": context_classification_result.usage.get("classification_count"),
+                },
+                message=None
+                if context_classification_result.status == "succeeded"
+                else "Context classification did not succeed.",
+            )
+        )
+    if context_report_result is not None and context_report_result.validation is not None:
+        checks.append(
+            ValidationCheck(
+                name="context_packet_report_validation",
+                status=context_report_result.validation.status,
+                details={"tool": context_report_result.tool},
+                message=None
+                if context_report_result.validation.status == "passed"
+                else "Context Packet report validation did not pass.",
+            )
+        )
     coverage_ratio = coverage_result.usage["coverage"].get("coverage_ratio")
     checks.append(
         ValidationCheck(
@@ -1183,10 +1430,31 @@ def _create_agent_validation_report(
             message=None if coverage_ratio == 1.0 else "Not every source ref is covered by generated blocks.",
         )
     )
+    if bundle_verification_result is not None and bundle_verification_result.validation is not None:
+        checks.append(
+            ValidationCheck(
+                name="audit_bundle_verification",
+                status=bundle_verification_result.validation.status,
+                details={"tool": bundle_verification_result.tool},
+                message=None
+                if bundle_verification_result.validation.status == "passed"
+                else "Audit bundle verification did not pass.",
+            )
+        )
     warnings = [
         *(create_result.validation.warnings if create_result.validation is not None else []),
         *render_report.warnings,
         *blank_report.warnings,
+        *(
+            context_report_result.validation.warnings
+            if context_report_result is not None and context_report_result.validation is not None
+            else []
+        ),
+        *(
+            bundle_verification_result.validation.warnings
+            if bundle_verification_result is not None and bundle_verification_result.validation is not None
+            else []
+        ),
     ]
     if any(check.status == "failed" for check in checks):
         status = "failed"
@@ -1200,6 +1468,40 @@ def _create_agent_validation_report(
         page_count=create_result.validation.page_count if create_result.validation is not None else None,
         warnings=warnings,
     )
+
+
+def _context_packet_source_for_report(
+    context_packet: dict[str, Any] | str | Path | None,
+    context_packet_path: str | Path | None,
+) -> dict[str, Any] | str | Path | None:
+    if context_packet is not None:
+        return context_packet
+    if context_packet_path is not None:
+        return context_packet_path
+    return None
+
+
+def _create_agent_bundle_inputs(
+    output_path: Path,
+    plan_path: Path,
+    composition_path: Path,
+    layer_path: Path,
+    coverage_path: Path,
+    context_classification_result: ToolResult | None,
+    context_report_result: ToolResult | None,
+) -> list[Path]:
+    paths = [
+        output_path,
+        plan_path,
+        composition_path,
+        layer_path,
+        coverage_path,
+    ]
+    if context_classification_result is not None:
+        paths.extend(artifact.path for artifact in context_classification_result.artifacts)
+    if context_report_result is not None:
+        paths.extend(artifact.path for artifact in context_report_result.artifacts)
+    return paths
 
 
 def _target_profile_id(target_profile: dict[str, Any] | str | None) -> str | None:
@@ -1654,18 +1956,26 @@ def _load_context_packet_for_template(
     return raw_packet
 
 
-def _context_packet_agent_blocks(packet: dict[str, Any]) -> list[dict[str, Any]]:
+def _context_packet_agent_blocks(
+    packet: dict[str, Any],
+    target_profile: dict[str, Any] | str | None = None,
+) -> list[dict[str, Any]]:
+    resolved_target_profile = _target_profile_for_context_mapping(target_profile)
     blocks: list[dict[str, Any]] = []
     for index, item in enumerate(packet.get("items", []), start=1):
         if not isinstance(item, dict):
             continue
-        block = _context_item_agent_block(item, index=index)
+        block = _context_item_agent_block(item, index=index, target_profile=resolved_target_profile)
         if block is not None:
             blocks.append(block)
     return blocks
 
 
-def _context_item_agent_block(item: dict[str, Any], index: int) -> dict[str, Any] | None:
+def _context_item_agent_block(
+    item: dict[str, Any],
+    index: int,
+    target_profile: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
     item_type = _stringify(item.get("type")).strip().lower()
     context_item_id = _stringify(item.get("context_item_id")) or f"ctx_{index:03d}"
     source_ref = _stringify(item.get("source_ref")) or context_item_id
@@ -1734,12 +2044,14 @@ def _context_item_agent_block(item: dict[str, Any], index: int) -> dict[str, Any
         )
         return block
     if item_type in {"audio", "video", "media"}:
+        block_type = _context_media_block_type(item_type, target_profile)
         body = _context_media_body(item)
         block.update(
             {
-                "type": "slide",
-                "target_slot": "evidence",
+                "type": block_type,
+                "target_slot": _context_media_target_slot(block_type, target_profile),
                 "body": body or [f"Media source recorded: {_stringify(metadata.get('filename') or title)}"],
+                **_context_media_block_fields(item=item, item_type=item_type),
             }
         )
         return block
@@ -1789,6 +2101,100 @@ def _context_media_body(item: dict[str, Any]) -> list[str]:
     if transcript_text:
         body.append(transcript_text[:1200])
     return [line for line in body if line]
+
+
+def _target_profile_for_context_mapping(target_profile: dict[str, Any] | str | None) -> dict[str, Any] | None:
+    profile_id = _target_profile_id(target_profile)
+    if isinstance(target_profile, dict):
+        if profile_id in DEFAULT_TARGET_PROFILES:
+            merged = deepcopy(DEFAULT_TARGET_PROFILES[profile_id])
+            merged.update(target_profile)
+            return merged
+        return deepcopy(target_profile)
+    if profile_id:
+        return deepcopy(DEFAULT_TARGET_PROFILES.get(profile_id))
+    return None
+
+
+def _context_media_block_type(item_type: str, target_profile: dict[str, Any] | None) -> str:
+    specific_reference_type = {
+        "audio": "audio_reference",
+        "video": "video_reference",
+    }.get(item_type, "media_reference")
+    if target_profile is not None:
+        layout_mode = str(target_profile.get("layout_mode") or "").strip().lower()
+        accepts_specific_reference = _target_profile_accepts_block_type(
+            target_profile,
+            specific_reference_type,
+        )
+        accepts_generic_reference = _target_profile_accepts_block_type(target_profile, "media_reference")
+        accepts_slide = _target_profile_accepts_block_type(target_profile, "slide")
+        if layout_mode == "slides" and accepts_slide:
+            return "slide"
+        if accepts_specific_reference:
+            return specific_reference_type
+        if accepts_generic_reference:
+            return "media_reference"
+        if accepts_slide:
+            return "slide"
+    return "slide"
+
+
+def _context_media_target_slot(block_type: str, target_profile: dict[str, Any] | None) -> str:
+    slot = _first_target_profile_slot(target_profile, block_type)
+    if slot:
+        return slot
+    if block_type in {"audio_reference", "video_reference", "media_reference"}:
+        return "media_evidence"
+    if block_type == "slide":
+        return "evidence"
+    return _agent_block_default_slot(block_type)
+
+
+def _target_profile_accepts_block_type(target_profile: dict[str, Any] | None, block_type: str) -> bool:
+    if target_profile is None:
+        return False
+    accepted_block_types = _template_pack_string_list(target_profile.get("accepted_block_types"))
+    return block_type in accepted_block_types or bool(_first_target_profile_slot(target_profile, block_type))
+
+
+def _first_target_profile_slot(target_profile: dict[str, Any] | None, block_type: str) -> str:
+    for slot_name, accepted_types in _target_profile_slot_acceptance(target_profile).items():
+        if block_type in accepted_types:
+            return slot_name
+    return ""
+
+
+def _context_media_block_fields(item: dict[str, Any], item_type: str) -> dict[str, Any]:
+    metadata = item.get("metadata") if isinstance(item.get("metadata"), dict) else {}
+    content = item.get("content") if isinstance(item.get("content"), dict) else {}
+    media = content.get("media") if isinstance(content.get("media"), dict) else {}
+    path = _stringify(metadata.get("path") or media.get("path") or item.get("uri"))
+    filename = _stringify(metadata.get("filename") or media.get("filename"))
+    if not filename and path:
+        filename = Path(path).name
+    chapters = content.get("chapters") if isinstance(content.get("chapters"), list) else []
+    keyframes = content.get("keyframes") if isinstance(content.get("keyframes"), list) else []
+    chapter_count = metadata.get("chapter_count") if metadata.get("chapter_count") is not None else len(chapters)
+    keyframe_count = metadata.get("keyframe_count") if metadata.get("keyframe_count") is not None else len(keyframes)
+    fields: dict[str, Any] = {
+        "media_kind": _stringify(metadata.get("media_kind") or media.get("kind") or item_type),
+        "path": path,
+        "filename": filename,
+        "duration_seconds": metadata.get("duration_seconds"),
+        "transcript_excerpt": _context_transcript_excerpt(content),
+        "chapter_count": chapter_count,
+        "keyframe_count": keyframe_count,
+    }
+    return {key: value for key, value in fields.items() if value not in {"", None}}
+
+
+def _context_transcript_excerpt(content: dict[str, Any], max_chars: int = 1800) -> str:
+    transcript = content.get("transcript")
+    if not isinstance(transcript, dict):
+        return ""
+    text = _stringify(transcript.get("text"))
+    return text[:max_chars].strip()
 
 
 def _template_pack_slot_routing_plan(
@@ -2010,9 +2416,12 @@ def _normalize_agent_block_type(raw_type: Any) -> str:
         "figure": "image",
         "metric_table": "table",
         "deck_slide": "slide",
+        "audio": "audio_reference",
+        "video": "video_reference",
+        "media": "media_reference",
     }
     normalized = aliases.get(block_type, block_type)
-    allowed = {"section", "code", "table", "image", "slide", "citation"}
+    allowed = set(SUPPORTED_AGENT_BLOCK_TYPES)
     if normalized not in allowed:
         raise AgentPDFException(
             "invalid_input",
@@ -2037,6 +2446,8 @@ def _agent_block_id(raw_block_id: Any, index: int, seen_block_ids: set[str]) -> 
 
 
 def _agent_block_default_slot(block_type: str) -> str:
+    if block_type in {"audio_reference", "video_reference", "media_reference"}:
+        return "media_evidence"
     if block_type in {"code", "table", "image", "citation"}:
         return "evidence"
     if block_type == "slide":
@@ -2083,6 +2494,8 @@ def _agent_block_data(block_type: str, raw_block: dict[str, Any]) -> dict[str, A
             "body": _normalize_body_lines(raw_block.get("body") or raw_block.get("bullets")),
             "speaker_notes": _normalize_body_lines(raw_block.get("speaker_notes")),
         }
+    if block_type in {"audio_reference", "video_reference", "media_reference"}:
+        return _agent_media_reference_data(block_type, raw_block)
     if block_type == "citation":
         return {
             "quote": _stringify(raw_block.get("quote") or raw_block.get("body")),
@@ -2117,6 +2530,51 @@ def _normalize_body_lines(value: Any) -> list[str]:
         return [_stringify(item) for item in value if _stringify(item)]
     text = _stringify(value)
     return [text] if text else []
+
+
+def _agent_media_reference_data(block_type: str, raw_block: dict[str, Any]) -> dict[str, Any]:
+    data = raw_block.get("data") if isinstance(raw_block.get("data"), dict) else raw_block
+    path = _stringify(data.get("path") or data.get("media_path") or data.get("uri"))
+    filename = _stringify(data.get("filename"))
+    if not filename and path:
+        filename = Path(path).name
+    transcript_excerpt = _stringify(data.get("transcript_excerpt") or data.get("transcript"))
+    payload: dict[str, Any] = {
+        "media_kind": _stringify(data.get("media_kind")) or block_type.replace("_reference", ""),
+        "path": path,
+        "filename": filename,
+        "duration_seconds": _coerce_number(data.get("duration_seconds")),
+        "transcript_excerpt": transcript_excerpt,
+        "chapter_count": _coerce_int(data.get("chapter_count")),
+        "keyframe_count": _coerce_int(data.get("keyframe_count")),
+        "body": _normalize_body_lines(data.get("body") or data.get("bullets")),
+    }
+    return {
+        key: value
+        for key, value in payload.items()
+        if value is not None and value != "" and value != []
+    }
+
+
+def _coerce_number(value: Any) -> float | int | None:
+    if value is None or value == "":
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    if number.is_integer():
+        return int(number)
+    return number
+
+
+def _coerce_int(value: Any) -> int | None:
+    if value is None or value == "":
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def _image_block_evidence(path: str) -> dict[str, Any]:
@@ -2215,6 +2673,26 @@ def _agent_block_markdown_lines(block: dict[str, Any]) -> list[str]:
             lines.extend(["", "**Speaker notes:**"])
             for note in speaker_notes:
                 lines.append(f"- {_stringify(note)}")
+        return lines
+    if block_type in {"audio_reference", "video_reference", "media_reference"}:
+        media_kind = _stringify(data.get("media_kind")) or block_type.replace("_reference", "")
+        filename = _stringify(data.get("filename") or data.get("path") or block.get("title"))
+        lines.append(f"Media file: {filename}")
+        lines.append(f"Kind: {media_kind}")
+        if data.get("duration_seconds") is not None:
+            lines.append(f"Duration: {data['duration_seconds']} second(s)")
+        if data.get("chapter_count") is not None:
+            lines.append(f"Chapters: {data['chapter_count']}")
+        if data.get("keyframe_count") is not None:
+            lines.append(f"Keyframes: {data['keyframe_count']}")
+        transcript_excerpt = _stringify(data.get("transcript_excerpt"))
+        if transcript_excerpt:
+            lines.extend(["", transcript_excerpt])
+        body = data.get("body") if isinstance(data.get("body"), list) else []
+        if body:
+            lines.append("")
+            for item in body:
+                lines.append(f"- {_stringify(item)}")
         return lines
     if block_type == "citation":
         quote = _stringify(data.get("quote"))

@@ -1,6 +1,6 @@
 {
   "manifest_version": "0.1-full",
-  "tool_count": 224,
+  "tool_count": 227,
   "tools": [
     {
       "name": "agent.setup.claude_code",
@@ -19,8 +19,8 @@
     },
     {
       "name": "agent.setup.codex",
-      "status": "planned",
-      "description": "Generate Codex MCP/workspace integration config.",
+      "status": "beta",
+      "description": "Generate a Codex MCP/workspace integration config for local AgentPDF tools.",
       "category": "agent",
       "interfaces": [
         "cli",
@@ -28,7 +28,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -65,7 +65,7 @@
     {
       "name": "pdf.context.ingest",
       "status": "beta",
-      "description": "Register PDFs, images, audio/video, text, Markdown, HTML, code, CSV/JSON, links, or data files as context items.",
+      "description": "Normalize one PDF, image, audio/video, text, Markdown, HTML, code, CSV/JSON, web link, or data file into an agent context item with local evidence.",
       "category": "context",
       "interfaces": [
         "cli",
@@ -73,14 +73,14 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
     {
       "name": "pdf.context.packet",
       "status": "beta",
-      "description": "Build a reusable context packet from multiple local files, links, prompts, checksums, and warnings.",
+      "description": "Build a reusable Context Packet from raw or pre-ingested local context items with source graph metadata.",
       "category": "context",
       "interfaces": [
         "cli",
@@ -88,7 +88,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -110,7 +110,7 @@
     {
       "name": "pdf.context.classify",
       "status": "beta",
-      "description": "Classify context items by type, role, safety, and likely target uses.",
+      "description": "Classify context items by type, role, local evidence, safety limits, likely block type, and target slots.",
       "category": "context",
       "interfaces": [
         "cli",
@@ -118,7 +118,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -203,7 +203,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -218,7 +218,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -254,7 +254,7 @@
     },
     {
       "name": "pdf.target.select_profile",
-      "status": "planned",
+      "status": "beta",
       "description": "Select a target PDF profile such as learning, resume, paper, deck, report, packet, or audit.",
       "category": "target",
       "interfaces": [
@@ -262,8 +262,8 @@
         "sdk",
         "mcp"
       ],
-      "implemented": false,
-      "oss_default": false,
+      "implemented": true,
+      "oss_default": true,
       "requires_model": false
     },
     {
@@ -277,7 +277,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -328,8 +328,8 @@
     },
     {
       "name": "pdf.evidence.context_packet_report",
-      "status": "planned",
-      "description": "Create a PDF appendix summarizing context items, sources, refs, checksums, and limitations.",
+      "status": "beta",
+      "description": "Create a validated PDF and JSON audit report summarizing Context Packet items, source refs, checksums, evidence, and limitations.",
       "category": "evidence",
       "interfaces": [
         "cli",
@@ -337,7 +337,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -366,7 +366,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -396,14 +396,14 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
     {
       "name": "pdf.compose.add_code_block",
       "status": "beta",
-      "description": "Add formatted code blocks with optional file/line source refs.",
+      "description": "Append a formatted code evidence page to a new PDF artifact with source refs, patch evidence, rollback metadata, and validation.",
       "category": "compose",
       "interfaces": [
         "cli",
@@ -411,14 +411,14 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
     {
       "name": "pdf.compose.add_figure",
       "status": "beta",
-      "description": "Add image/figure blocks with captions and source refs.",
+      "description": "Append an image or figure evidence page to a new PDF artifact with captions, source refs, patch evidence, rollback metadata, and validation.",
       "category": "compose",
       "interfaces": [
         "cli",
@@ -426,14 +426,14 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
     {
       "name": "pdf.compose.add_table",
       "status": "beta",
-      "description": "Add tables from structured data with source refs.",
+      "description": "Append a structured table evidence page to a new PDF artifact with source refs, patch evidence, rollback metadata, and validation.",
       "category": "compose",
       "interfaces": [
         "cli",
@@ -441,14 +441,14 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
     {
       "name": "pdf.compose.add_appendix",
       "status": "beta",
-      "description": "Build appendix sections from context packets, citations, or artifacts.",
+      "description": "Append a Markdown appendix page to a new PDF artifact with source refs, patch evidence, rollback metadata, and validation.",
       "category": "compose",
       "interfaces": [
         "cli",
@@ -456,7 +456,52 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.compose.add_citation",
+      "status": "beta",
+      "description": "Append a citation evidence page to a new PDF artifact with source refs, local citation metadata, patch evidence, rollback metadata, and validation.",
+      "category": "compose",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.compose.add_media_reference",
+      "status": "beta",
+      "description": "Append an audio, video, or media reference evidence page to a new PDF artifact with local media metadata, source refs, patch evidence, rollback metadata, and validation.",
+      "category": "compose",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "pdf.compose.add_slide",
+      "status": "beta",
+      "description": "Append a slide-like evidence page to a new PDF artifact with source refs, patch evidence, rollback metadata, and validation.",
+      "category": "compose",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -477,7 +522,7 @@
     {
       "name": "pdf.patch.plan",
       "status": "beta",
-      "description": "Create a structured append-only patch manifest for Markdown, code, table, image, slide, source-map, and template-layer evidence.",
+      "description": "Create a structured append-only patch manifest for Markdown, code, table, image, slide, citation, media reference, source-map, template-layer, and regenerate_block evidence.",
       "category": "patch",
       "interfaces": [
         "cli",
@@ -1955,7 +2000,7 @@
     },
     {
       "name": "pdf.security.remove_metadata",
-      "status": "planned",
+      "status": "beta",
       "description": "Remove document metadata.",
       "category": "security",
       "interfaces": [
@@ -1964,7 +2009,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -2285,7 +2330,7 @@
     },
     {
       "name": "pdf.metadata.page_info",
-      "status": "planned",
+      "status": "beta",
       "description": "Page size/rotation/info.",
       "category": "metadata",
       "interfaces": [
@@ -2294,7 +2339,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -2345,7 +2390,7 @@
     },
     {
       "name": "pdf.validation.page_count_check",
-      "status": "planned",
+      "status": "beta",
       "description": "Compare expected page counts.",
       "category": "validation",
       "interfaces": [
@@ -2354,7 +2399,7 @@
         "rest",
         "sdk"
       ],
-      "implemented": false,
+      "implemented": true,
       "oss_default": true,
       "requires_model": false
     },
@@ -2888,7 +2933,7 @@
     {
       "name": "pdf.ai.create.agent",
       "status": "beta",
-      "description": "Run the local create agent: plan, create, render-check, blank-check, and coverage.",
+      "description": "Run the local create agent: plan, classify Context Packet routing, create, Context Packet report, render-check, blank-check, coverage, and optional audit bundle.",
       "category": "ai_create",
       "interfaces": [
         "cli",
