@@ -28,6 +28,7 @@ def test_extract_schema_matches_context_packet_sources(tmp_path: Path) -> None:
     assert evidence["records"][0]["value"] == "Acme Corp"
     assert evidence["records"][0]["source_ref"] == "ctx_001:docx:paragraph:1"
     assert evidence["records"][2]["match_source"] == "source_graph.nodes[2].evidence_text"
+    assert "sheet.create.evidence_workbook" in result.next_recommended_tools
     assert json.loads(output_path.read_text(encoding="utf-8")) == evidence
 
 

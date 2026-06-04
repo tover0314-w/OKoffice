@@ -157,6 +157,7 @@ from agentpdf.office.context import build_office_context_packet
 from agentpdf.office.extract import extract_schema
 from agentpdf.office.inspect import inspect_office_file
 from agentpdf.office.sheet import (
+    create_evidence_workbook,
     extract_sheet_tables,
     inspect_sheet_workbook,
     profile_sheet_data,
@@ -298,6 +299,13 @@ def run_sheet_extract_tables(path: str | Path) -> ToolResult:
 
 def run_sheet_write_workbook(data: dict[str, object] | list[dict[str, object]], output_path: str | Path) -> ToolResult:
     return write_sheet_workbook(data, output_path)
+
+
+def run_sheet_create_evidence_workbook(
+    data: dict[str, object] | list[dict[str, object]],
+    output_path: str | Path,
+) -> ToolResult:
+    return create_evidence_workbook(data, output_path)
 
 
 def run_sheet_validate_workbook(path: str | Path) -> ToolResult:

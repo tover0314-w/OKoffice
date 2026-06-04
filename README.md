@@ -76,6 +76,7 @@ okoffice sheet inspect path/to/model.xlsx --json
 okoffice sheet read path/to/model.xlsx --max-rows 100 --json
 okoffice sheet profile path/to/model.xlsx --json
 okoffice sheet extract-tables path/to/model.xlsx --json
+okoffice sheet create-evidence-workbook records.json -o .okoffice-out/evidence.xlsx --json
 okoffice sheet write-workbook records.json -o .okoffice-out/model.xlsx --json
 okoffice sheet validate .okoffice-out/model.xlsx --json
 okoffice deck inspect path/to/deck.pptx --json
@@ -111,6 +112,7 @@ okpdf serve --api
 | `sheet.read.workbook` | beta | Reads bounded workbook rows, cells, formulas, and source refs as agent-friendly JSON. |
 | `sheet.profile.data` | beta | Profiles headers, data types, missing cells, formulas, and source coverage. |
 | `sheet.extract.tables` | beta | Extracts worksheet tables with sheet, row, column, and cell refs. |
+| `sheet.create.evidence_workbook` | beta | Creates auditable XLSX evidence workbooks from source-mapped records with provenance sheets. |
 | `sheet.write.workbook` | beta | Writes source-mapped records into a local XLSX workbook with provenance sheets. |
 | `sheet.validate.workbook` | beta | Validates XLSX structure, non-empty sheets, external links, safety markers, and SourceRefs readiness. |
 | `deck.inspect.presentation` | beta | Reads PPTX slide, notes, layout, theme, media, and chart facts. |
@@ -131,7 +133,7 @@ The codebase still exposes the compatibility Python package as `agentpdf` and th
 |---|---|
 | Inspect | `office.inspect.file`, `word.inspect.document`, `sheet.inspect.workbook`, `deck.inspect.presentation`, `pdf.inspect.document` |
 | Extract | `word.extract.tables`, `sheet.read.workbook`, `sheet.profile.data`, `sheet.extract.tables`, `deck.extract.notes`, `pdf.convert.pdf_to_text` |
-| Create | `word.write.document`, `sheet.write.workbook`, `deck.compose.plan`, `deck.create.from_outline`, `pdf.convert.markdown_to_pdf` |
+| Create | `word.write.document`, `sheet.create.evidence_workbook`, `sheet.write.workbook`, `deck.compose.plan`, `deck.create.from_outline`, `pdf.convert.markdown_to_pdf` |
 | Patch | `office.patch.plan`, `word.edit.patch`, `sheet.edit.patch`, `deck.edit.patch`, `pdf.patch.apply` |
 | Validate | `office.validation.run`, `word.validation.document`, `sheet.validate.workbook`, `deck.validate.presentation`, `pdf.validation.render_check` |
 | Evidence | `office.context.build_packet`, `office.evidence.coverage`, `office.source_map.create` |
@@ -161,7 +163,7 @@ Every public tool should return evidence, not just a boolean:
   "validation": {"status": "passed", "checks": []},
   "warnings": [],
   "usage": {"summary": {"table_count": 1}},
-  "next_recommended_tools": ["sheet.write.workbook"]
+  "next_recommended_tools": ["sheet.create.evidence_workbook"]
 }
 ```
 

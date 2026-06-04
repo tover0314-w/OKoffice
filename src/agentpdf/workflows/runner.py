@@ -68,6 +68,7 @@ SUPPORTED_LOCAL_WORKFLOW_TOOLS = {
     "pdf.render.html_package",
     "pdf.qa.visual_report",
     "pdf.workflow.createpdf",
+    "sheet.create.evidence_workbook",
     "sheet.extract.tables",
     "sheet.inspect.workbook",
     "sheet.profile.data",
@@ -436,6 +437,12 @@ def _run_local_step(tool: str, payload: dict[str, Any]) -> ToolResult:
         )
     if tool == "sheet.extract.tables":
         return runner.run_sheet_extract_tables(payload.get("path", payload.get("input_path", "")))
+    if tool == "sheet.create.evidence_workbook":
+        data = payload.get("data", payload)
+        return runner.run_sheet_create_evidence_workbook(
+            data=data if isinstance(data, (dict, list)) else {},
+            output_path=payload.get("output_path", payload.get("output", ".okoffice-out/evidence.xlsx")),
+        )
     if tool == "sheet.write.workbook":
         data = payload.get("data", payload)
         return runner.run_sheet_write_workbook(

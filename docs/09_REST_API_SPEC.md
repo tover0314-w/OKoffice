@@ -136,6 +136,49 @@ Output should include:
 - Warnings for missing/low-confidence fields.
 - Next recommended tools such as `sheet.validation.formulas` or `office.workflow.sheet_to_deck`.
 
+## Example: Implemented Evidence Workbook Tool
+
+```http
+POST /v1/tools/sheet.create.evidence_workbook/run
+```
+
+Input:
+
+```json
+{
+  "data": {
+    "records": [
+      {
+        "source_path": "memo.docx",
+        "source_format": "docx",
+        "table_id": "table_1",
+        "source_row_index": 1,
+        "values": ["Vendor A", "250000"],
+        "source_refs": [{"document_path": "memo.docx", "row_index": 1}]
+      }
+    ]
+  },
+  "output_path": ".okoffice-out/evidence.xlsx"
+}
+```
+
+Output highlights:
+
+```json
+{
+  "status": "succeeded",
+  "tool": "sheet.create.evidence_workbook",
+  "validation": {"status": "passed"},
+  "usage": {
+    "summary": {"record_count": 1, "source_ref_count": 1},
+    "workbook": {"sheets": ["Workbook", "SourceRefs"]}
+  },
+  "next_recommended_tools": ["sheet.inspect.workbook", "sheet.validate.workbook", "deck.compose.plan"]
+}
+```
+
+Limitations: this local tool writes a deterministic XLSX evidence workbook and SourceRefs sheet. It does not require cloud workers or model calls, and it does not yet create charts, formulas, pivots, or styled financial models.
+
 ## Example: Implemented Context Packet Build
 
 ```http

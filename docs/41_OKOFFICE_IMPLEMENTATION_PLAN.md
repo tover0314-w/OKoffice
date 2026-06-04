@@ -89,7 +89,7 @@ Deliverables:
 
 - `office.context.build_packet` for DOCX/PDF/XLSX/PPTX sources.
 - `office.extract.schema`.
-- `sheet.create.evidence_workbook`.
+- `sheet.create.evidence_workbook` as the okoffice-first evidence workbook writer.
 - `office.evidence.coverage`.
 
 Acceptance:

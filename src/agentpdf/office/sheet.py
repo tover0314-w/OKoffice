@@ -19,6 +19,7 @@ from agentpdf.security.paths import resolve_output_path
 INSPECT_TOOL_NAME = "sheet.inspect.workbook"
 EXTRACT_TABLES_TOOL_NAME = "sheet.extract.tables"
 WRITE_WORKBOOK_TOOL_NAME = "sheet.write.workbook"
+CREATE_EVIDENCE_WORKBOOK_TOOL_NAME = "sheet.create.evidence_workbook"
 VALIDATE_WORKBOOK_TOOL_NAME = "sheet.validate.workbook"
 READ_WORKBOOK_TOOL_NAME = "sheet.read.workbook"
 PROFILE_DATA_TOOL_NAME = "sheet.profile.data"
@@ -134,23 +135,41 @@ def extract_sheet_tables(path: str | Path) -> ToolResult:
             "tables": tables,
             "safety": preflight.usage["safety"],
         },
-        next_recommended_tools=["sheet.write.workbook", "office.workflow.extract_to_sheet", "office.context.build_packet"],
+        next_recommended_tools=[
+            "sheet.create.evidence_workbook",
+            "sheet.write.workbook",
+            "office.workflow.extract_to_sheet",
+            "office.context.build_packet",
+        ],
     )
 
 
 def write_sheet_workbook(data: dict[str, Any] | list[dict[str, Any]], output_path: str | Path) -> ToolResult:
+    return _write_sheet_workbook(data, output_path, tool_name=WRITE_WORKBOOK_TOOL_NAME)
+
+
+def create_evidence_workbook(data: dict[str, Any] | list[dict[str, Any]], output_path: str | Path) -> ToolResult:
+    return _write_sheet_workbook(data, output_path, tool_name=CREATE_EVIDENCE_WORKBOOK_TOOL_NAME)
+
+
+def _write_sheet_workbook(
+    data: dict[str, Any] | list[dict[str, Any]],
+    output_path: str | Path,
+    *,
+    tool_name: str,
+) -> ToolResult:
     try:
         output = resolve_output_path(output_path)
     except AgentPDFException as exc:
-        return _failed(WRITE_WORKBOOK_TOOL_NAME, exc.to_error())
+        return _failed(tool_name, exc.to_error())
 
     records = _write_records(data)
     if not records:
         return _failed(
-            WRITE_WORKBOOK_TOOL_NAME,
+            tool_name,
             AgentPDFError(
                 code="unsafe_input_rejected",
-                message="sheet.write.workbook requires at least one record or table row.",
+                message=f"{tool_name} requires at least one record or table row.",
             ),
         )
 
@@ -194,11 +213,11 @@ def write_sheet_workbook(data: dict[str, Any] | list[dict[str, Any]], output_pat
         )
 
     write_xlsx(output, [("Workbook", workbook_rows), ("SourceRefs", source_rows)])
-    artifact = build_artifact(output, WRITE_WORKBOOK_TOOL_NAME)
+    artifact = build_artifact(output, tool_name)
     return ToolResult(
         job_id=_job_id(),
         status="succeeded",
-        tool=WRITE_WORKBOOK_TOOL_NAME,
+        tool=tool_name,
         artifacts=[artifact],
         validation=ValidationReport(
             status="passed",
@@ -237,6 +256,7 @@ def write_sheet_workbook(data: dict[str, Any] | list[dict[str, Any]], output_pat
             "sheet.inspect.workbook",
             "sheet.validate.workbook",
             "office.context.build_packet",
+            "deck.compose.plan",
             "office.workflow.sheet_to_deck",
         ],
     )
@@ -432,6 +452,7 @@ def profile_sheet_data(
             "safety": read_result.usage["safety"],
         },
         next_recommended_tools=[
+            "sheet.create.evidence_workbook",
             "sheet.write.workbook",
             "sheet.validate.workbook",
             "office.context.build_packet",

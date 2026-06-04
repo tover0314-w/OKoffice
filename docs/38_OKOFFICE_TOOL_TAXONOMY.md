@@ -214,7 +214,7 @@ Build in this order:
 4. `deck.inspect.presentation`
 5. `office.context.build_packet`
 6. `office.extract.schema`
-7. `sheet.create.evidence_workbook`
+7. `sheet.create.evidence_workbook` (beta local writer with SourceRefs sheet)
 8. `sheet.validation.formulas`
 9. `deck.create.presentation`
 10. `deck.validation.contact_sheet`

@@ -127,7 +127,7 @@ curl -X POST http://127.0.0.1:7331/v1/tools/office.extract.schema/run \
 ## Create Evidence Workbook
 
 ```bash
-curl -X POST http://127.0.0.1:7331/v1/tools/sheet.write.workbook/run \
+curl -X POST http://127.0.0.1:7331/v1/tools/sheet.create.evidence_workbook/run \
   -H 'Content-Type: application/json' \
   -d '{
     "data": {

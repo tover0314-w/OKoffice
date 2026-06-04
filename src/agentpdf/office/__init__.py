@@ -8,6 +8,7 @@ from agentpdf.office.manifest import load_office_tool_manifest
 from agentpdf.office.inspect import inspect_office_file
 from agentpdf.office.planner import plan_office_workflow
 from agentpdf.office.sheet import (
+    create_evidence_workbook,
     extract_sheet_tables,
     inspect_sheet_workbook,
     profile_sheet_data,
@@ -25,6 +26,7 @@ __all__ = [
     "extract_to_sheet",
     "sheet_to_deck",
     "verify_board_pack",
+    "create_evidence_workbook",
     "extract_sheet_tables",
     "extract_schema",
     "extract_word_tables",

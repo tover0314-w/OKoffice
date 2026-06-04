@@ -78,6 +78,7 @@ MCP wrapper groups:
 - `office_extract_schema`
 - `office_validation_package`
 - `office_workflow_extract_to_sheet`
+- `sheet_create_evidence_workbook`
 - `sheet_write_workbook`
 - `deck_compose_plan`
 - `deck_create_from_outline`

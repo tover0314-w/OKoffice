@@ -2,7 +2,7 @@
     "manifest_version":  "0.1",
     "product":  "okoffice",
     "compatibility_package":  "agentpdf",
-    "tool_count":  48,
+    "tool_count":  49,
     "domains":  [
                     "office",
                     "word",
@@ -502,6 +502,21 @@
                              "name":  "sheet.write.workbook",
                              "status":  "beta",
                              "description":  "Create XLSX workbooks from structured tables, formulas, charts, and validation notes.",
+                             "domain":  "sheet",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  true,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "sheet.create.evidence_workbook",
+                             "status":  "beta",
+                             "description":  "Create an auditable evidence workbook from structured records while preserving SourceRefs provenance.",
                              "domain":  "sheet",
                              "interfaces":  [
                                                 "cli",

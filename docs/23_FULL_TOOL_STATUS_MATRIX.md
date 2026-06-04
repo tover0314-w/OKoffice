@@ -27,6 +27,7 @@ Implemented okoffice target snapshot lives in `schemas/office-tool-manifest.targ
 | `sheet.read.workbook` | beta | yes |
 | `sheet.profile.data` | beta | yes |
 | `sheet.extract.tables` | beta | yes |
+| `sheet.create.evidence_workbook` | beta | yes |
 | `sheet.write.workbook` | beta | yes |
 | `sheet.validate.workbook` | beta | yes |
 | `deck.inspect.presentation` | beta | yes |

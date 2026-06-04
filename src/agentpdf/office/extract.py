@@ -61,7 +61,11 @@ def extract_schema(
                 },
                 "evidence": evidence,
             },
-            next_recommended_tools=["sheet.write.workbook", "office.workflow.extract_to_sheet"],
+            next_recommended_tools=[
+                "sheet.create.evidence_workbook",
+                "sheet.write.workbook",
+                "office.workflow.extract_to_sheet",
+            ],
         )
     except AgentPDFException as exc:
         return _failed(exc.to_error())

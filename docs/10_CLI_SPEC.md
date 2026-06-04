@@ -54,9 +54,12 @@ okoffice validate package memo.docx --json
 Workbook:
 
 ```bash
-okoffice sheet write-workbook .okoffice-out/evidence.json -o .okoffice-out/evidence.xlsx --json
+okoffice sheet create-evidence-workbook .okoffice-out/evidence.json -o .okoffice-out/evidence.xlsx --json
+okoffice sheet write-workbook .okoffice-out/evidence.json -o .okoffice-out/workbook.xlsx --json
 okoffice sheet validate .okoffice-out/evidence.xlsx --json
 ```
+
+`sheet.create-evidence-workbook` is the okoffice-first workflow command for source-mapped evidence. `sheet.write-workbook` remains available as the lower-level compatibility writer for structured records.
 
 Document and deck:
 

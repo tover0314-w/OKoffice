@@ -28,6 +28,7 @@ def test_word_extract_tables_returns_normalized_cells(tmp_path: Path) -> None:
         "row_index": 2,
         "cell_index": 2,
     }
+    assert "sheet.create.evidence_workbook" in result.next_recommended_tools
     assert "sheet.write.workbook" in result.next_recommended_tools
 
 
@@ -56,6 +57,7 @@ def test_sheet_extract_tables_returns_sheet_cell_refs(tmp_path: Path) -> None:
         "row_index": 2,
         "column_index": 2,
     }
+    assert "sheet.create.evidence_workbook" in result.next_recommended_tools
     assert "office.workflow.extract_to_sheet" in result.next_recommended_tools
 
 

@@ -38,6 +38,7 @@ okoffice sheet inspect path/to/model.xlsx --json
 okoffice sheet read path/to/model.xlsx --max-rows 100 --json
 okoffice sheet profile path/to/model.xlsx --json
 okoffice sheet extract-tables path/to/model.xlsx --json
+okoffice sheet create-evidence-workbook records.json -o .okoffice-out/evidence.xlsx --json
 okoffice sheet write-workbook records.json -o .okoffice-out/model.xlsx --json
 okoffice sheet validate .okoffice-out/model.xlsx --json
 okoffice deck inspect path/to/deck.pptx --json
@@ -109,7 +110,7 @@ okpdf serve --api
 |---|---|
 | Inspect | `office.inspect.file`, `word.inspect.document`, `sheet.inspect.workbook`, `deck.inspect.presentation`, `pdf.inspect.document` |
 | Extract | `word.extract.tables`, `sheet.read.workbook`, `sheet.profile.data`, `sheet.extract.tables`, `deck.extract.notes`, `pdf.convert.pdf_to_text` |
-| Create | `word.write.document`, `sheet.write.workbook`, `deck.compose.plan`, `deck.create.from_outline`, `pdf.convert.markdown_to_pdf` |
+| Create | `word.write.document`, `sheet.create.evidence_workbook`, `sheet.write.workbook`, `deck.compose.plan`, `deck.create.from_outline`, `pdf.convert.markdown_to_pdf` |
 | Patch | `office.patch.plan`, `word.edit.patch`, `sheet.edit.patch`, `deck.edit.patch`, `pdf.patch.apply` |
 | Validate | `office.validation.run`, `word.validation.document`, `sheet.validate.workbook`, `deck.validate.presentation`, `pdf.validation.render_check` |
 | Evidence | `office.context.build_packet`, `office.evidence.coverage`, `office.source_map.create` |

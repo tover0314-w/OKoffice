@@ -92,7 +92,7 @@ okoffice extract schema .okoffice-out/vendor.context.json \
   -o .okoffice-out/vendor.evidence.json \
   --json
 
-okoffice sheet write-workbook .okoffice-out/vendor.evidence.json \
+okoffice sheet create-evidence-workbook .okoffice-out/vendor.evidence.json \
   -o .okoffice-out/vendor-evidence.xlsx \
   --json
 ```

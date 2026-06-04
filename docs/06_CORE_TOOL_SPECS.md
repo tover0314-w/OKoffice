@@ -185,6 +185,88 @@ Limitations:
 - Emits missing-field warnings instead of inventing values.
 - Does not yet infer complex tables, formulas, or multi-hop claims beyond available source graph text/evidence.
 
+### `sheet.create.evidence_workbook`
+
+Purpose: create an auditable XLSX evidence workbook from structured records while preserving SourceRefs provenance.
+
+CLI:
+
+```bash
+okoffice sheet create-evidence-workbook .okoffice-out/evidence.json -o .okoffice-out/evidence.xlsx --json
+```
+
+MCP:
+
+```python
+sheet_create_evidence_workbook({"records": [...]}, ".okoffice-out/evidence.xlsx")
+```
+
+REST:
+
+```http
+POST /v1/tools/sheet.create.evidence_workbook/run
+```
+
+Input:
+
+```json
+{
+  "data": {
+    "records": [
+      {
+        "source_path": "memo.docx",
+        "source_format": "docx",
+        "table_id": "table_1",
+        "source_row_index": 1,
+        "values": ["Vendor A", "250000"],
+        "source_refs": [{"document_path": "memo.docx", "table_index": 1, "row_index": 1}]
+      }
+    ]
+  },
+  "output_path": ".okoffice-out/evidence.xlsx"
+}
+```
+
+Expected output highlights:
+
+```json
+{
+  "status": "succeeded",
+  "tool": "sheet.create.evidence_workbook",
+  "artifacts": [{"path": ".okoffice-out/evidence.xlsx"}],
+  "validation": {"status": "passed"},
+  "usage": {
+    "summary": {
+      "record_count": 1,
+      "column_count": 2,
+      "source_ref_count": 1
+    },
+    "workbook": {"sheets": ["Workbook", "SourceRefs"]}
+  },
+  "next_recommended_tools": ["sheet.inspect.workbook", "sheet.validate.workbook", "deck.compose.plan"]
+}
+```
+
+Error example:
+
+```json
+{
+  "status": "failed",
+  "tool": "sheet.create.evidence_workbook",
+  "error": {
+    "code": "unsafe_input_rejected",
+    "message": "sheet.create.evidence_workbook requires at least one record or table row."
+  }
+}
+```
+
+Limitations and dependency notes:
+
+- Runs locally with the default XLSX writer; it does not require hosted workers, model calls, Microsoft Office, LibreOffice, or GPL/AGPL dependencies.
+- Writes a new output artifact and never mutates source files.
+- Produces structural workbook evidence and SourceRefs sheets; it does not yet create charts, formulas, pivot tables, or styled financial models.
+- Call `sheet.validate.workbook` and optionally `deck.compose.plan` before handing the artifact to a downstream deck/report workflow.
+
 ## Core Inspect Tools
 
 ### `office.inspect.file`

@@ -98,6 +98,11 @@
       "status": "beta"
     },
     {
+      "name": "sheet_create_evidence_workbook",
+      "maps_to": "sheet.create.evidence_workbook",
+      "status": "beta"
+    },
+    {
       "name": "sheet_write_workbook",
       "maps_to": "sheet.write.workbook",
       "status": "beta"

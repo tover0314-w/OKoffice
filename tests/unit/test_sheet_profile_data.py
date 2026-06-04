@@ -39,6 +39,7 @@ def test_profile_sheet_data_reports_headers_types_missing_and_coverage(tmp_path:
     assert columns["Revenue"]["nonempty_count"] == 2
     assert columns["Score"]["formula_count"] == 1
     assert columns["Score"]["missing_count"] == 1
+    assert "sheet.create.evidence_workbook" in result.next_recommended_tools
     assert "sheet.write.workbook" in result.next_recommended_tools
     assert any("missing cells" in warning.lower() for warning in result.warnings)
 

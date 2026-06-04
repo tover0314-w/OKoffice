@@ -101,7 +101,8 @@ First target wrappers:
 - `deck_validate_presentation`
 - `office_context_build_packet`
 - `office_extract_schema`
-- `sheet_create_workbook`
+- `sheet_create_evidence_workbook`
+- `sheet_write_workbook`
 - `deck_create_presentation`
 - `word_create_document`
 - `office_workflow_docset_to_sheet`
@@ -125,6 +126,19 @@ office_inspect_file("model.xlsx")
 office_context_build_packet(["memo.docx", "model.xlsx"], ".okoffice-out/context.packet.json")
 office_extract_schema(".okoffice-out/context.packet.json", {"fields": [{"name": "vendor"}]}, ".okoffice-out/evidence.json")
 office_validation_package("memo.docx")
+sheet_create_evidence_workbook(
+    {
+        "records": [
+            {
+                "source_path": "memo.docx",
+                "source_format": "docx",
+                "values": ["Vendor A", "250000"],
+                "source_refs": [{"document_path": "memo.docx", "row_index": 1}],
+            }
+        ]
+    },
+    ".okoffice-out/evidence.xlsx",
+)
 office_workflow_extract_to_sheet([], ".okoffice-out/evidence.xlsx", context_packet_path=".okoffice-out/context.packet.json")
 deck_compose_plan(".okoffice-out/evidence.xlsx", ".okoffice-out/deck.plan.json", title="Board Review")
 deck_validate_presentation(".okoffice-out/vendor-board-deck.pptx")

@@ -13,6 +13,7 @@ from agentpdf.office.extract import extract_schema
 from agentpdf.office.inspect import inspect_office_file
 from agentpdf.office.planner import plan_office_workflow
 from agentpdf.office.sheet import (
+    create_evidence_workbook,
     extract_sheet_tables,
     inspect_sheet_workbook,
     profile_sheet_data,
@@ -178,6 +179,17 @@ def sheet_write_workbook(
     """Write an XLSX workbook from structured records with source refs."""
     payload = json.loads(data_path.read_text(encoding="utf-8"))
     _emit_result(write_sheet_workbook(payload, output_path), json_output=json_output)
+
+
+@sheet_app.command("create-evidence-workbook")
+def sheet_create_evidence_workbook(
+    data_path: Annotated[Path, typer.Argument(help="JSON records or ToolResult path to write as an evidence XLSX.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output evidence XLSX workbook path.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Create an auditable XLSX evidence workbook from structured records with source refs."""
+    payload = json.loads(data_path.read_text(encoding="utf-8"))
+    _emit_result(create_evidence_workbook(payload, output_path), json_output=json_output)
 
 
 @sheet_app.command("validate")

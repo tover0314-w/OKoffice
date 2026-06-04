@@ -154,6 +154,7 @@ from agentpdf.tools.runner import (
     run_security_verify_redaction,
     run_security_verify_signature,
     run_select_target_profile,
+    run_sheet_create_evidence_workbook,
     run_sheet_extract_tables,
     run_sheet_inspect_workbook,
     run_sheet_profile_data,
@@ -361,6 +362,12 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
         )
     if tool_name == "sheet.extract.tables":
         return run_sheet_extract_tables(payload.get("path", payload.get("input_path", "")))
+    if tool_name == "sheet.create.evidence_workbook":
+        data = payload.get("data", payload)
+        return run_sheet_create_evidence_workbook(
+            data=data if isinstance(data, (dict, list)) else {},
+            output_path=payload.get("output_path", payload.get("output", ".okoffice-out/evidence.xlsx")),
+        )
     if tool_name == "sheet.write.workbook":
         data = payload.get("data", payload)
         return run_sheet_write_workbook(

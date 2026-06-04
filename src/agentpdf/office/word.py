@@ -135,7 +135,12 @@ def extract_word_tables(path: str | Path) -> ToolResult:
             "tables": tables,
             "safety": preflight.usage["safety"],
         },
-        next_recommended_tools=["sheet.write.workbook", "office.workflow.extract_to_sheet", "office.context.build_packet"],
+        next_recommended_tools=[
+            "sheet.create.evidence_workbook",
+            "sheet.write.workbook",
+            "office.workflow.extract_to_sheet",
+            "office.context.build_packet",
+        ],
     )
 
 
