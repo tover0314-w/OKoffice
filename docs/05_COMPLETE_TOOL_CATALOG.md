@@ -1,6 +1,55 @@
 # 05 — Complete Tool Catalog
 
-This is the full public tool map. Some tools can be `planned` or `cloud_only`, but the namespace should be stable.
+This file contains the current machine-aligned compatibility tool map. It must continue to cover every tool in `schemas/tool-manifest.full.json`.
+
+For the okoffice product map, read `docs/38_OKOFFICE_TOOL_TAXONOMY.md` first. That document defines the target `office.*`, `word.*`, `sheet.*`, `deck.*`, and `pdf.*` surface. The table rows below remain the legacy PDF-domain manifest until the registry, CLI, MCP, REST, SDK, schemas, and tests migrate together.
+
+## okoffice Public Taxonomy
+
+The public okoffice surface is organized around artifact types and workflows:
+
+- Cross-format: `office.inspect`, `office.context`, `office.extract`, `office.evidence`, `office.patch`, `office.workflow`, `office.bundle`, `office.agent.setup`.
+- Word: `word.inspect`, `word.extract`, `word.create`, `word.patch`, `word.validation`, `word.review`.
+- Excel: `sheet.inspect`, `sheet.extract`, `sheet.create`, `sheet.patch`, `sheet.validation`, `sheet.review`.
+- PowerPoint: `deck.inspect`, `deck.extract`, `deck.compose`, `deck.create`, `deck.patch`, `deck.validation`, `deck.review`.
+- PDF: `pdf.inspect`, `pdf.organize`, `pdf.convert`, `pdf.validation`, `pdf.security`, plus compatibility tools already implemented.
+
+Do not treat the current `pdf.*` manifest as the okoffice product boundary.
+
+## okoffice Migration Note
+
+The current manifest is PDF-centered and contains 241 tools. During the okoffice migration, these `pdf.*` tools remain the compatibility surface and the first implemented domain.
+
+The target product adds an `office.*` namespace for Word, Excel, PowerPoint, PDF, evidence, validation, bundles, and cross-document workflows. Do not add `office.*` rows to the table sections below until the machine manifest, registry, CLI/MCP/REST adapters, and tests are updated together.
+
+Target namespace families:
+
+- `office.context`
+- `office.source`
+- `office.ir`
+- `office.word`
+- `office.sheet`
+- `office.deck`
+- `office.pdf`
+- `office.extract`
+- `office.compose`
+- `office.convert`
+- `office.patch`
+- `office.evidence`
+- `office.validation`
+- `office.workflow`
+- `office.bundle`
+- `office.agent.setup`
+
+The compatibility relationship is:
+
+```text
+pdf.*          = current implemented PDF domain
+office.pdf.*   = future aliases/wrappers over pdf.*
+office.*       = target okoffice surface for cross-format workflows
+```
+
+Some tools can be `planned` or `cloud_only`, but names that enter the machine manifest should be stable.
 
 ## Naming rules
 
@@ -16,14 +65,14 @@ These namespaces make the larger product shape explicit. Early local releases ma
 
 ### `agent.setup`
 
-Generate local runtime configs for agent ecosystems that call okpdf through MCP or REST.
+Generate local runtime configs for agent ecosystems that call the current compatibility server through MCP or REST.
 
 | Tool | Status | Description |
 |---|---:|---|
-| `agent.setup.claude_code` | beta | Generate a Claude Code project-level MCP config for local okpdf tools. |
-| `agent.setup.codex` | beta | Generate a Codex MCP/workspace integration config for local okpdf tools. |
-| `agent.setup.kilo_code` | beta | Generate a Kilo Code MCP config for local okpdf tools. |
-| `agent.setup.openclaw` | beta | Generate an OpenClaw MCP config for local okpdf tools. |
+| `agent.setup.claude_code` | beta | Generate a Claude Code project-level MCP config for local compatibility tools. |
+| `agent.setup.codex` | beta | Generate a Codex MCP/workspace integration config for local compatibility tools. |
+| `agent.setup.kilo_code` | beta | Generate a Kilo Code MCP config for local compatibility tools. |
+| `agent.setup.openclaw` | beta | Generate an OpenClaw MCP config for local compatibility tools. |
 
 ### `pdf.context`
 
@@ -31,7 +80,7 @@ Normalize heterogeneous context and create context packets.
 
 | Tool | Status | Description |
 |---|---:|---|
-| `pdf.context.ingest` | beta | Normalize one PDF, image, audio/video, text, Markdown, HTML, code, CSV/JSON, web link, or data file into an agent context item with local evidence. |
+| `pdf.context.ingest` | beta | Normalize one PDF, image, audio/video, text, Markdown, HTML, code, CSV/JSON, web link, or data file into an agent context item with local evidence, including hashed transcript sidecar provenance for media. |
 | `pdf.context.packet` | beta | Build a reusable Context Packet from raw or pre-ingested local context items with source graph metadata. |
 | `pdf.context.build_packet` | beta target | Build a local Context Packet JSON with source graph metadata from text, files, and links. |
 | `pdf.context.classify` | beta | Classify context items by type, role, local evidence, safety limits, likely block type, and target slots. |
@@ -39,7 +88,7 @@ Normalize heterogeneous context and create context packets.
 | `pdf.context.video_transcribe` | planned/cloud | Transcribe video and create timestamped transcript context/source nodes. |
 | `pdf.context.video_keyframes` | planned/cloud | Extract keyframes and frame source refs from video. |
 | `pdf.context.audio_transcribe` | planned/cloud | Transcribe audio into timestamped context/source nodes. |
-| `pdf.context.web_capture` | planned/cloud | Capture web links/pages with source refs and SSRF-safe fetching. |
+| `pdf.context.web_capture` | beta | Fetch an HTTP/HTTPS page into a `web_link` context item with SSRF-safe local evidence, byte limits, text preview, and source refs. |
 | `pdf.context.code_snapshot` | beta | Create context and source refs for files, line ranges, dependency hints, and repository metadata. |
 | `pdf.context.data_profile` | beta | Profile CSV/TSV/JSON/JSONL/XLSX data for report generation. |
 
@@ -90,7 +139,7 @@ Represent agent edits as explicit patch transactions instead of opaque in-place 
 
 | Tool | Status | Description |
 |---|---:|---|
-| `pdf.patch.plan` | beta target | Create a structured append-only patch manifest for Markdown, code, table, image, slide, citation, media-reference, source-map, template-layer, and `regenerate_block` evidence. |
+| `pdf.patch.plan` | beta target | Create a structured non-mutating patch manifest for Markdown, code, table, image, slide, citation, media-reference, source-map, template-layer, HTML-layer, and `regenerate_block` evidence. |
 | `pdf.patch.preview` | beta target | Preview patch effects and validation requirements without mutating the input. |
 | `pdf.patch.apply` | beta target | Apply a patch transaction and write a new PDF artifact. |
 | `pdf.patch.verify` | beta target | Verify a patched PDF against the patch manifest. |
@@ -116,8 +165,8 @@ Inspect artifact lineage and manifests.
 
 | Tool | Status | Description |
 |---|---:|---|
-| `pdf.artifacts.manifest` | beta target | Return artifact metadata, checksums, source refs, HTML package refs, Context Packet refs, validation links, and retention hints. |
-| `pdf.artifacts.graph` | beta target | Return parent/child artifact lineage for a workflow or output. |
+| `pdf.artifacts.manifest` | beta target | Return artifact metadata, checksums, source refs, HTML package refs, render profile refs, renderer backend refs, HTML layer patch refs, Context Packet refs, validation links, and retention hints. |
+| `pdf.artifacts.graph` | beta target | Return parent/child artifact lineage for a workflow or output, including HTML package, render profile, renderer backend, layer, and HTML rerender patch edges. |
 | `pdf.artifacts.source_map` | beta target | Return generated PDF block/page refs mapped back to sources. |
 | `pdf.artifacts.export_bundle` | beta/local | Export PDF, manifests, validations, source maps, and reports as a portable audit ZIP with checksums. |
 | `pdf.artifacts.verify_bundle` | beta/local | Verify a portable audit ZIP manifest, entries, and SHA-256 checksums before downstream agent use. |
@@ -131,7 +180,7 @@ Inspect artifact lineage and manifests.
 | `pdf.workflow.plan` | beta target | Plan a local-first agent workflow with roles, steps, validation, and cloud boundary. |
 | `pdf.workflow.run` | beta target | Execute a local workflow manifest and return per-step evidence. |
 | `pdf.workflow.report` | beta target | Summarize workflow artifacts, warnings, validation, and step evidence. |
-| `pdf.workflow.createpdf` | beta target | Create a validated PDF through a local HTML-first workflow with visual QA and artifact lineage reports. |
+| `pdf.workflow.createpdf` | beta target | Create a validated PDF from HTML, page JSON, or a Context Packet through a local HTML-first workflow with selectable renderer backend evidence, visual QA, artifact lineage reports, and optional verified portable audit bundle export. |
 | `pdf.workflow.research_deck` | beta target | Plan or execute a local research-to-deck workflow from brief and evidence cards through authoring, storyboard, page JSON, HTML package, render, and visual QA steps. |
 
 ### Authoring workflow
@@ -197,7 +246,7 @@ Inspect artifact lineage and manifests.
 | `pdf.convert.image_to_pdf` | stable target | Create PDF from images. |
 | `pdf.convert.markdown_to_pdf` | stable target | Render Markdown to PDF using templates. |
 | `pdf.convert.html_to_pdf` | beta target | Convert local HTML into a validated PDF; the current OSS converter preserves text and emits layout-approximation warnings. |
-| `pdf.render.html_package` | beta | Validate an AgentPDF HTML package manifest, local assets, and render it to a validated PDF through the local fallback renderer. |
+| `pdf.render.html_package` | beta | Validate a compatibility HTML package manifest, local assets, render profile safety, and requested renderer backend evidence before rendering to a validated PDF or returning structured backend-unavailable evidence. |
 | `pdf.convert.url_to_pdf` | beta | Fetch URL with safety checks and convert HTML text to PDF. |
 | `pdf.convert.text_to_pdf` | stable target | Plain text to PDF. |
 | `pdf.convert.docx_to_pdf` | beta | Convert DOCX text to local PDF. |

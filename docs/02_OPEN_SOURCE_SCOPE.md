@@ -1,8 +1,8 @@
 # 02 - Open-source Scope
 
-## Open-source edition goals
+## Open-source Edition Goals
 
-The open-source edition should be genuinely useful without cloud services.
+The open-source edition of okoffice should be genuinely useful without cloud services.
 
 It should include:
 
@@ -13,95 +13,136 @@ It should include:
 - TypeScript/Node SDK.
 - Docker/self-hosting path.
 - Tool registry.
-- Deterministic PDF operations.
-- Lite parse.
-- Local RAG/evidence demo.
-- Document IR.
-- Composition IR schema direction.
-- Context packet, target PDF profile, source graph, and artifact manifest direction.
-- Patch transaction manifest direction.
-- Validation outputs.
+- Deterministic PDF operations from the current harness.
+- Deterministic Office inspect/extract/create/validate paths as they are added.
+- Context packet, source graph, Office IR, composition IR, patch manifest, artifact manifest, and validation models.
+- Lite parse and local evidence/RAG demos.
+- Cross-document workflow recipes.
 - Example integrations.
 - Complete documentation.
 
-The open-source core should make developers believe the larger agent-native PDF platform is real, even before hosted multimodal workers exist.
+The open-source core should make developers believe the larger agent-native Office platform is real before hosted workers exist.
 
-## Open-source deterministic tools
+## Current Compatibility Scope
 
-These should be implemented first and remain free/local:
+The existing implementation exposes `pdf.*` tools through compatibility names. These remain valid during migration, but they are not the okoffice product identity.
 
-- Inspect PDF.
-- Page-level inspection.
-- Read/update metadata.
-- Merge.
-- Split.
-- Extract pages.
-- Remove pages.
-- Reorder pages.
-- Rotate pages.
+Compatibility rules:
+
+- Keep `pdf.*` stable while introducing okoffice docs and future `office.*` aliases.
+- Do not remove `agentpdf` imports until compatibility entrypoints exist.
+- Treat PDF as the first implemented okoffice domain.
+- Document gaps honestly instead of pretending DOCX/XLSX/PPTX behavior is already complete.
+
+## Open-source Deterministic Tools
+
+These should be implemented first and remain free/local.
+
+PDF:
+
+- Inspect documents and pages.
+- Read/update/remove metadata.
+- Merge, split, extract, remove, reorder, rotate pages.
 - Render pages to images.
-- Convert images to PDF.
-- Convert PDF to images.
-- Basic text extraction.
-- Watermark/stamp.
-- Page numbers.
-- Crop/resize where reliable.
-- Basic compression.
-- Basic repair.
-- Password protect.
-- Authorized decrypt/unlock.
-- Remove metadata.
-- Markdown/HTML/text/JSON to PDF where deterministic.
+- Convert image/Markdown/HTML/text/JSON to PDF where deterministic.
+- Convert PDF to images/text/Markdown/JSON where supported.
+- Watermark, page numbers, crop/resize, compression, repair.
+- Authorized protect/unlock/decrypt.
+- Redaction and verification where safe.
 - Output validation.
 
-## Open-source agent-native baseline
+Word:
+
+- Inspect `.docx` structure, metadata, outline, sections, tables, comments, revisions, fields, headers, footers, and safety markers.
+- Extract text and source locators.
+- Create simple reports and memos from structured IR.
+- Apply non-mutating patch transactions.
+- Validate schema/structure, placeholder leakage, field presence, and preview evidence when available.
+
+Excel:
+
+- Inspect workbook sheets, dimensions, tables, formulas, named ranges, pivots, charts, comments, and safety markers.
+- Extract data profiles and source locators.
+- Create workbooks from structured data with formulas, tables, charts, and validation notes.
+- Detect formula errors, placeholder leakage, `###` truncation, and suspicious cached values when possible.
+
+PowerPoint:
+
+- Inspect slide inventory, shapes, charts, tables, notes, media, comments, and safety markers.
+- Extract slide text and source locators.
+- Create simple editable decks from storyboard/composition IR.
+- Validate slide order, bounds, text overflow, notes coverage, placeholder leakage, and preview evidence when available.
+
+Bundles:
+
+- Export portable artifact bundles with files, manifests, source maps, validations, and checksums.
+- Verify bundle manifests before downstream agent use.
+
+## Open-source Agent-native Baseline
 
 These capabilities should exist locally as schemas, manifests, deterministic tools, examples, or lightweight implementations:
 
-- Context packet model for PDFs, images, video, audio, links, text, Markdown, HTML, code, CSV/JSON, and manually supplied prompts/review notes.
-- Target PDF profile model for learning PDFs, resumes, papers, deck-like PDFs, reports, packets, audits, worksheets, and formal documents.
+- Context packet model for PDFs, Word docs, Excel workbooks, PowerPoint decks, images, scans, video, audio, links, text, Markdown, HTML, code, CSV/JSON, and manually supplied prompts/review notes.
+- Target artifact profile model for Word reports, Excel models, PowerPoint decks, PDF packets, board packs, evidence workbooks, research briefs, training handouts, and audit bundles.
 - Source graph model for provenance and evidence refs derived from context packets.
-- Artifact lineage model linking inputs, outputs, validations, manifests, and reports.
-- Document IR for parsed PDFs.
-- Composition IR for generated reports, packets, appendices, and slide-like PDFs.
-- Local style packs and templates that support headings, tables, figures, code blocks, callouts, citations, appendices, and page/slide layouts.
-- Patch transaction manifests for planned PDF edits.
-- Workflow recipes that show inspect -> compose/operate -> verify -> report.
-- Evidence reports that map claims or generated blocks back to source refs when available.
+- Artifact lineage model linking inputs, outputs, validations, manifests, previews, and reports.
+- Office IR for parsed PDFs, Word documents, workbooks, decks, code/data sources, and generated artifacts.
+- Composition IR for reports, workbooks, decks, packets, appendices, and bundles.
+- Local style packs/templates for headings, tables, charts, figures, code blocks, callouts, citations, appendices, sheets, dashboards, and slides.
+- Patch transaction manifests for planned edits across supported formats.
+- Workflow recipes that show inspect -> extract/model/compose/operate -> verify -> report.
+- Evidence reports that map claims, cells, slides, charts, and generated blocks back to source refs when available.
 
 The local version may use simple heuristics and deterministic rendering. It should still expose the shape of the larger platform.
 
-## Open-source AI-lite tools
+## Open-source AI-lite Tools
 
 These should work locally without paid models:
 
-- Lite parse using text layer and simple layout heuristics.
+- Lite parse using text layers and simple layout heuristics.
 - Chunking.
 - Keyword/embedding-optional retrieval.
-- Evidence search returning page citations.
-- RAG demo returning page citations.
-- Template-based PDF creation.
-- Rule-based sensitive data detection baseline.
-- Local context packet examples for image/text/Markdown/code/data/link inputs.
+- Evidence search returning citations.
+- RAG demo returning source citations.
+- Template-based document, workbook, deck, and PDF creation where deterministic.
+- Rule-based sensitive-data detection baseline.
+- Local context packet examples for document/image/text/Markdown/code/data/link inputs.
 
-RAG is a support capability, not the product center. The broader local goal is evidence-backed document assembly and verification.
+RAG is a support capability, not the product center. The broader local goal is evidence-backed Office artifact assembly and verification.
 
-## Future hosted or advanced features
+## Optional Workers
+
+Optional workers may power richer Office operations, but they must be explicit:
+
+- OfficeCLI or another OOXML worker for `.docx`, `.xlsx`, and `.pptx` DOM operations.
+- LibreOffice or document renderers for PDF export/preview.
+- Browser renderers for HTML/source-package output.
+- OCR engines.
+- VLM/model workers.
+
+Optional workers need:
+
+- Feature flag or install extra.
+- Dependency and license note.
+- Capability detection.
+- Structured unavailable-worker error.
+- No silent cloud fallback.
+
+## Future Hosted Or Advanced Features
 
 These may be cloud-only or paid:
 
-- Agentic parse.
-- VLM OCR.
-- Advanced table/chart/formula parsing.
+- Agentic Office parse.
+- VLM OCR and advanced image understanding.
+- Advanced table/chart/formula reconstruction.
 - Video transcription and keyframe extraction.
 - Audio transcription.
-- Advanced image understanding.
 - Web capture at scale.
 - AI translation.
-- AI PDF creation from prompts, context packets, and target PDF profiles.
-- AI PDF editing/regeneration.
-- Hosted context packet, source graph, and artifact graph.
-- Hosted vector/evidence indexes.
+- AI document/deck/workbook generation from prompts.
+- AI editing/regeneration.
+- Hosted context packet, source graph, artifact graph, and vector/evidence indexes.
+- Managed rendering.
 - Batch processing at scale.
 - Persistent artifacts.
 - Audit logs.
@@ -110,13 +151,13 @@ These may be cloud-only or paid:
 - Zero data retention.
 - Enterprise VPC/on-prem.
 
-## Boundary rule
+## Boundary Rule
 
-Open-source code may include interfaces, schemas, manifests, examples, and stubs for cloud features, but it must never require the hosted cloud service for deterministic local tools.
+Open-source code may include interfaces, schemas, manifests, examples, and stubs for hosted features, but it must never require the hosted cloud service for deterministic local tools.
 
-If a local tool requires cloud, expose it as a separate `cloud_only` or optional worker tool rather than hiding it behind the same deterministic command.
+If a tool requires cloud, expose it as a separate `cloud_only` or optional-worker tool rather than hiding it behind the same deterministic command.
 
-## Feature status labels
+## Feature Status Labels
 
 Every tool and doc page should label features as:
 
@@ -126,7 +167,7 @@ Every tool and doc page should label features as:
 - `planned`
 - `cloud_only`
 
-## Default license stance
+## Default License Stance
 
 Use Apache-2.0 for the core project unless maintainers decide otherwise. Avoid copyleft dependencies in default install.
 

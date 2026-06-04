@@ -1,69 +1,85 @@
 # 01 - Product Vision
 
-## One-sentence positioning
+## One-sentence Positioning
 
-AgentPDF Infra is the open-source, agent-native infrastructure layer for turning heterogeneous context into specific, verifiable PDF artifacts such as learning PDFs, resumes, papers, deck-like PDFs, reports, packets, and audits.
+okoffice is the open-source, agent-native Office infrastructure layer for turning heterogeneous documents, data, and prompts into verified Word reports, Excel workbooks, PowerPoint decks, PDFs, and audit bundles.
 
-## What problem it solves
+## What Problem It Solves
 
-Agents often encounter PDFs, images, videos, code, spreadsheets, web pages, and business data but lack reliable infrastructure to turn those materials into trustworthy document deliverables.
+Agents can read files and produce text, but they still struggle to reliably operate on real business artifacts:
 
-They need tools to:
+- Word documents with sections, tables, comments, revisions, headers, footers, fields, and style systems.
+- Excel workbooks with formulas, pivots, charts, assumptions, named ranges, and dashboards.
+- PowerPoint decks with slide rhythm, speaker notes, charts, diagrams, media, brand systems, and visual QA.
+- PDFs with page geometry, extraction ambiguity, redaction risk, render validation, and immutable delivery expectations.
+- Multi-source workflows where evidence must move from PDFs and Word docs into a workbook, then into a deck and final PDF bundle.
 
-- Inspect document structure and safety before acting.
-- Extract text, tables, images, forms, metadata, annotations, page geometry, timestamps, code references, and data ranges.
-- Transform pages and files safely.
-- Compose polished target PDFs from heterogeneous context.
-- Insert rich content such as images, charts, code blocks, callouts, citations, and appendices.
-- Generate slide-like presentation PDFs, reports, packets, briefs, and handouts.
-- Modify existing PDFs predictably through patch transactions.
-- Retrieve and cite evidence from context materials.
-- Validate that generated or edited PDFs are correct, renderable, traceable, and safe.
+okoffice treats Office artifacts as an agent-operable environment, not just a set of file converters.
 
-Traditional PDF SaaS tools are human-first. Parser products are extraction-first. Simple RAG products are question-answering-first. AgentPDF is agent-first, artifact-first, and verification-first.
-
-## Product analogy
+## Product Analogy
 
 - Firecrawl turns web pages into agent-ready context.
-- AgentPDF turns heterogeneous context into agent-ready actions and evidence-backed target PDF artifacts.
+- OfficeCLI gives agents a command surface over Word, Excel, and PowerPoint files.
+- okoffice turns heterogeneous document context into evidence-backed Office workflows and verified deliverables.
 
-## Product thesis
+## Product Thesis
 
-PDF should be treated as an agent-operable environment and a durable delivery artifact, not just a file format.
+The durable enterprise output of agents is not a chat answer. It is a document pack: a report, workbook, deck, PDF, source map, validation report, and audit bundle that another human or system can trust.
 
-The architecture starts with **context**: images, videos, documents, PDFs, code, spreadsheets, databases, network links, prompts, and review notes. It then chooses a **target PDF profile**: learning PDF, resume PDF, academic paper PDF, PPT/deck-like PDF, business report, evidence packet, training handout, worksheet, code audit, or formal document.
+The architecture starts with **context**:
 
-The product should support this loop:
+- PDFs.
+- Word documents.
+- Excel workbooks.
+- PowerPoint decks.
+- Images and scans.
+- Web captures.
+- Markdown, HTML, text, CSV, JSON, database results, code, prompts, and review notes.
+
+It then chooses a **target artifact profile**:
+
+- Word report.
+- Excel model.
+- PowerPoint deck.
+- PDF packet.
+- Board pack.
+- Evidence workbook.
+- Research brief.
+- Contract review packet.
+- Training handout.
+- Audit bundle.
+
+The platform loop is:
 
 ```text
-understand -> compose -> operate -> verify -> report
+understand -> extract -> model -> compose -> operate -> verify -> report
 ```
 
-Every serious action should return structured JSON, artifacts, source references, warnings, validation results, and next recommended actions.
+Every serious action returns structured JSON, artifacts, source references, warnings, validation results, and next recommended actions.
 
-## North-star user stories
+## North-star User Stories
 
-1. As a coding agent, I can merge, split, compress, validate, and package PDFs without browser automation.
-2. As a research agent, I can parse papers, cite page/bbox sources, and create a literature summary PDF or slide-like presentation PDF.
-3. As a business agent, I can turn messy PDFs, spreadsheets, screenshots, and meeting videos into polished board reports and decks.
-4. As a legal agent, I can extract contract terms, flag risks, redact sensitive data, verify redaction, and produce a review packet.
-5. As a developer, I can embed PDF tools through MCP, REST, CLI, Python, or TypeScript.
-6. As an enterprise admin, I can self-host deterministic tools and decide which AI/cloud features are allowed.
-7. As a support or training agent, I can turn videos, screenshots, SOPs, and product docs into handouts, worksheets, and presentation PDFs.
-8. As an audit agent, I can create PDFs with code snippets, file references, dependency findings, logs, and evidence appendices.
+1. As a business agent, I can read multiple Word and PDF files, extract structured fields with source refs, and produce an Excel workbook that can be audited row by row.
+2. As an analyst agent, I can turn an evidence workbook into a polished editable PowerPoint deck with charts, speaker notes, and PDF export.
+3. As a consulting agent, I can produce a complete board pack: Word memo, Excel analysis, PowerPoint deck, PDF summary, source map, validation report, and portable bundle.
+4. As a legal agent, I can inspect contracts, extract obligations, flag risks, redact sensitive material, verify redaction, and produce a review packet.
+5. As a research agent, I can parse papers and reports, cite page/bbox sources, and create a literature review document or cited presentation.
+6. As a developer, I can embed Office workflows through CLI, MCP, REST, Python, or TypeScript.
+7. As an enterprise admin, I can self-host deterministic tools and decide which AI/cloud/optional-worker features are allowed.
+8. As a support or training agent, I can turn SOPs, screenshots, videos, and docs into handouts, decks, quizzes, and searchable packets.
 
-## Target audiences
+## Target Audiences
 
 - Agent developers.
 - AI workflow builders.
-- SaaS developers needing PDF and document automation.
-- Research and legal teams.
+- SaaS developers needing Office automation.
+- Consulting, finance, ops, and strategy teams.
+- Research, legal, compliance, and audit teams.
 - Education, support, and training teams.
-- Business operations, finance, and consulting teams.
 - Enterprises with document-heavy workflows.
-- Open-source developers wanting a local PDF toolchain.
+- Open-source developers wanting a local Office toolchain.
 
-## Core values
+## Core Values
 
 - Complete tool coverage.
 - Agent-native structured outputs.
@@ -76,34 +92,29 @@ Every serious action should return structured JSON, artifacts, source references
 - Security-conscious document handling.
 - Honest limits for unsafe, unsupported, or unverifiable operations.
 
-## What complete means
+## What Complete Means
 
-Complete means the project has a well-organized tool family covering the same broad surface as mainstream PDF SaaS products while adding agent-native infrastructure that those tools usually lack.
+Complete means the project covers the broad Office artifact surface while adding agent-native infrastructure that traditional Office APIs, PDF SaaS tools, and simple RAG products usually lack.
 
-Core PDF breadth:
+Core Office breadth:
 
-- Organize pages.
-- Optimize files.
-- Convert to/from PDF.
-- Edit and annotate.
-- Forms.
-- Security and signatures.
-- OCR and scan cleanup.
-- Compare and diff.
-- Metadata and attachments.
-- Validation and repair.
+- Inspect documents, sheets, decks, and PDFs.
+- Extract text, tables, formulas, charts, images, forms, annotations, comments, metadata, and source locators.
+- Create Word reports, Excel workbooks, PowerPoint decks, PDFs, and bundles.
+- Edit and annotate without silently mutating inputs.
+- Convert across Office/PDF/HTML/Markdown/image formats.
+- Validate structure, renderability, formula integrity, placeholder leakage, visual fit, redaction, and source coverage.
 
 Agent-native breadth:
 
-- Context packets, target PDF profiles, source graph, and artifact lineage.
-- Document IR and composition IR.
-- Page/bbox/timestamp/file/row citations.
-- Multimodal-to-PDF composition.
-- PDF patch transactions.
-- Presentation PDF generation.
+- Context packets, target artifact profiles, source graphs, and artifact lineage.
+- Office IR and composition IR.
+- Page/bbox/paragraph/run/sheet/range/slide/shape/timestamp/file/row citations.
+- Cross-format composition and workflow plans.
+- Patch transactions for explicit edits.
 - Evidence coverage and citation verification.
 - Workflow planning, execution, retries, and reports.
 - Batch processing and audit trails.
-- AI parse, RAG/evidence, extract, summarize, translate, create, edit, and review.
+- AI parse, RAG/evidence, extract, summarize, translate, create, edit, and review behind explicit boundaries.
 
 Implementation depth can grow over time, but public naming and user mental model should be complete from the start.

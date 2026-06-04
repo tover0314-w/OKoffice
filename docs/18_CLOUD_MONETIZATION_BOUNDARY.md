@@ -1,36 +1,31 @@
 # 18 - Cloud and Monetization Boundary
 
-## Business model intent
+## Business Model Intent
 
-The open-source project should attract users, agents, developers, and enterprises. Hosted cloud services can monetize advanced resource-consuming features, operational convenience, scale, persistence, and enterprise controls.
+The open-source project should attract users, agents, developers, and enterprises before the hosted product exists. Hosted okoffice can monetize advanced resource-consuming features, operational convenience, scale, persistence, managed connectors, and enterprise controls.
 
-The intended shape is similar to agent-infra SaaS products: the local core is free and useful, while the hosted service adds API keys, free quotas, paid plans, persistence, concurrency, advanced AI workers, multimodal context processing, artifact graphs, and operational convenience.
+The intended shape is agent-infra SaaS:
 
-## Always-free open-source tools
+- Local core is free, useful, and trustworthy.
+- Hosted service adds API keys, quotas, persistence, concurrency, managed workers, advanced AI, artifact graphs, and governance.
+- The OSS core never depends on hosted billing for local deterministic operations.
 
-Local tools should remain free:
+## Always-Free Open-Source Tools
 
-- Merge.
-- Split.
-- Rotate.
-- Extract pages.
-- Remove pages.
-- Reorder pages.
-- Inspect.
-- Metadata.
-- Basic text extraction.
-- PDF to image.
-- Image to PDF.
-- Basic Markdown/HTML/text/JSON to PDF.
-- Basic watermark/page numbers.
-- Basic validation.
-- Lite parse.
-- Local RAG/evidence demo.
-- Local style packs and templates.
-- Local context packet, target PDF profile, source graph, and composition IR schemas.
+Local deterministic tools should remain free:
+
+- PDF inspect, merge, split, rotate, reorder, extract, metadata, render, validation, and basic creation.
+- DOCX package inspect, text/table/comment/style extraction, metadata checks, and validation.
+- XLSX package inspect, sheet/table/formula/chart/named-range extraction, external-link detection, and validation.
+- PPTX package inspect, slide/shape/notes/media/theme extraction, and validation.
+- Source Graph and Office IR schemas.
+- Local artifact manifests and bundle verification.
+- Local style packs and template packs.
 - Local patch manifests where deterministic.
+- Local evidence/RAG demo where no paid model is required.
+- CLI, MCP, REST, Docker, and SDK integration.
 
-## Cloud/free quota concept
+## Cloud/Free Quota Concept
 
 A hosted free plan may include:
 
@@ -41,13 +36,13 @@ A hosted free plan may include:
 - Trial AI credits.
 - Trial OCR/image/video credits.
 - Temporary hosted source graphs.
+- Limited managed connector usage.
 - Community support.
 
-## Paid dimensions
+## Paid Dimensions
 
 Classic document processing:
 
-- AI model tokens.
 - Advanced OCR pages.
 - Agentic parse pages.
 - Hosted RAG/evidence storage.
@@ -55,8 +50,21 @@ Classic document processing:
 - Large files.
 - High concurrency.
 - Long artifact retention.
+- High-fidelity Office conversion/render workers.
+- Formula recalculation and workbook QA at scale.
 
-Agent-native multimodal processing:
+Agent-native Office processing:
+
+- Word/PDF source extraction at scale.
+- Excel model generation and validation.
+- PowerPoint deck generation and contact-sheet QA.
+- Board-pack and audit-bundle workflows.
+- Managed source maps and artifact graphs.
+- Citation/source coverage verification.
+- Patch previews and verification.
+- Brand kits, template galleries, and enterprise style packs.
+
+Multimodal processing:
 
 - Video transcription minutes.
 - Video keyframe extraction.
@@ -64,13 +72,6 @@ Agent-native multimodal processing:
 - Image understanding/OCR regions.
 - Chart/table/formula understanding.
 - Web capture at scale.
-- Context packet, target PDF profile, source graph creation, and persistence.
-- Artifact graph persistence.
-- Source map generation and storage.
-- Composition IR planning.
-- High-quality PDF/deck rendering.
-- Patch previews and verification.
-- Evidence coverage verification.
 
 Team and enterprise:
 
@@ -78,28 +79,29 @@ Team and enterprise:
 - Team/org management.
 - Audit logs.
 - Usage analytics.
-- Brand kits and enterprise templates.
-- Template gallery and SEO landing pages for PDF creation workflows.
-- Enterprise security.
 - SSO/SAML.
 - Zero data retention.
-- VPC/on-prem.
+- Private deployment/VPC/on-prem.
+- Connector governance.
+- Retention/legal hold policies.
 
-## Suggested credit model
+## Suggested Credit Model
 
 ```text
 basic deterministic operation: 0-1 credit/document
 OCR: 1-3 credits/page
 agentic parse: 3-10 credits/page
+Office high-fidelity render/convert: pages/slides/sheets + complexity
+formula recalculation/QA: workbook size + formula count
 image understanding: 1-5 credits/image or detected region
 video transcription: credits/minute
 video keyframes: credits/minute or frame batch
 audio transcription: credits/minute
 AI generation/edit/translation: model tokens + platform margin
 composition planning: source count + model tokens + platform margin
-PDF/deck rendering: pages + complexity + validation checks
-patch verification: changed pages + validation checks
-RAG/evidence ingest: pages + embedding tokens
+deck/report generation: slides/pages + model/render/validation checks
+patch verification: changed objects + validation checks
+RAG/evidence ingest: source nodes + embedding tokens
 RAG/evidence query: retrieval + model tokens
 context/source graph storage: context items + source nodes + GB-day
 artifact storage: GB-day
@@ -113,25 +115,26 @@ Support Bring Your Own Key for model providers.
 In BYOK mode:
 
 - User pays model provider directly.
-- AgentPDF may charge only platform/processing credits in cloud mode.
-- Local OSS mode may use no hosted billing at all.
+- Hosted okoffice may charge only platform/processing credits.
+- Local OSS mode uses no hosted billing at all.
 
-## OSS rule
+## OSS Rule
 
 The open-source package must not depend on hosted billing for local deterministic operations.
 
-Cloud features must be additive. If a local tool requires cloud, expose it as a separate `cloud_only` or optional worker tool rather than hiding it behind the same deterministic command.
+Cloud features must be additive. If a capability requires cloud or a proprietary worker, expose it as a separate `cloud_only` or optional-worker tool rather than hiding it behind the same deterministic command.
 
-## Commercial wedge
+## Commercial Wedge
 
-Do not try to monetize basic PDF operations. They are adoption and trust builders.
+Do not try to monetize basic local PDF/Word/Excel/PowerPoint operations. They are adoption and trust builders.
 
 The stronger paid wedges are:
 
 - Hosted agentic parse with evidence output.
-- Video/image/audio/document/code/link context-to-PDF pipelines.
-- Source-backed report and presentation generation.
+- Managed Office conversion/render workers.
+- Source-backed report, workbook, and presentation generation.
 - Batch workflow orchestration.
-- Persistent context packet, source graph, and artifact graph.
+- Persistent source graphs and artifact graphs.
 - Citation/source coverage verification.
-- Enterprise audit, retention, and private deployment controls.
+- Managed connectors and enterprise governance.
+- Private deployment controls.

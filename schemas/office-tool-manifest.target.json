@@ -1,0 +1,697 @@
+{
+    "manifest_version":  "0.1",
+    "product":  "okoffice",
+    "compatibility_package":  "agentpdf",
+    "tool_count":  45,
+    "domains":  [
+                    "office",
+                    "word",
+                    "sheet",
+                    "deck",
+                    "pdf"
+                ],
+    "namespace_strategy":  {
+                               "target_cross_format_namespace":  "office.*",
+                               "target_word_namespace":  "word.*",
+                               "target_sheet_namespace":  "sheet.*",
+                               "target_deck_namespace":  "deck.*",
+                               "legacy_pdf_namespace":  "pdf.*"
+                           },
+    "target_tools":  [
+                         {
+                             "name":  "office.inspect.file",
+                             "status":  "beta",
+                             "description":  "Detect Office artifact format, package health, safety markers, and recommended next tools.",
+                             "domain":  "office",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  true,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "word.inspect.document",
+                             "status":  "planned",
+                             "description":  "Inspect DOCX structure, paragraphs, headings, tables, comments, styles, sections, and safety markers.",
+                             "domain":  "word",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  false,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "sheet.inspect.workbook",
+                             "status":  "planned",
+                             "description":  "Inspect XLSX sheets, used ranges, tables, formulas, charts, named ranges, comments, hidden content, and external links.",
+                             "domain":  "sheet",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  false,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "deck.inspect.presentation",
+                             "status":  "planned",
+                             "description":  "Inspect PPTX slides, text, notes, shapes, placeholders, charts, media references, layouts, and theme metadata.",
+                             "domain":  "deck",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  false,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "office.context.build_packet",
+                             "status":  "planned",
+                             "description":  "Build a reusable cross-format context packet from Word, Excel, PowerPoint, PDF, web, text, and data sources.",
+                             "domain":  "office",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  false,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "office.extract.schema",
+                             "status":  "planned",
+                             "description":  "Extract schema-shaped rows from mixed Office/PDF sources with source refs, confidence, and warnings.",
+                             "domain":  "office",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  false,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "office.workflow.docset_to_sheet",
+                             "status":  "planned",
+                             "description":  "Turn a set of source documents into an evidence-backed workbook.",
+                             "domain":  "office",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  false,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "office.workflow.sheet_to_deck",
+                             "status":  "planned",
+                             "description":  "Turn an evidence workbook into an editable PowerPoint deck with source refs.",
+                             "domain":  "office",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  false,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "office.workflow.board_pack",
+                             "status":  "planned",
+                             "description":  "Create a board pack containing workbook, memo, deck, optional PDF, source map, validation report, and bundle.",
+                             "domain":  "office",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  false,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "office.manifest.show",
+                             "status":  "beta",
+                             "description":  "Return the target OKoffice tool map for agent runtimes.",
+                             "domain":  "office",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  true,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "office.workflow.plan",
+                             "status":  "beta",
+                             "description":  "Plan a local-first cross-format Office workflow from goals, inputs, and outputs.",
+                             "domain":  "office",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  true,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "office.workflow.extract_to_sheet",
+                             "status":  "planned",
+                             "description":  "Extract structured evidence from Word, PDF, deck, and sheet sources into an auditable workbook.",
+                             "domain":  "office",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  false,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "office.workflow.source_to_deck",
+                             "status":  "planned",
+                             "description":  "Create a presentation from gathered document evidence, tables, outlines, and style packs.",
+                             "domain":  "office",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  false,
+                             "oss_default":  true,
+                             "requires_model":  true
+                         },
+                         {
+                             "name":  "office.workflow.source_to_doc",
+                             "status":  "planned",
+                             "description":  "Create a Word document from multi-source evidence and a structured writing brief.",
+                             "domain":  "office",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  false,
+                             "oss_default":  true,
+                             "requires_model":  true
+                         },
+                         {
+                             "name":  "office.workflow.multi_format_brief",
+                             "status":  "planned",
+                             "description":  "Build a reusable task brief, evidence map, and output plan across Word, Excel, PPT, and PDF.",
+                             "domain":  "office",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  false,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "office.context.ingest",
+                             "status":  "planned",
+                             "description":  "Normalize local files, text, links, and extracted media into OKoffice context items.",
+                             "domain":  "office",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  false,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "office.context.packet",
+                             "status":  "planned",
+                             "description":  "Assemble context items into a portable packet with source refs, evidence cards, and warnings.",
+                             "domain":  "office",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  false,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "office.artifacts.bundle",
+                             "status":  "planned",
+                             "description":  "Export generated Office files and validation reports as a portable audit bundle.",
+                             "domain":  "office",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  false,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "office.validate.output",
+                             "status":  "planned",
+                             "description":  "Validate generated documents, workbooks, presentations, and PDFs before returning artifacts.",
+                             "domain":  "office",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  false,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "word.read.document",
+                             "status":  "planned",
+                             "description":  "Read DOCX structure, paragraphs, tables, comments, media, styles, and document properties.",
+                             "domain":  "word",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  false,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "word.extract.structure",
+                             "status":  "planned",
+                             "description":  "Extract a Word document outline, sections, references, and source-map anchors.",
+                             "domain":  "word",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  false,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "word.extract.tables",
+                             "status":  "planned",
+                             "description":  "Extract Word tables into normalized records with source cell locations.",
+                             "domain":  "word",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  false,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "word.write.document",
+                             "status":  "planned",
+                             "description":  "Create DOCX files from structured document IR, evidence, comments, and style packs.",
+                             "domain":  "word",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  false,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "word.edit.patch",
+                             "status":  "planned",
+                             "description":  "Apply auditable paragraph, run, table, comment, and metadata patches to DOCX files.",
+                             "domain":  "word",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  false,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "word.comment.review",
+                             "status":  "planned",
+                             "description":  "Create and resolve Word comments for agent review workflows.",
+                             "domain":  "word",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  false,
+                             "oss_default":  true,
+                             "requires_model":  true
+                         },
+                         {
+                             "name":  "word.convert.to_pdf",
+                             "status":  "planned",
+                             "description":  "Convert DOCX to validated PDF through explicit local or configured renderer backends.",
+                             "domain":  "word",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  false,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "word.convert.from_pdf",
+                             "status":  "planned",
+                             "description":  "Convert PDFs into editable DOCX drafts with layout warnings and source mapping.",
+                             "domain":  "word",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  false,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "sheet.read.workbook",
+                             "status":  "planned",
+                             "description":  "Read workbook sheets, tables, formulas, styles, charts, comments, and metadata.",
+                             "domain":  "sheet",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  false,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "sheet.profile.data",
+                             "status":  "planned",
+                             "description":  "Profile sheet data types, headers, empty ranges, anomalies, and source coverage.",
+                             "domain":  "sheet",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  false,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "sheet.extract.tables",
+                             "status":  "planned",
+                             "description":  "Extract normalized tables from workbooks with sheet, row, column, and cell refs.",
+                             "domain":  "sheet",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  false,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "sheet.write.workbook",
+                             "status":  "planned",
+                             "description":  "Create XLSX workbooks from structured tables, formulas, charts, and validation notes.",
+                             "domain":  "sheet",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  false,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "sheet.edit.patch",
+                             "status":  "planned",
+                             "description":  "Apply auditable range, formula, chart, validation, and style patches to workbooks.",
+                             "domain":  "sheet",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  false,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "sheet.visualize.chart",
+                             "status":  "planned",
+                             "description":  "Create charts and chart-ready data ranges with explicit source references.",
+                             "domain":  "sheet",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  false,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "sheet.validate.workbook",
+                             "status":  "planned",
+                             "description":  "Validate formulas, dimensions, blank sheets, chart refs, and workbook renderability.",
+                             "domain":  "sheet",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  false,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "deck.read.presentation",
+                             "status":  "planned",
+                             "description":  "Read PPTX slides, layouts, speaker notes, media, charts, and theme metadata.",
+                             "domain":  "deck",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  false,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "deck.create.from_outline",
+                             "status":  "planned",
+                             "description":  "Create PPTX decks from outlines, evidence cards, tables, charts, and style packs.",
+                             "domain":  "deck",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  false,
+                             "oss_default":  true,
+                             "requires_model":  true
+                         },
+                         {
+                             "name":  "deck.edit.apply_theme",
+                             "status":  "planned",
+                             "description":  "Apply or replace presentation themes, masters, tokens, fonts, and layout rules.",
+                             "domain":  "deck",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  false,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "deck.edit.patch",
+                             "status":  "planned",
+                             "description":  "Apply auditable slide, shape, text, chart, note, and theme patches to PPTX files.",
+                             "domain":  "deck",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  false,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "deck.export.pdf",
+                             "status":  "planned",
+                             "description":  "Export PPTX decks to validated PDFs with slide render checks.",
+                             "domain":  "deck",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  false,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "deck.validate.presentation",
+                             "status":  "planned",
+                             "description":  "Validate slide counts, missing media, speaker notes, theme refs, and renderability.",
+                             "domain":  "deck",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  false,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "pdf.read.document",
+                             "status":  "planned",
+                             "description":  "Read PDF document structure, pages, text, images, tables, metadata, and render facts.",
+                             "domain":  "pdf",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  false,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "pdf.extract.tables",
+                             "status":  "planned",
+                             "description":  "Extract PDF tables into normalized rows with page, bbox, and confidence evidence.",
+                             "domain":  "pdf",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  false,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "pdf.convert.to_docx",
+                             "status":  "planned",
+                             "description":  "Convert PDF pages into DOCX drafts with source refs and layout-loss warnings.",
+                             "domain":  "pdf",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  false,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "pdf.convert.to_xlsx",
+                             "status":  "planned",
+                             "description":  "Convert PDF tables and selected fields into XLSX workbooks with provenance.",
+                             "domain":  "pdf",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  false,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "pdf.convert.to_pptx",
+                             "status":  "planned",
+                             "description":  "Convert PDF page evidence into PPTX drafts with page screenshots and editable notes.",
+                             "domain":  "pdf",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  false,
+                             "oss_default":  true,
+                             "requires_model":  true
+                         }
+                     ]
+}

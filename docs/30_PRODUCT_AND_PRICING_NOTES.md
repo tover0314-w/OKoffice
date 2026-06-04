@@ -2,29 +2,32 @@
 
 This is not part of the OSS implementation, but the architecture should support it.
 
-## Free forever
+## Free Forever
 
-- Local deterministic tools.
+- Local deterministic PDF tools.
+- Local deterministic DOCX/XLSX/PPTX inspect and validation tools.
 - Local CLI/MCP/API.
 - Python and TypeScript SDK access to local APIs.
 - Lite parse.
 - Local RAG/evidence demo.
-- Local context packet, target PDF profile, source graph, and composition IR schemas.
+- Local Source Graph and Office IR schemas.
+- Local artifact profiles and style packs.
 - Local patch manifests for deterministic workflows.
-- Local style packs and examples.
+- Local bundle export/verify.
 - Community docs and examples.
 
-## Free hosted quota
+## Free Hosted Quota
 
 - Monthly basic credits.
 - Trial AI credits.
 - Trial OCR/image/video credits.
 - Low concurrency.
 - Temporary artifacts.
-- Temporary context packets and source graphs.
+- Temporary source graphs and artifact graphs.
+- Limited managed connector runs.
 - Community support.
 
-## Paid hosted features
+## Paid Hosted Features
 
 - Model-token-consuming AI tools.
 - Advanced OCR.
@@ -33,11 +36,15 @@ This is not part of the OSS implementation, but the architecture should support 
 - Audio transcription.
 - Image understanding.
 - Advanced table/chart/formula understanding.
+- Managed Office render/conversion workers.
+- Formula recalculation/QA at scale.
 - Hosted RAG/evidence indexes.
-- Hosted context packets and source graphs.
+- Hosted source graphs.
 - Hosted artifact graphs.
-- Context-backed target PDF composition planning.
-- High-quality report/deck rendering.
+- Source-backed Word report generation.
+- Evidence-backed Excel workbook generation.
+- High-quality PowerPoint deck generation.
+- Board-pack bundle workflows.
 - Patch preview and verification.
 - Batch processing.
 - Persistent artifacts.
@@ -70,7 +77,7 @@ For high-volume workflows.
 
 For regulated/private deployments.
 
-## Billing events to design for
+## Billing Events to Design For
 
 Classic document processing:
 
@@ -83,20 +90,28 @@ Classic document processing:
 - `artifact_stored`
 - `batch_job_completed`
 
-Agent-native multimodal and verification:
+Agent-native Office workflows:
 
-- `context_packet_created`
-- `target_profile_selected`
 - `source_graph_node_created`
 - `source_graph_stored`
+- `office_ir_created`
+- `word_report_created`
+- `excel_workbook_created`
+- `excel_formula_validation_completed`
+- `powerpoint_deck_created`
+- `deck_contact_sheet_rendered`
+- `board_pack_created`
+- `bundle_exported`
+- `bundle_verified`
+
+Multimodal and verification:
+
 - `video_minute_transcribed`
 - `video_keyframe_extracted`
 - `audio_minute_transcribed`
 - `image_region_analyzed`
 - `chart_or_table_understood`
 - `composition_plan_created`
-- `composition_ir_rendered`
-- `presentation_pdf_created`
 - `patch_preview_created`
 - `patch_applied`
 - `patch_verified`
@@ -104,15 +119,17 @@ Agent-native multimodal and verification:
 - `citation_verified`
 - `artifact_graph_exported`
 
-## Packaging notes
+## Packaging Notes
 
 The paid product should sell outcomes, not isolated low-level operations:
 
 - Parse and evidence API.
+- Source-to-workbook API.
 - Source-to-report API.
 - Source-to-deck API.
-- Verified PDF edit API.
+- Board-pack API.
+- Verified edit/patch API.
 - Batch workflow API.
 - Enterprise audit and retention.
 
-Basic merge/split/convert should remain free and should function as developer adoption, not the pricing center.
+Basic local merge/split/inspect/validate/create operations should remain free and should function as developer adoption, not the pricing center.

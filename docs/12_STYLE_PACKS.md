@@ -1,99 +1,157 @@
-# 12 — PDF Creation and Style Packs
+# 12 - Artifact Profiles and Style Packs
+
+okoffice should create polished Office artifacts from mixed context while preserving evidence, validation, and format-specific quality. A style pack is no longer a PDF-only theme. It is a cross-format design and quality contract for Word documents, Excel workbooks, PowerPoint decks, PDFs, and audit bundles.
 
 ## Goal
 
-AgentPDF should generate polished PDFs from many context types into clear target PDF profiles.
+Agents should be able to say:
 
-Context inputs may include PDFs, images, screenshots, scans, video, audio, web links, Markdown, HTML, Office-like documents, code, spreadsheets, JSON, databases, prompts, and review notes.
+```text
+Use these Word and PDF sources, extract the numbers into Excel,
+then create an executive PowerPoint and a board-ready PDF handout.
+```
 
-Target PDF profiles include:
+okoffice should turn that into:
 
-- Business reports.
-- Consulting reports.
-- Academic papers.
-- Learning PDFs.
-- PPT/deck-like PDFs.
-- Research briefs.
-- Resumes.
-- Invoices.
-- Contracts.
-- Product datasheets.
-- Training materials.
-- Education worksheets.
-- Startup pitch handouts.
-- Annual reports.
-- Financial reports.
-- Government/formal documents.
-- Evidence packets.
-- Code audit reports.
-- Slide-like presentation PDFs.
-- Video-derived handouts.
-- Image review packets.
+- A Source Graph with evidence locators.
+- A target artifact profile.
+- Office IR and/or Composition IR.
+- Generated artifacts.
+- Validation reports for every generated file.
+- A bundle manifest that links outputs back to sources.
 
-## Style pack schema
+## Artifact Profiles
 
-A style pack defines layout, fonts, colors, spacing, components, and document structure for one or more target PDF profiles.
+An artifact profile defines the purpose, audience, structure, validation rules, and expected quality bar for an output.
+
+Common profiles:
+
+- `executive_memo`: Word report with concise sections, comments cleared, styles normalized, and source appendix.
+- `evidence_workbook`: Excel workbook with extracted rows, source columns, confidence, formulas, filters, and validation sheet.
+- `board_deck`: PowerPoint deck with executive narrative, chart slides, speaker notes, and cited appendix.
+- `financial_model`: Excel workbook with assumptions, model sheets, checks, summaries, and chart output.
+- `research_brief`: Word or PDF brief with citations, figures, and limitations.
+- `pitch_deck`: PowerPoint deck with strong visual hierarchy and tight claim spine.
+- `contract_packet`: Word/PDF bundle with clause extraction, risk notes, and redaction checks.
+- `training_material`: Word handout, PowerPoint deck, and PDF export.
+- `audit_bundle`: Multi-artifact package with manifest, source map, validation, and provenance.
+
+## Style Pack Schema
+
+A style pack defines shared visual tokens plus format-specific behavior.
 
 ```json
 {
-  "style_id": "business_report_modern",
-  "name": "Business Report Modern",
-  "description": "Clean board-report style with executive summary and metric cards.",
-  "page": {
-    "size": "A4",
+  "style_id": "executive_board_pack",
+  "name": "Executive Board Pack",
+  "description": "Calm executive reporting style for memo, workbook, deck, and PDF handout.",
+  "tokens": {
+    "colors": {
+      "primary": "#155E75",
+      "accent": "#D97706",
+      "ink": "#111827",
+      "muted": "#6B7280"
+    },
+    "typography": {
+      "heading_font": "system-sans",
+      "body_font": "system-sans",
+      "base_size": 10
+    },
+    "spacing": {
+      "density": "compact",
+      "section_gap": 16
+    }
+  },
+  "word": {
+    "page_size": "A4",
+    "styles": ["Title", "Heading 1", "Heading 2", "Body", "Caption", "Source Note"],
+    "requires_source_appendix": true
+  },
+  "excel": {
+    "table_style": "medium",
+    "freeze_header_rows": true,
+    "validation_sheet": true,
+    "formula_check_sheet": true
+  },
+  "powerpoint": {
+    "slide_size": "wide",
+    "layouts": ["title", "section", "claim_chart", "table", "evidence_appendix"],
+    "requires_speaker_notes": true
+  },
+  "pdf": {
+    "page_size": "A4",
     "orientation": "portrait",
-    "margins": {"top": 56, "right": 56, "bottom": 56, "left": 56}
-  },
-  "typography": {
-    "heading_font": "system-sans",
-    "body_font": "system-sans",
-    "base_size": 10
-  },
-  "components": [
-    "cover",
-    "toc",
-    "section_header",
-    "metric_card",
-    "table",
-    "figure",
-    "code_block",
-    "callout",
-    "citation_list",
-    "source_appendix",
-    "appendix"
-  ]
+    "requires_render_check": true
+  }
 }
 ```
 
-Style packs should support both classic document pages and slide-like pages. A style pack may define multiple layout modes:
+## Format Rules
 
-- `report`
-- `packet`
-- `deck`
-- `handout`
-- `appendix`
-- `paper`
-- `resume`
-- `learning`
+### Word
 
-## Rich block requirements
+Word outputs must be more than text dumps. They should have:
 
-Agent-native composition requires blocks that are more expressive than Markdown paragraphs:
+- Stable paragraph and table ids for patching.
+- Named styles instead of ad hoc formatting.
+- Headings, table captions, figure captions, citations, and source appendices.
+- Comment/tracked-change policy.
+- Metadata and privacy checks.
+- Render preview evidence when a renderer is available.
 
-- Code blocks with language labels, file/line source refs, wrapping behavior, and overflow warnings.
-- Figures and images with captions, crop/fill rules, and source refs.
-- Tables with source ranges, column sizing, and numeric consistency checks.
-- Charts with data source refs and image fallbacks.
-- Callouts for risks, decisions, evidence, warnings, and limitations.
-- Citation lists and source appendices.
-- Speaker notes for slide-like PDFs.
-- Review comments and approval markers for enterprise workflows.
+### Excel
 
-If a block cannot fit safely, rendering should produce layout warnings rather than silently clipping important content.
+Excel outputs should be useful workbooks, not CSVs in disguise:
 
-## Open-source style packs
+- Tables with filters and typed columns.
+- Source-ref columns for extracted data.
+- Formula cells separated from input cells.
+- Named ranges for important assumptions.
+- Check sheets for totals, missing fields, and formula risks.
+- Charts sourced from explicit ranges.
+- No formula errors before completion.
 
-Implemented local built-in packs:
+### PowerPoint
+
+Deck outputs should follow a claim spine:
+
+- One main claim per slide unless the profile says otherwise.
+- Slide layouts chosen from the style pack.
+- Speaker notes with evidence refs where needed.
+- Chart/table slides linked to workbook ranges or source nodes.
+- Appendix slides for citations and assumptions.
+- Rendered contact-sheet validation.
+
+### PDF
+
+PDF remains a first-class output, especially for final handouts, immutable reports, and audit bundles:
+
+- Page count and renderability checks.
+- Blank page detection.
+- Optional visual diff.
+- Metadata and redaction verification when relevant.
+- Source map and manifest links back to Office IR.
+
+## Rich Block Requirements
+
+Agent-native composition requires blocks that preserve intent and evidence:
+
+- `claim`: statement, confidence, source refs, reviewer notes.
+- `paragraph`: text, style, source refs, patch policy.
+- `table`: columns, data types, source ranges, validation rules.
+- `chart`: data range, chart type, title, insight, fallback image.
+- `figure`: image source, caption, crop/fill rules, alt text.
+- `formula`: formula text, precedents, dependents, recalculation status.
+- `slide`: title, claim, layout, notes, source refs.
+- `comment`: author, target locator, severity, resolution status.
+- `citation`: source locator, excerpt, confidence, format.
+- `appendix`: evidence cards, limitations, validation summaries.
+
+If a block cannot fit safely, rendering should produce warnings rather than clipping or dropping content.
+
+## Current Built-ins
+
+The current OSS codebase implements PDF-oriented style packs:
 
 - `plain_report`
 - `business_report_modern`
@@ -102,160 +160,100 @@ Implemented local built-in packs:
 - `invoice_clean`
 - `paper_ink`
 
-Planned gallery packs:
+These remain valid for `okpdf` and the PDF domain inside okoffice.
 
-- `resume_classic`
-- `contract_plain`
-- `research_brief`
-- `training_handout`
-- `education_worksheet`
-- `board_deck`
-- `technical_audit`
-- `evidence_packet`
-- `training_slide_handout`
+Target okoffice packs:
 
-`pdf.convert.markdown_to_pdf` also accepts a local JSON style pack path, which lets users and agents supply custom margins, page size/orientation, typography, colors, and components without waiting for the hosted template gallery.
+- `executive_board_pack`
+- `evidence_workbook_clean`
+- `board_deck_modern`
+- `research_brief_pack`
+- `financial_model_standard`
+- `contract_review_pack`
+- `training_material_pack`
+- `pitch_deck_sharp`
+- `audit_bundle_plain`
 
-## Local create-agent templates
+## Template Packs
 
-`pdf.ai.create.templates` lists the local template catalog for agents. It includes field contracts, layout slots, sample data, and the preview tool id for each template. `pdf.ai.create.template_preview` generates a real validated preview PDF from that sample data. `pdf.ai.create.from_prompt` is the local template creation agent. It chooses or accepts a template, applies optional color overrides, renders Markdown, creates a PDF with a style pack, and validates the output.
+Template packs should evolve from PDF template packages into multi-artifact packages. A pack may define:
 
-`pdf.ai.create.template_packs` adds the reusable package layer. A template pack is a local JSON file that groups template entries, base template ids, target profiles, field contracts, layout slots, supported block types, sample data, and named color schemes. Agents should validate packs with `pdf.ai.create.validate_template_pack` before calling `pdf.ai.create.from_template_pack`. This keeps the OSS core ready for future hosted template galleries while staying local and license-safe.
-
-Implemented templates:
-
-- `one_pager`
-- `business_report`
-- `research_brief`
-- `proposal`
-- `worksheet`
-- `resume`
-- `invoice`
-
-Implemented template pack example:
-
-- `examples/template-packs/local-agent-starter.json`
-
-Implemented local starter templates:
-
-- `board_audit`: technical audit / leadership packet.
-- `research_brief_packet`: cited research brief.
-- `evidence_packet`: source-backed evidence packet.
-- `agent_resume`: ATS-friendly resume PDF.
-- `client_invoice`: clean invoice PDF.
-- `project_proposal`: scoped project proposal.
-- `lesson_worksheet`: training worksheet.
-- `media_review_deck`: slide-like media review PDF.
-
-Template pack example:
-
-```bash
-okpdf create template-packs -o .agentpdf-out/template-packs.json --json
-okpdf create validate-template-pack examples/template-packs/local-agent-starter.json \
-  -o .agentpdf-out/template-pack.validation.json \
-  --json
-okpdf create plan-template-pack examples/template-packs/local-agent-starter.json \
-  --target-profile technical_audit \
-  --context-packet context.packet.json \
-  --planned-output .agentpdf-out/board-audit.pdf \
-  -o .agentpdf-out/board-audit.plan.json \
-  --json
-okpdf create agent examples/template-packs/local-agent-starter.json \
-  --target-profile technical_audit \
-  --context-packet context.packet.json \
-  -o .agentpdf-out/board-audit.pdf \
-  --plan-output .agentpdf-out/board-audit.plan.json \
-  --coverage-output .agentpdf-out/board-audit.coverage.json \
-  --context-classification-output .agentpdf-out/board-audit.context-classification.json \
-  --context-report-output .agentpdf-out/board-audit.context-report.pdf \
-  --context-report-json-output .agentpdf-out/board-audit.context-report.json \
-  --bundle-output .agentpdf-out/board-audit.agentpdf-bundle.zip \
-  --json
-okpdf create from-template-pack examples/template-packs/local-agent-starter.json \
-  --template board_audit \
-  --color-scheme executive_blue \
-  --data examples/create-data/agent-block-audit.json \
-  -o .agentpdf-out/board-audit.pdf \
-  --renderer html \
-  --html-output .agentpdf-out/board-audit.html \
-  --json
-okpdf evidence coverage-report .agentpdf-out/board-audit.composition.json \
-  -o .agentpdf-out/board-audit.coverage.json \
-  --json
-```
-
-`pdf.ai.create.plan_template_pack` is the local create-agent planning step for template packs. It ranks candidate templates from the target profile and Context Packet, then returns `create_payload`, `preview_payload`, candidate scores, matched/unsupported block types, and validation requirements. `pdf.ai.create.agent` runs that plan through Context Packet classification, Context Packet report generation, PDF creation, render-check, blank-page check, evidence coverage, and optional bundle export/verification in one local call. `pdf.ai.create.from_template_pack` writes the PDF plus sibling `.composition.json` and `.layers.json` artifacts. With `renderer=html`, it first writes an auditable HTML package, safe local asset copies, `.html-manifest.json`, and package validation evidence, then renders that package into the final PDF. The composition artifact includes `composition_ir`, `source_map`, `evidence_coverage`, `slot_routing_plan`, the selected `target_profile`, and template pack metadata so agents can immediately run coverage reports and patch planning against generated template outputs. The layer manifest validates against `schemas/template-layer-manifest.schema.json` and gives each block a stable layer id, target slot, source refs, source kinds, estimated normalized-page anchor, and edit policy. `pdf.patch.plan` can consume this file through `--layers` / `layer_manifest_path`; operations may cite `layer_id`, `block_id`, or `target_slot`, and the patch manifest records matched `layer_evidence`. Layer edit policies are enforced during planning: matched layers must be editable and the requested patch operation must map to an allowed operation such as `append_to_slot`, `annotate`, or `regenerate_block`. The local `regenerate_block` operation uses those layer refs plus `replacement_markdown` to append an audited regenerated block appendix to a new PDF artifact; it does not claim in-place layout-preserving edits or mutate the original block. When `data.blocks` is supplied, each block keeps its own `block_id`, `type`, `target_slot`, and `source_refs`; supported block types are `section`, `code`, `table`, `image`, `slide`, `audio_reference`, `video_reference`, `media_reference`, and `citation`. Agents can pass `--context-packet` / `context_packet_path` instead of hand-writing blocks; okpdf maps context text, code, tables, images, web links, PDFs, and media into target-profile-aware template blocks while preserving packet source refs. Document profiles route media to `audio_reference`, `video_reference`, or `media_reference` slots such as `media_evidence`; slide profiles can keep media as slide blocks. The slot routing plan records route ids, accepted/warning status, supported block type checks, slot-known facts, target profile compatibility, candidate target-profile slots, and routing reasons for every generated block. Image blocks validate the referenced local file and store `image_evidence` with width, height, and MIME type; Context Packet image items additionally carry `visual_evidence` with aspect ratio, average color, non-white ratio, blank detection, and perceptual hash.
-
-Structured renderers:
-
-- `invoice`: `invoice_number`, `client` or `bill_to`, `due_date`, `items[]`, `payment_notes`, `total`.
-- `resume`: `name`, `headline`, `contact`, `summary`, `skills[]`, `experience[]`.
-- `worksheet`: `learning_goal`, `questions[]`, `checklist[]`.
-- `proposal`: `client`, `problem`, `approach`, `deliverables`, `timeline`.
-
-Preview example:
-
-```bash
-okpdf create preview invoice \
-  -o .agentpdf-out/invoice-preview.pdf \
-  --json
-```
+- Supported artifact profiles.
+- Field contracts and required data.
+- Word section templates.
+- Excel sheet/table/formula templates.
+- PowerPoint slide layouts and speaker-note rules.
+- PDF handout/export rules.
+- Sample data and preview commands.
+- Validation requirements.
+- License/dependency notes.
 
 Example:
 
+```json
+{
+  "pack_id": "local-agent-board-pack",
+  "profiles": ["executive_memo", "evidence_workbook", "board_deck", "audit_bundle"],
+  "artifacts": {
+    "word": {"template": "executive_memo"},
+    "excel": {"template": "evidence_workbook"},
+    "powerpoint": {"template": "board_deck"},
+    "pdf": {"template": "board_handout"}
+  },
+  "validation": [
+    "word.validation.render_check",
+    "sheet.validation.formulas",
+    "deck.validation.contact_sheet",
+    "pdf.validation.render_check",
+    "office.bundle.verify"
+  ]
+}
+```
+
+## CLI Compatibility
+
+Current PDF command:
+
 ```bash
-okpdf create from-prompt "Create a worksheet about validating generated PDFs." \
-  -o .agentpdf-out/worksheet.pdf \
-  --template worksheet \
-  --style-pack paper_ink \
-  --color primary=#4f46e5 \
-  --color accent=#f59e0b \
+okpdf create markdown examples/sample-documents/business_report.md \
+  -o .agentpdf-out/business-report.pdf \
+  --style-pack business_report_modern \
   --json
 ```
 
-Invoice data example:
+Target okoffice commands:
 
 ```bash
-okpdf create from-prompt "Create an invoice for okpdf local template work." \
-  -o .agentpdf-out/invoice.pdf \
-  --template invoice \
-  --data examples/create-data/invoice.json \
+okoffice styles list --json
+
+okoffice workflow docset-to-sheet sources/*.docx sources/*.pdf \
+  -o .okoffice-out/evidence.xlsx \
+  --profile evidence_workbook \
+  --style-pack evidence_workbook_clean \
+  --json
+
+okoffice workflow sheet-to-deck .okoffice-out/evidence.xlsx \
+  -o .okoffice-out/board-deck.pptx \
+  --profile board_deck \
+  --style-pack board_deck_modern \
+  --json
+
+okoffice bundle export \
+  --artifact .okoffice-out/evidence.xlsx \
+  --artifact .okoffice-out/board-deck.pptx \
+  --artifact .okoffice-out/board-handout.pdf \
+  -o .okoffice-out/board-pack.okoffice.zip \
   --json
 ```
 
-## AI generation boundary
+## Validation Contract
 
-Open-source deterministic mode:
+A style or template pack is complete only when it declares validation expectations:
 
-```text
-Markdown/HTML/JSON + style pack -> PDF
-```
+- Word: package integrity, styles, comments/tracked changes, metadata, render preview, accessibility.
+- Excel: package integrity, formula references, formula errors, chart/table refs, named ranges, hidden sheets, macros.
+- PowerPoint: package integrity, slide count, placeholder fit, notes, media refs, contact sheet, theme consistency.
+- PDF: page count, renderability, blank-page detection, metadata, redaction, optional visual diff.
+- Bundle: manifest hashes, source-map coverage, artifact graph, warnings, dependency/license notes.
 
-Future AI mode:
-
-```text
-context packet + target PDF profile -> composition IR with source refs -> styled PDF
-```
-
-Composition and style systems should make the generated PDF traceable. Blocks should preserve source refs through rendering so evidence reports can map final pages back to the original context.
-
-## UX requirements
-
-Generated PDFs should include:
-
-- Consistent spacing.
-- Good typography.
-- Proper page breaks.
-- Optional cover page.
-- Optional table of contents.
-- Headers/footers.
-- Page numbers.
-- Source refs and citation pages where applicable.
-- Code block overflow handling.
-- Figure/table captions.
-- Optional speaker notes for presentation PDFs.
-- Validation report.
-
-## Template examples
-
-See `examples/style-packs/`.
+The design standard is "beautiful by default", but the engineering standard is "auditable by default".

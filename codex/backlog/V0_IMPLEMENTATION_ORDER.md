@@ -1,122 +1,212 @@
 # V0 Implementation Order for Codex
 
-Do not implement randomly. Follow this sequence.
+Do not implement randomly. okoffice is the product. The existing `agentpdf` / `okpdf` / `pdf.*` code is a compatibility domain that should remain stable while new Office infrastructure is added.
 
-## Step 1 — Repo bootstrap
+## Step 1 - Naming and Compatibility Boundary
 
-Create:
+Implement:
 
-- `pyproject.toml`
-- `src/agentpdf/__init__.py`
-- `src/agentpdf/cli/main.py`
-- `src/agentpdf/tools/registry.py`
-- `src/agentpdf/schemas/common.py`
-- `tests/unit/test_import.py`
+- `okoffice` CLI alias that points at the existing local runner.
+- README/docs language that treats `okpdf` as compatibility.
+- tool discovery output that can distinguish implemented compatibility tools from target okoffice tools.
 
 Acceptance:
 
 ```bash
-python -m agentpdf.cli --help
-pytest -q
+okpdf tools list --json
+okoffice tools list --json
+pytest tests/unit/test_docs_integrity.py -q
 ```
 
-## Step 2 — Schema models
+`okoffice` may initially show target namespace metadata while reusing the existing runner.
 
-Implement Pydantic models:
-
-- `FileRef`
-- `Artifact`
-- `Job`
-- `ToolResult`
-- `ValidationReport`
-- `ToolManifest`
-
-Acceptance:
-
-- Models serialize to JSON.
-- Schemas export.
-- Tests cover required fields.
-
-## Step 3 — Artifact store
-
-Implement local artifact store:
-
-- Safe output directory.
-- Artifact ID generation.
-- SHA-256.
-- File size.
-- MIME type.
-- PDF page count where possible.
-
-## Step 4 — Page range parser
-
-Implement robust page range parsing.
-
-Acceptance:
-
-- `1-3,7` works.
-- `all`, `odd`, `even` work.
-- Invalid ranges return `invalid_page_range`.
-
-## Step 5 — Tool registry
-
-Implement registry with status labels and discovery.
-
-Acceptance:
-
-```bash
-agentpdf tools list --json
-agentpdf tools show pdf.inspect.document --json
-```
-
-## Step 6 — Core PDF inspect
-
-Implement `pdf.inspect.document`.
-
-## Step 7 — Organize operations
+## Step 2 - okoffice Manifest Skeleton
 
 Implement:
 
-- merge.
-- split.
-- extract pages.
-- remove pages.
-- rotate pages.
+- a target okoffice manifest or manifest section for `office.*`, `word.*`, `sheet.*`, and `deck.*`.
+- status labels: `implemented`, `planned`, `optional_worker`, `cloud_only`, `legacy_compat`.
+- docs that explain which tools are runnable today.
 
-## Step 8 — Validation
+Acceptance:
 
-Implement `pdf.validation.validate_output`.
+- machine manifest tests still pass.
+- target tools are discoverable without pretending they are executable.
 
-Attach validation to every generated PDF operation.
+## Step 3 - Office IR and Native Locators
 
-## Step 9 — Render and text
+Implement schemas for:
+
+- Source Graph.
+- Office IR.
+- Word locators: section, paragraph, run, table, comment.
+- Excel locators: sheet, cell, range, table, chart, formula.
+- PowerPoint locators: slide, shape, placeholder, notes.
+- PDF locators: page, bbox, annotation, form field.
+
+Acceptance:
+
+- schemas validate example JSON.
+- tests cover serialization.
+
+## Step 4 - `office.inspect.file`
+
+Implement a deterministic file inspector.
+
+Acceptance:
+
+- detects PDF, DOCX, XLSX, PPTX, CSV, Markdown, HTML.
+- reports file size, hash, extension, MIME type, package type, and recommended next tools.
+- rejects unsafe paths.
+
+## Step 5 - DOCX Inspect
+
+Implement `word.inspect.document`.
+
+Acceptance:
+
+- reports paragraph count, headings, tables, comments, styles, sections, fields, metadata markers, tracked-change markers, and package warnings.
+- does not claim rendered layout unless a render worker exists.
+- returns ToolResult.
+
+## Step 6 - XLSX Inspect
+
+Implement `sheet.inspect.workbook`.
+
+Acceptance:
+
+- reports sheets, used ranges, tables, formulas, charts, named ranges, comments, hidden sheets, external links, workbook properties, and macro/package markers.
+- does not execute macros.
+- formula evaluation status is explicit.
+
+## Step 7 - PPTX Inspect
+
+Implement `deck.inspect.presentation`.
+
+Acceptance:
+
+- reports slide count, slide order, text blocks, notes, shapes, placeholders, charts, media refs, hidden slides, layouts, and theme metadata.
+- does not claim visual fit without render/contact-sheet evidence.
+
+## Step 8 - Office Validation Baseline
 
 Implement:
 
-- render pages.
-- extract text.
-- metadata read/update.
+- `office.validation.package`
+- `word.validation.document`
+- `sheet.validation.formulas`
+- `deck.validation.presentation`
 
-## Step 10 — CLI polish
+Acceptance:
 
-All stable tools available through CLI with `--json`.
+- unsafe package entries fail.
+- macro/external-link/embedded-object risks are warnings.
+- formula/link checks are structural when no worker is configured.
+- optional worker skips are structured, not silent.
 
-## Step 11 — MCP server
+## Step 9 - Context Packet for Office Sources
 
-Expose stable tools through MCP.
+Extend context ingestion to support:
 
-## Step 12 — REST server
+- DOCX text/outline/table/comment nodes.
+- XLSX sheet/table/formula nodes.
+- PPTX slide/text/notes nodes.
+- existing PDF nodes.
 
-Expose local API.
+Acceptance:
 
-## Step 13 — Markdown/create baseline
+- source graph nodes contain native locators.
+- context packet examples validate.
 
-Implement Markdown-to-PDF or HTML-to-PDF with style packs.
+## Step 10 - Evidence Workbook Workflow
 
-## Step 14 — Lite parse and local RAG demo
+Implement:
 
-Implement minimal Document IR, chunking, and retrieval.
+- `office.extract.schema`
+- `sheet.create.evidence_workbook`
+- `office.workflow.docset_to_sheet`
 
-## Step 15 — Docs and examples polish
+Acceptance:
 
-Update README, examples, screenshots/GIF instructions, and integration configs.
+- multiple Word/PDF sources can produce an XLSX workbook with source-ref columns.
+- missing fields and low confidence are warnings.
+- workbook validation runs.
+
+## Step 11 - Sheet To Deck Workflow
+
+Implement:
+
+- `deck.compose.plan`
+- `deck.create.presentation`
+- `deck.validation.contact_sheet`
+- `office.workflow.sheet_to_deck`
+
+Acceptance:
+
+- workbook data can produce editable PPTX slides.
+- slide claims cite workbook ranges or source graph nodes.
+- contact-sheet validation runs or returns structured worker-unavailable evidence.
+
+## Step 12 - Board Pack Bundle
+
+Implement:
+
+- `word.create.report`
+- `office.workflow.board_pack`
+- `office.bundle.export`
+- `office.bundle.verify`
+
+Acceptance:
+
+- emits workbook, memo, deck, optional PDF handout, manifest, source map, validation report, and bundle.
+- bundle hashes verify.
+
+## Step 13 - Agent Setup for okoffice
+
+Implement target setup commands:
+
+- Codex.
+- Claude Code/Desktop.
+- Cursor.
+- Kilo Code.
+- OpenClaw.
+- OpenAI Agents.
+
+Acceptance:
+
+- generated MCP configs use server name `okoffice`.
+- compatibility configs still work.
+
+## Step 14 - Optional Workers
+
+Add worker contracts, not hard dependencies:
+
+- OfficeCLI adapter.
+- LibreOffice/render adapter.
+- browser renderer.
+- OCR.
+- formula engine.
+- AI provider routing.
+
+Acceptance:
+
+- workers are feature-flagged.
+- license notes are documented.
+- unavailability is returned as structured evidence.
+
+## Step 15 - Docs and Examples Polish
+
+Update:
+
+- README.
+- examples.
+- MCP configs.
+- REST examples.
+- SDK examples.
+- fixture docs.
+
+Acceptance:
+
+- examples lead with okoffice workflows.
+- legacy PDF examples live in compatibility docs.
+- docs and registry tests pass.

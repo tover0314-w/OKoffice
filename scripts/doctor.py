@@ -19,7 +19,7 @@ if str(SRC) not in sys.path:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Check whether okpdf local development is ready.")
+    parser = argparse.ArgumentParser(description="Check whether okoffice local development is ready.")
     parser.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
     args = parser.parse_args()
 
@@ -159,7 +159,7 @@ def check_node_workspace() -> dict[str, Any]:
 def check_cli_help() -> dict[str, Any]:
     env = os.environ.copy()
     env["PYTHONPATH"] = str(SRC) + os.pathsep + env.get("PYTHONPATH", "")
-    result = subprocess.run(
+    compatibility_result = subprocess.run(
         [sys.executable, "-m", "agentpdf.cli", "--help"],
         cwd=ROOT,
         env=env,
@@ -167,14 +167,31 @@ def check_cli_help() -> dict[str, Any]:
         text=True,
         check=False,
     )
-    output = (result.stdout or result.stderr).strip()
+    public_result = subprocess.run(
+        [sys.executable, "-m", "okoffice.cli", "--help"],
+        cwd=ROOT,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    compatibility_output = (compatibility_result.stdout or compatibility_result.stderr).strip()
+    public_output = (public_result.stdout or public_result.stderr).strip()
+    compatibility_ok = (
+        compatibility_result.returncode == 0
+        and (
+            "OKoffice agent-native Office infra CLI" in compatibility_output
+            or "AgentPDF Infra CLI" in compatibility_output
+        )
+    )
+    public_ok = public_result.returncode == 0 and "okoffice local-first agent-native Office CLI" in public_output
     return {
-        "ok": result.returncode == 0 and "AgentPDF Infra CLI" in output,
+        "ok": compatibility_ok and public_ok,
         "required": True,
         "category": "required_runtime",
-        "message": "python -m agentpdf.cli --help works."
-        if result.returncode == 0
-        else "python -m agentpdf.cli --help failed.",
+        "message": "agentpdf compatibility CLI and okoffice public CLI help both work."
+        if compatibility_ok and public_ok
+        else "Run python -m agentpdf.cli --help and python -m okoffice.cli --help to inspect CLI setup.",
     }
 
 
@@ -287,7 +304,7 @@ def next_steps(checks: dict[str, dict[str, Any]]) -> list[str]:
     if not checks["node"]["ok"] or not checks["npm"]["ok"]:
         steps.append("Install Node.js 20 or newer to use the TypeScript SDK.")
     if not checks["cli_help"]["ok"]:
-        steps.append("Run: python -m agentpdf.cli --help")
+        steps.append("Run: python -m okoffice.cli --help and python -m agentpdf.cli --help")
     if not checks["rest_app"]["ok"] or not checks["mcp_server"]["ok"]:
         steps.append("Check local package imports and rerun: pytest tests/integration/test_api.py -q")
     if not steps:
@@ -305,7 +322,7 @@ def optional_next_steps(checks: dict[str, dict[str, Any]]) -> list[str]:
 
 
 def print_text_report(report: dict[str, Any]) -> None:
-    print(f"okpdf doctor: {report['status']}")
+    print(f"okoffice doctor: {report['status']}")
     for name, check in report["checks"].items():
         if check["ok"]:
             marker = "ok"

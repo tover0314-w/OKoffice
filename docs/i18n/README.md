@@ -1,6 +1,6 @@
 # Translation Guide
 
-okpdf uses English as the canonical release language and welcomes community-maintained translations for onboarding, examples, and contributor guidance.
+okoffice uses English as the canonical release language and welcomes community-maintained translations for onboarding, examples, and contributor guidance.
 
 ## Current Languages
 

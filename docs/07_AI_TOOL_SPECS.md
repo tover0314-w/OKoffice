@@ -1,542 +1,270 @@
-# 07 — AI Tool Specifications
+# 07 - okoffice AI and Agent Tool Specifications
 
-The open-source project should expose AI-oriented tool namespaces while making local/free and cloud/paid boundaries clear.
+okoffice should expose AI-oriented tools for Office workflows without making model output the source of truth. The core product is agent-native Office infrastructure: deterministic tools, structured artifacts, validation evidence, and provenance across PDF, Word, Excel, and PowerPoint.
 
-AI tools are not the product by themselves. They support the larger agent-native loop:
+The AI loop is:
 
 ```text
-understand context -> choose target PDF profile -> compose/operate on PDF artifacts -> verify evidence -> report results
+collect sources -> normalize source graph -> parse Office/PDF structures
+-> plan target artifact -> execute deterministic transforms
+-> validate every output -> return evidence and next actions
 ```
 
-RAG is one evidence technique, not the main product surface. The broader goal is context-backed target PDF creation, patching, review, and verification.
+The current implementation still exposes the `pdf.ai.*` namespace. During the migration, those tools are the PDF-domain compatibility layer. The target okoffice namespace is `office.ai.*`, with `office.pdf.ai.*` available as an aliasing bridge when useful.
 
-## Agent-native AI layers
+## Boundary
 
-### Context understanding
+AI workers may propose structure, classify content, map evidence, rank templates, draft copy, explain formulas, or suggest patch operations. They must not silently mutate source files, invent citations, claim exact geometry that was not measured, or bypass format-specific validation.
 
-Future AI workers may normalize video, audio, image, scanned, web links/pages, documents, code, and data context into source graph nodes.
-
-Examples:
-
-- Video transcript segments and keyframes.
-- Image OCR regions and captions.
-- Chart/table/formula interpretations.
-- Code file and line-range summaries.
-- Spreadsheet/table profiles.
-
-Every derived node should include provenance, confidence, warnings, and source locators such as page/bbox, timestamp, file/line, row/range, or URL fragment.
-
-### Target and composition assistance
-
-AI may help select target PDF profiles and plan learning PDFs, resumes, papers, reports, packets, handouts, and slide-like PDFs from context packets. The output should be target profile + composition IR + source refs, not only prose.
-
-Allowed outputs:
-
-- Proposed document outline.
-- Block list with source refs.
-- Slide rhythm and speaker notes.
-- Figure/table/code block placement.
-- Appendix plan.
-- Validation requirements.
-
-### Patch assistance
-
-AI may help plan edits to existing PDFs, but execution should use explicit patch transactions where possible.
-
-Allowed outputs:
-
-- Patch manifest.
-- Target block/page/bbox refs.
-- Template layer refs from `.layers.json`: `layer_id`, `block_id`, `target_slot`, estimated anchors, and edit policies.
-- Replacement blocks.
-- Source refs for inserted or rewritten content.
-- Required validation checks.
-
-Do not claim arbitrary lossless in-place body text editing. The current local patch baseline is append-only; when regeneration or precise layout-preserving replacement is required, return that fact explicitly.
-
-### Verification assistance
-
-AI may help detect unsupported claims, inconsistent numbers, weak citations, risky redactions, accessibility issues, and semantic changes. These checks should complement deterministic validation, not replace it.
-
-## Two-tier parse model
-
-### `pdf.ai.parse.lite`
-
-Local, free, open-source.
-
-- Uses existing text layer.
-- Uses simple page geometry and heuristics.
-- Produces Document IR.
-- Best for clean, digital PDFs.
-- Does not require model tokens.
-
-Current baseline:
-
-- Implemented in local Python core.
-- Emits Document IR in the standard `ToolResult.usage.document_ir` field.
-- Uses page-level bboxes when precise spans are unavailable.
-- Returns warnings for pages without text-layer blocks.
-
-### `pdf.ai.parse.agentic`
-
-Future cloud or advanced optional mode.
-
-- Uses OCR/VLM/LLM as needed.
-- Handles charts, complex tables, multi-column layouts, formulas, scans.
-- Returns confidence, bboxes, and warnings.
-- Token-consuming and likely paid.
-
-## `pdf.ai.rag.ingest`
-
-### Purpose
-
-Turn PDF into searchable chunks with page and bbox citations.
-
-### Open-source baseline
-
-- Use lite parse.
-- Chunk by headings/page/paragraph.
-- Store local JSON index.
-- Support keyword or optional local embedding provider.
-
-Current baseline:
-
-- Implemented with local keyword chunks.
-- Stores `index.json`-compatible JSON when a directory path is provided.
-- Each chunk stores `chunk_id`, `page_number`, `bbox`, text, source block id, and normalized tokens.
-
-### Input
+Every AI-assisted tool must return the same `ToolResult` envelope used by deterministic tools:
 
 ```json
 {
-  "file": {"kind": "local_path", "path": "paper.pdf"},
-  "index_path": "./.agentpdf/indexes/paper",
-  "chunking": {
-    "strategy": "page_paragraph",
-    "max_chars": 1200,
-    "overlap_chars": 120
-  },
-  "embedding": {
-    "provider": "none"
-  }
-}
-```
-
-### Output
-
-```json
-{
-  "index_id": "idx_local_paper",
-  "chunk_count": 83,
-  "pages_indexed": 12,
-  "citation_mode": "page_bbox_optional"
-}
-```
-
-## `pdf.ai.rag.query`
-
-### Purpose
-
-Answer questions with evidence.
-
-### Input
-
-```json
-{
-  "index": {"kind": "local_path", "path": "./.agentpdf/indexes/paper"},
-  "query": "What are the main contributions?",
-  "top_k": 5,
-  "answer_mode": "extractive"
-}
-```
-
-### Output
-
-```json
-{
-  "answer": "The paper contributes ...",
-  "citations": [
-    {
-      "page": 3,
-      "bbox": [72, 140, 510, 220],
-      "text": "...",
-      "confidence": 0.82
-    }
-  ]
-}
-```
-
-Current baseline provides extractive answers and cited chunks. Generative answers require configured model provider or cloud.
-
-## `pdf.ai.rag.search`
-
-### Purpose
-
-Search local indexed chunks and return cited matches without composing an answer.
-
-### Output
-
-```json
-{
-  "matches": [
-    {
-      "chunk_id": "chunk_000001",
-      "page_number": 1,
-      "bbox": [0, 0, 612, 792],
-      "text": "...",
-      "score": 0.75
-    }
-  ]
-}
-```
-
-Current baseline is local keyword search over chunks created by `pdf.ai.rag.ingest`.
-
-## `pdf.ai.rag.chat`
-
-### Purpose
-
-Ask a local PDF in one tool call and return an extractive answer, page/bbox citations, a cited PDF answer report, and a highlighted source PDF.
-
-### Input
-
-```json
-{
-  "input_path": "./paper.pdf",
-  "question": "What does this document say about local deployment?",
-  "index_path": "./paper.index.json",
-  "report_output_path": "./paper-chat-report.pdf",
-  "highlight_output_path": "./paper-chat-highlighted.pdf",
-  "top_k": 5,
-  "style_pack": "business_report_modern"
-}
-```
-
-If output paths are omitted, the local runner creates them under `.agentpdf-out/rag-chat/<job>/`.
-
-### Output
-
-```json
-{
-  "answer": "No cloud key required.",
-  "citation_count": 1,
-  "pages_cited": [1],
-  "report_path": "./paper-chat-report.pdf",
-  "highlighted_path": "./paper-chat-highlighted.pdf"
-}
-```
-
-Current baseline is local and extractive. It chains `ingest`, `query`, `export_report`, and `highlight_sources` while preserving each artifact and step result for agents.
-
-## `pdf.ai.rag.cite_answer`
-
-### Purpose
-
-Map an existing answer back to local page and bbox evidence from an okpdf RAG index.
-
-### Input
-
-```json
-{
-  "index_path": "./.agentpdf/indexes/paper/index.json",
-  "answer": "The document says no cloud key is required.",
-  "top_k": 5
-}
-```
-
-### Output
-
-```json
-{
-  "citation_mode": "page_bbox",
-  "citation_count": 2,
-  "citations": [
-    {
-      "chunk_id": "chunk_000004",
-      "page_number": 1,
-      "bbox": [0, 0, 612, 792],
-      "text": "No cloud key required.",
-      "score": 0.8
-    }
-  ]
-}
-```
-
-Current baseline is local and extractive: it ranks stored chunks against the supplied answer and returns supporting citations. It does not generate or rewrite the answer.
-
-## `pdf.ai.rag.highlight_sources`
-
-### Purpose
-
-Create a highlighted copy of the source PDF from local page/bbox citations.
-
-### Input
-
-```json
-{
-  "index_path": "./.agentpdf/indexes/paper/index.json",
-  "answer": "The document says no cloud key is required.",
-  "output_path": "./paper-highlighted.pdf",
-  "top_k": 5,
-  "highlight_color": "fff59d"
-}
-```
-
-`query` can be supplied instead of `answer` when the caller wants to highlight search matches.
-
-### Output
-
-```json
-{
-  "citation_count": 2,
-  "highlighted_pages": [1],
-  "output_path": "./paper-highlighted.pdf",
-  "citations": []
-}
-```
-
-Current baseline is local and deterministic. It copies the source PDF from the RAG index, adds PDF highlight annotations for matched citation bboxes, writes a new PDF artifact, and validates the generated PDF.
-
-## `pdf.ai.rag.export_report`
-
-### Purpose
-
-Create a cited PDF answer report from a local RAG index.
-
-### Input
-
-```json
-{
-  "index_path": "./.agentpdf/indexes/paper/index.json",
-  "question": "What does the document say about local deployment?",
-  "answer": "The document says no cloud key is required.",
-  "output_path": "./paper-rag-report.pdf",
-  "top_k": 5,
-  "include_citations": true,
-  "style_pack": "plain_report"
-}
-```
-
-If `answer` is omitted, the local query tool produces an extractive answer first.
-
-### Output
-
-```json
-{
-  "output_path": "./paper-rag-report.pdf",
-  "citation_count": 2,
-  "pages_cited": [1],
-  "answer_mode": "provided_answer_with_local_citations"
-}
-```
-
-Current baseline is local and deterministic. It writes a new PDF artifact containing the question, answer, source metadata, citation snippets, page numbers, bboxes, and limitations, then validates the generated PDF.
-
-## `pdf.ai.create.*`
-
-PDF creation supports a local deterministic create-agent baseline first. Hosted model generation remains a later layer.
-
-### `pdf.ai.create.from_prompt`
-
-Local, open-source, deterministic:
-
-- Inputs: `prompt`, `output_path`, optional `template`, optional `style_pack`, optional JSON `data`, optional `title`.
-- Built-in templates: `one_pager`, `business_report`, `research_brief`, `proposal`, `worksheet`, `resume`, `invoice`.
-- Built-in style packs include `paper_ink`, `business_report_modern`, `resume_modern`, and `invoice_clean`.
-- Color overrides accept `primary`, `accent`, and `text` hex values, for example `--color primary=#4f46e5`.
-- The tool selects a template from the prompt when no template is supplied, renders Markdown, creates a PDF, validates the PDF, and returns the generated Markdown plus an agent plan.
-- `invoice`, `resume`, `worksheet`, and `proposal` have structured renderers for common JSON fields. The output includes `template_renderer` so agents can tell whether a specialized renderer or the generic sections renderer was used.
-
-### `pdf.ai.create.templates`
-
-Local template discovery for agents. It returns template ids, names, default sections, default style packs, field contracts, layout slots, sample data, preview tool ids, style pack metadata, supported color keys, and `cloud_required: false`.
-
-### `pdf.ai.create.template_packs`
-
-Local template pack discovery for agents. A template pack groups reusable templates, required/optional fields, layout slots, supported agent block types, target profiles, color schemes, sample data, and license metadata. This is the OSS boundary for future hosted template galleries.
-
-The starter pack includes local templates for technical audits, research briefs, evidence packets, resumes, invoices, proposals, worksheets, and media review decks. These are deterministic OSS templates; future hosted galleries can add more templates without changing the local tool contract.
-
-### `pdf.ai.create.validate_template_pack`
-
-Validates a local template pack before use. The validation report includes pack id, template count, field contracts, layout slots, supported block types, color scheme ids, warnings, errors, and whether each template is agent-ready.
-
-### `pdf.ai.create.plan_template_pack`
-
-Plans a local create call from a template pack, optional Target PDF Profile, and optional Context Packet. It scores candidate templates by target-profile match and context block-type coverage, selects a color scheme, and returns a `create_payload` that can be passed directly to `pdf.ai.create.from_template_pack`. The optional output artifact validates against `schemas/template-pack-plan.schema.json`.
-
-### `pdf.ai.create.agent`
-
-Runs the local deterministic create agent in one call: template-pack planning, Context Packet classification when context is supplied, PDF creation, render-check, blank-page check, Context Packet reporting, and evidence coverage report. The result includes `usage.create_agent_run`, which records the ordered tool chain, selected template, selected color scheme, output PDF, composition artifact, template layer manifest artifact, plan artifact, context classification artifact, coverage artifact, nested ToolResult evidence, `slot_routing_plan`, `template_layer_manifest`, and `evidence_coverage`. The run object validates against `schemas/create-agent-run.schema.json`.
-
-### `pdf.ai.create.from_template_pack`
-
-Creates a validated PDF from a template pack entry. The agent selects `template_id` and optional `color_scheme`; okpdf resolves the base local template, applies sample or supplied `data`, renders the PDF, validates it, and returns the nested create result. Agents can set `renderer=html` plus optional `html_output_path` to create an auditable HTML package first, copy safe local assets into a sibling assets directory, write an asset manifest and package validation report, then render that package into the final PDF. Supplied `data.blocks` can include `section`, `code`, `table`, `image`, `slide`, `audio_reference`, `video_reference`, `media_reference`, and `citation` blocks with `target_slot` and `source_refs`; these render into the PDF and are recorded in the sibling composition source map. Agents can also pass `context_packet_path` or `context_packet` to auto-map packet items into target-profile-aware template blocks: text/document/PDF items become sections, code becomes code blocks, inline tables become tables, images become embedded image blocks, web links become citations, document-profile media becomes `audio_reference`, `video_reference`, or `media_reference`, and slide profiles can keep media as slide blocks. The result includes `slot_routing_plan`, an agent-readable placement report with route ids, target slots, source refs, template block-type checks, target profile block compatibility, candidate target-profile slots, slot-known facts, and routing reasons. It also writes a sibling `.layers.json` artifact validating against `schemas/template-layer-manifest.schema.json`; each layer maps a rendered block to its slot, source refs, source kinds, estimated normalized-page anchor, and edit policy for patch/edit agents. `pdf.patch.plan` can use those layer refs for append-only notes or `regenerate_block` operations that append an audited regenerated block appendix to a new PDF artifact without mutating the original block. Image blocks validate the local image path and record dimensions and MIME type as block evidence; citation blocks can map URL refs as `web_link` source evidence.
-
-### `pdf.ai.create.template_preview`
-
-Local template preview for agents. It uses the template catalog's sample data unless custom `data` is supplied, creates a real PDF through the local create agent, validates the result, and returns the nested `create_result` evidence. This is the local equivalent of trying a template before committing to a production artifact.
-
-CLI example:
-
-```bash
-okpdf create templates --json
-```
-
-CLI example:
-
-```bash
-okpdf create template-packs -o .agentpdf-out/template-packs.json --json
-okpdf create validate-template-pack examples/template-packs/local-agent-starter.json \
-  -o .agentpdf-out/template-pack.validation.json \
-  --json
-okpdf create plan-template-pack examples/template-packs/local-agent-starter.json \
-  --target-profile technical_audit \
-  --context-packet .agentpdf-out/context.packet.json \
-  --planned-output .agentpdf-out/board-audit.pdf \
-  -o .agentpdf-out/board-audit.plan.json \
-  --json
-okpdf create agent examples/template-packs/local-agent-starter.json \
-  --target-profile technical_audit \
-  --context-packet .agentpdf-out/context.packet.json \
-  -o .agentpdf-out/board-audit.pdf \
-  --plan-output .agentpdf-out/board-audit.plan.json \
-  --coverage-output .agentpdf-out/board-audit.coverage.json \
-  --context-classification-output .agentpdf-out/board-audit.context-classification.json \
-  --json
-okpdf create from-template-pack examples/template-packs/local-agent-starter.json \
-  --template board_audit \
-  --color-scheme executive_blue \
-  --data examples/create-data/agent-block-audit.json \
-  -o .agentpdf-out/board-audit.pdf \
-  --renderer html \
-  --html-output .agentpdf-out/board-audit.html \
-  --json
-```
-
-CLI example:
-
-```bash
-okpdf create preview invoice \
-  -o .agentpdf-out/invoice-preview.pdf \
-  --json
-```
-
-CLI example:
-
-```bash
-okpdf create from-prompt "Create a research brief about local PDF agents." \
-  -o .agentpdf-out/research-brief.pdf \
-  --template research_brief \
-  --style-pack paper_ink \
-  --color primary=#4f46e5 \
-  --color accent=#f59e0b \
-  --json
-```
-
-REST example:
-
-```bash
-curl -X POST http://127.0.0.1:7331/v1/tools/pdf.ai.create.from_prompt/run \
-  -H 'Content-Type: application/json' \
-  -d '{"prompt":"Create a proposal about local PDF template agents.","output_path":"proposal.pdf","template":"proposal","style_pack":"business_report_modern"}'
-```
-
-Preview REST example:
-
-```bash
-curl -X POST http://127.0.0.1:7331/v1/tools/pdf.ai.create.template_preview/run \
-  -H 'Content-Type: application/json' \
-  -d '{"template":"invoice","output_path":"invoice-preview.pdf"}'
-```
-
-Structured invoice CLI example:
-
-```bash
-okpdf create from-prompt "Create an invoice for okpdf local template work." \
-  -o .agentpdf-out/invoice.pdf \
-  --template invoice \
-  --data examples/create-data/invoice.json \
-  --json
-```
-
-Expected output includes:
-
-```json
-{
-  "tool": "pdf.ai.create.from_prompt",
+  "job_id": "job_...",
   "status": "succeeded",
-  "usage": {
-    "template_id": "research_brief",
-    "template_renderer": "generic",
-    "style_pack": "paper_ink",
-    "agent_plan": {"cloud_required": false}
-  },
-  "validation": {"status": "passed"}
+  "tool": "office.workflow.docset_to_sheet",
+  "artifacts": [],
+  "validation": {},
+  "warnings": [],
+  "usage": {},
+  "next_recommended_tools": []
 }
 ```
 
-Preview output includes:
+## AI Layers
+
+### Source Understanding
+
+AI may help normalize mixed source material into a Source Graph:
+
+- PDF pages, text blocks, bboxes, annotations, signatures, attachments, and render evidence.
+- Word paragraphs, headings, tables, comments, tracked changes, styles, sections, and fields.
+- Excel worksheets, tables, formulas, named ranges, charts, pivots, comments, data validation, and workbook-level metadata.
+- PowerPoint slides, placeholders, shapes, speaker notes, media, transitions, charts, and theme tokens.
+- Web pages, screenshots, images, audio/video transcripts, code snapshots, CSV/JSON data, and connector documents.
+
+Every derived node should include source locator, confidence, extraction method, warnings, and provenance. Locators must use the native coordinate system of the source:
+
+- PDF: page number and optional bbox.
+- Word: paragraph/table/run/comment ids and optional rendered page/bbox evidence.
+- Excel: sheet name, table name, cell/range address, formula refs, chart ids.
+- PowerPoint: slide number, shape id, placeholder id, notes region, optional screenshot bbox.
+- Media: timestamp or transcript segment.
+- Code: file path, symbol, and line range.
+
+### Target Planning
+
+AI may help choose the output artifact profile and produce an execution plan. The output should be structured, not prose-only:
+
+- Target artifact type: `pdf`, `docx`, `xlsx`, `pptx`, or `bundle`.
+- Artifact profile: report, board deck, evidence workbook, financial model, research brief, contract packet, training material, pitch deck, audit bundle.
+- Office IR or Composition IR.
+- Source refs for each claim, table, chart, paragraph, slide, or formula.
+- Validation requirements and known limitations.
+- Recommended deterministic tools.
+
+### Patch Assistance
+
+AI may propose edits, but execution should use explicit patch manifests. A patch proposal should name the target object and the policy that permits editing:
 
 ```json
 {
-  "tool": "pdf.ai.create.template_preview",
-  "status": "succeeded",
-  "usage": {
-    "template_id": "invoice",
-    "data_source": "template_sample_data",
-    "create_result": {"tool": "pdf.ai.create.from_prompt"}
+  "operation": "replace_paragraph",
+  "target": {
+    "format": "docx",
+    "paragraph_id": "p_0042",
+    "source_ref": "src_contract_1:p_0042"
   },
-  "validation": {"status": "passed"}
+  "replacement": {
+    "markdown": "Updated renewal language..."
+  },
+  "validation_required": ["word.render_check", "word.style_check", "office.evidence.coverage"]
 }
 ```
 
-Limitations:
+Do not claim arbitrary lossless body-text editing for opaque PDFs. If the source is HTML-first or template-generated and includes layer evidence, okoffice may rerender from editable source. Otherwise it should create a new artifact with transparent patch evidence.
 
-- This is not a hidden cloud LLM call.
-- It does not claim arbitrary design generation.
-- It creates polished, template-backed PDFs from local deterministic rules and optional structured data.
+### Verification Assistance
 
-### Future AI Mode
+AI may help identify unsupported claims, inconsistent numbers, weak citations, risky redactions, inaccessible layouts, broken formulas, and slide/story problems. These checks complement deterministic validators; they do not replace them.
 
-Cloud/BYOK/optional:
+## Target Namespaces
 
-- Prompt-to-PDF.
-- Context packets to learning PDFs, resumes, papers, summary reports, evidence packets, training handouts, and presentation PDFs.
-- Video/audio/image/document/code/link/data context to PDF artifacts.
-- Brand/style transformation.
-- Model-generated content.
-- Composition IR planning with source refs.
-- Target PDF profile selection.
-- Speaker notes and appendix generation.
+### `office.ai.parse.lite`
 
-The generated artifact must still pass through rendering, validation, and evidence coverage checks.
+Local, free, and deterministic-first.
 
-## `pdf.ai.edit.*`
+Purpose: produce a normalized Office IR from clean digital PDF/DOCX/XLSX/PPTX files.
 
-Separate safe edits from AI regeneration.
+Baseline behavior:
 
-### Safe deterministic edits
+- PDF: uses current `pdf.ai.parse.lite`.
+- Word: extracts headings, paragraphs, tables, comments, styles, fields, and relationships from DOCX packages.
+- Excel: extracts workbook structure, sheets, tables, values, formulas, named ranges, charts, and comments without evaluating macros.
+- PowerPoint: extracts slide tree, placeholders, text, notes, shapes, media refs, charts, and theme references.
+- Emits warnings when layout, formulas, scans, macros, or media require optional workers.
 
-Use `pdf.edit.*` tools.
+### `office.ai.parse.agentic`
 
-### AI regeneration edits
+Optional advanced mode for OCR, VLM, complex tables, chart interpretation, formula explanation, scan handling, and semantic layout recovery. This may be cloud-backed or configured through optional local workers.
 
-Pipeline:
+It must disclose model/provider usage, token cost when applicable, confidence, and unsupported regions.
+
+### `office.ai.extract.schema`
+
+Extract structured fields from mixed Office/PDF sources into a caller-provided JSON schema.
+
+Example:
+
+```json
+{
+  "sources": [
+    {"kind": "local_path", "path": "contracts/vendor-a.docx"},
+    {"kind": "local_path", "path": "invoices/vendor-a.pdf"}
+  ],
+  "schema": {
+    "type": "object",
+    "properties": {
+      "vendor": {"type": "string"},
+      "renewal_date": {"type": "string"},
+      "annual_amount": {"type": "number"}
+    },
+    "required": ["vendor", "annual_amount"]
+  },
+  "evidence_required": true
+}
+```
+
+Output should include extracted rows, source refs, confidence, missing fields, and recommended validation.
+
+### `office.ai.rag.*`
+
+RAG becomes evidence search across an Office bundle, not only a PDF chat feature.
+
+Target tools:
+
+- `office.ai.rag.ingest`: index source graph nodes from PDF/DOCX/XLSX/PPTX and sidecar context.
+- `office.ai.rag.search`: return cited matches without generating prose.
+- `office.ai.rag.query`: produce extractive or configured generative answers with evidence.
+- `office.ai.rag.cite_answer`: verify answer spans against source refs.
+- `office.ai.rag.export_report`: create a cited report artifact.
+
+The current `pdf.ai.rag.*` tools remain the PDF-only compatibility surface.
+
+### `office.ai.create.*`
+
+AI-assisted creation should produce Office IR and deterministic render payloads.
+
+Target tools:
+
+- `office.ai.create.document`: create a Word report from source graph and style profile.
+- `office.ai.create.workbook`: create an Excel workbook from extracted evidence, formulas, tables, and charts.
+- `office.ai.create.deck`: create a PowerPoint deck from claims, evidence, chart plans, and a deck profile.
+- `office.ai.create.pdf`: create a PDF deliverable through the current PDF domain.
+- `office.ai.create.bundle`: create a multi-artifact package with manifest, source map, and validation reports.
+
+Creation tools should return source coverage, missing-evidence warnings, layout/render checks, and next recommended review tools.
+
+### `office.ai.review.*`
+
+Review tools operate across formats:
+
+- `office.ai.review.claims`: unsupported or weakly sourced claims.
+- `office.ai.review.numbers`: mismatched figures across documents, sheets, and slides.
+- `office.ai.review.formulas`: formula risk, broken references, suspicious hardcodes, circular refs.
+- `office.ai.review.deck_story`: slide logic, audience fit, hierarchy, and notes coverage.
+- `office.ai.review.document_quality`: Word report structure, comments, styles, accessibility, and metadata.
+- `office.ai.review.security`: sensitive data, metadata, macro presence, external links, redaction safety.
+
+## Hero Workflows
+
+### `office.workflow.docset_to_sheet`
+
+Turn multiple Word/PDF sources into a cited Excel workbook.
 
 ```text
-PDF -> parse IR -> transform content/style -> render new PDF -> validate -> diff report
+office.context.build_packet
+-> office.ai.extract.schema
+-> sheet.create.workbook
+-> sheet.validation.formulas
+-> office.evidence.coverage
 ```
 
-Never promise arbitrary lossless in-place PDF body text editing.
+### `office.workflow.sheet_to_deck`
 
-## AI model provider design
+Turn a workbook into an executive PowerPoint deck.
 
-Open-source project may support:
+```text
+sheet.inspect.workbook
+-> sheet.extract.tables
+-> deck.compose.plan
+-> deck.create.presentation
+-> deck.validation.render_check
+```
 
-- `none`: no model, deterministic only.
-- `byok`: user-configured model keys.
-- `local`: local model provider.
-- `cloud`: future hosted AgentPDF service.
+### `office.workflow.docset_to_board_pack`
 
-Public code should not include private API keys or hard-coded hosted endpoints.
+Turn mixed source docs into a workbook, PPT deck, Word memo, and final PDF bundle.
+
+```text
+office.context.build_packet
+-> office.ai.extract.schema
+-> sheet.create.workbook
+-> deck.create.presentation
+-> word.create.report
+-> office.bundle.export
+-> office.bundle.verify
+```
+
+## Worker Tiers
+
+### Tier 0: deterministic OSS
+
+No model dependency. Uses package parsing, XML/relationship inspection, render checks, manifest generation, and safe filesystem rules.
+
+### Tier 1: optional local workers
+
+Feature-flagged OCR, local embeddings, chart/table helpers, browser rendering, LibreOffice-compatible conversions, or document screenshot services. License notes must be explicit.
+
+### Tier 2: configured AI providers
+
+LLM/VLM/OCR providers configured by the user. No proprietary hosted URLs or keys are baked into the OSS core.
+
+### Tier 3: future hosted okoffice
+
+Managed workers, enterprise queues, connectors, billing, and governance. This boundary must remain outside the OSS core.
+
+## Compatibility Map
+
+| Current PDF tool | Target okoffice role |
+|---|---|
+| `pdf.ai.parse.lite` | `office.ai.parse.lite` for PDF sources |
+| `pdf.ai.rag.ingest` | `office.ai.rag.ingest` on PDF source nodes |
+| `pdf.ai.rag.query` | `office.ai.rag.query` with PDF citations |
+| `pdf.ai.create.from_prompt` | `office.ai.create.pdf` compatibility path |
+| `pdf.ai.create.from_template_pack` | PDF renderer behind `office.ai.create.bundle` |
+| `pdf.ai.review.sensitive_data_detect` | `office.ai.review.security` for PDF sources |
+
+## Failure Model
+
+AI-assisted tools should fail loudly and helpfully:
+
+```json
+{
+  "status": "failed",
+  "error": {
+    "code": "worker_unavailable",
+    "message": "The requested chart interpretation worker is not configured.",
+    "details": {
+      "requested_worker": "vision.chart_interpreter",
+      "fallback_available": "sheet.extract.tables"
+    }
+  },
+  "warnings": [
+    "Workbook formulas were inspected structurally but not recalculated."
+  ],
+  "next_recommended_tools": ["sheet.inspect.workbook"]
+}
+```
+
+The agent should always know what is missing, what evidence was produced, and which deterministic tool can safely run next.

@@ -1,83 +1,171 @@
-# 20 — Benchmarks and Competitive Matrix
+# 20 - Benchmarks and Competitive Matrix
 
-## Benchmark goal
+## Benchmark Goal
 
-Track whether AgentPDF is becoming complete, reliable, and agent-friendly.
+Track whether okoffice is becoming complete, reliable, and agent-friendly across Word, Excel, PowerPoint, PDF, and cross-format workflows.
 
-## Tool coverage matrix
+The benchmark should answer:
 
-Compare against mainstream PDF SaaS categories:
+- Can an agent discover the right tool?
+- Does the tool return structured evidence?
+- Does the output validate?
+- Are source refs preserved?
+- Are limitations explicit?
+- Can the same workflow run locally through CLI, MCP, REST, and SDK?
 
-- Merge.
-- Split.
-- Compress.
-- Convert to PDF.
-- Convert from PDF.
-- Edit.
+## Tool Coverage Matrix
+
+Compare against mainstream PDF utilities, Office automation tools, document AI systems, and agent-native infra projects.
+
+PDF:
+
+- Merge, split, compress, repair.
+- Convert to/from PDF.
+- Render pages.
+- Extract text/images.
 - OCR.
-- Sign.
 - Redact.
-- Protect/unlock.
-- Page numbers.
-- Watermark.
-- Rotate.
-- Crop.
+- Protect/unlock authorized files.
+- Page numbers, watermark, rotate, crop.
 - Compare.
-- Repair.
 - Forms.
-- AI summarize.
-- AI translate.
-- AI RAG.
-- AI create.
-- AI edit.
 
-## Agent-readiness matrix
+Word:
+
+- Inspect package.
+- Extract headings/paragraphs/tables/comments.
+- Detect tracked changes and metadata.
+- Create report.
+- Patch paragraph/table/comment.
+- Validate styles, accessibility, render preview.
+
+Excel:
+
+- Inspect workbook.
+- Extract sheets/tables/formulas/charts/named ranges.
+- Detect hidden sheets and external links.
+- Create evidence workbook.
+- Validate formulas and chart refs.
+- Create/validate financial model.
+
+PowerPoint:
+
+- Inspect deck.
+- Extract slides/shapes/notes/media/charts.
+- Create deck from claim spine.
+- Validate contact sheet.
+- Patch slide text/chart/notes.
+
+Cross-format:
+
+- DOCX/PDF to evidence workbook.
+- Workbook to deck.
+- Report/deck/workbook to PDF handout.
+- Bundle export/verify.
+- Source map and artifact graph.
+- Patch plan/apply/verify.
+
+## Agent-Readiness Matrix
 
 For each tool, score:
 
+- CLI support.
 - MCP support.
 - REST support.
-- CLI support.
-- JSON output.
+- SDK support.
+- JSON schema.
+- Structured ToolResult.
 - Validation report.
 - Artifact manifest.
-- Error code.
+- Source refs.
+- Stable error code.
 - Tests.
-- Docs.
+- Docs examples.
+- OSS/cloud boundary.
 
-## Quality benchmarks
+## Quality Benchmarks
+
+PDF:
 
 - Correct page counts.
 - Render success rate.
-- Output file size.
-- Processing time.
-- Compression ratio.
-- OCR confidence.
-- Extraction accuracy.
-- Table extraction accuracy.
-- Citation correctness.
+- Blank page detection.
+- Visual diff accuracy.
 - Redaction verification.
 
-## Performance tiers
+Word:
 
-Track:
+- Heading/paragraph/table extraction accuracy.
+- Comment/tracked-change detection.
+- Style preservation.
+- Metadata removal verification.
+- Render preview consistency.
 
-- Tiny: 1-5 pages.
-- Small: 6-50 pages.
-- Medium: 51-300 pages.
-- Large: 301-1000 pages.
-- Huge: >1000 pages.
+Excel:
 
-## Public benchmark page
+- Sheet/table/range detection.
+- Formula reference correctness.
+- Formula error detection.
+- Named range extraction.
+- Chart source binding accuracy.
+- Hidden/external-link detection.
+
+PowerPoint:
+
+- Slide count and order.
+- Shape/text extraction.
+- Notes extraction.
+- Media relationship detection.
+- Contact-sheet render success.
+- Placeholder overflow warnings.
+
+Cross-format:
+
+- Source-ref coverage.
+- Claim citation correctness.
+- Number consistency from workbook to deck/report.
+- Bundle verification.
+- Workflow replayability.
+
+## Performance Tiers
+
+Track by file and workflow size:
+
+- Tiny: 1-5 pages/slides/sheets.
+- Small: 6-50 pages/slides or up to 10 sheets.
+- Medium: 51-300 pages/slides or up to 50 sheets.
+- Large: 301-1000 pages/slides or large workbooks.
+- Huge: >1000 pages/slides or enterprise batches.
+
+For workbooks, also track:
+
+- Formula count.
+- Cell count.
+- Chart count.
+- External link count.
+
+## Public Benchmark Page
 
 A future docs page should show transparent status:
 
 ```text
-Tool                Status     CLI  MCP  API  Tests  Validation
-merge               stable     yes  yes  yes  yes    yes
-split               stable     yes  yes  yes  yes    yes
-compress            stable     yes  yes  yes  yes    yes
-repair              beta       yes  yes  yes  yes    yes
-pdf_to_docx         planned    no   no   no   no     no
-agentic_parse       cloud      no   no   no   no     no
+Tool                         Status     CLI  MCP  API  SDK  Tests  Validation
+pdf.organize.merge           stable     yes  yes  yes  yes  yes    yes
+pdf.validation.render_check  stable     yes  yes  yes  yes  yes    yes
+word.inspect.document        planned    no   no   no   no   no     no
+sheet.inspect.workbook       planned    no   no   no   no   no     no
+deck.inspect.presentation    planned    no   no   no   no   no     no
+office.workflow.docset_to_sheet planned no   no   no   no   no     no
 ```
+
+## Competitive Lens
+
+okoffice should be judged against:
+
+- PDF utilities for breadth and self-hosted ergonomics.
+- Office automation tools for DOCX/XLSX/PPTX structure control.
+- Document AI systems for extraction and evidence quality.
+- Agent toolkits for MCP/REST/SDK friendliness.
+- OfficeCLI-style projects for schema-driven, single-binary Office operations.
+
+The winning bar is not "can it produce a file once"; it is "can an agent reliably produce, validate, cite, patch, and explain the file locally."

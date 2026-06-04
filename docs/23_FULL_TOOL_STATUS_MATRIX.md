@@ -2,6 +2,17 @@
 
 Total tools specified: **241**
 
+This matrix is the current machine-aligned `pdf.*` compatibility manifest. It should remain complete and unchanged until the okoffice tool manifest is added.
+
+This is not the okoffice public product map. The okoffice product map lives in `docs/38_OKOFFICE_TOOL_TAXONOMY.md` and is organized around Word, Excel, PowerPoint, PDF, bundles, source graphs, validation, and workflows.
+
+okoffice migration notes:
+
+- `pdf.*` remains the first implemented domain and current CLI/MCP/REST compatibility surface.
+- Future `office.*` tools should be added to a new okoffice manifest before they appear in this table.
+- Target domains include `office.inspect.*`, `word.*`, `sheet.*`, `deck.*`, `office.context.*`, `office.evidence.*`, `office.workflow.*`, `office.validation.*`, and `office.bundle.*`.
+- The intended product is multi-format Office infrastructure; this table records the currently implemented PDF-domain foundation.
+
 | Tool | Category | Status | OSS default |
 |---|---|---:|---:|
 | `agent.setup.claude_code` | agent | beta | yes |
@@ -16,7 +27,7 @@ Total tools specified: **241**
 | `pdf.context.video_transcribe` | context | planned/cloud | no |
 | `pdf.context.video_keyframes` | context | planned/cloud | no |
 | `pdf.context.audio_transcribe` | context | planned/cloud | no |
-| `pdf.context.web_capture` | context | planned/cloud | no |
+| `pdf.context.web_capture` | context | beta | yes |
 | `pdf.context.code_snapshot` | context | beta | yes |
 | `pdf.context.data_profile` | context | beta | yes |
 | `pdf.target.profiles` | target | beta | yes |

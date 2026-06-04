@@ -1,15 +1,15 @@
 <p align="center">
-  <img src="assets/brand/okpdf-logo.png" alt="okpdf logo" width="160" />
+  <img src="assets/brand/okpdf-logo.png" alt="okoffice logo" width="160" />
 </p>
 
-<h1 align="center">okpdf</h1>
+<h1 align="center">okoffice</h1>
 
 <p align="center">
-  Local-first, agent-native PDF infrastructure for CLI, MCP, REST, and self-hosted workflows.
+  Local-first, agent-native Office infrastructure for Word, Excel, PowerPoint, PDF, bundles, CLI, MCP, REST, and SDK workflows.
 </p>
 
 <p align="center">
-  <a href="https://github.com/tover0314-w/okpdf"><img alt="GitHub repo" src="https://img.shields.io/badge/github-okpdf-0b1220"></a>
+  <a href="https://github.com/tover0314-w/okpdf"><img alt="GitHub repo" src="https://img.shields.io/badge/github-okoffice-0b1220"></a>
   <img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-blue">
   <img alt="TypeScript" src="https://img.shields.io/badge/typescript-sdk-3178c6">
   <img alt="Node.js" src="https://img.shields.io/badge/node.js-20%2B-339933">
@@ -20,564 +20,157 @@
 
 <p align="center">
   <a href="README.md">English</a>
-  ·
-  <a href="README.zh-CN.md">简体中文</a>
-  ·
+  |
+  <a href="README.zh-CN.md">Simplified Chinese</a>
+  |
   <a href="docs/i18n/README.md">Translation guide</a>
 </p>
 
-okpdf is building the open-source foundation for agent-native PDF infrastructure: inspect, organize, render, extract, compose, patch, validate, and expose evidence-backed document artifacts through local interfaces that coding agents can call safely.
+okoffice is the open-source foundation for agent-native Office workflows. It gives coding agents and local automation systems a structured way to inspect, extract, create, edit, validate, cite, and bundle Word documents, Excel workbooks, PowerPoint decks, PDFs, and evidence-backed artifacts.
 
-The public CLI is `okpdf`. The legacy/internal command `agentpdf` still works for compatibility. The TypeScript/Node package lives at `packages/agentpdf-node` and is named `@okpdf/agentpdf-node`.
+The old project identity was `agentpdf` / `okpdf`. Those names are now legacy compatibility surfaces for the current PDF-domain implementation. The product direction is okoffice.
 
-## Why Star This
+## The Product Loop
 
-- Complete public tool map from day one: 241 public tool names are discoverable now.
-- Local-first by default: no hosted URL, paid key, or cloud dependency required.
-- Agent-first outputs: every tool returns structured JSON with artifacts, validation, warnings, and next recommended tools.
-- Bigger than RAG: the product direction covers context packets, target PDF profiles, source graphs, composition IR, PDF patch transactions, evidence coverage, and multimodal context-to-PDF workflows.
-- MCP, REST, and TypeScript ready: Claude Code, Claude Desktop, Cursor, Codex-style, Kilo Code, OpenClaw-style agents, Node scripts, and web apps can call the same tool layer.
-- Safety-minded PDF workflow: explicit paths, no input mutation, path traversal rejection, metadata removal, and validation for generated PDFs.
-- License-safe core: default dependencies avoid GPL/AGPL.
+```text
+many sources
+  -> source graph
+  -> evidence extraction
+  -> workbook/model
+  -> Word report + PowerPoint deck + PDF packet
+  -> validation
+  -> portable okoffice bundle
+```
+
+The flagship workflow:
+
+```text
+multiple Word/PDF sources -> cited Excel workbook -> polished PowerPoint deck -> executive memo -> PDF handout -> audit bundle
+```
+
+## Why This Exists
+
+- Agents need structured tools, not one-off scripts.
+- Office files need native locators: paragraphs, tables, comments, cells, formulas, charts, slides, shapes, notes, pages, and bboxes.
+- Generated artifacts need validation evidence, not just `success: true`.
+- Local OSS should work without a cloud account.
+- Cloud should add workers, connectors, persistence, batch scale, and governance without becoming a hidden dependency.
+
+## Target Tool Surface
+
+| Domain | Example tools |
+|---|---|
+| Inspect | `office.inspect.file`, `word.inspect.document`, `sheet.inspect.workbook`, `deck.inspect.presentation`, `pdf.inspect.document` |
+| Extract | `word.extract.tables`, `sheet.extract.formulas`, `deck.extract.notes`, `office.extract.schema` |
+| Create | `word.create.report`, `sheet.create.evidence_workbook`, `deck.create.presentation`, `pdf.create.handout` |
+| Patch | `office.patch.plan`, `word.patch.apply`, `sheet.patch.apply`, `deck.patch.apply` |
+| Validate | `word.validation.document`, `sheet.validation.formulas`, `deck.validation.contact_sheet`, `pdf.validation.render_check` |
+| Evidence | `office.context.build_packet`, `office.evidence.coverage`, `office.source_map.create` |
+| Workflow | `office.workflow.docset_to_sheet`, `office.workflow.sheet_to_deck`, `office.workflow.board_pack` |
+| Bundle | `office.bundle.export`, `office.bundle.verify` |
+| Agents | `office.agent.setup.codex`, `office.agent.setup.claude_code`, `office.agent.setup.cursor` |
+
+The current machine manifest still contains **241** public `pdf.*` and agent setup tools. That manifest is preserved for compatibility while the okoffice namespace is introduced deliberately.
 
 ## What Works Today
 
-| Family | Tools | Interfaces |
-|---|---|---|
-| Inspect | document and page-level facts, including text/image/render evidence | CLI, MCP, REST, Node.js |
-| Organize | merge, split, extract/remove/reorder/rotate pages, insert blank pages | CLI, MCP, REST |
-| Optimize | content-stream compression, parseable PDF repair/rewrite | CLI, MCP, REST, Node.js |
-| Convert | image/Markdown/Text to PDF, render pages to images, extract text and embedded images | CLI, MCP, REST, Node.js |
-| Create Agent | local prompt-to-template PDF creation with templates, style packs, context reports, validation, coverage, and optional audit bundles | CLI, MCP, REST, Node.js |
-| Context / Compose | context packets, target PDF profiles, source graphs, composition IR, and context-backed PDF creation | CLI, MCP, REST, Node.js |
-| Evidence / Patch | context packet reports, coverage reports, and structured append transactions for Markdown, code, tables, images, citations, media references, and slide pages that do not mutate inputs | CLI, MCP, REST, Node.js |
-| Edit | text watermark, page numbers | CLI, MCP, REST |
-| Metadata | read, update, remove | CLI, MCP, REST |
-| Validation | generated PDF validation, render check, blank page check, rendered visual diff | CLI, MCP, REST, Node.js |
-| AI-lite | local Document IR parse, PDF-to-JSON/Markdown, local RAG ingest/query with citations | CLI, MCP, REST |
-| Forms / OCR Scan | local text-form creation/import/validation and image-only scan PDF preparation with OCR limitation warnings | CLI, MCP, REST, Node.js |
-| Workflow | local-first agent workflow planning, execution, and reporting with per-step evidence | CLI, MCP, REST, Node.js |
-| SDK | TypeScript/Node REST client and Node CLI wrappers | Node.js |
-| Discovery | complete tool manifest | CLI, MCP, REST, Node.js |
+The runnable implementation is the legacy PDF domain:
 
-Planned next local tools include crop, attachments, richer repair diagnostics, better table parsing, and redaction verification. The current OSS baseline already includes local form field creation/import/validation, scan-to-PDF OCR preparation helpers, and rendered visual diff.
+- CLI command: `okpdf`
+- Internal Python package: `agentpdf`
+- Current TypeScript package: `@okpdf/agentpdf-node`
+- Current namespaces: `pdf.*` and `agent.setup.*`
 
-## Languages
+This compatibility layer already provides local PDF inspect, organize, render, validate, metadata, RAG-lite, workflow, artifact, patch, MCP, REST, and Node SDK surfaces. It is useful, but it is no longer the product boundary.
 
-- English is the canonical README and documentation language for releases.
-- `README.zh-CN.md` is the Simplified Chinese entry point for local developers and agent users.
-- Translation rules, ownership, and update expectations live in [docs/i18n/README.md](docs/i18n/README.md).
-- New translations should preserve command examples, tool names, JSON fields, and file paths exactly unless the referenced artifact is language-specific.
+See [docs/42_LEGACY_PDF_COMPATIBILITY.md](docs/42_LEGACY_PDF_COMPATIBILITY.md) for the compatibility rules.
 
-## Install
+## What Comes Next
 
-```bash
-git clone git@github.com:tover0314-w/okpdf.git
-cd okpdf
-python scripts/setup_dev.py
-```
+The next implementation work should not add more PDF-only breadth by default. Build okoffice in this order:
+
+1. Add `okoffice` CLI and package-level naming without breaking `okpdf`.
+2. Add okoffice tool manifest scaffolding above the current `pdf.*` manifest.
+3. Add Office IR and source locator schemas.
+4. Add deterministic DOCX/XLSX/PPTX inspect tools.
+5. Add Word/Excel/PowerPoint validation reports.
+6. Add `office.workflow.docset_to_sheet`.
+7. Add `office.workflow.sheet_to_deck`.
+8. Add `office.workflow.board_pack`.
+9. Add optional workers for render/convert/OCR/formula/AI.
+10. Add hosted APIs only after the local contract is credible.
 
 ## Quickstart
 
+Current compatibility quickstart:
+
 ```bash
+python scripts/setup_dev.py
 python scripts/doctor.py
 python scripts/smoke.py
-okpdf tools list
-okpdf create text "Hello from okpdf" -o .agentpdf-out/hello.pdf --json
-okpdf agent setup kilo-code -o .agentpdf-out/kilo-code.mcp.json --safe-root . --json
-okpdf agent setup openclaw -o .agentpdf-out/openclaw.mcp.json --safe-root . --json
-```
-
-That is the happy path: install, check the environment, generate a validated PDF.
-The doctor report separates required runtime checks from optional capabilities such as Tesseract OCR and CJK fonts, so local agents can tell whether scan/OCR and multilingual output are fully enabled.
-
-### Authoring Workflow: Brief to Verified PDF
-
-AgentPDF can plan a local authoring route, build a storyboard, write page JSON, create an HTML/CSS source package, render that package to PDF, and run visual QA. By default `workflow research-deck` returns the plan; add `--execute` to run the HTML-to-PDF chain immediately.
-
-```bash
-okpdf authoring plan examples/research_deck_brief.json --json
-okpdf research source-cards --brief examples/research_deck_brief.json --sources examples/research_deck_sources.json --json
-okpdf research evidence-cards --source-cards examples/research_deck_source_cards.json --json
-okpdf design tokens --theme consulting --color primary_color=#123456 --json
-okpdf workflow research-deck examples/research_deck_brief.json \
-  --evidence-cards examples/research_deck_evidence.json \
-  --html-output output/deck.html \
-  --pdf-output output/deck.pdf \
-  --artifact-dir output/research-deck-artifacts \
-  --execute \
-  --json
-```
-
-The OSS path is local-first and deterministic. `pdf.research.*` normalizes agent-supplied metadata and keeps `fetch_status=not_fetched`; it does not browse or summarize remote pages. Hosted research, LLM synthesis, and managed browser renderers are future cloud or optional-worker candidates, not default core behavior.
-
-## Docker
-
-Run the local REST API in a container:
-
-```bash
-docker build -t okpdf/local:dev .
-docker run --rm -p 7331:7331 -v "$PWD:/workspace" okpdf/local:dev
-curl http://127.0.0.1:7331/healthz
-```
-
-Or use Compose:
-
-```bash
-docker compose up --build
-```
-
-The image runs as a non-root user, disables cloud/model calls by default, and exposes the same local REST API that MCP and the TypeScript SDK use.
-
-Common commands:
-
-```bash
+okpdf tools list --json
 okpdf inspect tests/fixtures/simple.pdf --json
-okpdf agent setup codex -o .agentpdf-out/codex.mcp.json --safe-root . --json
-okpdf agent setup kilo-code -o .agentpdf-out/kilo-code.mcp.json --safe-root . --json
-okpdf agent setup openclaw -o .agentpdf-out/openclaw.mcp.json --safe-root . --json
-okpdf inspect-pages tests/fixtures/text.pdf --pages 1 --render-check --json
-okpdf workflow plan --goal "Chat with this PDF and cite answers" --input-path .agentpdf-out/numbered.pdf --json
-okpdf workflow run examples/workflows/local-rag.json --json
-okpdf workflow run .agentpdf-out/plan.json --artifact-dir .agentpdf-out/workflows/chat --binding "<question>=What does this document say?" --binding "<answer>=This document is locally indexed." --json
-okpdf workflow report .agentpdf-out/run-result.json -o .agentpdf-out/workflow-report.md --json
-okpdf merge tests/fixtures/simple.pdf tests/fixtures/two_pages.pdf -o .agentpdf-out/merged.pdf --json
-okpdf reorder-pages .agentpdf-out/merged.pdf --order 3,1,2 -o .agentpdf-out/reordered.pdf --json
-okpdf insert-blank-pages .agentpdf-out/reordered.pdf --after-page 1 --count 1 -o .agentpdf-out/with-blank.pdf --json
-okpdf compress .agentpdf-out/with-blank.pdf -o .agentpdf-out/with-blank-compressed.pdf --json
-okpdf repair .agentpdf-out/with-blank-compressed.pdf -o .agentpdf-out/with-blank-repaired.pdf --json
-okpdf image-to-pdf cover.png -o .agentpdf-out/cover.pdf --json
-okpdf create markdown examples/sample-documents/business_report.md -o .agentpdf-out/business-report.pdf --style-pack business_report_modern --json
-okpdf create html-package --html "<main><h1>HTML First</h1><p>Inspectable source before PDF.</p></main>" -o .agentpdf-out/html-first.html --title "HTML First" --json
-okpdf render-html-package .agentpdf-out/html-first.html-manifest.json -o .agentpdf-out/html-first.pdf --json
-okpdf qa visual-report .agentpdf-out/html-first.pdf --html-package-manifest .agentpdf-out/html-first.html-manifest.json --pages 1 --json
-okpdf artifacts manifest --file .agentpdf-out/html-first.pdf --file .agentpdf-out/html-first.html --file .agentpdf-out/html-first.html-manifest.json -o .agentpdf-out/html-first.artifacts.json --title "HTML First Artifacts" --metadata workflow=html-first-createpdf --json
-okpdf artifacts graph --manifest .agentpdf-out/html-first.artifacts.json -o .agentpdf-out/html-first.artifact-graph.json --title "HTML First Artifact Graph" --json
-okpdf createpdf --html "<main><h1>CreatePDF</h1><p>HTML-first workflow with audit evidence.</p></main>" --html-output .agentpdf-out/createpdf.html --pdf-output .agentpdf-out/createpdf.pdf --artifact-dir .agentpdf-out/createpdf-audit --title "CreatePDF" --json
-okpdf create templates --json
-okpdf create template-packs -o .agentpdf-out/template-packs.json --json
-okpdf create validate-template-pack examples/template-packs/local-agent-starter.json -o .agentpdf-out/template-pack.validation.json --json
-okpdf create from-template-pack examples/template-packs/local-agent-starter.json --template board_audit --color-scheme executive_blue -o .agentpdf-out/board-audit.pdf --json
-okpdf evidence coverage-report .agentpdf-out/board-audit.composition.json -o .agentpdf-out/board-audit.coverage.json --json
-okpdf artifacts source-map --composition .agentpdf-out/board-audit.composition.json -o .agentpdf-out/board-audit.artifact-source-map.json --title "Board Audit Artifact Source Map" --json
-okpdf patch plan .agentpdf-out/board-audit.pdf --operations examples/patch-operations/layer-aware-reviewer-note.json -o .agentpdf-out/board-audit.layer.patch.json --composition .agentpdf-out/board-audit.composition.json --layers .agentpdf-out/board-audit.layers.json --reason "Append a layer-aware reviewer note." --json
-okpdf patch plan .agentpdf-out/board-audit.pdf --operations examples/patch-operations/regenerate-layer-block.json -o .agentpdf-out/board-audit.regenerate.patch.json --composition .agentpdf-out/board-audit.composition.json --layers .agentpdf-out/board-audit.layers.json --reason "Regenerate a template block with layer evidence." --json
-okpdf artifacts manifest --file .agentpdf-out/board-audit.pdf --file .agentpdf-out/board-audit.composition.json --file .agentpdf-out/board-audit.coverage.json --file .agentpdf-out/board-audit.artifact-source-map.json --file .agentpdf-out/board-audit.layer.patch.json -o .agentpdf-out/board-audit.artifacts.json --title "Board Audit Artifacts" --metadata workflow=template-pack-patch --json
-okpdf artifacts graph --manifest .agentpdf-out/board-audit.artifacts.json -o .agentpdf-out/board-audit.artifact-graph.json --title "Board Audit Artifact Graph" --json
-okpdf create preview invoice -o .agentpdf-out/invoice-preview.pdf --json
-okpdf create from-prompt "Create a research brief about local PDF agents and template validation." -o .agentpdf-out/research-brief.pdf --template research_brief --style-pack paper_ink --color primary=#4f46e5 --color accent=#f59e0b --json
-okpdf create from-prompt "Create an invoice for okpdf local template work." -o .agentpdf-out/invoice.pdf --template invoice --data examples/create-data/invoice.json --json
-okpdf context ingest --file src/agentpdf/compose/context.py --role code_evidence --label "Composer Source" -o .agentpdf-out/composer.context-item.json --json
-okpdf context code-snapshot src/agentpdf/compose/context.py --line-start 1 --line-end 80 --repository-root . -o .agentpdf-out/composer.snapshot.context-item.json --json
-okpdf context data-profile examples/create-data/metrics.csv --label "Runtime Metrics" -o .agentpdf-out/metrics.profile.context-item.json --json
-okpdf context image-analyze assets/brand/okpdf-logo.png --skip-ocr --json
-okpdf context packet --item-json .agentpdf-out/composer.context-item.json --text "Create a technical audit PDF from pre-ingested code evidence." -o .agentpdf-out/agent.context.packet.json --title "Agent Packet" --json
-okpdf context build --text "Create a technical audit PDF from code, metrics, visual evidence, project docs, web links, and media context." --file src/agentpdf/compose/context.py --file examples/create-data/metrics.csv --file assets/brand/okpdf-logo.png --file examples/sample-documents/business_report.md --link okpdf.dev/docs/context --item-json examples/context/media-items.json -o .agentpdf-out/context.packet.json --title "Audit Context" --json
-okpdf context classify .agentpdf-out/context.packet.json --profile technical_audit -o .agentpdf-out/context.classification.json --json
-okpdf evidence context-packet-report .agentpdf-out/context.packet.json -o .agentpdf-out/context-report.pdf --report-output .agentpdf-out/context-report.json --json
-okpdf create agent examples/template-packs/local-agent-starter.json --profile technical_audit --context-packet .agentpdf-out/context.packet.json -o .agentpdf-out/board-audit-agent.pdf --plan-output .agentpdf-out/board-audit-agent.plan.json --coverage-output .agentpdf-out/board-audit-agent.coverage.json --context-classification-output .agentpdf-out/board-audit-agent.context-classification.json --context-report-output .agentpdf-out/board-audit-agent.context-report.pdf --context-report-json-output .agentpdf-out/board-audit-agent.context-report.json --bundle-output .agentpdf-out/board-audit-agent.agentpdf-bundle.zip --json
-okpdf create from-template-pack examples/template-packs/local-agent-starter.json --template board_audit --color-scheme executive_blue --context-packet .agentpdf-out/context.packet.json -o .agentpdf-out/board-audit-from-context.pdf --renderer html --html-output .agentpdf-out/board-audit-from-context.html --json
-okpdf target profiles -o .agentpdf-out/target-profiles.json --json
-okpdf target validate --profile-json examples/target-profiles/media-learning-deck.json -o .agentpdf-out/media-learning-deck.validation.json --json
-okpdf compose plan .agentpdf-out/context.packet.json --profile technical_audit -o .agentpdf-out/technical-audit.plan.json --json
-okpdf compose render-ir .agentpdf-out/technical-audit.plan.json -o .agentpdf-out/technical-audit-from-ir.pdf --json
-okpdf compose from-context .agentpdf-out/context.packet.json --profile technical_audit -o .agentpdf-out/technical-audit.pdf --renderer html --html-output .agentpdf-out/technical-audit.html --json
-okpdf render-html-package .agentpdf-out/technical-audit.html-manifest.json -o .agentpdf-out/technical-audit-rendered.pdf --json
-okpdf compose from-context .agentpdf-out/context.packet.json --profile slide_deck -o .agentpdf-out/agent-review-deck.pdf --json
-okpdf compose from-context .agentpdf-out/context.packet.json --profile-json examples/target-profiles/media-learning-deck.json -o .agentpdf-out/media-learning-deck.pdf --json
-okpdf compose add-code-block .agentpdf-out/technical-audit.pdf --title "Risk Function" --code "def risky_total(items): return sum(items)" --language python --source-ref ctx_002 --target-slot code_review -o .agentpdf-out/technical-audit.code.pdf --json
-okpdf compose add-table .agentpdf-out/technical-audit.pdf --title "Runtime Metrics" --columns metric,value --row latency_ms,42 --source-ref ctx_003 --target-slot evidence_table -o .agentpdf-out/technical-audit.table.pdf --json
-okpdf compose add-figure .agentpdf-out/technical-audit.pdf --title "Architecture Figure" --image assets/brand/okpdf-logo.png --caption "Local visual evidence." --source-ref ctx_004 -o .agentpdf-out/technical-audit.figure.pdf --json
-okpdf compose add-appendix .agentpdf-out/technical-audit.pdf --title "Source Appendix" --markdown "## Sources\n\n- ctx_002\n- ctx_003\n- ctx_004" --source-ref ctx_002 --source-ref ctx_003 -o .agentpdf-out/technical-audit.appendix.pdf --json
-okpdf compose add-citation .agentpdf-out/technical-audit.pdf --title "Source Citation" --source https://example.com/research --quote "Cited claim" --source-ref ctx_web -o .agentpdf-out/technical-audit.citation.pdf --json
-okpdf compose add-media-reference .agentpdf-out/technical-audit.pdf --title "Meeting Audio" --media meeting.mp3 --media-kind audio --transcript-excerpt "00:00 Kickoff" --source-ref ctx_audio -o .agentpdf-out/technical-audit.media.pdf --json
-okpdf compose add-slide .agentpdf-out/technical-audit.pdf --title "Review Slide" --body "Decision evidence" --source-ref ctx_slide -o .agentpdf-out/technical-audit.slide.pdf --json
-okpdf evidence coverage-report .agentpdf-out/technical-audit.composition.json -o .agentpdf-out/technical-audit.coverage.json --json
-okpdf patch plan .agentpdf-out/technical-audit.pdf --operations examples/patch-operations/reviewer-note.json -o .agentpdf-out/technical-audit.patch.json --composition .agentpdf-out/technical-audit.composition.json --reason "Add reviewer note appendix." --json
-okpdf patch preview .agentpdf-out/technical-audit.patch.json -o .agentpdf-out/technical-audit.patch-preview.json --json
-okpdf patch apply .agentpdf-out/technical-audit.patch.json -o .agentpdf-out/technical-audit-patched.pdf --json
-okpdf patch verify .agentpdf-out/technical-audit.patch.json .agentpdf-out/technical-audit-patched.pdf --json
-okpdf patch plan .agentpdf-out/technical-audit.pdf --operations examples/patch-operations/structured-appendix.json -o .agentpdf-out/technical-audit.structured.patch.json --composition .agentpdf-out/technical-audit.composition.json --reason "Append code, table, image, citation, media, and slide evidence." --json
-okpdf watermark .agentpdf-out/cover.pdf --text "CONFIDENTIAL" -o .agentpdf-out/watermarked.pdf --json
-okpdf page-numbers .agentpdf-out/watermarked.pdf --template "Page {page} of {total}" -o .agentpdf-out/numbered.pdf --json
-okpdf render tests/fixtures/simple.pdf --pages 1 --format png --out-dir .agentpdf-out/renders --json
-okpdf extract-images .agentpdf-out/numbered.pdf --pages all --out-dir .agentpdf-out/extracted-images --json
-okpdf extract-text tests/fixtures/text.pdf --pages 1 --json
-okpdf metadata remove tests/fixtures/metadata.pdf -o .agentpdf-out/metadata-clean.pdf --json
-okpdf security redact .agentpdf-out/sensitive.pdf -o .agentpdf-out/sensitive-redacted.pdf --region '{"page":1,"bbox":[60,700,280,760],"label":"secret"}' --json
-okpdf security verify-redaction .agentpdf-out/sensitive-redacted.pdf --search-term SECRET-CODE-123 --json
-okpdf redaction-check .agentpdf-out/sensitive-redacted.pdf --search-term SECRET-CODE-123 --json
-okpdf validate .agentpdf-out/numbered.pdf --expected-pages 1 --json
-okpdf render-check .agentpdf-out/numbered.pdf --pages 1 --json
-okpdf blank-page-check .agentpdf-out/with-blank.pdf --pages all --json
-okpdf parse-lite .agentpdf-out/numbered.pdf --json
-okpdf compare semantic-diff .agentpdf-out/numbered-v1.pdf .agentpdf-out/numbered-v2.pdf --pages 1 --json
-okpdf compare version-report .agentpdf-out/numbered-v1.pdf .agentpdf-out/numbered-v2.pdf -o .agentpdf-out/numbered.version-report.md --json
-okpdf compare visual-diff .agentpdf-out/numbered-v1.pdf .agentpdf-out/numbered-v2.pdf --pages 1 --json
-okpdf visual-diff .agentpdf-out/numbered-v1.pdf .agentpdf-out/numbered-v2.pdf --max-difference-ratio 0.001 --json
-okpdf parse-figures .agentpdf-out/numbered.pdf --json
-okpdf parse-formulas .agentpdf-out/numbered.pdf --json
-okpdf parse-charts .agentpdf-out/numbered.pdf --json
-okpdf parse-references .agentpdf-out/numbered.pdf --json
-okpdf forms create -o .agentpdf-out/contact-form.pdf --field '{"name":"name","label":"Name","required":true}' --json
-okpdf forms import-data .agentpdf-out/contact-form.pdf --data '{"name":"Ada"}' -o .agentpdf-out/contact-form-filled.pdf --json
-okpdf forms validate .agentpdf-out/contact-form-filled.pdf --required-field name --json
-okpdf ocr scan-to-pdf assets/brand/okpdf-logo.png -o .agentpdf-out/scan.pdf --json
-okpdf ocr despeckle .agentpdf-out/scan.pdf -o .agentpdf-out/scan-despeckled.pdf --json
-okpdf ocr remove-existing .agentpdf-out/scan.pdf -o .agentpdf-out/scan-no-ocr.pdf --json
-okpdf ocr multilingual .agentpdf-out/scan.pdf -o .agentpdf-out/scan-multilingual.pdf --language eng --language chi_sim --json
-okpdf pdf-to-json .agentpdf-out/numbered.pdf -o .agentpdf-out/numbered.ir.json --json
-okpdf pdf-to-markdown .agentpdf-out/numbered.pdf -o .agentpdf-out/numbered.md --json
-okpdf rag ingest .agentpdf-out/numbered.pdf --index .agentpdf-out/numbered.index.json --json
-okpdf rag chat .agentpdf-out/numbered.pdf --question "What does this document say?" --report-output .agentpdf-out/numbered-chat-report.pdf --highlight-output .agentpdf-out/numbered-chat-highlighted.pdf --json
-okpdf rag query .agentpdf-out/numbered.index.json --query "What does this document say?" --json
-okpdf rag search .agentpdf-out/numbered.index.json --query "document" --json
-okpdf rag cite-answer .agentpdf-out/numbered.index.json --answer "This document is locally indexed." --json
-okpdf rag highlight-sources .agentpdf-out/numbered.index.json --answer "This document is locally indexed." -o .agentpdf-out/numbered-highlighted.pdf --json
-okpdf rag export-report .agentpdf-out/numbered.index.json --question "What does this document say?" --answer "This document is locally indexed." -o .agentpdf-out/numbered-rag-report.pdf --json
-```
-
-For document-style `pdf.compose.from_context` runs, `--renderer html` writes an inspectable HTML package plus `.html-manifest.json` before creating the PDF. Local image assets are copied into a sibling `*.assets/` directory, hashed, referenced from the HTML, and validated in the package manifest; remote and `file://` assets are blocked by default. Agents can call `pdf.render.html_package` or `okpdf render-html-package` to re-validate and render an existing package. The current OSS converter preserves the local evidence and validation contract while using a lightweight HTML-to-PDF fallback; a browser renderer can replace that final conversion step later without changing the agent-facing tool contract.
-
-Template-pack creation writes a validated PDF plus sibling `.composition.json` and `.layers.json` artifacts. The composition file carries source maps, slot routing, and evidence coverage; the layer manifest gives agents stable block/layer ids, target slots, source refs, estimated normalized-page anchors, and edit policies for PDF patch/edit workflows. `pdf.context.ingest` normalizes one local source into a reusable context item, `pdf.context.packet` merges raw or pre-ingested items into a Context Packet so multiple agents can collect evidence independently before composition, and `pdf.context.classify` gives deterministic local block/slot routing hints plus safety limitations before agents compose. Web links accept `http`/`https` values or bare domains, normalize to `https://...`, reject unsafe schemes, and remain `fetch_status=not_fetched` in local OSS context evidence. `pdf.context.code_snapshot` creates range-aware static code context with symbols, hashes, optional dependency hints, and repository-relative path evidence; it does not execute code. `pdf.context.data_profile` profiles CSV/TSV/JSON/JSONL/XLSX files into table previews with column types and `data_profile_evidence`; XLSX support reads worksheet XML locally and does not evaluate formulas, macros, or legacy `.xls` binary content. Document context includes local Markdown/text/HTML previews and DOCX paragraph text extracted from `word/document.xml` with `document_evidence`; it does not claim full Office layout conversion. `pdf.ai.parse.figures`, `pdf.ai.parse.formulas`, `pdf.ai.parse.charts`, and `pdf.ai.parse.references` provide local text-layer semantic hints for agents without OCR, vision models, or cloud inference; `pdf.compare.semantic_diff` and `pdf.compare.version_report` compare text-layer changes and emit structured page-level evidence plus optional Markdown reports. `pdf.compose.plan` creates replayable Composition IR plus source map, coverage, validation plan, and a render plan without writing a PDF; `pdf.compose.render_ir` renders that plan into a validated PDF artifact. `pdf.evidence.map_sources` normalizes block/claim source refs against a Context Packet and writes a source-map report with matched/unmatched refs, coverage ratios, and evidence summaries for patch/audit workflows. `pdf.evidence.cite_claims` turns source-backed claim objects into local citation records with source refs, matched evidence summaries, and any available page, bbox, timestamp, row, or line locators without inventing missing precision. `pdf.artifacts.source_map` converts composition/source-map evidence into block, page, source-ref, and generated-artifact indexes; `pdf.artifacts.manifest` collects output PDFs, HTML sources, HTML package manifests, Context Packet artifacts, composition files, coverage reports, source maps, citations, patches, and layer manifests into a local JSON manifest with SHA-256 checksums, page counts, evidence links, source refs, HTML package refs, context packet refs, source graph ids, and a `context_evidence_index` before bundle export; `pdf.artifacts.graph` turns that manifest into local artifact/source-ref nodes, inclusion edges, HTML-package-to-PDF lineage, Context Packet evidence metadata, and clearly marked convention-inferred lineage edges for audit traversal. When `pdf.ai.create.agent` receives a Context Packet it runs classification automatically, records the nested `context_classification` ToolResult in `usage.create_agent_run`, and includes the classification JSON in audit bundles. `pdf.compose.add_code_block`, `pdf.compose.add_table`, `pdf.compose.add_figure`, `pdf.compose.add_appendix`, `pdf.compose.add_citation`, `pdf.compose.add_media_reference`, and `pdf.compose.add_slide` provide one-step append-only composition for agents: each writes a new PDF plus `.compose-block.json`, patch evidence, rollback metadata, and validation. Citation append uses local citation metadata and does not fetch web links by default; media-reference append records local file metadata, MIME type, size, SHA-256, and provided transcript excerpts without transcribing audio/video by default. `pdf.patch.plan` can consume those layers for lower-level append-only notes and `regenerate_block` operations, which create a new PDF artifact with an audited regenerated block appendix instead of claiming unsafe in-place layout-preserving edits.
-
-## TypeScript / Node.js
-
-Run the Python REST server, then call it from TypeScript or Node:
-
-```bash
-okpdf serve --api
-node packages/agentpdf-node/dist/src/cli.js tools
-node packages/agentpdf-node/dist/src/cli.js agent-setup-kilo-code -o kilo-code.mcp.json --safe-root .
-node packages/agentpdf-node/dist/src/cli.js agent-setup-openclaw -o openclaw.mcp.json --safe-root .
-node packages/agentpdf-node/dist/src/cli.js create-text --text "Hello Node" -o .agentpdf-out/node.pdf
-```
-
-SDK usage:
-
-```ts
-import { AgentPDFClient } from "@okpdf/agentpdf-node";
-
-const client = new AgentPDFClient({ baseUrl: "http://127.0.0.1:7331" });
-const result = await client.createMarkdownPdf({
-  markdown: "# Agent Report\n\n- Local first\n- TypeScript ready",
-  outputPath: ".agentpdf-out/report.pdf",
-  stylePack: "business_report_modern",
-});
-const brief = await client.createFromPrompt({
-  prompt: "Create a proposal about local PDF template agents.",
-  outputPath: ".agentpdf-out/proposal.pdf",
-  template: "proposal",
-  stylePack: "business_report_modern",
-  colors: { primary: "#4f46e5", accent: "#f59e0b" },
-});
-const pageFacts = await client.inspectPages({
-  inputPath: ".agentpdf-out/report.pdf",
-  pages: "1",
-  renderCheck: true,
-});
-const form = await client.formsCreate({
-  outputPath: ".agentpdf-out/contact-form.pdf",
-  fields: [{ name: "name", label: "Name", required: true }],
-});
-const filledForm = await client.formsImportData({
-  inputPath: ".agentpdf-out/contact-form.pdf",
-  data: { name: "Ada" },
-  outputPath: ".agentpdf-out/contact-form-filled.pdf",
-});
-const formValidation = await client.formsValidate({
-  inputPath: ".agentpdf-out/contact-form-filled.pdf",
-  requiredFields: ["name"],
-});
-const scan = await client.ocrScanToPdf({
-  imagePaths: ["assets/brand/okpdf-logo.png"],
-  outputPath: ".agentpdf-out/scan.pdf",
-});
-const ocrText = await client.ocr({
-  inputPath: ".agentpdf-out/scan.pdf",
-  languages: ["eng"],
-});
-const searchableScan = await client.ocrSearchablePdf({
-  inputPath: ".agentpdf-out/scan.pdf",
-  outputPath: ".agentpdf-out/scan-searchable.pdf",
-  languages: ["eng"],
-});
-const multilingualScan = await client.ocrMultilingual({
-  inputPath: ".agentpdf-out/scan.pdf",
-  outputPath: ".agentpdf-out/scan-multilingual.pdf",
-  languages: ["eng", "chi_sim"],
-});
-
-await client.watermark({
-  inputPath: ".agentpdf-out/report.pdf",
-  text: "DRAFT",
-  outputPath: ".agentpdf-out/report-draft.pdf",
-});
-
-console.log(pageFacts.usage.pages);
-console.log(result.artifacts[0]?.path);
-console.log(brief.usage.template_id, brief.validation?.status);
-```
-
-## Agent Interfaces
-
-### MCP
-
-Run a local stdio MCP server:
-
-```bash
 okpdf serve --mcp --safe-root .
-```
-
-Generate a Claude Code project config:
-
-```bash
-okpdf agent setup claude-code -o .mcp.json --json
-```
-
-Example config:
-
-```json
-{
-  "mcpServers": {
-    "agentpdf": {
-      "type": "stdio",
-      "command": "okpdf",
-      "args": ["serve", "--mcp", "--safe-root", "${CLAUDE_PROJECT_DIR:-.}"]
-    }
-  }
-}
-```
-
-MCP tools currently exposed:
-
-- `agent_setup_claude_code`
-- `agent_setup_codex`
-- `agent_setup_kilo_code`
-- `agent_setup_openclaw`
-- `agentpdf_tool_manifest`
-- `pdf_inspect_document`
-- `pdf_inspect_pages`
-- `pdf_workflow_plan`
-- `pdf_workflow_run`
-- `pdf_workflow_report`
-- `pdf_merge`
-- `pdf_split`
-- `pdf_extract_pages`
-- `pdf_remove_pages`
-- `pdf_rotate_pages`
-- `pdf_reorder_pages`
-- `pdf_insert_blank_pages`
-- `pdf_optimize_compress`
-- `pdf_optimize_repair`
-- `pdf_image_to_pdf`
-- `pdf_watermark`
-- `pdf_add_page_numbers`
-- `pdf_create_text`
-- `pdf_create_markdown`
-- `pdf_ai_create_from_prompt`
-- `pdf_ai_create_templates`
-- `pdf_ai_create_template_packs`
-- `pdf_ai_create_validate_template_pack`
-- `pdf_ai_create_plan_template_pack`
-- `pdf_ai_create_agent`
-- `pdf_ai_create_from_template_pack`
-- `pdf_ai_create_template_preview`
-- `pdf_context_build_packet`
-- `pdf_context_ingest`
-- `pdf_context_packet`
-- `pdf_context_classify`
-- `pdf_context_code_snapshot`
-- `pdf_context_data_profile`
-- `pdf_compose_from_context`
-- `pdf_compose_add_code_block`
-- `pdf_compose_add_table`
-- `pdf_compose_add_figure`
-- `pdf_compose_add_appendix`
-- `pdf_compose_add_citation`
-- `pdf_compose_add_media_reference`
-- `pdf_compose_add_slide`
-- `pdf_target_profiles`
-- `pdf_target_select_profile`
-- `pdf_target_validate_profile`
-- `pdf_evidence_map_sources`
-- `pdf_evidence_cite_claims`
-- `pdf_evidence_coverage_report`
-- `pdf_evidence_context_packet_report`
-- `pdf_artifacts_export_bundle`
-- `pdf_artifacts_verify_bundle`
-- `pdf_patch_plan`
-- `pdf_patch_preview`
-- `pdf_patch_apply`
-- `pdf_patch_verify`
-- `pdf_render_pages`
-- `pdf_extract_images`
-- `pdf_extract_text`
-- `pdf_pdf_to_json`
-- `pdf_pdf_to_markdown`
-- `pdf_metadata_read`
-- `pdf_metadata_update`
-- `pdf_metadata_remove`
-- `pdf_validate_output`
-- `pdf_render_check`
-- `pdf_blank_page_check`
-- `pdf_ai_parse_lite`
-- `pdf_ai_rag_ingest`
-- `pdf_ai_rag_chat`
-- `pdf_ai_rag_cite_answer`
-- `pdf_ai_rag_export_report`
-- `pdf_ai_rag_highlight_sources`
-- `pdf_ai_rag_query`
-- `pdf_ai_rag_search`
-
-### REST
-
-Run the local HTTP API:
-
-```bash
 okpdf serve --api
 ```
 
-Useful endpoints:
-
-```text
-GET  /healthz
-GET  /v1/tools
-GET  /v1/tools/{tool_name}
-POST /v1/tools/{tool_name}/run
-GET  /v1/jobs/{job_id}
-GET  /v1/artifacts/{artifact_id}
-GET  /v1/artifacts/{artifact_id}/download
-```
-
-Example:
+Target okoffice commands:
 
 ```bash
-curl -X POST http://127.0.0.1:7331/v1/tools/pdf.inspect.document/run \
-  -H 'Content-Type: application/json' \
-  -d '{"path": "tests/fixtures/simple.pdf"}'
+okoffice tools list --json
+okoffice inspect report.docx --json
+okoffice inspect model.xlsx --json
+okoffice inspect deck.pptx --json
+okoffice workflow docset-to-sheet sources/*.docx sources/*.pdf -o .okoffice-out/evidence.xlsx --json
+okoffice workflow sheet-to-deck .okoffice-out/evidence.xlsx -o .okoffice-out/board-deck.pptx --json
+okoffice bundle verify .okoffice-out/board-pack.okoffice.zip --json
 ```
 
-Inspect page facts with render evidence:
+The target commands document product direction; current runnable commands are the compatibility `okpdf` commands until the okoffice CLI is implemented.
 
-```bash
-curl -X POST http://127.0.0.1:7331/v1/tools/pdf.inspect.pages/run \
-  -H 'Content-Type: application/json' \
-  -d '{"input_path": "tests/fixtures/text.pdf", "pages": "1", "render_check": true}'
-```
+## Agent Infrastructure
 
-Extract embedded images:
+okoffice is built for coding agents first:
 
-```bash
-curl -X POST http://127.0.0.1:7331/v1/tools/pdf.convert.extract_images/run \
-  -H 'Content-Type: application/json' \
-  -d '{"input_path": ".agentpdf-out/report.pdf", "pages": "all", "out_dir": ".agentpdf-out/extracted-images"}'
-```
+- CLI with `--json`.
+- MCP server.
+- Local REST API.
+- Python and TypeScript SDKs.
+- JSON schemas.
+- Tool manifest.
+- Artifact references instead of inline binaries.
+- Source refs and native locators.
+- Validation reports and warnings.
+- Agent setup configs for Codex, Claude Code/Desktop, Cursor, Kilo Code, OpenClaw, OpenAI Agents, LangChain, LlamaIndex, Vercel AI SDK, n8n, Zapier, and Make.
 
-Plan an agent workflow:
+See [docs/40_OKOFFICE_AGENT_INFRA.md](docs/40_OKOFFICE_AGENT_INFRA.md).
 
-```bash
-curl -X POST http://127.0.0.1:7331/v1/tools/pdf.workflow.plan/run \
-  -H 'Content-Type: application/json' \
-  -d '{"goal": "Chat with this PDF and cite answers", "input_path": ".agentpdf-out/report.pdf"}'
-```
+## Cloud Boundary
 
-Run a local workflow manifest:
+The OSS core stays local-first and free for deterministic operations. Hosted okoffice can monetize:
 
-```bash
-curl -X POST http://127.0.0.1:7331/v1/tools/pdf.workflow.run/run \
-  -H 'Content-Type: application/json' \
-  -d '{"workflow":{"steps":[{"step_id":"inspect","tool":"pdf.inspect.document","input":{"path":".agentpdf-out/report.pdf"}}]}}'
-```
+- managed Office render/convert workers;
+- advanced OCR and agentic parse;
+- formula recalculation and workbook QA at scale;
+- source-backed report/workbook/deck generation;
+- persistent source graphs and artifact graphs;
+- batch orchestration;
+- managed connectors;
+- enterprise audit, retention, SSO, VPC, and on-prem controls.
 
-`pdf.workflow.run` can also consume the full JSON returned by `pdf.workflow.plan`; pass runtime values under `bindings` for placeholders such as `<question>` and `<answer>`, and set `artifact_dir` when the runner should auto-create paths like `<output.index.json>`.
+See [docs/39_OKOFFICE_CLOUD_BUSINESS.md](docs/39_OKOFFICE_CLOUD_BUSINESS.md).
 
-Create a PDF from Markdown:
+## Documentation Map
 
-```bash
-curl -X POST http://127.0.0.1:7331/v1/tools/pdf.convert.markdown_to_pdf/run \
-  -H 'Content-Type: application/json' \
-  -d '{"markdown": "# Agent Report\n\n- Local first\n- MCP ready", "output_path": ".agentpdf-out/report.pdf"}'
-```
-
-Compress a PDF:
-
-```bash
-curl -X POST http://127.0.0.1:7331/v1/tools/pdf.optimize.compress/run \
-  -H 'Content-Type: application/json' \
-  -d '{"input_path": ".agentpdf-out/report.pdf", "output_path": ".agentpdf-out/report-compressed.pdf"}'
-```
-
-## Tool Result Contract
-
-Every public tool returns the same shape:
-
-```json
-{
-  "job_id": "job_...",
-  "status": "succeeded",
-  "tool": "pdf.organize.merge",
-  "artifacts": [],
-  "validation": {},
-  "warnings": [],
-  "usage": {},
-  "next_recommended_tools": []
-}
-```
-
-Generated PDFs include artifact metadata and validation checks such as parseability and page count.
-
-## Architecture
-
-```mermaid
-flowchart LR
-  A["Agents / Apps"] --> B["MCP Server"]
-  A --> C["CLI"]
-  A --> D["REST API"]
-  A --> J["TypeScript / Node SDK"]
-  J --> D
-  B --> E["Tool Runner"]
-  C --> E
-  D --> E
-  E --> F["PDF Core"]
-  E --> G["Artifact Store"]
-  E --> H["Validation"]
-  G --> I["Structured ToolResult"]
-  H --> I
-```
-
-Core code lives under `src/agentpdf`:
-
-- `core/`: deterministic PDF operations.
-- `tools/`: registry and runner wrappers.
-- `schemas/`: Pydantic public contracts.
-- `artifacts/`: local artifact metadata.
-- `validation/`: generated output validation.
-- `cli/`: Typer CLI.
-- `mcp/`: FastMCP server.
-- `api/`: FastAPI local REST server.
-- `security/`: path safety helpers.
-
-## Open-Source Direction
-
-okpdf is inspired by mature open-source document processing projects such as pdf-craft, Docling, Marker, Unstructured, and local-first PDF tooling. The project borrows architectural ideas, not implementation code:
-
-- local/offline document processing;
-- handler boundaries for reading, rendering, extraction, OCR, and output writing;
-- optional heavyweight workers with explicit dependency and cache locations;
-- per-page warnings and partial-failure reporting;
-- cloud/model functionality as an explicit layer above the local core.
-
-## Roadmap
-
-- Lite document parse and local RAG demo.
-- More creation inputs and style packs.
-- More deterministic operations: crop, attachments, richer form widgets, and safe redaction helpers.
-- Richer validation: repair diagnostics, text-layer checks, and redaction verification.
-- Context packet, target PDF profile, source graph, composition IR, artifact lineage, and patch manifests.
-- Multimodal context-to-PDF workflows for images, video, documents, code, links, data, and existing PDFs.
-- Docker and self-hosted examples.
-- Cloud worker boundary for advanced OCR, agentic parse, multimodal processing, and hosted batch jobs.
+- [Product strategy](docs/37_OKOFFICE_PRODUCT_STRATEGY.md)
+- [Tool taxonomy](docs/38_OKOFFICE_TOOL_TAXONOMY.md)
+- [Cloud business](docs/39_OKOFFICE_CLOUD_BUSINESS.md)
+- [Agent infrastructure](docs/40_OKOFFICE_AGENT_INFRA.md)
+- [Implementation plan](docs/41_OKOFFICE_IMPLEMENTATION_PLAN.md)
+- [Legacy PDF compatibility](docs/42_LEGACY_PDF_COMPATIBILITY.md)
+- [Office PRD](docs/36_OKOFFICE_AGENT_NATIVE_OFFICE_INFRA_PRD.md)
+- [Architecture](docs/03_ARCHITECTURE.md)
+- [Office IR](docs/11_DOCUMENT_IR_SPEC.md)
 
 ## Development
 
@@ -592,32 +185,10 @@ This workspace currently has no required cloud service for local development.
 
 ## Repository Hygiene
 
-Commit source code, schemas, tests, small generated fixtures, examples with clear provenance, and docs. Do not commit local outputs, dependency folders, caches, secrets, personal MCP configs, build artifacts, logs, databases, or ad hoc generated PDFs. The full policy lives in [docs/REPOSITORY_HYGIENE.md](docs/REPOSITORY_HYGIENE.md).
-
-Generated PDFs are usually written under `.agentpdf-out/`, which is ignored. The only generated PDFs that should be committed are tiny, license-safe, reproducible examples with a README explaining the regeneration command, such as `examples/generated/hello.pdf`.
-
-Before pushing:
-
-```bash
-git status --short
-python scripts/doctor.py
-pytest -q
-npm --workspace @okpdf/agentpdf-node test
-```
-
-## Troubleshooting
-
-- `pytest -q` should use pytest's runtime temp directory. If a local `.pytest-tmp` folder is locked by another Windows process, it is safe to close that process or delete the folder after confirming no test run is active.
-- If render-related commands fail, run `python scripts/doctor.py` first and confirm `pypdfium2` is installed in the active Python environment.
-- If Node SDK tests fail before reaching the API client tests, run `npm install` at the repository root and then `npm --workspace @okpdf/agentpdf-node test`.
-- If the REST API port is busy, start it on another port with `okpdf serve --api --port 7332`.
-
-## Reference Projects
-
-The project intentionally studies mature PDF/document tooling such as [pypdf](https://github.com/py-pdf/pypdf), [qpdf](https://github.com/qpdf/qpdf), [pdfcpu](https://github.com/pdfcpu/pdfcpu), [pdfplumber](https://github.com/jsvine/pdfplumber), [OCRmyPDF](https://ocrmypdf.readthedocs.io/), [Docling](https://github.com/docling-project/docling), [Marker](https://github.com/VikParuchuri/marker), and [Stirling-PDF](https://github.com/Stirling-Tools/Stirling-PDF). The synthesis lives in [docs/33_REFERENCE_PROJECT_SYNTHESIS.md](docs/33_REFERENCE_PROJECT_SYNTHESIS.md).
-
-The larger agent-native multimodal PRD lives in [docs/35_AGENT_NATIVE_MULTIMODAL_PDF_INFRA_PRD.md](docs/35_AGENT_NATIVE_MULTIMODAL_PDF_INFRA_PRD.md). The agent-infra and cloud strategy lives in [docs/34_AGENT_INFRA_AI_CLOUD_STRATEGY.md](docs/34_AGENT_INFRA_AI_CLOUD_STRATEGY.md).
+Commit source code, schemas, tests, small generated fixtures, examples with clear provenance, and docs. Do not commit local outputs, dependency folders, caches, secrets, personal MCP configs, build artifacts, logs, databases, or ad hoc generated files. The full policy lives in [docs/REPOSITORY_HYGIENE.md](docs/REPOSITORY_HYGIENE.md).
 
 ## License
 
 Apache-2.0. See [LICENSE](LICENSE).
+
+# OKoffice

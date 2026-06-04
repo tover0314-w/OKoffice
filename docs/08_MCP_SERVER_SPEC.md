@@ -1,20 +1,53 @@
-# 08 — MCP Server Specification
+# 08 - okoffice MCP Server Specification
 
 ## Goal
 
-Expose AgentPDF tools to MCP-compatible clients such as coding agents, desktop assistants, and IDEs.
+Expose okoffice tools to MCP-compatible clients such as coding agents, desktop assistants, IDEs, and local automation hosts.
 
-## MCP design principles
+The MCP server should make Office workflows safe for agents:
+
+- Discover tools and schemas.
+- Run local deterministic tools.
+- Return structured results and artifact refs.
+- Preserve validation evidence.
+- Keep cloud/AI workers opt-in.
+
+The current server exposes `pdf.*` tools through MCP wrappers. During migration, those wrappers remain the compatibility surface while `office.*`, `word.*`, `sheet.*`, and `deck.*` wrappers are added.
+
+## MCP Design Principles
 
 - Keep tool names stable.
-- Use compact, precise descriptions.
-- Group tools by namespace.
-- Avoid exposing every planned tool as executable before implementation.
-- Provide `tool_manifest` and `list_tools` resources.
-- Return structured JSON results.
-- Include artifact references instead of giant binary payloads.
+- Group wrappers by domain.
+- Prefer compact descriptions with clear limitations.
+- Do not expose planned tools as executable before implementation.
+- Provide machine-readable tool manifest resources.
+- Return structured JSON in `structuredContent`.
+- Include artifact references instead of large binary payloads.
+- Avoid hidden network or model calls.
+- Keep every path under the configured safe root.
 
-## Initial MCP tools
+## Discovery Resources
+
+Current resource:
+
+```text
+agentpdf_tool_manifest
+```
+
+Target resources:
+
+```text
+okoffice_tool_manifest
+okoffice_format_capabilities
+okoffice_artifact_profiles
+okoffice_style_packs
+```
+
+`okoffice_tool_manifest` should include implementation status, OSS/cloud boundary, required feature flags, accepted formats, and example inputs.
+
+## Current PDF MCP Wrappers
+
+The implemented compatibility wrappers include:
 
 - `pdf_inspect_document`
 - `pdf_inspect_pages`
@@ -55,54 +88,119 @@ Expose AgentPDF tools to MCP-compatible clients such as coding agents, desktop a
 - `pdf_ai_rag_query`
 - `pdf_ai_rag_search`
 
-## Example MCP tool result
+## Target okoffice MCP Wrappers
+
+First target wrappers:
+
+- `office_inspect_file`
+- `word_inspect_document`
+- `sheet_inspect_workbook`
+- `deck_inspect_presentation`
+- `office_context_build_packet`
+- `office_extract_schema`
+- `sheet_create_workbook`
+- `deck_create_presentation`
+- `word_create_document`
+- `office_workflow_docset_to_sheet`
+- `office_workflow_sheet_to_deck`
+- `office_bundle_export`
+- `office_bundle_verify`
+
+Wrappers should map to canonical tool names in `structuredContent.tool`, for example:
+
+```json
+{
+  "tool": "sheet.inspect.workbook"
+}
+```
+
+Implemented example:
+
+```python
+office_inspect_file("model.xlsx")
+```
+
+Returns a ToolResult JSON string with `tool: office.inspect.file`, `usage.file`, `usage.format`, `usage.safety`, warnings, validation, and `next_recommended_tools`.
+
+## Example MCP Tool Result
 
 ```json
 {
   "content": [
     {
       "type": "text",
-      "text": "Merged 2 PDFs into merged.pdf. Output has 17 pages. Validation passed."
+      "text": "Inspected workbook evidence.xlsx. Found 4 sheets, 127 formulas, 0 formula errors, and 2 charts."
     }
   ],
   "structuredContent": {
     "job_id": "job_01HX...",
     "status": "succeeded",
-    "tool": "pdf.organize.merge",
-    "artifacts": [
-      {
-        "artifact_id": "art_01HX...",
-        "path": "./merged.pdf",
-        "mime_type": "application/pdf",
-        "sha256": "...",
-        "page_count": 17
-      }
-    ],
+    "tool": "sheet.inspect.workbook",
+    "artifacts": [],
     "validation": {
       "valid": true,
-      "checks": []
-    }
+      "checks": [
+        {"name": "package_opened", "status": "passed"},
+        {"name": "formula_refs", "status": "passed"}
+      ]
+    },
+    "warnings": [],
+    "usage": {
+      "sheet_count": 4,
+      "formula_count": 127,
+      "chart_count": 2
+    },
+    "next_recommended_tools": ["sheet.validation.formulas"]
   }
 }
 ```
 
-## Example Claude Desktop config
+## Example Cross-Format Workflow
 
-See `examples/mcp/claude_desktop_config.json`.
-
-## Tool discovery
-
-Expose a resource or tool:
+Target wrapper:
 
 ```text
-agentpdf_tool_manifest
+office_workflow_docset_to_sheet
 ```
 
-It should return current implementation status and all planned namespaces.
+Input:
+
+```json
+{
+  "sources": [
+    {"kind": "local_path", "path": "sources/vendor-a.docx"},
+    {"kind": "local_path", "path": "sources/vendor-b.pdf"}
+  ],
+  "schema": {
+    "fields": ["vendor", "renewal_date", "annual_amount"]
+  },
+  "output_path": ".okoffice-out/vendor-evidence.xlsx",
+  "style_pack": "evidence_workbook_clean"
+}
+```
+
+Output should include the workbook artifact, source map, extraction warnings, and recommended sheet validation.
+
+## Example Client Config
+
+Current examples live in:
+
+```text
+examples/mcp/
+```
+
+The migration should preserve current `okpdf serve --mcp` behavior and add:
+
+```bash
+okoffice serve --mcp --safe-root .
+```
 
 ## Safety
 
-- Default file root should be current working directory or configured safe root.
-- Reject path traversal.
+- Default file root should be the current working directory or configured safe root.
+- Reject path traversal and unsafe archive/package entries.
 - Do not fetch external URLs unless URL fetch is explicitly enabled.
 - Do not use cloud models unless explicitly configured.
+- Do not return document binaries inline.
+- Never mutate input files.
+- Report macros, external links, embedded files, suspicious package parts, and metadata risks.

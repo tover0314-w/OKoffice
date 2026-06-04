@@ -25,10 +25,14 @@ dev = [
   "mypy>=1.10",
 ]
 api = []
+browser-renderer = [
+  "playwright>=1.44",
+]
 
 [project.scripts]
 agentpdf = "agentpdf.cli.main:app"
 okpdf = "agentpdf.cli.main:app"
+okoffice = "okoffice.cli.main:app"
 
 [build-system]
 requires = ["hatchling"]

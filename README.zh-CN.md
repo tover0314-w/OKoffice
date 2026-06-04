@@ -1,222 +1,122 @@
-# okpdf 中文说明
+# okoffice 中文说明
 
-> 本地优先、面向 AI Agent 的 PDF 基础设施：CLI、MCP、REST、本地工作流和 TypeScript/Node SDK。
+> 本地优先、面向 agent 的 Office 基础设施：Word、Excel、PowerPoint、PDF、Bundle、CLI、MCP、REST 和 SDK 工作流。
 
-语言： [English](README.md) · [中文说明](README.zh-CN.md) · [翻译维护说明](docs/i18n/README.md)
+语言：[English](README.md) | [中文说明](README.zh-CN.md) | [翻译维护说明](docs/i18n/README.md)
 
-okpdf 正在构建一套开源的 agent-native PDF 基础设施。它不是单点 PDF 小工具，而是一层统一的工具面：检查、组织、渲染、提取、创建、组合、补丁、验证，并把结果以结构化 JSON、artifact、validation、warning 和下一步建议的形式返回给本地 agent。
+okoffice 的目标不是继续做一个 PDF 工具箱，而是做一层 agent-native Office infra。它让 coding agent 和本地自动化系统能够可靠地检查、抽取、创建、编辑、验证、引用和打包 Word 文档、Excel 工作簿、PowerPoint 演示文稿、PDF 和证据型 artifact。
 
-公开 CLI 命令是 `okpdf`。兼容命令 `agentpdf` 仍然可用。TypeScript/Node 包位于 `packages/agentpdf-node`，包名是 `@okpdf/agentpdf-node`。
+历史上的 `agentpdf` / `okpdf` / `pdf.*` 现在是兼容层。它们仍然有用，但不再是产品边界。
+
+## 产品主循环
+
+```text
+多个来源文件
+  -> source graph
+  -> 证据抽取
+  -> workbook/model
+  -> Word report + PowerPoint deck + PDF packet
+  -> validation
+  -> okoffice bundle
+```
+
+旗舰场景：
+
+```text
+多个 Word/PDF 来源 -> 可审计 Excel 工作簿 -> 漂亮的 PowerPoint -> 高管 memo -> PDF handout -> 审计 bundle
+```
 
 ## 为什么值得关注
 
-- 完整工具地图：当前 241 个公开工具名已经可通过 CLI、MCP、REST 和 manifest 发现。
-- 本地优先：默认不需要托管服务 URL、付费 API key 或云依赖。
-- Agent 优先输出：工具返回统一 `ToolResult`，包含 artifacts、validation、warnings、usage 和 next recommended tools。
-- 不止 RAG：方向覆盖 context packet、target PDF profile、source graph、composition IR、PDF patch transaction、evidence coverage 和多模态 context-to-PDF 工作流。
-- 多接口一致：CLI、MCP、REST 和 Node SDK 调用同一套工具层。
-- PDF 安全优先：显式路径、不静默修改输入、拒绝路径穿越、元数据移除、生成 PDF 验证。
-- 许可证安全：默认核心依赖避免 GPL/AGPL。
+- 本地优先：默认不需要托管 URL、付费 API key 或云依赖。
+- Agent 优先：工具返回统一 ToolResult，包含 artifact、validation、warning、usage 和 next recommended tools。
+- 不止 RAG：RAG 只是证据能力之一，核心是跨 Office artifact 的抽取、建模、创作、验证和打包。
+- 原生结构：保留 Word 段落/表格/批注、Excel 单元格/公式/图表、PPT 幻灯片/shape/notes、PDF 页码/bbox。
+- 安全边界清楚：不默认执行宏，不默认把文件发到云端，不静默修改输入文件。
+- 商业化边界清楚：OSS 做本地确定性工具，云端卖 worker、连接器、批处理、持久化和企业治理。
 
-## 当前可用能力
+## 目标工具面
 
-| 能力族 | 说明 | 接口 |
-|---|---|---|
-| Inspect | 文档和页面级事实、文本/图像/渲染证据 | CLI, MCP, REST, Node.js |
-| Organize | merge、split、extract/remove/reorder/rotate pages、插入空白页 | CLI, MCP, REST |
-| Optimize | 压缩、可解析 PDF repair/rewrite | CLI, MCP, REST, Node.js |
-| Convert | 图片/Markdown/Text 转 PDF，渲染页面，提取文本和内嵌图片 | CLI, MCP, REST, Node.js |
-| Create Agent | 模板、style pack、context report、validation、coverage、本地 artifact bundle | CLI, MCP, REST, Node.js |
-| Context / Compose | context packet、target PDF profile、source graph、composition IR、context-backed PDF | CLI, MCP, REST, Node.js |
-| Evidence / Patch | 证据覆盖报告、结构化 append transaction、补丁预览/应用/验证 | CLI, MCP, REST, Node.js |
-| Metadata | read、update、remove | CLI, MCP, REST |
-| Validation | page count、render check、blank page check | CLI, MCP, REST |
-| AI-lite | 本地 Document IR parse、PDF-to-JSON/Markdown、本地 RAG ingest/query/citation | CLI, MCP, REST |
-| Workflow | 本地 agent workflow 规划、执行、报告 | CLI, MCP, REST, Node.js |
+| 领域 | 示例工具 |
+|---|---|
+| Inspect | `office.inspect.file`, `word.inspect.document`, `sheet.inspect.workbook`, `deck.inspect.presentation`, `pdf.inspect.document` |
+| Extract | `word.extract.tables`, `sheet.extract.formulas`, `deck.extract.notes`, `office.extract.schema` |
+| Create | `word.create.report`, `sheet.create.evidence_workbook`, `deck.create.presentation`, `pdf.create.handout` |
+| Patch | `office.patch.plan`, `word.patch.apply`, `sheet.patch.apply`, `deck.patch.apply` |
+| Validate | `word.validation.document`, `sheet.validation.formulas`, `deck.validation.contact_sheet`, `pdf.validation.render_check` |
+| Workflow | `office.workflow.docset_to_sheet`, `office.workflow.sheet_to_deck`, `office.workflow.board_pack` |
+| Bundle | `office.bundle.export`, `office.bundle.verify` |
 
-规划中的能力包括 crop/resize、forms、attachments、更丰富的 repair diagnostics、table parsing、visual diff 和 redaction verification。
+当前 machine manifest 仍有 **241** 个公开 `pdf.*` 和 agent setup 工具名，这是兼容层，不是 okoffice 的最终产品地图。
 
-## 一分钟开始
+## 当前能跑什么
+
+当前可运行实现主要是 PDF 兼容域：
+
+- CLI：`okpdf`
+- Python 包：`agentpdf`
+- TypeScript 包：`@okpdf/agentpdf-node`
+- 工具命名空间：`pdf.*` 和 `agent.setup.*`
+
+兼容 quickstart：
 
 ```bash
-git clone git@github.com:tover0314-w/okpdf.git
-cd okpdf
 python scripts/setup_dev.py
 python scripts/doctor.py
 python scripts/smoke.py
-okpdf tools list
-okpdf create text "Hello from okpdf" -o .agentpdf-out/hello.pdf --json
-```
-
-常用命令：
-
-```bash
+okpdf tools list --json
 okpdf inspect tests/fixtures/simple.pdf --json
-okpdf merge tests/fixtures/simple.pdf tests/fixtures/two_pages.pdf -o .agentpdf-out/merged.pdf --json
-okpdf render tests/fixtures/simple.pdf --pages 1 --format png --out-dir .agentpdf-out/renders --json
-okpdf create markdown examples/sample-documents/business_report.md -o .agentpdf-out/report.pdf --json
-okpdf validate .agentpdf-out/report.pdf --json
-okpdf serve --api
 okpdf serve --mcp --safe-root .
-```
-
-## Authoring 工作流：从 Brief 到已验证 PDF
-
-AgentPDF 可以在本地规划 authoring route、生成 storyboard、写出 page JSON、创建 HTML/CSS source package、渲染为 PDF，并运行 visual QA。
-
-```bash
-okpdf workflow research-deck examples/research_deck_brief.json \
-  --evidence-cards examples/research_deck_evidence.json \
-  --html-output output/deck.html \
-  --pdf-output output/deck.pdf \
-  --artifact-dir output/research-deck-artifacts \
-  --execute \
-  --json
-```
-
-这条 OSS 路径是本地优先且确定性的。托管 research、LLM insight synthesis 和 managed browser renderer 属于未来云端或可选 worker 边界，不是默认核心逻辑。
-
-## Docker
-
-```bash
-docker build -t okpdf/local:dev .
-docker run --rm -p 7331:7331 -v "$PWD:/workspace" okpdf/local:dev
-curl http://127.0.0.1:7331/healthz
-```
-
-也可以使用：
-
-```bash
-docker compose up --build
-```
-
-镜像默认以非 root 用户运行，默认关闭云端/model 调用，暴露与 MCP 和 Node SDK 共用的本地 REST API。
-
-## TypeScript / Node.js
-
-先启动本地 REST API：
-
-```bash
 okpdf serve --api
 ```
 
-然后从 Node 调用：
+## okoffice 目标命令
+
+这些命令代表产品方向，实际实现会按计划逐步补齐：
 
 ```bash
-npm install
-npm run build:node
-node packages/agentpdf-node/dist/src/cli.js tools
-node packages/agentpdf-node/dist/src/cli.js create-text --text "Hello Node" -o .agentpdf-out/node.pdf
+okoffice tools list --json
+okoffice inspect report.docx --json
+okoffice inspect model.xlsx --json
+okoffice inspect deck.pptx --json
+okoffice workflow docset-to-sheet sources/*.docx sources/*.pdf -o .okoffice-out/evidence.xlsx --json
+okoffice workflow sheet-to-deck .okoffice-out/evidence.xlsx -o .okoffice-out/board-deck.pptx --json
+okoffice bundle verify .okoffice-out/board-pack.okoffice.zip --json
 ```
 
-SDK 示例：
+## 下一步实现顺序
 
-```ts
-import { AgentPDFClient } from "@okpdf/agentpdf-node";
+1. 增加 `okoffice` CLI alias，同时保留 `okpdf`。
+2. 增加 okoffice manifest / namespace skeleton。
+3. 增加 Office IR 和 source locator schemas。
+4. 实现 DOCX/XLSX/PPTX inspect。
+5. 实现 Word/Excel/PPT validation。
+6. 实现 `docset_to_sheet`。
+7. 实现 `sheet_to_deck`。
+8. 实现 `board_pack`。
+9. 把 OfficeCLI、LibreOffice、OCR、formula engine、AI provider 做成可选 worker。
 
-const client = new AgentPDFClient({ baseUrl: "http://127.0.0.1:7331" });
-const result = await client.createMarkdownPdf({
-  markdown: "# Agent Report\n\n- Local first\n- MCP ready",
-  outputPath: ".agentpdf-out/report.pdf",
-  stylePack: "business_report_modern",
-});
+## 重点文档
 
-console.log(result.status);
-console.log(result.artifacts[0]?.path);
-```
-
-## MCP 和 REST
-
-运行本地 stdio MCP server：
-
-```bash
-okpdf serve --mcp --safe-root .
-```
-
-生成 Claude Code 项目配置：
-
-```bash
-okpdf agent setup claude-code -o .mcp.json --json
-```
-
-运行本地 HTTP API：
-
-```bash
-okpdf serve --api
-```
-
-REST 示例：
-
-```bash
-curl -X POST http://127.0.0.1:7331/v1/tools/pdf.inspect.document/run \
-  -H 'Content-Type: application/json' \
-  -d '{"path": "tests/fixtures/simple.pdf"}'
-```
-
-## ToolResult 合约
-
-每个公开工具都返回统一结构：
-
-```json
-{
-  "job_id": "job_...",
-  "status": "succeeded",
-  "tool": "pdf.organize.merge",
-  "artifacts": [],
-  "validation": {},
-  "warnings": [],
-  "usage": {},
-  "next_recommended_tools": []
-}
-```
-
-生成 PDF 会附带 artifact metadata 和 validation checks，例如可解析性、页数、renderability 和 blank page 检查。
-
-## 仓库规范
-
-应该提交：
-
-- 源代码、schemas、tests、fixtures、docs、examples。
-- 小型、许可安全、可复现的 baseline 生成样例。
-- 能解释来源和再生成命令的示例资产。
-
-不应该提交：
-
-- `.agentpdf-out/` 下的本地输出。
-- `node_modules/`、`.venv/`、`dist/`、`build/`、cache、log、coverage。
-- `.env`、token、私有 URL、个人 MCP 配置。
-- 随手生成的大 PDF、数据库、临时压缩包、本地 benchmark 产物。
-
-如果确实需要提交生成 PDF，请放在 `examples/generated/`，同时保留 README 说明来源、用途和再生成命令。
-
-完整规则见 [docs/REPOSITORY_HYGIENE.md](docs/REPOSITORY_HYGIENE.md)。
+- [产品策略](docs/37_OKOFFICE_PRODUCT_STRATEGY.md)
+- [工具分类](docs/38_OKOFFICE_TOOL_TAXONOMY.md)
+- [云端商业化](docs/39_OKOFFICE_CLOUD_BUSINESS.md)
+- [Agent infra](docs/40_OKOFFICE_AGENT_INFRA.md)
+- [实施计划](docs/41_OKOFFICE_IMPLEMENTATION_PLAN.md)
+- [PDF 兼容层](docs/42_LEGACY_PDF_COMPATIBILITY.md)
+- [Office PRD](docs/36_OKOFFICE_AGENT_NATIVE_OFFICE_INFRA_PRD.md)
 
 ## 开发
 
 ```bash
 python scripts/setup_dev.py
 pytest -q
-npm --workspace @okpdf/agentpdf-node test
+npm test --workspace @okpdf/agentpdf-node
 ruff check src tests scripts
 ```
 
-本地开发不需要云服务。
+本地开发当前不需要任何云服务。
 
-## 贡献
+## License
 
-请阅读 [CONTRIBUTING.md](CONTRIBUTING.md)、[SECURITY.md](SECURITY.md)、[community/DEPENDENCY_POLICY.md](community/DEPENDENCY_POLICY.md) 和 [docs/i18n/README.md](docs/i18n/README.md)。
-
-新增公开功能时，请同步更新：
-
-- CLI 示例。
-- MCP 示例。
-- REST 示例。
-- 预期输出示例。
-- 错误示例。
-- 限制说明。
-- 依赖和许可证说明。
-- 相关翻译入口，至少保证 README 链接和核心术语不失真。
-
-## 许可证
-
-Apache-2.0。见 [LICENSE](LICENSE)。
+Apache-2.0。详见 [LICENSE](LICENSE)。

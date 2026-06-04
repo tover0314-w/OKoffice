@@ -1,77 +1,72 @@
-# 29 — Batch and Workflow Engine
+# 29 - Batch and Workflow Engine
 
-## Open-source baseline
+## Open-Source Baseline
 
 Batch can start as a CLI loop:
 
 ```bash
-agentpdf batch run workflow.yaml --input-dir ./pdfs --out-dir ./out
+okoffice batch run workflow.yaml --input-dir ./sources --out-dir ./out
 ```
 
-Agents can already ask for a local-first workflow plan:
+Compatibility commands remain available while the CLI migrates:
 
 ```bash
-okpdf workflow plan --goal "Chat with this PDF and cite answers" --input-path report.pdf --json
+okpdf workflow plan --goal "Inspect this PDF and cite answers" --input-path report.pdf --json
 ```
 
 The implemented `pdf.workflow.plan` tool returns a `ToolResult` with a workflow plan id, agent roles, ordered tool steps, expected JSON outputs, and an explicit cloud boundary.
 
-Future workflow plans should also be able to describe context packet inputs, target PDF profiles, source graph evidence, composition IR outputs, patch transactions, evidence coverage checks, and artifact graph updates. This keeps the workflow layer useful for agent-native document assembly, not only single-PDF tool chaining.
+The target okoffice workflow planner should also describe:
 
-Agents can also execute a concrete local workflow manifest:
+- Source Graph inputs.
+- Artifact profiles.
+- Office IR outputs.
+- Patch transactions.
+- Evidence coverage checks.
+- Format-specific validation.
+- Bundle manifests.
+- Artifact graph updates.
+
+## Current Local Execution
+
+Agents can execute a concrete local workflow manifest:
 
 ```bash
-okpdf workflow run examples/workflows/local-rag.json --json
+okoffice workflow run examples/workflows/board-pack.yaml --json
 ```
 
-The implemented `pdf.workflow.run` tool executes supported local tools in order and returns per-step job ids, statuses, artifact ids, warnings, and next recommended tools. It accepts either a workflow manifest or the full JSON returned by `pdf.workflow.plan`.
+Compatibility `pdf.workflow.run` executes supported local PDF-domain tools in order and returns per-step job ids, statuses, artifact ids, warnings, and next recommended tools. Target `office.workflow.run` should do the same across Word, Excel, PowerPoint, PDF, and bundles.
 
-Runtime placeholders can be supplied through `bindings`; artifact placeholders such as `<output.index.json>` can be generated under `artifact_dir`.
+Runtime placeholders can be supplied through `bindings`; artifact placeholders can be generated under `artifact_dir`.
 
 ```bash
-okpdf workflow run plan-result.json \
-  --artifact-dir .agentpdf-out/workflows/chat \
-  --binding "<question>=What does this PDF say?" \
-  --binding "<answer>=This PDF is locally indexed." \
+okoffice workflow run plan-result.json \
+  --artifact-dir .okoffice-out/workflows/board-pack \
+  --binding "<reviewer>=Finance Committee" \
   --json
 ```
 
-Unresolved semantic placeholders such as `<question>` are rejected before execution unless `--dry-run` is used.
+Unresolved semantic placeholders are rejected before execution unless dry-run is used.
+
+## Workflow Report
 
 Workflow runs can be summarized into a structured report and optional Markdown artifact:
 
 ```bash
-okpdf workflow report run-result.json -o .agentpdf-out/workflows/chat-report.md --json
+okoffice workflow report run-result.json -o .okoffice-out/workflows/board-pack-report.md --json
 ```
 
-`pdf.workflow.report` returns run status, step counts, failed step ids, tool list, warning rollup, artifact count, and Markdown suitable for issue comments, agent handoffs, or CI logs.
+Target:
 
-Example output shape:
-
-```json
-{
-  "tool": "pdf.workflow.run",
-  "status": "succeeded",
-  "usage": {
-    "workflow_run": {
-      "run_id": "wfrun_...",
-      "planned_steps": 4,
-      "executed_steps": 4,
-      "failed_steps": 0,
-      "step_results": []
-    }
-  }
-}
+```bash
+okoffice workflow report run-result.json -o .okoffice-out/workflow-report.md --json
 ```
 
-Current limitations:
+Reports should include run status, step counts, failed step ids, tool list, warning rollup, artifact count, validation summaries, and bundle/source-map links.
 
-- No parallel execution yet.
-- No variable substitution yet; concrete paths must be supplied before execution.
-- Cloud-only/model tools are rejected by the local runner.
-- Context packets, target PDF profiles, source graph, artifact graph, composition IR, and patch manifests are product-direction concepts; first local implementations may be schema-only or example-driven.
+## Workflow YAML Concepts
 
-## Workflow YAML concept
+### PDF Compatibility Workflow
 
 ```yaml
 name: redact-and-summarize
@@ -89,51 +84,80 @@ outputs:
   folder: ./out
 ```
 
-## Agent-native workflow concept
+### Office Docset to Evidence Workbook
 
 ```yaml
-name: context-to-board-deck
+name: vendor-contracts-to-evidence-workbook
 inputs:
-  context:
-    - ./meeting-transcript.md
-    - ./metrics.csv
-    - ./screenshots/
+  sources:
+    - ./contracts/*.docx
+    - ./invoices/*.pdf
 steps:
-  - tool: pdf.context.packet
-  - tool: pdf.target.select_profile
-  - tool: pdf.compose.plan
-  - tool: pdf.compose.render_ir
-  - tool: pdf.evidence.coverage_report
-  - tool: pdf.validation.render_check
+  - tool: office.context.build_packet
+  - tool: office.ai.extract.schema
+    with:
+      fields:
+        - vendor
+        - renewal_date
+        - annual_amount
+  - tool: sheet.create.workbook
+  - tool: sheet.validation.formulas
+  - tool: office.evidence.coverage
 outputs:
-  pdf: ./out/board-deck.pdf
-  source_map: ./out/board-deck.source-map.json
-  report: ./out/board-deck.validation.json
+  workbook: ./out/vendor-evidence.xlsx
+  source_map: ./out/vendor-evidence.source-map.json
 ```
 
-Patch workflow concept:
+### Evidence Workbook to Board Deck
 
 ```yaml
-name: insert-code-appendix
+name: evidence-workbook-to-board-deck
 inputs:
-  pdf: ./architecture-review.pdf
-  code: ./src/
+  workbook: ./out/vendor-evidence.xlsx
 steps:
-  - tool: pdf.inspect.document
-  - tool: pdf.context.code_snapshot
-  - tool: pdf.target.select_profile
-  - tool: pdf.patch.plan
-  - tool: pdf.patch.preview
-  - tool: pdf.patch.apply
-  - tool: pdf.patch.verify
-  - tool: pdf.validation.visual_diff
+  - tool: sheet.inspect.workbook
+  - tool: sheet.extract.tables
+  - tool: deck.compose.plan
+  - tool: deck.create.presentation
+  - tool: deck.validation.contact_sheet
 outputs:
-  pdf: ./out/architecture-review-with-appendix.pdf
-  patch_manifest: ./out/patch.json
-  diff_report: ./out/diff.json
+  deck: ./out/vendor-board-deck.pptx
+  contact_sheet: ./out/vendor-board-deck.contact-sheet.png
 ```
 
-## Future cloud workflow features
+### Board Pack Bundle
+
+```yaml
+name: board-pack
+inputs:
+  sources:
+    - ./contracts/*.docx
+    - ./invoices/*.pdf
+steps:
+  - tool: office.workflow.docset_to_sheet
+  - tool: office.workflow.sheet_to_deck
+  - tool: word.create.document
+  - tool: pdf.convert.from_office_bundle
+    when: optional_worker_available
+  - tool: office.bundle.export
+  - tool: office.bundle.verify
+outputs:
+  workbook: ./out/evidence.xlsx
+  deck: ./out/board-deck.pptx
+  memo: ./out/executive-memo.docx
+  handout: ./out/board-handout.pdf
+  bundle: ./out/board-pack.okoffice.zip
+```
+
+## Current Limitations
+
+- No parallel execution yet.
+- Variable substitution is limited.
+- Cloud-only/model tools are rejected by the local runner.
+- Office workflows are target specs until the corresponding tools are implemented.
+- Context packets, Office IR, source graph, artifact graph, and bundle manifests may start schema-first.
+
+## Future Cloud Workflow Features
 
 - Queue.
 - Retry.
@@ -142,30 +166,35 @@ outputs:
 - Parallelism.
 - Scheduled jobs.
 - Team usage accounting.
-- Hosted context packet and source graph persistence.
+- Hosted source graph persistence.
 - Hosted artifact graph persistence.
 - Long-running video/image/audio workers.
 - Evidence and citation verification workers.
 - Enterprise audit logs and retention policies.
 
-## Agent integration
+## Agent Integration
 
 Agents should be able to ask for a workflow plan before executing it:
+
+```text
+office.workflow.plan -> office.workflow.run -> office.workflow.report
+```
+
+Compatibility:
 
 ```text
 pdf.workflow.plan -> pdf.workflow.run -> pdf.workflow.report
 ```
 
-`pdf.workflow.plan`, `pdf.workflow.run`, and `pdf.workflow.report` are implemented locally. Future orchestration work should add retries, parallel execution, richer variable binding, and batch persistence.
-
 Longer-term workflow runs should expose a complete audit trail:
 
 - Input context packet.
-- Target PDF profile.
+- Target artifact profile.
 - Input source graph.
 - Step results.
 - Output artifacts.
 - Source maps.
 - Patch manifests.
 - Validation reports.
+- Bundle manifest.
 - Warnings and unresolved risks.

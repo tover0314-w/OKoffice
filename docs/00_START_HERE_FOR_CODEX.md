@@ -1,86 +1,60 @@
-# 00 — Start Here for Codex
+# 00 - Start Here for Codex
+
+This repository is now directed toward **okoffice**: local-first, agent-native Office infrastructure for Word, Excel, PowerPoint, PDF, bundles, and cross-document workflows.
 
 Read these files first, in order:
 
 1. `README.md`
 2. `AGENTS.md`
-3. `docs/01_PRODUCT_VISION.md`
-4. `docs/35_AGENT_NATIVE_MULTIMODAL_PDF_INFRA_PRD.md`
-5. `docs/02_OPEN_SOURCE_SCOPE.md`
-6. `docs/03_ARCHITECTURE.md`
-7. `docs/05_COMPLETE_TOOL_CATALOG.md`
-8. `schemas/tool-manifest.schema.json`
-9. `codex/backlog/V0_IMPLEMENTATION_ORDER.md`
-10. `codex/review/CODE_REVIEW_CHECKLIST.md`
+3. `docs/37_OKOFFICE_PRODUCT_STRATEGY.md`
+4. `docs/38_OKOFFICE_TOOL_TAXONOMY.md`
+5. `docs/40_OKOFFICE_AGENT_INFRA.md`
+6. `docs/41_OKOFFICE_IMPLEMENTATION_PLAN.md`
+7. `docs/42_LEGACY_PDF_COMPATIBILITY.md`
+8. `docs/36_OKOFFICE_AGENT_NATIVE_OFFICE_INFRA_PRD.md`
+9. `docs/03_ARCHITECTURE.md`
+10. `docs/11_DOCUMENT_IR_SPEC.md`
+11. `codex/backlog/V0_IMPLEMENTATION_ORDER.md`
 
-## Primary objective
+## Primary Objective
 
-Implement the first open-source version of AgentPDF Infra with a beautiful developer experience, a full tool manifest, and a clear path toward agent-native multimodal PDF infrastructure.
+Build okoffice as the open-source tool layer agents use to inspect, extract, create, edit, validate, cite, and bundle Office artifacts.
 
-The first code release does **not** need to fully implement every planned PDF tool. It does need to:
+The current runnable implementation is the PDF compatibility domain. Treat it as existing infrastructure to preserve, not as the future product boundary.
 
-- Provide a complete, stable namespace.
-- Implement the first core stable tools.
-- Make CLI/MCP/API integration real.
-- Produce structured outputs and validation reports.
-- Treat PDFs as evidence-backed target artifacts created from context packets, target profiles, source maps, manifests, and next actions.
-- Maintain open-source quality standards.
+## What To Build Next
 
-## Implementation milestones
+Prioritize:
 
-### Milestone A — Repo bootstrap
+- okoffice naming and namespace scaffolding.
+- Office IR and Source Graph schemas.
+- native locators for Word, Excel, PowerPoint, and PDF.
+- deterministic `.docx`, `.xlsx`, and `.pptx` inspect tools.
+- format-specific validation tools.
+- `docset_to_sheet`, `sheet_to_deck`, and `board_pack` workflows.
+- agent setup and manifest surfaces for multiple coding agents.
 
-- Python package.
-- CLI entrypoint.
-- Logging and config.
-- Schemas copied into package.
-- Basic tests.
-- Documentation build path.
+Do not spend the next phase adding unrelated PDF-only utility breadth unless it supports okoffice workflows, safety, validation, or compatibility.
 
-### Milestone B — Core deterministic PDF tools
+## Product Shape
 
-- `pdf.inspect`
-- `pdf.render.pages`
-- `pdf.organize.merge`
-- `pdf.organize.split`
-- `pdf.organize.extract_pages`
-- `pdf.organize.remove_pages`
-- `pdf.organize.rotate_pages`
-- `pdf.metadata.read`
-- `pdf.metadata.update`
-- `pdf.convert.pdf_to_images`
-- `pdf.convert.image_to_pdf`
-- `pdf.convert.markdown_to_pdf`
-- `pdf.convert.text_to_pdf`
-- `pdf.edit.watermark`
-- `pdf.edit.page_numbers`
-- `pdf.validation.validate_output`
+The first public okoffice release should make this workflow unmistakable:
 
-### Milestone C — Agent interfaces
+```text
+understand sources -> extract evidence -> model data -> compose artifact -> verify -> export bundle
+```
 
-- MCP server exposing stable tools.
-- REST API exposing stable tools.
-- Tool registry and tool discovery endpoint.
-- Example configs for Claude Desktop, Cursor, OpenAI Agents, and local API calls.
+## Acceptance Bar
 
-### Milestone D — Lightweight AI/document layer
+The repository should look polished enough that a developer can star it, run the local compatibility tools, and clearly see the path to a complete agent-native Office workflow system.
 
-- Lite parse.
-- Text chunks.
-- Local keyword/vector-like demo retrieval.
-- RAG answer wrapper with citations.
-- No paid models required by default.
+Each new public capability needs:
 
-### Milestone E - Agent-native product surface
-
-The first release does not need full multimodal or cloud execution, but the harness should expose the product shape:
-
-- Context packet, target PDF profile, source graph, and artifact lineage concepts.
-- Composition IR direction for learning PDFs, resumes, papers, reports, packets, and slide-like PDFs.
-- Patch transaction direction for agent edits.
-- Evidence and citation tools as a broader layer than RAG.
-- Workflow recipes for multimodal-to-PDF, PDF patching, verification packets, and presentations.
-
-## Acceptance bar for the first public release
-
-The public repository should look polished enough that a developer can star it, run it locally, and understand the path from local PDF tools to a complete agent-native document infrastructure product.
+- CLI example.
+- MCP example.
+- REST example.
+- expected ToolResult output.
+- error example.
+- limitations.
+- validation expectations.
+- license/dependency notes where relevant.

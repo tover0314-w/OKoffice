@@ -1,51 +1,71 @@
-# 11 - Context, Target, Document, Source, and Composition IR Specification
+# 11 - Context, Source, Office IR, and Composition IR Specification
 
-## Why IR matters
+## Why IR Matters
 
-The core moat of AgentPDF is not file merging. It is a structured, agent-readable intermediate representation that makes parsing, RAG/evidence, editing, generation, citation, verification, and workflow orchestration composable.
+The core moat of okoffice is not file conversion. It is a structured, agent-readable intermediate representation that makes parsing, extraction, evidence, editing, generation, citation, validation, and workflow orchestration composable across Word, Excel, PowerPoint, PDF, and other source materials.
 
-AgentPDF needs five related representations:
+okoffice needs these related representations:
 
 - Context packet: what materials and intent the agent/user supplied.
-- Target PDF profile: what kind of PDF should be produced.
+- Target artifact profile: what kind of output should be produced.
 - Source graph: where information came from.
-- Document IR: what exists inside a parsed context item.
-- Composition IR: what should be rendered into a target PDF artifact.
+- Office IR: what exists inside a parsed context item or generated artifact.
+- Composition IR: what should be rendered into target artifacts.
+- Patch manifest: what changes should be applied without mutating inputs.
+- Artifact bundle manifest: what outputs and evidence travel together.
 
-## Design goals
+## Design Goals
 
-- Preserve page geometry.
+- Preserve format-specific structure.
+- Preserve geometry and layout when known.
 - Preserve reading order when known.
 - Include confidence and source method.
-- Support text, tables, images, figures, forms, annotations, signatures, links, metadata, code blocks, slide blocks, and speaker notes.
-- Enable page/bbox/timestamp/file/row citations.
-- Enable regeneration into PDF.
-- Enable visual, semantic, citation, source coverage, and layout diff.
+- Support text, tables, images, figures, forms, annotations, comments, revisions, formulas, charts, fields, links, metadata, code blocks, slides, speaker notes, cells, ranges, and pages.
+- Enable page/bbox/paragraph/run/sheet/range/cell/slide/shape/timestamp/file/row citations.
+- Enable regeneration into Word, Excel, PowerPoint, PDF, HTML, Markdown, JSON, and bundles.
+- Enable visual, semantic, citation, source coverage, formula, and layout diff.
 - Make generated artifacts traceable back to source material.
-- Keep context input separate from target PDF output, so images, videos, documents, code, and links are not treated as PDF subtypes.
+- Keep context input separate from target output, so PDFs, Word docs, workbooks, decks, images, videos, data, code, and links are not treated as subtypes of one another.
 
-## Context packet model
+## Context Packet Model
 
-A context packet is the user/agent-facing input container. It can mix different material types before the system decides what PDF to produce. The local baseline implements this as `pdf.context.build_packet` and writes a JSON artifact shaped by `schemas/context-packet.schema.json`.
+A context packet is the user/agent-facing input container. It can mix material types before the system decides what to produce.
 
 ```bash
-okpdf context build \
-  --text "Create a technical audit PDF from these sources." \
-  --file README.md \
-  --file examples/sample-documents/business_report.md \
-  -o .agentpdf-out/context.packet.json \
-  --title "Audit Context" \
+okoffice context build \
+  --text "Create a board review from these sources." \
+  --file diligence.pdf \
+  --file memo.docx \
+  --file metrics.xlsx \
+  -o .okoffice-out/context.packet.json \
+  --title "Board Review Context" \
   --json
 ```
 
 ```json
 {
   "context_packet_id": "ctxpkt_...",
-  "title": "Audit Context",
-  "intent": "Create a target PDF artifact with traceable evidence.",
+  "title": "Board Review Context",
+  "intent": "Create a board review with an evidence workbook and deck.",
   "items": [
-    {"context_item_id": "ctx_001", "type": "text", "source_ref": "ctx_001", "role": "brief"},
-    {"context_item_id": "ctx_002", "type": "document", "source_ref": "ctx_002", "uri": "D:/repo/README.md"}
+    {
+      "context_item_id": "ctx_001",
+      "type": "pdf",
+      "source_ref": "src_pdf_001",
+      "uri": "diligence.pdf"
+    },
+    {
+      "context_item_id": "ctx_002",
+      "type": "word_document",
+      "source_ref": "src_docx_001",
+      "uri": "memo.docx"
+    },
+    {
+      "context_item_id": "ctx_003",
+      "type": "workbook",
+      "source_ref": "src_xlsx_001",
+      "uri": "metrics.xlsx"
+    }
   ],
   "source_graph": {
     "source_graph_id": "srcgraph_...",
@@ -57,6 +77,9 @@ okpdf context build \
 Context item types should include:
 
 - `pdf`
+- `word_document`
+- `workbook`
+- `deck`
 - `image`
 - `scan`
 - `video`
@@ -65,306 +88,320 @@ Context item types should include:
 - `web_page`
 - `markdown`
 - `html`
-- `office_document`
 - `text`
 - `code_repository`
 - `code_file`
-- `spreadsheet`
 - `csv`
 - `database_result`
 - `json`
 - `prompt`
 - `review_note`
 
-## Target PDF profile model
+## Target Artifact Profile Model
 
-A target PDF profile defines the intended output type, structure, style, and validation policy. The local baseline implements target profiles in `pdf.compose.from_context` and documents the schema in `schemas/target-pdf-profile.schema.json`.
+A target artifact profile defines the intended output type, structure, style, and validation policy.
 
 ```json
 {
-  "profile_id": "technical_audit",
-  "title": "AgentPDF Technical Audit",
-  "audience": "agent infrastructure maintainers",
-  "style_pack": "paper_ink",
-  "sections": ["Executive Summary", "Evidence Table", "Code Review", "Source Map"],
-  "validation_required": ["render_check", "evidence_coverage_report"]
+  "profile_id": "board_review_pack",
+  "title": "Board Review Pack",
+  "audience": "board and executive team",
+  "outputs": ["evidence_workbook", "powerpoint_deck", "pdf_packet"],
+  "style_pack": "executive_clear",
+  "sections": ["Executive Summary", "KPI Review", "Risks", "Decisions", "Appendix"],
+  "validation_required": [
+    "office.validation.source_coverage",
+    "office.validation.workbook_formula_check",
+    "office.validation.deck_render_check",
+    "office.validation.bundle_manifest_check"
+  ]
 }
 ```
 
-```bash
-okpdf compose from-context .agentpdf-out/context.packet.json \
-  --profile technical_audit \
-  -o .agentpdf-out/technical-audit.pdf \
-  --renderer html \
-  --html-output .agentpdf-out/technical-audit.html \
-  --json
-```
+Target artifact types should include:
 
-Target PDF types should include:
+- `word_report`
+- `word_memo`
+- `evidence_workbook`
+- `excel_model`
+- `powerpoint_deck`
+- `board_deck`
+- `pdf_packet`
+- `research_brief`
+- `legal_review_packet`
+- `training_handout`
+- `worksheet`
+- `code_audit_packet`
+- `invoice`
+- `artifact_bundle`
 
-- `learning_pdf`
-- `resume_pdf`
-- `academic_paper_pdf`
-- `deck_pdf`
-- `business_report_pdf`
-- `board_deck_pdf`
-- `legal_review_packet_pdf`
-- `evidence_packet_pdf`
-- `training_handout_pdf`
-- `worksheet_pdf`
-- `code_audit_pdf`
-- `invoice_pdf`
-- `formal_document_pdf`
-
-## Source graph model
+## Source Graph Model
 
 The source graph is derived from the context packet and records all inputs and derived source nodes.
 
 ```json
 {
-  "graph_id": "sg_...",
-  "sources": [
+  "source_graph_id": "sg_...",
+  "nodes": [
     {
-      "source_id": "src_pdf_001",
-      "type": "pdf",
+      "source_id": "src_pdf_001_page_005",
+      "type": "pdf_page",
+      "parent_source_id": "src_pdf_001",
       "artifact_id": "art_...",
-      "filename": "report.pdf",
+      "locator": {"page": 5},
       "sha256": "..."
     },
     {
-      "source_id": "src_video_001_segment_004",
-      "type": "transcript_segment",
-      "parent_source_id": "src_video_001",
-      "locator": {"time_range": ["00:03:12", "00:03:48"]},
+      "source_id": "src_xlsx_001_range_revenue",
+      "type": "sheet_range",
+      "parent_source_id": "src_xlsx_001",
+      "locator": {"sheet": "Revenue", "range": "B4:F18"},
+      "confidence": 1.0
+    },
+    {
+      "source_id": "src_docx_001_p_012",
+      "type": "word_paragraph",
+      "parent_source_id": "src_docx_001",
+      "locator": {"paragraph_index": 12},
       "text": "Renewal risk is concentrated in enterprise accounts.",
-      "confidence": 0.88
+      "confidence": 0.93
     }
-  ]
+  ],
+  "edges": []
 }
 ```
 
 Source types should include:
 
-- `pdf`
-- `pdf_page`
-- `pdf_block`
-- `image`
-- `image_region`
+- `pdf`, `pdf_page`, `pdf_block`
+- `word_document`, `word_section`, `word_paragraph`, `word_run`, `word_table`, `word_cell`, `word_comment`, `word_revision`, `word_field`
+- `workbook`, `sheet`, `cell`, `sheet_range`, `formula`, `table`, `pivot_table`, `chart`, `named_range`
+- `deck`, `slide`, `shape`, `slide_table`, `slide_chart`, `speaker_note`, `media`
+- `image`, `image_region`
 - `scan`
-- `video`
-- `video_frame`
-- `transcript_segment`
+- `video`, `video_frame`, `transcript_segment`
 - `audio`
 - `web_page`
-- `markdown`
-- `html`
-- `text`
-- `code_file`
-- `code_range`
-- `spreadsheet`
-- `data_range`
-- `json_field`
-- `prompt`
-- `review_note`
+- `markdown`, `html`, `text`
+- `code_file`, `code_range`
+- `csv_row`, `database_row`, `json_field`
+- `prompt`, `review_note`
 
-## Document IR model
+## Locator Shapes
 
-Document IR describes an existing parsed context item, such as a PDF, web page, code file, transcript, spreadsheet, or document.
+PDF:
+
+```json
+{"page": 2, "bbox": [72, 144, 520, 210]}
+```
+
+Word:
+
+```json
+{"section": 1, "paragraph_index": 14, "run_index": 2}
+```
+
+Excel:
+
+```json
+{"sheet": "KPI", "cell": "D12"}
+```
+
+Excel range:
+
+```json
+{"sheet": "Revenue", "range": "B4:F18", "row": 8, "column": "D"}
+```
+
+PowerPoint:
+
+```json
+{"slide": 7, "shape_id": "shape_12", "bbox": [1.5, 4.0, 14.2, 6.8], "unit": "cm"}
+```
+
+Transcript:
+
+```json
+{"time_range": ["00:03:12", "00:03:48"]}
+```
+
+Code:
+
+```json
+{"path": "src/okoffice/workflows/docset_to_sheet.py", "line_start": 20, "line_end": 48}
+```
+
+## Office IR Model
+
+Office IR describes an existing parsed context item or generated artifact.
 
 ```json
 {
-  "ir_version": "0.2",
+  "ir_version": "0.3",
   "document_id": "doc_...",
+  "artifact_kind": "workbook",
   "source": {
-    "source_id": "src_pdf_001",
+    "source_id": "src_xlsx_001",
     "artifact_id": "art_...",
-    "filename": "report.pdf",
+    "filename": "metrics.xlsx",
     "sha256": "..."
   },
   "metadata": {
-    "title": "Q1 Report",
-    "page_count": 12,
-    "language": "en",
-    "has_text_layer": true,
-    "has_scanned_pages": false
+    "title": "Q1 Metrics",
+    "sheet_count": 4,
+    "has_macros": false,
+    "has_external_links": false
   },
-  "pages": [
+  "sheets": [
     {
-      "page_number": 1,
-      "width": 612,
-      "height": 792,
-      "rotation": 0,
-      "blocks": [
+      "name": "Revenue",
+      "used_range": "A1:F40",
+      "tables": [],
+      "formulas": [
         {
-          "id": "blk_1",
-          "type": "heading",
-          "text": "Executive Summary",
-          "bbox": [72, 80, 420, 120],
-          "confidence": 0.98,
-          "source": "text_layer",
+          "cell": "F12",
+          "formula": "SUM(B12:E12)",
+          "cached_value": 1250000,
           "source_ref": {
-            "source_id": "src_pdf_001",
-            "locator": {"page": 1, "bbox": [72, 80, 420, 120]}
+            "source_id": "src_xlsx_001",
+            "locator": {"sheet": "Revenue", "cell": "F12"}
           }
+        }
+      ],
+      "charts": []
+    }
+  ]
+}
+```
+
+Format-specific top-level sections:
+
+- PDF IR: `pages`, `blocks`, `annotations`, `forms`, `attachments`, `metadata`.
+- Word IR: `sections`, `paragraphs`, `tables`, `comments`, `revisions`, `fields`, `headers`, `footers`.
+- Excel IR: `sheets`, `cells`, `ranges`, `tables`, `formulas`, `pivots`, `charts`, `named_ranges`.
+- PowerPoint IR: `slides`, `shapes`, `tables`, `charts`, `notes`, `comments`, `media`, `theme`.
+
+## Composition IR Model
+
+Composition IR describes new artifacts to create for a target profile.
+
+```json
+{
+  "composition_version": "0.2",
+  "composition_id": "cmp_...",
+  "outputs": [
+    {
+      "artifact_kind": "xlsx",
+      "target_profile_id": "evidence_workbook",
+      "sheet_plan": [
+        {"name": "Executive Summary", "role": "summary"},
+        {"name": "Extracted Evidence", "role": "source_backed_table"},
+        {"name": "Checks", "role": "validation"}
+      ]
+    },
+    {
+      "artifact_kind": "pptx",
+      "target_profile_id": "board_deck",
+      "deck_plan": [
+        {"slide_id": "s1", "title": "Renewal risk is concentrated", "proof_object": "chart"},
+        {"slide_id": "s2", "title": "Three actions reduce exposure", "proof_object": "decision_table"}
+      ]
+    }
+  ],
+  "blocks": [
+    {
+      "id": "claim_renewal_risk",
+      "type": "claim",
+      "text": "Renewal risk is concentrated in enterprise accounts.",
+      "source_refs": [
+        {
+          "source_id": "src_docx_001_p_012",
+          "locator": {"paragraph_index": 12},
+          "confidence": 0.93
+        },
+        {
+          "source_id": "src_pdf_001_page_005",
+          "locator": {"page": 5, "bbox": [72, 144, 520, 210]},
+          "confidence": 0.88
         }
       ]
     }
+  ],
+  "validation_required": [
+    "office.validation.source_coverage",
+    "office.validation.workbook_formula_check",
+    "office.validation.deck_render_check"
   ]
 }
 ```
 
-## Composition IR model
+## Patch Manifest Model
 
-Composition IR describes a new PDF artifact to render for a specific target PDF profile.
+Patch manifests represent edits explicitly and non-mutatingly.
 
 ```json
 {
-  "composition_version": "0.1",
-  "composition_id": "cmp_...",
-  "output": {
-    "artifact_kind": "pdf",
-    "target_profile_id": "target_business_report",
-    "pdf_type": "business_report_pdf",
-    "layout_mode": "report",
-    "style_pack": "business_report_modern"
-  },
-  "blocks": [
+  "patch_version": "0.2",
+  "patch_id": "patch_...",
+  "input_artifact": "art_docx_001",
+  "output_artifact_kind": "docx",
+  "operations": [
     {
-      "id": "blk_summary_003",
-      "type": "paragraph",
-      "text": "Renewal risk is the largest short-term revenue concern.",
-      "source_refs": [
-        {
-          "source_id": "src_video_001_segment_004",
-          "locator": {"time_range": ["00:03:12", "00:03:48"]},
-          "confidence": 0.86
-        },
-        {
-          "source_id": "src_pdf_001",
-          "locator": {"page": 5, "bbox": [72, 144, 520, 210]},
-          "confidence": 0.91
-        }
-      ],
-      "layout": {
-        "role": "body",
-        "keep_with_next": false,
-        "max_lines": 5
-      }
+      "op": "replace_text",
+      "target": {
+        "source_id": "src_docx_001_p_012",
+        "locator": {"paragraph_index": 12}
+      },
+      "replacement": "Renewal exposure is concentrated in enterprise accounts.",
+      "reason": "Use the finance team's preferred term."
     }
   ],
   "validation_required": [
-    "pdf.validation.render_check",
-    "pdf.evidence.coverage_report"
+    "office.validation.schema_check",
+    "office.validation.placeholder_check",
+    "office.validation.source_map_check"
   ]
 }
 ```
 
-## Block types
+## Validation Reports
 
-Document and composition IR should support:
+Validation reports should be format-aware.
 
-- `title`
-- `heading`
-- `paragraph`
-- `list`
-- `table`
-- `figure`
-- `image`
-- `caption`
-- `formula`
-- `chart`
-- `code_block`
-- `callout`
-- `quote`
-- `metric_card`
-- `timeline`
-- `slide`
-- `speaker_note`
-- `appendix`
-- `citation_list`
-- `source_ref`
-- `header`
-- `footer`
-- `page_number`
-- `form_field`
-- `annotation`
-- `signature`
-- `link`
-- `review_comment`
-- `approval_marker`
-- `unknown`
-
-## Coordinate and locator system
-
-User-facing bboxes should identify page coordinate system.
-
-- Include `coordinate_origin`: `top_left` or `bottom_left`.
-- Be explicit about units: PDF points by default.
-- Use timestamps for video/audio sources.
-- Use file path and line ranges for code sources.
-- Use row/range locators for tabular data.
-- Use URL and fragment/text offsets for web sources when available.
-
-## Citation object
+Common check fields:
 
 ```json
 {
-  "source_id": "src_pdf_001",
-  "page": 3,
-  "bbox": [72, 144, 520, 210],
-  "text": "Revenue increased by 12%",
-  "block_id": "blk_39",
-  "confidence": 0.91,
-  "source": "text_layer"
+  "name": "placeholder_leakage_check",
+  "status": "passed",
+  "details": {
+    "patterns_checked": ["{{", "}}", "<TODO>", "lorem", "xxxx"],
+    "matches": []
+  }
 }
 ```
 
-Non-PDF citation example:
+Examples:
 
-```json
-{
-  "source_id": "src_code_001",
-  "locator": {"path": "src/billing.py", "line_start": 40, "line_end": 67},
-  "text": "class BillingEvent",
-  "confidence": 1.0,
-  "source": "code_snapshot"
-}
-```
+- `pdf_render_check`
+- `word_outline_check`
+- `word_field_presence_check`
+- `sheet_formula_error_check`
+- `sheet_cached_value_check`
+- `deck_shape_bounds_check`
+- `deck_notes_coverage_check`
+- `source_coverage_report`
+- `bundle_manifest_check`
 
-## Patch transaction references
+## Compatibility Notes
 
-Patch manifests should target existing blocks, pages, bboxes, sections, or source refs. They should produce a new artifact and preserve rollback information.
+Existing schemas such as `context-packet.schema.json`, `document-ir.schema.json`, `composition-ir.schema.json`, and `target-pdf-profile.schema.json` are PDF-oriented but already point in the right direction.
 
-```json
-{
-  "patch_id": "patch_...",
-  "operations": [
-    {
-      "op": "insert_block",
-      "target": {"after_block_id": "blk_10"},
-      "block": {
-        "type": "code_block",
-        "language": "python",
-        "text": "def validate_pdf(path): ...",
-        "source_refs": [
-          {"source_id": "src_code_001", "locator": {"path": "src/validation/pdf.py", "line_start": 1, "line_end": 18}}
-        ]
-      }
-    }
-  ]
-}
-```
+Migration should add Office-aware schemas while preserving current tests:
 
-## IR export formats
+- `office-ir.schema.json`
+- `target-artifact-profile.schema.json`
+- `office-source-locator.schema.json`
+- `office-workflow.schema.json`
 
-- JSON.
-- Markdown.
-- HTML.
-- Chunks for RAG/evidence.
-- Source map JSON.
-- Patch manifest JSON.
-- Style-aware render input.
-
-## Schema
-
-See `schemas/document-ir.schema.json` for the current baseline. Future schema work should add source graph, composition IR, source map, and patch manifest schemas rather than overloading raw Document IR.
+Do not rename or remove current schemas until aliases and tests are in place.

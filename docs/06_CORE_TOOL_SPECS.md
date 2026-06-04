@@ -1,348 +1,374 @@
-# 06 — Core Tool Specifications
+# 06 - okoffice Core Tool Specifications
 
-This document describes the first stable deterministic tools Codex should implement.
+This document describes the first stable deterministic tool surface for okoffice. The existing `pdf.*` tools remain the implemented compatibility domain. The target product adds Word, Excel, PowerPoint, cross-format workflows, and audit bundles under an `office.*` namespace.
 
-## Common input concepts
+The rule is simple: agents should be able to inspect, create, edit, validate, and connect Office artifacts without guessing about file structure or silently trusting generated output.
 
-### File reference
+## Common Input Concepts
+
+### File Reference
 
 ```json
 {
   "kind": "local_path",
-  "path": "./report.pdf"
+  "path": "./report.docx"
 }
 ```
 
-Future kinds may include `artifact_id`, `url`, `bytes`, `connector_file`, or `cloud_object`.
+Future kinds may include `artifact_id`, `url`, `bytes`, `connector_file`, or `cloud_object`. Local paths must be explicit, normalized, and checked for traversal or suspicious names.
 
-### Page range syntax
+### Format
 
-Support a human-friendly page range parser:
+okoffice should detect and report file format, but callers may also provide an expected format:
+
+```json
+{
+  "file": {"kind": "local_path", "path": "./board-pack.pptx"},
+  "expected_format": "pptx"
+}
+```
+
+Supported target formats:
+
+- `pdf`
+- `docx`
+- `xlsx`
+- `pptx`
+- `csv`
+- `html`
+- `markdown`
+- `okoffice_bundle`
+
+### Range Syntax
+
+User-facing indexes are 1-based unless a native format convention is clearer.
+
+PDF pages:
 
 - `1`
 - `1-3`
 - `1,3,5`
-- `1-3,7,10-12`
 - `odd`
 - `even`
 - `all`
 
-Pages are 1-indexed for user-facing APIs.
+PowerPoint slides use the same syntax.
 
-Internal page indices may be 0-indexed but must never leak ambiguously.
+Excel ranges use workbook notation:
 
-## `pdf.inspect.document`
+- `Sheet1!A1:D20`
+- `Summary!A:C`
+- `Model!Revenue_Table`
+- `named_range:Assumptions`
 
-### Purpose
+Word ranges use stable document locators:
 
-Inspect a PDF and return agent-readable facts.
+- `heading:Executive Summary`
+- `paragraph:p_0042`
+- `table:t_0003`
+- `comment:c_0010`
 
-### Input
+## Common Output Contract
 
-```json
-{
-  "file": {"kind": "local_path", "path": "report.pdf"},
-  "include_page_details": true,
-  "include_security": true,
-  "include_recommendations": true
-}
-```
-
-### Output highlights
+Every core tool returns:
 
 ```json
 {
-  "page_count": 12,
-  "encrypted": false,
-  "has_text_layer": true,
-  "has_forms": false,
-  "has_annotations": true,
-  "has_attachments": false,
-  "has_signatures": false,
-  "scanned_page_estimate": [5, 6],
-  "recommended_next_tools": ["pdf.ai.parse.lite", "pdf.validation.render_check"]
+  "job_id": "job_...",
+  "status": "succeeded",
+  "tool": "sheet.inspect.workbook",
+  "artifacts": [],
+  "validation": {},
+  "warnings": [],
+  "usage": {},
+  "next_recommended_tools": []
 }
 ```
 
-### Acceptance criteria
+For generated artifacts, the output must include checksums, file size, format, validation summary, source refs when available, and next recommended validation or review tools.
+
+## Core Inspect Tools
+
+### `office.inspect.file`
+
+Purpose: identify a local file, detect format, inspect package health, and recommend next tools.
+
+Output highlights:
+
+```json
+{
+  "status": "succeeded",
+  "tool": "office.inspect.file",
+  "usage": {
+    "file": {
+      "extension": ".xlsx",
+      "size_bytes": 42811,
+      "sha256": "..."
+    },
+    "format": {
+      "detected_format": "xlsx",
+      "domain": "sheet",
+      "mime_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "package_type": "ooxml_xlsx"
+    },
+    "safety": {
+      "mutates_inputs": false,
+      "macro_enabled": false,
+      "has_external_relationships": false
+    }
+  },
+  "next_recommended_tools": ["sheet.inspect.workbook", "office.context.build_packet"]
+}
+```
+
+Acceptance criteria:
+
+- Does not mutate input.
+- Rejects unsafe paths.
+- Detects format mismatch.
+- Reports package and security facts.
+- Returns stable error codes.
+- Uses only Python standard library ZIP/XML-adjacent checks plus existing core dependencies.
+- Does not yet extract complete Word, Excel, or PowerPoint structure.
+
+### `pdf.inspect.document`
+
+Current implemented PDF-domain tool.
+
+Purpose: inspect a PDF and return agent-readable facts: page count, sizes, metadata, encryption, forms, annotations, attachments, text-layer presence, and recommendations.
+
+Acceptance criteria:
 
 - Works for valid PDFs.
-- Returns clear error for missing/encrypted/invalid PDFs.
-- Detects page count and sizes.
-- Returns metadata.
+- Returns clear errors for missing, encrypted, or invalid PDFs.
 - Does not mutate input.
+- Recommends parse, render, redaction, or validation tools as appropriate.
 
-## `pdf.inspect.pages`
+### `word.inspect.document`
 
-### Purpose
+Target deterministic DOCX tool.
 
-Return per-page facts that agents can use before parsing, OCR, editing, or validation workflows.
+Purpose: inspect a Word document package and return structure that agents can cite and edit.
 
-### Input
-
-```json
-{
-  "input_path": "report.pdf",
-  "pages": "1-3",
-  "render_check": true
-}
-```
-
-### Output highlights
+Output highlights:
 
 ```json
 {
-  "selected_pages": [1, 2, 3],
-  "pages": [
-    {
-      "page_number": 1,
-      "width": 612,
-      "height": 792,
-      "rotation": 0,
-      "has_text_layer": true,
-      "text_char_count": 842,
-      "image_count": 2,
-      "render": {"status": "passed", "width": 306, "height": 396}
-    }
-  ]
-}
-```
-
-### Acceptance criteria
-
-- Supports the standard page range syntax.
-- Reports page size, rotation, text presence, text character count, and embedded image count.
-- Optionally renders selected pages in memory and attaches render evidence.
-- Does not mutate input.
-
-## `pdf.organize.merge`
-
-### Input
-
-```json
-{
-  "files": [
-    {"kind": "local_path", "path": "a.pdf"},
-    {"kind": "local_path", "path": "b.pdf"}
+  "paragraph_count": 84,
+  "heading_count": 9,
+  "table_count": 3,
+  "comment_count": 2,
+  "tracked_changes": {"present": false},
+  "styles": ["Title", "Heading 1", "Normal", "Caption"],
+  "sections": [
+    {"section_id": "s_0001", "title": "Executive Summary", "paragraph_refs": ["p_0001", "p_0002"]}
   ],
-  "output": {"path": "merged.pdf"},
-  "preserve_metadata": false,
-  "validate": true
+  "recommended_next_tools": ["word.validation.package", "word.extract.tables"]
 }
 ```
 
-### Acceptance criteria
+Acceptance criteria:
 
-- Merges all pages in order.
-- Output page count equals sum of input page counts.
-- Produces validation report.
-- Handles encrypted PDFs only when authorized credentials are provided.
+- Reads DOCX package parts and relationships.
+- Extracts headings, paragraphs, tables, comments, footnotes/endnotes where available.
+- Reports styles and tracked changes.
+- Detects macros only when the file/package indicates macro-enabled content.
+- Does not claim final page layout unless rendered evidence exists.
 
-## `pdf.organize.split`
+### `sheet.inspect.workbook`
 
-### Input
+Target deterministic XLSX tool.
 
-```json
-{
-  "file": {"kind": "local_path", "path": "report.pdf"},
-  "strategy": "ranges",
-  "ranges": ["1-3", "4-6", "7-10"],
-  "output_dir": "./parts",
-  "filename_template": "report-part-{index}.pdf"
-}
-```
+Purpose: inspect workbook structure, formulas, tables, charts, and workbook risks.
 
-### Strategies
-
-- `ranges`
-- `every_n_pages`
-- `bookmarks`
-- `single_pages`
-
-### Acceptance criteria
-
-- Validates ranges.
-- Creates one artifact per output file.
-- Does not overwrite unless `overwrite=true`.
-- Preserves page order.
-
-## `pdf.optimize.compress`
-
-### Input
+Output highlights:
 
 ```json
 {
-  "input_path": "report.pdf",
-  "output_path": "report-compressed.pdf"
-}
-```
-
-### Open-source baseline
-
-The local implementation rewrites pages through the PDF writer, compresses page content streams when the backend supports it, preserves page count, records original/output byte counts, and validates the generated PDF. It may warn when the source is already compressed or the rewritten output is not smaller.
-
-## `pdf.optimize.repair`
-
-### Input
-
-```json
-{
-  "input_path": "report.pdf",
-  "output_path": "report-repaired.pdf"
-}
-```
-
-### Open-source baseline
-
-The local implementation reads a parseable or mildly recoverable PDF and writes a fresh PDF object structure. This is a safe local rewrite helper, not a promise to recover every corrupted file; richer diagnostics can be added later with optional qpdf-style workers.
-
-## `pdf.convert.pdf_to_images`
-
-### Input
-
-```json
-{
-  "file": {"kind": "local_path", "path": "report.pdf"},
-  "pages": "1-3",
-  "format": "png",
-  "dpi": 144,
-  "output_dir": "./renders"
-}
-```
-
-### Acceptance criteria
-
-- Produces one image per page.
-- Records dimensions and checksums.
-- Supports controlled DPI.
-- Fails gracefully when renderer dependency is missing.
-
-## `pdf.convert.extract_images`
-
-### Input
-
-```json
-{
-  "input_path": "report.pdf",
-  "pages": "all",
-  "out_dir": "./extracted-images"
-}
-```
-
-### Open-source baseline
-
-The local implementation extracts decoded embedded images from selected PDF pages, writes image artifacts, and returns page number, image index, dimensions, source object name, artifact id, output path, and MIME type. This supports agent workflows that need to hand figures, scans, charts, or photos to OCR/vision workers later.
-
-## `pdf.convert.image_to_pdf`
-
-### Input
-
-```json
-{
-  "images": [
-    {"kind": "local_path", "path": "page1.png"},
-    {"kind": "local_path", "path": "page2.png"}
+  "sheet_count": 4,
+  "sheets": [
+    {"name": "Summary", "used_range": "A1:H32", "table_count": 1, "formula_count": 18}
   ],
-  "output": {"path": "scan.pdf"},
-  "page_size": "auto",
-  "fit": "contain"
+  "named_ranges": ["RevenueAssumptions"],
+  "charts": [{"sheet": "Summary", "chart_id": "chart_0001"}],
+  "formula_summary": {"count": 127, "errors_detected": 0, "external_refs": 0},
+  "recommended_next_tools": ["sheet.validation.formulas", "sheet.extract.tables"]
 }
 ```
 
-### Open-source baseline
+Acceptance criteria:
 
-The local implementation accepts one or more image paths, creates one PDF page per image, returns a `ToolResult`, and validates the generated PDF.
+- Reads XLSX package and worksheet XML.
+- Reports sheets, used ranges, tables, formulas, charts, comments, named ranges, and external links.
+- Does not execute macros.
+- Formula evaluation is explicit; if not available, report structural inspection only.
 
-## `pdf.edit.watermark`
+### `deck.inspect.presentation`
 
-### Input
+Target deterministic PPTX tool.
+
+Purpose: inspect slide structure, theme, notes, media refs, charts, and shape locators.
+
+Output highlights:
 
 ```json
 {
-  "input_path": "report.pdf",
-  "text": "CONFIDENTIAL",
-  "pages": "all",
-  "output_path": "report-watermarked.pdf"
+  "slide_count": 12,
+  "theme": {"name": "Office Theme"},
+  "slides": [
+    {"slide_number": 1, "title": "Q2 Results", "shape_count": 7, "has_notes": true}
+  ],
+  "media": [{"kind": "image", "slide_number": 4, "relationship_id": "rId5"}],
+  "recommended_next_tools": ["deck.validation.contact_sheet"]
 }
 ```
 
-### Open-source baseline
+Acceptance criteria:
 
-The local implementation adds a text overlay to selected pages, writes a new PDF, and validates the output. It does not claim secure redaction.
+- Reads PPTX package parts and relationships.
+- Extracts slide order, layouts, placeholders, text, notes, charts, images, and embedded media refs.
+- Reports missing title/notes/style warnings.
+- Does not claim visual fit without render evidence.
 
-## `pdf.edit.page_numbers`
+## Core Creation Tools
 
-### Input
+### `pdf.convert.markdown_to_pdf`
 
-```json
-{
-  "input_path": "report.pdf",
-  "template": "Page {page} of {total}",
-  "pages": "all",
-  "output_path": "report-numbered.pdf"
-}
-```
+Current implemented PDF-domain tool.
 
-### Open-source baseline
+Purpose: create a validated PDF from Markdown/HTML-first inputs and a style pack.
 
-The local implementation adds bottom-centered page labels to selected pages and validates the generated PDF.
+Acceptance criteria:
 
-## `pdf.convert.text_to_pdf`
+- Writes a new output artifact.
+- Produces page count, render check, blank-page check, and output manifest.
+- Supports built-in and local JSON style packs.
+- Does not silently clip content without warnings.
 
-### Input
+### `word.create.document`
 
-```json
-{
-  "text": "Hello from okpdf",
-  "output_path": "hello.pdf",
-  "title": "Hello"
-}
-```
+Target DOCX creation tool.
 
-### Open-source baseline
+Purpose: create a Word document from Office IR, Markdown, or structured sections.
 
-The local implementation writes plain text into a validated PDF artifact with structured `ToolResult` output.
+Acceptance criteria:
 
-## `pdf.convert.markdown_to_pdf`
+- Uses named styles.
+- Preserves source refs in companion metadata.
+- Supports tables, captions, citations, comments, and appendices.
+- Writes validation report and package manifest.
+- Supports render preview when a renderer is configured.
 
-### Input
+### `sheet.create.workbook`
 
-```json
-{
-  "markdown": "# Report\n\nHello",
-  "style_pack": "plain_report",
-  "output_path": "report.pdf"
-}
-```
+Target XLSX creation tool.
 
-### Open-source baseline
+Purpose: create a workbook from extracted rows, tables, formulas, charts, and validation rules.
 
-The local implementation supports simple Markdown plus deterministic style packs. `style_pack` can be a built-in id such as `plain_report`, `business_report_modern`, `academic_paper_basic`, `resume_modern`, `invoice_clean`, or `paper_ink`, or a path to a local JSON style pack file. The result usage includes resolved style id, name, source, page settings, colors, and components so agents can audit the selected template. Advanced AI style generation is cloud-only.
+Acceptance criteria:
 
-## `pdf.validation.validate_output`
+- Creates tables with typed columns and filters.
+- Separates inputs, calculations, checks, and outputs when the profile requires it.
+- Adds source-ref columns for extracted evidence.
+- Writes formula validation and workbook manifest.
+- Does not create hidden assumptions without recording them.
 
-### Input
+### `deck.create.presentation`
 
-```json
-{
-  "file": {"kind": "local_path", "path": "merged.pdf"},
-  "expected": {
-    "page_count": 10,
-    "must_render": true,
-    "no_blank_pages": true
-  }
-}
-```
+Target PPTX creation tool.
 
-### Output
+Purpose: create a PowerPoint deck from claim spine, slide layouts, charts, tables, notes, and source refs.
 
-```json
-{
-  "valid": true,
-  "checks": [
-    {"name": "page_count", "passed": true},
-    {"name": "render", "passed": true},
-    {"name": "blank_pages", "passed": true}
-  ]
-}
-```
+Acceptance criteria:
+
+- Uses a style pack layout and theme tokens.
+- Produces slide ids, shape ids, and source refs.
+- Includes speaker notes when required by profile.
+- Validates contact sheet/render preview when available.
+- Returns slide-level warnings for fit, missing evidence, or weak hierarchy.
+
+## Core Edit and Patch Tools
+
+### `office.patch.plan`
+
+Purpose: plan a non-destructive edit across PDF, DOCX, XLSX, or PPTX.
+
+Output should include:
+
+- Target artifact and format.
+- Target locator.
+- Operation type.
+- Replacement payload.
+- Source refs.
+- Validation requirements.
+- Rollback/lineage plan.
+
+### `office.patch.apply`
+
+Purpose: apply an approved patch plan to a new output artifact.
+
+Acceptance criteria:
+
+- Never mutates the input file.
+- Writes a new artifact.
+- Returns patch manifest and validation report.
+- Fails if the target locator is stale or ambiguous.
+
+Format-specific examples:
+
+- Word: replace paragraph, append section, update table, resolve comment.
+- Excel: update cell/range/table, add validation sheet, add chart, insert formula.
+- PowerPoint: replace text box, update chart data, add slide, update notes.
+- PDF: append note, regenerate from editable HTML/template source, redact through PDF safety tools.
+
+## Core Validation Tools
+
+### `office.validation.package`
+
+Validates ZIP/package structure, relationships, content types, and unsafe entries.
+
+### `word.validation.document`
+
+Checks DOCX package health, styles, comments/tracked changes policy, metadata, accessibility hints, and optional render preview.
+
+### `sheet.validation.formulas`
+
+Checks formula references, formula errors when evaluation is available, external links, circular refs, named ranges, and chart/table bindings.
+
+### `deck.validation.presentation`
+
+Checks slide count, missing titles, placeholder overflow warnings, notes policy, media refs, theme consistency, and contact-sheet render evidence.
+
+### `pdf.validation.render_check`
+
+Current implemented PDF-domain validator. Every generated PDF must pass renderability, page count, blank-page checks, and manifest requirements.
+
+## Bundle Tools
+
+### `office.bundle.export`
+
+Purpose: package multiple artifacts, source maps, validation reports, and manifests into one portable audit bundle.
+
+### `office.bundle.verify`
+
+Purpose: verify checksums, artifact presence, source refs, validation reports, and dependency/license notes.
+
+Acceptance criteria:
+
+- Bundle verification is local-first.
+- Missing artifacts or hash mismatches fail.
+- Warnings remain visible to agents.
+- Bundle does not include secrets or proprietary cloud state.
+
+## First Migration Milestones
+
+1. Keep `okpdf` and `pdf.*` stable.
+2. Add `okoffice` CLI alias and top-level `office.inspect.file`.
+3. Add deterministic DOCX/XLSX/PPTX inspect tools.
+4. Add Office IR and Source Graph support for all four formats.
+5. Add validation reports for Word, Excel, and PowerPoint.
+6. Add `office.workflow.docset_to_sheet`.
+7. Add `office.workflow.sheet_to_deck`.
+8. Add `office.bundle.export` and `office.bundle.verify`.
+
+The first milestone is not perfect Office editing. It is trustworthy structure, evidence, and validation across the formats agents already need to work with.

@@ -1,34 +1,108 @@
-# 25 — SDK Specification
+# 25 - okoffice SDK Specification
 
-## Python SDK target
+## SDK Goal
+
+The SDK should wrap the same ToolResult contract exposed by CLI, MCP, and REST. It should not create a second behavior layer or hide validation evidence.
+
+Current compatibility clients:
+
+- Python import path: `agentpdf`
+- TypeScript package: `@okpdf/agentpdf-node`
+
+Target okoffice clients:
+
+- Python import path: `okoffice`
+- TypeScript package: `@okoffice/node`
+
+## Python SDK Target
+
+```python
+from okoffice import OkOffice
+
+client = OkOffice.local()
+
+result = client.tools.run(
+    "sheet.inspect.workbook",
+    file={"kind": "local_path", "path": "evidence.xlsx"},
+    include_formulas=True,
+)
+
+print(result.usage["sheet_count"])
+```
+
+Compatibility:
 
 ```python
 from agentpdf import AgentPDF
 
 client = AgentPDF.local()
-
 result = client.tools.run(
     "pdf.organize.merge",
     files=["a.pdf", "b.pdf"],
     output="merged.pdf",
     validate=True,
 )
-
-print(result.artifacts[0].path)
 ```
 
-Convenience methods:
+## Python Convenience Methods
+
+Target methods:
 
 ```python
-client.inspect("report.pdf")
-client.merge(["a.pdf", "b.pdf"], output="merged.pdf")
-client.split("report.pdf", pages="1-3", output_dir="parts")
-client.render("report.pdf", pages="1", output_dir="renders")
-client.ask("report.pdf", "What are the risks?")
-client.create_from_markdown("summary.md", style="business_report_modern", output="report.pdf")
+client.inspect("report.docx")
+client.inspect("model.xlsx")
+client.inspect("deck.pptx")
+client.inspect("packet.pdf")
+
+client.word.inspect("report.docx")
+client.sheet.inspect("model.xlsx")
+client.deck.inspect("deck.pptx")
+client.pdf.inspect("packet.pdf")
+
+client.workflow.docset_to_sheet(
+    sources=["sources/a.docx", "sources/b.pdf"],
+    output="evidence.xlsx",
+    schema={"fields": ["vendor", "renewal_date", "annual_amount"]},
+)
+
+client.workflow.sheet_to_deck(
+    workbook="evidence.xlsx",
+    output="board-deck.pptx",
+    profile="board_deck",
+)
+
+client.bundle.export(
+    artifacts=["evidence.xlsx", "board-deck.pptx", "handout.pdf"],
+    output="board-pack.okoffice.zip",
+)
 ```
 
-## TypeScript SDK
+PDF compatibility methods:
+
+```python
+client.pdf.merge(["a.pdf", "b.pdf"], output="merged.pdf")
+client.pdf.split("report.pdf", pages="1-3", output_dir="parts")
+client.pdf.render("report.pdf", pages="1", output_dir="renders")
+client.pdf.ask("report.pdf", "What are the risks?")
+client.pdf.create_from_markdown("summary.md", style="business_report_modern", output="report.pdf")
+```
+
+## TypeScript SDK Target
+
+```ts
+import { OkOfficeClient } from "@okoffice/node";
+
+const client = new OkOfficeClient({ baseUrl: "http://127.0.0.1:7331" });
+
+const workbook = await client.runTool("sheet.inspect.workbook", {
+  file: { kind: "local_path", path: "evidence.xlsx" },
+  includeFormulas: true,
+});
+
+console.log(workbook.usage.sheet_count);
+```
+
+Compatibility:
 
 ```ts
 import { AgentPDFClient } from "@okpdf/agentpdf-node";
@@ -40,97 +114,98 @@ const result = await client.merge({
 });
 ```
 
-Convenience methods:
+## TypeScript Convenience Methods
+
+Target methods:
 
 ```ts
 client.listTools();
-client.getTool("pdf.organize.merge");
-client.runTool("pdf.convert.text_to_pdf", {
-  text: "Hello",
-  output_path: "hello.pdf",
+client.getTool("sheet.inspect.workbook");
+client.runTool("office.inspect.file", {
+  file: { kind: "local_path", path: "report.docx" },
 });
-client.inspectDocument({ path: "report.pdf" });
-client.inspectPages({ inputPath: "report.pdf", pages: "1-3", renderCheck: true });
-client.workflowPlan({ goal: "Chat with this PDF", inputPath: "report.pdf" });
-client.workflowRun({ workflow: { input_path: "report.pdf", steps: [] } });
-client.workflowReport({ workflowRun: { run_id: "wfrun_123", step_results: [] } });
-client.merge({ inputPaths: ["a.pdf", "b.pdf"], outputPath: "merged.pdf" });
-client.reorderPages({ inputPath: "merged.pdf", order: "2,1", outputPath: "reordered.pdf" });
-client.insertBlankPages({ inputPath: "reordered.pdf", afterPage: 1, count: 1, outputPath: "with-blank.pdf" });
-client.compress({ inputPath: "with-blank.pdf", outputPath: "with-blank-compressed.pdf" });
-client.repair({ inputPath: "with-blank-compressed.pdf", outputPath: "with-blank-repaired.pdf" });
-client.imageToPdf({ imagePaths: ["cover.png"], outputPath: "cover.pdf" });
-client.watermark({ inputPath: "cover.pdf", text: "DRAFT", outputPath: "cover-draft.pdf" });
-client.addPageNumbers({ inputPath: "cover-draft.pdf", outputPath: "cover-numbered.pdf" });
-client.createTextPdf({ text: "Hello", outputPath: "hello.pdf" });
-client.createMarkdownPdf({
-  markdown: "# Report\n\nHello",
-  outputPath: "report.pdf",
-  stylePack: "business_report_modern",
+
+client.inspect({ path: "report.docx" });
+client.word.inspectDocument({ path: "report.docx" });
+client.sheet.inspectWorkbook({ path: "model.xlsx" });
+client.deck.inspectPresentation({ path: "deck.pptx" });
+
+client.workflow.docsetToSheet({
+  sources: ["sources/a.docx", "sources/b.pdf"],
+  outputPath: "evidence.xlsx",
+  schema: { fields: ["vendor", "annual_amount"] },
 });
-client.validateOutput({ path: "cover-numbered.pdf", expectedPages: 1 });
-client.renderCheck({ path: "cover-numbered.pdf", pages: "1" });
-client.blankPageCheck({ path: "with-blank.pdf", pages: "all" });
-client.extractImages({ inputPath: "cover-numbered.pdf", pages: "all", outDir: "cover-images" });
-client.parseLite({ inputPath: "cover-numbered.pdf" });
-client.pdfToJson({ inputPath: "cover-numbered.pdf", outputPath: "cover-numbered.ir.json" });
-client.pdfToMarkdown({ inputPath: "cover-numbered.pdf", outputPath: "cover-numbered.md" });
-client.ragIngest({
-  inputPath: "cover-numbered.pdf",
-  indexPath: "cover-numbered.index.json",
+
+client.workflow.sheetToDeck({
+  workbookPath: "evidence.xlsx",
+  outputPath: "board-deck.pptx",
+  profile: "board_deck",
 });
-client.ragChat({
-  inputPath: "cover-numbered.pdf",
-  question: "What is this PDF about?",
-  reportOutputPath: "cover-chat-report.pdf",
-  highlightOutputPath: "cover-chat-highlighted.pdf",
-});
-client.ragQuery({
-  indexPath: "cover-numbered.index.json",
-  query: "What is this PDF about?",
-});
-client.ragSearch({
-  indexPath: "cover-numbered.index.json",
-  query: "PDF",
-});
-client.ragHighlightSources({
-  indexPath: "cover-numbered.index.json",
-  answer: "The cover is numbered.",
-  outputPath: "cover-highlighted.pdf",
-});
-client.ragExportReport({
-  indexPath: "cover-numbered.index.json",
-  question: "What is this PDF about?",
-  answer: "The cover is numbered.",
-  outputPath: "cover-rag-report.pdf",
+
+client.bundle.export({
+  artifacts: ["evidence.xlsx", "board-deck.pptx", "handout.pdf"],
+  outputPath: "board-pack.okoffice.zip",
 });
 ```
 
-## SDK principles
+PDF compatibility methods can continue to mirror `@okpdf/agentpdf-node` until the migration is complete.
+
+## SDK Principles
 
 - SDK wraps the same tool registry.
 - No separate hidden behavior.
-- Local and hosted clients should share the same method names.
-- Hosted client later adds auth, retries, and async polling.
+- Local and hosted clients share method names.
+- Hosted client later adds auth, retries, async polling, and signed downloads.
 - Results use the same ToolResult schema.
+- Binary artifacts are referenced by path/artifact id, not embedded in large JSON by default.
+- Warnings and validation are first-class fields, not console-only messages.
 
-## Client modes
+## Client Modes
 
 ```text
-AgentPDF.local()      -> in-process/local CLI-style execution
-AgentPDF.api(url)     -> local/remote REST API
-AgentPDF.cloud(key)   -> future hosted API
-AgentPDFClient(url)   -> TypeScript REST client for Node.js agents and apps
+OkOffice.local()      -> in-process/local CLI-style execution
+OkOffice.api(url)     -> local/remote REST API
+OkOffice.cloud(key)   -> future hosted API
+OkOfficeClient(url)   -> TypeScript REST client for Node.js agents and apps
 ```
 
-## Async jobs
+Compatibility:
+
+```text
+AgentPDF.local()      -> compatibility PDF-domain client
+AgentPDF.api(url)     -> compatibility local/remote REST API client
+AgentPDFClient(url)   -> current TypeScript REST client
+```
+
+## Async Jobs
 
 SDK should support:
 
 ```python
-job = client.jobs.submit("pdf.ai.parse.agentic", file="paper.pdf")
+job = client.jobs.submit(
+    "office.workflow.docset_to_sheet",
+    sources=["a.docx", "b.pdf"],
+    output_path="evidence.xlsx",
+)
 job.wait()
 result = job.result()
 ```
 
-Local deterministic tools may return immediately.
+Local deterministic tools may return immediately. Hosted or optional workers may use polling, webhooks, or durable job ids.
+
+## Type Shape
+
+The SDK should expose the public envelope:
+
+```ts
+type ToolResult<TUsage = Record<string, unknown>> = {
+  job_id: string;
+  status: "succeeded" | "failed" | "warning";
+  tool: string;
+  artifacts: ArtifactRef[];
+  validation: Record<string, unknown>;
+  warnings: string[];
+  usage: TUsage;
+  next_recommended_tools: string[];
+};
+```

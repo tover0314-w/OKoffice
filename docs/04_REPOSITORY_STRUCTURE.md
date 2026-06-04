@@ -1,9 +1,11 @@
-# 04 — Repository Structure
+# 04 - Repository Structure
 
-Codex should implement this structure.
+This repository currently uses the `agentpdf` Python package and okpdf-facing examples. During the okoffice migration, do not break those compatibility paths unless a deliberate migration task says so.
+
+The target repository structure is:
 
 ```text
-agentpdf/
+okoffice/
   .github/
     ISSUE_TEMPLATE/
     workflows/
@@ -12,8 +14,14 @@ agentpdf/
   codex/
   docs/
   examples/
+    workflows/
+    office/
+    pdf/
+    word/
+    sheet/
+    deck/
   packages/
-    agentpdf-node/
+    okoffice-node/
       src/
         client.ts
         cli.ts
@@ -23,7 +31,7 @@ agentpdf/
   schemas/
   scripts/
   src/
-    agentpdf/
+    okoffice/
       __init__.py
       api/
         __init__.py
@@ -34,51 +42,54 @@ agentpdf/
         store.py
         models.py
         graph.py
+        bundle.py
       cli/
         __init__.py
         main.py
       config/
         __init__.py
         settings.py
-      core/
-        __init__.py
-        inspect.py
-        organize.py
-        render.py
-        metadata.py
-        convert.py
-        create.py
-      ir/
-        __init__.py
-        models.py
-        lite_parse.py
-        composition.py
       context/
         __init__.py
         ingest.py
         packet.py
-      target/
+        classify.py
+      core/
         __init__.py
-        profiles.py
-      sources/
+        pdf/
+        word/
+        sheet/
+        deck/
+      conversion/
         __init__.py
-        graph.py
+        local.py
       evidence/
         __init__.py
         citations.py
         coverage.py
+        source_map.py
+      extract/
+        __init__.py
+        schema.py
+        tables.py
+      ir/
+        __init__.py
+        document.py
+        office.py
+        composition.py
       mcp/
         __init__.py
         server.py
         tools.py
-      rag/
-        __init__.py
-        chunking.py
-        retrieval.py
       patch/
         __init__.py
         manifest.py
         apply.py
+        verify.py
+      rag/
+        __init__.py
+        chunking.py
+        retrieval.py
       schemas/
         __init__.py
         common.py
@@ -86,14 +97,21 @@ agentpdf/
       security/
         __init__.py
         paths.py
-        pdf_safety.py
+        document_safety.py
+      target/
+        __init__.py
+        profiles.py
       tools/
         __init__.py
         registry.py
         manifest.py
       validation/
         __init__.py
-        pdf_validation.py
+        common.py
+        pdf.py
+        word.py
+        sheet.py
+        deck.py
         visual_diff.py
         source_coverage.py
       workflows/
@@ -101,11 +119,21 @@ agentpdf/
         planner.py
         runner.py
         report.py
+        docset_to_sheet.py
+        sheet_to_deck.py
+        docset_to_board_pack.py
       workers/
         __init__.py
         base.py
+        officecli.py
+        libreoffice.py
+        browser.py
   tests/
     fixtures/
+      pdf/
+      docx/
+      xlsx/
+      pptx/
     golden/
     unit/
     integration/
@@ -115,41 +143,73 @@ agentpdf/
   AGENTS.md
 ```
 
-## Important files Codex should create early
+## Current Compatibility Structure
 
-- `pyproject.toml`
+Until migration tasks update code:
+
+- Keep `src/agentpdf/`.
+- Keep `packages/agentpdf-node/`.
+- Keep current `pdf.*` tool names.
+- Keep current CLI entrypoints that tests expect.
+- Add okoffice docs, aliases, and wrappers incrementally.
+
+## Important Files To Create Or Migrate Early
+
+Current files to preserve:
+
 - `src/agentpdf/cli/main.py`
 - `src/agentpdf/tools/registry.py`
-- `src/agentpdf/schemas/tool_result.py`
-- `src/agentpdf/artifacts/models.py`
-- `src/agentpdf/validation/pdf_validation.py`
+- `src/agentpdf/schemas/models.py`
+- `src/agentpdf/artifacts/store.py`
+- `src/agentpdf/validation/pdf.py`
 - `src/agentpdf/context/packet.py`
-- `src/agentpdf/target/profiles.py`
-- `src/agentpdf/sources/graph.py`
-- `src/agentpdf/ir/composition.py`
-- `src/agentpdf/patch/manifest.py`
-- `tests/unit/test_tool_registry.py`
-- `tests/integration/test_cli_inspect.py`
+- `src/agentpdf/ir/lite.py`
+- `src/agentpdf/compose/context.py`
+- `tests/unit/test_registry.py`
+- `tests/integration/test_cli.py`
 
-## Package naming
+Target files to add during okoffice migration:
 
-Recommended package import name: `agentpdf`.
+- `src/okoffice/__init__.py`
+- `src/okoffice/core/word/inspect.py`
+- `src/okoffice/core/sheet/inspect.py`
+- `src/okoffice/core/deck/inspect.py`
+- `src/okoffice/validation/word.py`
+- `src/okoffice/validation/sheet.py`
+- `src/okoffice/validation/deck.py`
+- `src/okoffice/workflows/docset_to_sheet.py`
+- `src/okoffice/workflows/sheet_to_deck.py`
+- `src/okoffice/workflows/docset_to_board_pack.py`
+- `src/okoffice/workers/officecli.py`
+- `schemas/office-tool-manifest.target.json`
+- `schemas/office-ir.schema.json`
+- `schemas/target-artifact-profile.schema.json`
 
-Recommended CLI command: `agentpdf`.
+## Package Naming
 
-Recommended TypeScript package name: `@okpdf/agentpdf-node`.
+Target package import name: `okoffice`.
 
-Recommended Node CLI command: `agentpdf-node`.
+Compatibility package import name: `agentpdf`.
 
-Repository name options:
+Target CLI command: `okoffice`.
 
-- `agentpdf`
-- `agentpdf-infra`
-- `pdf-agent-infra`
-- `pdfagent`
+Compatibility CLI commands: `okpdf` and `agentpdf` where they already exist.
 
-## Documentation organization
+Target TypeScript package name: `@okoffice/node`.
+
+Compatibility TypeScript package name: `@okpdf/agentpdf-node` until migration.
+
+## Documentation Organization
 
 Keep reference docs in `docs/`. Keep machine-readable schemas in `schemas/`. Keep Codex instructions in `codex/`.
 
-Do not bury critical implementation rules in informal chat transcripts.
+Recommended future doc groups:
+
+- `docs/product/`
+- `docs/architecture/`
+- `docs/reference/`
+- `docs/guides/`
+- `docs/workflows/`
+- `docs/security/`
+
+For now, preserve the numbered docs and add focused migration docs. Do not bury critical implementation rules in informal chat transcripts.
