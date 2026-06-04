@@ -1,22 +1,34 @@
 from __future__ import annotations
 
+import html
+import zipfile
 from pathlib import Path
+from typing import Any
 from uuid import uuid4
 
+from agentpdf.artifacts.store import build_artifact
 from agentpdf.office.inspect import inspect_office_file
 from agentpdf.office.ooxml import DECK_NS, count_members, read_xml, sorted_members, zip_names
+from agentpdf.schemas.errors import AgentPDFException
 from agentpdf.schemas.models import AgentPDFError, ToolResult, ValidationCheck, ValidationReport
+from agentpdf.security.paths import resolve_output_path
 
 
-TOOL_NAME = "deck.inspect.presentation"
+INSPECT_TOOL_NAME = "deck.inspect.presentation"
+CREATE_FROM_OUTLINE_TOOL_NAME = "deck.create.from_outline"
+PPTX_MIME_TYPE = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
 
 
 def inspect_deck_presentation(path: str | Path) -> ToolResult:
     preflight = inspect_office_file(path)
     if preflight.status == "failed":
-        return _failed(preflight.error or AgentPDFError(code="unsupported_file_type", message="Deck inspect failed."))
+        return _failed(
+            INSPECT_TOOL_NAME,
+            preflight.error or AgentPDFError(code="unsupported_file_type", message="Deck inspect failed."),
+        )
     if preflight.usage["format"]["detected_format"] != "pptx":
         return _failed(
+            INSPECT_TOOL_NAME,
             AgentPDFError(
                 code="unsupported_file_type",
                 message="deck.inspect.presentation requires a PPTX-compatible OOXML package.",
@@ -32,7 +44,7 @@ def inspect_deck_presentation(path: str | Path) -> ToolResult:
     return ToolResult(
         job_id=_job_id(),
         status="succeeded",
-        tool=TOOL_NAME,
+        tool=INSPECT_TOOL_NAME,
         validation=ValidationReport(
             status="passed",
             checks=[
@@ -59,6 +71,253 @@ def inspect_deck_presentation(path: str | Path) -> ToolResult:
     )
 
 
+def create_deck_from_outline(outline: dict[str, Any], output_path: str | Path) -> ToolResult:
+    try:
+        output = resolve_output_path(output_path)
+    except AgentPDFException as exc:
+        return _failed(CREATE_FROM_OUTLINE_TOOL_NAME, exc.to_error())
+
+    slides = _outline_slides(outline)
+    if not slides:
+        return _failed(
+            CREATE_FROM_OUTLINE_TOOL_NAME,
+            AgentPDFError(
+                code="unsafe_input_rejected",
+                message="deck.create.from_outline requires at least one slide.",
+            ),
+        )
+
+    output.parent.mkdir(parents=True, exist_ok=True)
+    _write_outline_pptx(output, slides)
+    artifact = build_artifact(output, CREATE_FROM_OUTLINE_TOOL_NAME)
+    inspect_result = inspect_deck_presentation(output)
+    inspect_status = inspect_result.validation.status if inspect_result.validation is not None else "failed"
+    return ToolResult(
+        job_id=_job_id(),
+        status="succeeded" if inspect_result.status == "succeeded" else "failed",
+        tool=CREATE_FROM_OUTLINE_TOOL_NAME,
+        artifacts=[artifact],
+        validation=ValidationReport(
+            status=inspect_status,
+            checks=[
+                ValidationCheck(
+                    name="outline_normalized",
+                    status="passed",
+                    details={
+                        "slide_count": len(slides),
+                        "total_bullet_count": sum(len(slide["bullets"]) for slide in slides),
+                    },
+                ),
+                ValidationCheck(
+                    name="pptx_written",
+                    status="passed" if inspect_result.status == "succeeded" else "failed",
+                    details={"path": output.as_posix(), "mime_type": PPTX_MIME_TYPE},
+                ),
+            ],
+        ),
+        warnings=list(inspect_result.warnings),
+        usage={
+            "summary": {
+                "slide_count": len(slides),
+                "total_bullet_count": sum(len(slide["bullets"]) for slide in slides),
+                "text_run_count": inspect_result.usage.get("presentation", {}).get("text_run_count", 0),
+            },
+            "presentation": {
+                "path": output.as_posix(),
+                "format": "pptx",
+                "artifact_id": artifact.artifact_id,
+            },
+            "slides": slides,
+        },
+        next_recommended_tools=[
+            "deck.inspect.presentation",
+            "deck.validate.presentation",
+            "office.workflow.board_pack",
+        ],
+    )
+
+
+def _outline_slides(outline: dict[str, Any]) -> list[dict[str, Any]]:
+    raw_slides = outline.get("slides", [])
+    if not isinstance(raw_slides, list):
+        raw_slides = []
+    slides = []
+    for index, raw_slide in enumerate(raw_slides, start=1):
+        if not isinstance(raw_slide, dict):
+            continue
+        title = str(raw_slide.get("title") or f"Slide {index}").strip()
+        subtitle = str(raw_slide.get("subtitle") or "").strip()
+        bullets = raw_slide.get("bullets", [])
+        if not isinstance(bullets, list):
+            bullets = [bullets]
+        normalized_bullets = [str(bullet).strip() for bullet in bullets if str(bullet).strip()]
+        notes = str(raw_slide.get("notes") or "").strip()
+        slides.append(
+            {
+                "slide_index": index,
+                "title": title,
+                "subtitle": subtitle,
+                "bullets": normalized_bullets,
+                "bullet_count": len(normalized_bullets),
+                "notes": notes,
+            }
+        )
+    return slides
+
+
+def _write_outline_pptx(path: Path, slides: list[dict[str, Any]]) -> None:
+    with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("[Content_Types].xml", _content_types(len(slides)))
+        archive.writestr("_rels/.rels", _root_relationships())
+        archive.writestr("ppt/presentation.xml", _presentation_xml(len(slides)))
+        archive.writestr("ppt/_rels/presentation.xml.rels", _presentation_relationships(len(slides)))
+        for index, slide in enumerate(slides, start=1):
+            archive.writestr(f"ppt/slides/slide{index}.xml", _slide_xml(slide))
+            archive.writestr(f"ppt/slides/_rels/slide{index}.xml.rels", _empty_relationships())
+
+
+def _content_types(slide_count: int) -> str:
+    slide_overrides = "".join(
+        '<Override PartName="/ppt/slides/slide{index}.xml" '
+        'ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>'.format(
+            index=index
+        )
+        for index in range(1, slide_count + 1)
+    )
+    return (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+        '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+        '<Default Extension="xml" ContentType="application/xml"/>'
+        '<Override PartName="/ppt/presentation.xml" '
+        'ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>'
+        f"{slide_overrides}</Types>"
+    )
+
+
+def _root_relationships() -> str:
+    return (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+        '<Relationship Id="rId1" '
+        'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" '
+        'Target="ppt/presentation.xml"/>'
+        "</Relationships>"
+    )
+
+
+def _presentation_xml(slide_count: int) -> str:
+    slide_ids = "".join(
+        f'<p:sldId id="{255 + index}" r:id="rId{index}"/>' for index in range(1, slide_count + 1)
+    )
+    return (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<p:presentation xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" '
+        'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" '
+        'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+        f"<p:sldIdLst>{slide_ids}</p:sldIdLst>"
+        '<p:sldSz cx="12192000" cy="6858000" type="wide"/>'
+        '<p:notesSz cx="6858000" cy="9144000"/>'
+        "</p:presentation>"
+    )
+
+
+def _presentation_relationships(slide_count: int) -> str:
+    relationships = "".join(
+        '<Relationship Id="rId{index}" '
+        'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" '
+        'Target="slides/slide{index}.xml"/>'.format(index=index)
+        for index in range(1, slide_count + 1)
+    )
+    return (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+        f"{relationships}</Relationships>"
+    )
+
+
+def _empty_relationships() -> str:
+    return (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"/>'
+    )
+
+
+def _slide_xml(slide: dict[str, Any]) -> str:
+    shapes = [
+        _text_shape(shape_id=2, name="Title", x=650000, y=520000, cx=10900000, cy=700000, lines=[slide["title"]]),
+    ]
+    if slide.get("subtitle"):
+        shapes.append(
+            _text_shape(
+                shape_id=3,
+                name="Subtitle",
+                x=650000,
+                y=1260000,
+                cx=10900000,
+                cy=430000,
+                lines=[slide["subtitle"]],
+            )
+        )
+    bullets = list(slide.get("bullets", []))
+    if bullets:
+        shapes.append(
+            _text_shape(
+                shape_id=4,
+                name="Bullets",
+                x=900000,
+                y=2050000,
+                cx=10300000,
+                cy=3300000,
+                lines=bullets,
+                bullet=True,
+            )
+        )
+    shape_xml = "".join(shapes)
+    return (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" '
+        'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" '
+        'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+        "<p:cSld><p:spTree>"
+        "<p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"Group\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>"
+        "<p:grpSpPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"0\" cy=\"0\"/>"
+        "<a:chOff x=\"0\" y=\"0\"/><a:chExt cx=\"0\" cy=\"0\"/></a:xfrm></p:grpSpPr>"
+        f"{shape_xml}</p:spTree></p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sld>"
+    )
+
+
+def _text_shape(
+    *,
+    shape_id: int,
+    name: str,
+    x: int,
+    y: int,
+    cx: int,
+    cy: int,
+    lines: list[str],
+    bullet: bool = False,
+) -> str:
+    paragraphs = "".join(_paragraph(line, bullet=bullet) for line in lines if str(line).strip())
+    return (
+        "<p:sp>"
+        f'<p:nvSpPr><p:cNvPr id="{shape_id}" name="{_xml(name)}"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>'
+        f'<p:spPr><a:xfrm><a:off x="{x}" y="{y}"/><a:ext cx="{cx}" cy="{cy}"/></a:xfrm>'
+        "<a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></p:spPr>"
+        f"<p:txBody><a:bodyPr wrap=\"square\"/><a:lstStyle/>{paragraphs}</p:txBody>"
+        "</p:sp>"
+    )
+
+
+def _paragraph(text: str, *, bullet: bool) -> str:
+    bullet_xml = "<a:buChar char=\"•\"/>" if bullet else ""
+    return f"<a:p><a:pPr>{bullet_xml}</a:pPr><a:r><a:t>{_xml(text)}</a:t></a:r></a:p>"
+
+
+def _xml(value: object) -> str:
+    return html.escape(str(value), quote=True)
+
+
 def _slide_text_run_count(path: Path, slide_members: list[str]) -> int:
     count = 0
     for member in slide_members:
@@ -72,11 +331,11 @@ def _media_count(names: set[str]) -> int:
     return sum(1 for name in names if name.startswith("ppt/media/"))
 
 
-def _failed(error: AgentPDFError) -> ToolResult:
+def _failed(tool: str, error: AgentPDFError) -> ToolResult:
     return ToolResult(
         job_id=_job_id(),
         status="failed",
-        tool=TOOL_NAME,
+        tool=tool,
         warnings=[error.message],
         error=error,
     )

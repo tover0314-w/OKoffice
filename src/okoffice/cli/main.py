@@ -6,7 +6,7 @@ from typing import Annotated, Any
 
 import typer
 
-from agentpdf.office.deck import inspect_deck_presentation
+from agentpdf.office.deck import create_deck_from_outline, inspect_deck_presentation
 from agentpdf.office.inspect import inspect_office_file
 from agentpdf.office.planner import plan_office_workflow
 from agentpdf.office.sheet import (
@@ -188,6 +188,20 @@ def deck_inspect(
 ) -> None:
     """Inspect a local PowerPoint deck without mutating it."""
     _emit_result(inspect_deck_presentation(path), json_output=json_output)
+
+
+@deck_app.command("create-from-outline")
+def deck_create_from_outline(
+    outline_path: Annotated[Path, typer.Argument(help="JSON deck outline path.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output PPTX deck path.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Create a local editable PPTX deck from a structured outline."""
+    outline = json.loads(outline_path.read_text(encoding="utf-8"))
+    _emit_result(
+        create_deck_from_outline(outline if isinstance(outline, dict) else {}, output_path),
+        json_output=json_output,
+    )
 
 
 @workflow_app.command("extract-to-sheet")

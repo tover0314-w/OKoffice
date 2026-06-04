@@ -9,6 +9,7 @@ from agentpdf.schemas.models import AgentPDFError, Artifact, ToolResult
 
 
 SUPPORTED_LOCAL_WORKFLOW_TOOLS = {
+    "deck.create.from_outline",
     "deck.inspect.presentation",
     "office.inspect.file",
     "office.workflow.extract_to_sheet",
@@ -400,6 +401,12 @@ def _run_local_step(tool: str, payload: dict[str, Any]) -> ToolResult:
         )
     if tool == "sheet.validate.workbook":
         return runner.run_sheet_validate_workbook(payload.get("path", payload.get("input_path", "")))
+    if tool == "deck.create.from_outline":
+        outline = payload.get("outline", payload)
+        return runner.run_deck_create_from_outline(
+            outline=outline if isinstance(outline, dict) else {},
+            output_path=payload.get("output_path", payload.get("output", ".okoffice-out/deck.pptx")),
+        )
     if tool == "deck.inspect.presentation":
         return runner.run_deck_inspect_presentation(payload.get("path", payload.get("input_path", "")))
     if tool == "pdf.inspect.document":

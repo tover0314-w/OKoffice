@@ -83,6 +83,11 @@
       "status": "beta"
     },
     {
+      "name": "deck_create_from_outline",
+      "maps_to": "deck.create.from_outline",
+      "status": "beta"
+    },
+    {
       "name": "pdf_inspect_document",
       "maps_to": "pdf.inspect.document",
       "status": "stable"

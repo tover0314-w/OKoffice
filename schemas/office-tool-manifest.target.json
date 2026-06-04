@@ -545,7 +545,7 @@
                          },
                          {
                              "name":  "deck.create.from_outline",
-                             "status":  "planned",
+                             "status":  "beta",
                              "description":  "Create PPTX decks from outlines, evidence cards, tables, charts, and style packs.",
                              "domain":  "deck",
                              "interfaces":  [
@@ -554,9 +554,9 @@
                                                 "rest",
                                                 "sdk"
                                             ],
-                             "implemented":  false,
+                             "implemented":  true,
                              "oss_default":  true,
-                             "requires_model":  true
+                             "requires_model":  false
                          },
                          {
                              "name":  "deck.edit.apply_theme",
