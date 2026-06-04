@@ -62,6 +62,7 @@ okoffice deck create --from-workbook .okoffice-out/evidence.xlsx --profile board
 Workflows:
 
 ```bash
+okoffice workflow extract-to-sheet --context-packet .okoffice-out/context.json -o .okoffice-out/evidence.xlsx --json
 okoffice workflow extract-to-sheet memo.docx metrics.xlsx -o .okoffice-out/evidence.xlsx --json
 okoffice workflow sheet-to-deck .okoffice-out/evidence.xlsx -o .okoffice-out/board-review.pptx --title "Board Review" --json
 okoffice workflow board-pack .okoffice-out/evidence.xlsx .okoffice-out/board-review.pptx -o .okoffice-out/board-pack.zip --title "Board Review" --json

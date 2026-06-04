@@ -71,6 +71,16 @@ office.workflow.docset_to_sheet
 Current local OSS slice:
 
 ```text
+office.context.build_packet
+-> office.workflow.extract_to_sheet --context-packet
+-> office.workflow.sheet_to_deck
+-> office.workflow.board_pack
+-> office.bundle.verify
+```
+
+Direct-file compatibility slice:
+
+```text
 office.workflow.extract_to_sheet
 -> office.workflow.sheet_to_deck
 -> office.workflow.board_pack

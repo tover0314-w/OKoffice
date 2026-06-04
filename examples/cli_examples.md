@@ -73,6 +73,17 @@ okoffice context build \
 
 Current output includes `tool: office.context.build_packet`, a local context packet artifact, file/native source graph nodes, native child nodes when available, format counts, validation checks, and next recommended tools.
 
+Current local evidence workbook flow:
+
+```bash
+okoffice workflow extract-to-sheet \
+  --context-packet .okoffice-out/vendor.context.json \
+  -o .okoffice-out/vendor-evidence.xlsx \
+  --json
+```
+
+The workbook includes `Tables`, `Cells`, and `SourceGraph` sheets when a context packet is supplied. Row and cell records include `context_packet_id`, `source_graph_id`, and native source node refs when available.
+
 Target extraction flow:
 
 ```bash

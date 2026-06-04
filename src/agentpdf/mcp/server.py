@@ -454,9 +454,17 @@ def office_context_build_packet(
     return run_office_context_build_packet(files, output_path, title=title, intent=intent).model_dump_json()
 
 
-def office_workflow_extract_to_sheet(input_paths: list[str], output_path: str) -> str:
+def office_workflow_extract_to_sheet(
+    input_paths: list[str],
+    output_path: str,
+    context_packet_path: str | None = None,
+) -> str:
     """Extract Word and Excel source tables into an auditable evidence workbook."""
-    return run_office_workflow_extract_to_sheet(input_paths, output_path).model_dump_json()
+    return run_office_workflow_extract_to_sheet(
+        input_paths,
+        output_path,
+        context_packet_path=context_packet_path,
+    ).model_dump_json()
 
 
 def office_workflow_sheet_to_deck(

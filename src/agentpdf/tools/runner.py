@@ -218,8 +218,9 @@ def run_office_context_build_packet(
 def run_office_workflow_extract_to_sheet(
     input_paths: list[str | Path],
     output_path: str | Path,
+    context_packet_path: str | Path | None = None,
 ) -> ToolResult:
-    return extract_to_sheet(input_paths, output_path)
+    return extract_to_sheet(input_paths, output_path, context_packet_path=context_packet_path)
 
 
 def run_office_workflow_sheet_to_deck(

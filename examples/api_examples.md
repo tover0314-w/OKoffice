@@ -92,6 +92,19 @@ Expected output highlights:
 }
 ```
 
+## Build Evidence Workbook From Context Packet
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/office.workflow.extract_to_sheet/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "context_packet_path": ".okoffice-out/vendor.context.json",
+    "output_path": ".okoffice-out/vendor-evidence.xlsx"
+  }'
+```
+
+Expected output includes `usage.source_graph.source_graph_id`, `usage.records[].source_node_refs`, and an XLSX workbook with `Tables`, `Cells`, and `SourceGraph` sheets.
+
 ## Extract Schema
 
 ```bash

@@ -386,6 +386,7 @@ def _run_local_step(tool: str, payload: dict[str, Any]) -> ToolResult:
         return runner.run_office_workflow_extract_to_sheet(
             input_paths=input_paths if isinstance(input_paths, list) else [],
             output_path=payload.get("output_path", payload.get("output", ".okoffice-out/evidence.xlsx")),
+            context_packet_path=payload.get("context_packet_path"),
         )
     if tool == "office.workflow.sheet_to_deck":
         return runner.run_office_workflow_sheet_to_deck(

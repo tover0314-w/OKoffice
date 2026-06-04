@@ -239,14 +239,23 @@ def context_build(
 @workflow_app.command("extract-to-sheet")
 def workflow_extract_to_sheet(
     input_paths: Annotated[
-        list[Path],
+        list[Path] | None,
         typer.Argument(help="Input DOCX/XLSX sources to extract into an evidence workbook."),
-    ],
-    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output XLSX evidence workbook path.")],
+    ] = None,
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output XLSX evidence workbook path.")] = Path(
+        ".okoffice-out/evidence.xlsx"
+    ),
+    context_packet_path: Annotated[
+        Path | None,
+        typer.Option("--context-packet", help="Context packet JSON to use as the source graph input."),
+    ] = None,
     json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
 ) -> None:
     """Extract source tables into a source-mapped evidence workbook."""
-    _emit_result(extract_to_sheet(input_paths, output_path), json_output=json_output)
+    _emit_result(
+        extract_to_sheet(input_paths or [], output_path, context_packet_path=context_packet_path),
+        json_output=json_output,
+    )
 
 
 @workflow_app.command("sheet-to-deck")

@@ -29,19 +29,29 @@ PPTX_MIME_TYPE = "application/vnd.openxmlformats-officedocument.presentationml.p
 ZIP_MIME_TYPE = "application/zip"
 
 
-def extract_to_sheet(input_paths: list[str | Path], output_path: str | Path) -> ToolResult:
+def extract_to_sheet(
+    input_paths: list[str | Path],
+    output_path: str | Path,
+    *,
+    context_packet: dict[str, Any] | str | Path | None = None,
+    context_packet_path: str | Path | None = None,
+) -> ToolResult:
     try:
         output = resolve_output_path(output_path)
+        packet = _load_context_packet(context_packet=context_packet, context_packet_path=context_packet_path)
     except AgentPDFException as exc:
         return _failed(exc.to_error())
 
+    effective_input_paths = _workflow_input_paths(input_paths, packet)
+    source_graph = _source_graph_context(packet)
     records: list[dict[str, Any]] = []
     cell_records: list[dict[str, Any]] = []
     source_summaries: list[dict[str, Any]] = []
     warnings: list[str] = []
 
-    for input_path in input_paths:
+    for input_path in effective_input_paths:
         source_summary, source_records, source_cells, source_warnings = _extract_source(input_path)
+        _attach_source_graph_refs(source_records, source_cells, source_graph)
         source_summaries.append(source_summary)
         records.extend(source_records)
         cell_records.extend(source_cells)
@@ -52,14 +62,30 @@ def extract_to_sheet(input_paths: list[str | Path], output_path: str | Path) -> 
             AgentPDFError(
                 code="unsupported_file_type",
                 message="No supported Word or Excel tables were extracted for office.workflow.extract_to_sheet.",
-                details={"input_count": len(input_paths), "sources": source_summaries},
+                details={"input_count": len(effective_input_paths), "sources": source_summaries},
             )
         )
 
-    _write_evidence_workbook(output, records=records, cell_records=cell_records)
+    _write_evidence_workbook(output, records=records, cell_records=cell_records, source_graph=source_graph)
     artifact = build_artifact(output, TOOL_NAME)
     table_count = len({record["table_record_id"] for record in records})
     cell_count = len(cell_records)
+    workbook_sheets = ["Tables", "Cells", *([] if source_graph["node_count"] == 0 else ["SourceGraph"])]
+    summary = {
+        "source_count": len(effective_input_paths),
+        "supported_source_count": _supported_count(source_summaries),
+        "table_count": table_count,
+        "row_count": len(records),
+        "cell_count": cell_count,
+    }
+    if source_graph["context_packet_id"]:
+        summary.update(
+            {
+                "context_packet_id": source_graph["context_packet_id"],
+                "source_graph_id": source_graph["source_graph_id"],
+                "source_graph_node_count": source_graph["node_count"],
+            }
+        )
 
     return ToolResult(
         job_id=_job_id(),
@@ -72,12 +98,24 @@ def extract_to_sheet(input_paths: list[str | Path], output_path: str | Path) -> 
                 ValidationCheck(
                     name="sources_scanned",
                     status="passed",
-                    details={"source_count": len(input_paths), "supported_source_count": _supported_count(source_summaries)},
+                    details={
+                        "source_count": len(effective_input_paths),
+                        "supported_source_count": _supported_count(source_summaries),
+                    },
                 ),
                 ValidationCheck(
                     name="evidence_rows_extracted",
                     status="passed",
                     details={"table_count": table_count, "row_count": len(records), "cell_count": cell_count},
+                ),
+                ValidationCheck(
+                    name="context_source_graph_loaded",
+                    status="passed" if source_graph["node_count"] else "skipped",
+                    details={
+                        "context_packet_id": source_graph["context_packet_id"],
+                        "source_graph_id": source_graph["source_graph_id"],
+                        "node_count": source_graph["node_count"],
+                    },
                 ),
                 ValidationCheck(
                     name="evidence_workbook_written",
@@ -89,19 +127,14 @@ def extract_to_sheet(input_paths: list[str | Path], output_path: str | Path) -> 
         ),
         warnings=warnings,
         usage={
-            "summary": {
-                "source_count": len(input_paths),
-                "supported_source_count": _supported_count(source_summaries),
-                "table_count": table_count,
-                "row_count": len(records),
-                "cell_count": cell_count,
-            },
+            "summary": summary,
             "evidence_workbook": {
                 "path": output.as_posix(),
                 "format": "xlsx",
-                "sheets": ["Tables", "Cells"],
+                "sheets": workbook_sheets,
                 "artifact_id": artifact.artifact_id,
             },
+            "source_graph": _source_graph_usage(source_graph),
             "sources": source_summaries,
             "records": records,
             "cell_records": cell_records,
@@ -832,6 +865,190 @@ def _join_limited(values: list[str], *, fallback: str, limit: int = 5) -> str:
     return ", ".join(cleaned) + suffix
 
 
+def _load_context_packet(
+    *,
+    context_packet: dict[str, Any] | str | Path | None,
+    context_packet_path: str | Path | None,
+) -> dict[str, Any] | None:
+    payload = context_packet if context_packet is not None else context_packet_path
+    if payload is None:
+        return None
+    if isinstance(payload, dict):
+        packet = payload
+    else:
+        path = resolve_input_path(payload)
+        try:
+            packet = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            raise AgentPDFException("invalid_context_packet", f"Context packet JSON is invalid: {path}") from exc
+    if not isinstance(packet, dict) or not isinstance(packet.get("items"), list):
+        raise AgentPDFException("invalid_context_packet", "Context packet must include an items array.")
+    if not isinstance(packet.get("source_graph"), dict):
+        raise AgentPDFException("invalid_context_packet", "Context packet must include a source_graph object.")
+    return packet
+
+
+def _workflow_input_paths(input_paths: list[str | Path], packet: dict[str, Any] | None) -> list[str | Path]:
+    paths: list[str | Path] = list(input_paths)
+    if not paths and packet is not None:
+        paths.extend(_context_packet_paths(packet))
+    return _unique_paths(paths)
+
+
+def _context_packet_paths(packet: dict[str, Any]) -> list[str]:
+    paths: list[str] = []
+    for item in packet.get("items", []):
+        if isinstance(item, dict) and item.get("uri"):
+            paths.append(str(item["uri"]))
+    if paths:
+        return paths
+    graph = packet.get("source_graph", {}) if isinstance(packet.get("source_graph"), dict) else {}
+    for node in graph.get("nodes", []):
+        if not isinstance(node, dict):
+            continue
+        if node.get("type") != "file":
+            continue
+        locator = _first_locator(node)
+        path = locator.get("path") or node.get("uri")
+        if path:
+            paths.append(str(path))
+    return paths
+
+
+def _unique_paths(paths: list[str | Path]) -> list[str | Path]:
+    unique: list[str | Path] = []
+    seen: set[str] = set()
+    for path in paths:
+        key = _path_key(path)
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(path)
+    return unique
+
+
+def _source_graph_context(packet: dict[str, Any] | None) -> dict[str, Any]:
+    if packet is None:
+        return {
+            "context_packet_id": None,
+            "source_graph_id": None,
+            "nodes": [],
+            "node_count": 0,
+            "edge_count": 0,
+            "node_type_counts": {},
+            "table_refs": {},
+        }
+    graph = packet.get("source_graph", {}) if isinstance(packet.get("source_graph"), dict) else {}
+    nodes = [node for node in graph.get("nodes", []) if isinstance(node, dict)]
+    edges = [edge for edge in graph.get("edges", []) if isinstance(edge, dict)]
+    return {
+        "context_packet_id": str(packet.get("context_packet_id") or ""),
+        "source_graph_id": str(graph.get("source_graph_id") or ""),
+        "nodes": nodes,
+        "node_count": len(nodes),
+        "edge_count": len(edges),
+        "node_type_counts": _counts(node.get("type") for node in nodes),
+        "table_refs": _source_graph_table_refs(nodes),
+    }
+
+
+def _source_graph_table_refs(nodes: list[dict[str, Any]]) -> dict[tuple[str, int], list[dict[str, Any]]]:
+    refs: dict[tuple[str, int], list[dict[str, Any]]] = {}
+    for node in nodes:
+        node_type = str(node.get("type") or "")
+        if node_type not in {"word.table", "sheet.table"}:
+            continue
+        locator = _first_locator(node)
+        path = locator.get("path") or node.get("uri")
+        table_index = _node_table_index(node, locator)
+        if path is None or table_index <= 0:
+            continue
+        refs.setdefault((_path_key(path), table_index), []).append(_source_node_ref(node))
+    return refs
+
+
+def _attach_source_graph_refs(
+    records: list[dict[str, Any]],
+    cell_records: list[dict[str, Any]],
+    source_graph: dict[str, Any],
+) -> None:
+    if not source_graph["context_packet_id"]:
+        return
+    for record in records:
+        refs = _table_source_refs(record, source_graph)
+        record["context_packet_id"] = source_graph["context_packet_id"]
+        record["source_graph_id"] = source_graph["source_graph_id"]
+        record["source_node_refs"] = refs
+    for cell in cell_records:
+        refs = _table_source_refs(cell, source_graph)
+        cell["context_packet_id"] = source_graph["context_packet_id"]
+        cell["source_graph_id"] = source_graph["source_graph_id"]
+        cell["source_node_refs"] = refs
+
+
+def _table_source_refs(row: dict[str, Any], source_graph: dict[str, Any]) -> list[dict[str, Any]]:
+    table_index = int(row.get("table_index") or _table_index_from_table_id(str(row.get("table_id") or "")))
+    return list(source_graph["table_refs"].get((_path_key(str(row.get("source_path") or "")), table_index), []))
+
+
+def _source_graph_usage(source_graph: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "context_packet_id": source_graph["context_packet_id"],
+        "source_graph_id": source_graph["source_graph_id"],
+        "node_count": source_graph["node_count"],
+        "edge_count": source_graph["edge_count"],
+        "node_type_counts": source_graph["node_type_counts"],
+    }
+
+
+def _first_locator(node: dict[str, Any]) -> dict[str, Any]:
+    locators = node.get("locators")
+    if isinstance(locators, list) and locators and isinstance(locators[0], dict):
+        return locators[0]
+    locator = node.get("locator")
+    if isinstance(locator, dict):
+        return locator
+    return {}
+
+
+def _source_node_ref(node: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "node_id": node.get("node_id"),
+        "type": node.get("type"),
+        "source_ref": node.get("source_ref"),
+        "locators": node.get("locators", []),
+    }
+
+
+def _node_table_index(node: dict[str, Any], locator: dict[str, Any]) -> int:
+    if locator.get("table_index") is not None:
+        return int(locator["table_index"])
+    return _table_index_from_table_id(str(node.get("source_ref") or node.get("node_id") or ""))
+
+
+def _table_index_from_table_id(value: str) -> int:
+    tail = value.rsplit(":", 1)[-1].rsplit("_", 1)[-1]
+    try:
+        return int(tail)
+    except ValueError:
+        return 0
+
+
+def _path_key(path: str | Path) -> str:
+    try:
+        return Path(path).expanduser().resolve().as_posix().lower()
+    except (OSError, RuntimeError, ValueError):
+        return str(path).replace("\\", "/").lower()
+
+
+def _counts(values: Any) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for value in values:
+        key = str(value)
+        counts[key] = counts.get(key, 0) + 1
+    return dict(sorted(counts.items()))
+
+
 def _extract_source(
     input_path: str | Path,
 ) -> tuple[dict[str, Any], list[dict[str, Any]], list[dict[str, Any]], list[str]]:
@@ -940,6 +1157,7 @@ def _normalize_table_result(
                         "source_path": source_path,
                         "source_format": source_format,
                         "table_id": table_id,
+                        "table_index": int(table.get("table_index", 0)),
                         "source_sheet": sheet_name,
                         "source_row_index": row_index,
                         "source_cell_index": int(cell.get("cell_index") or source_ref.get("column_index") or fallback_index),
@@ -960,6 +1178,7 @@ def _write_evidence_workbook(
     *,
     records: list[dict[str, Any]],
     cell_records: list[dict[str, Any]],
+    source_graph: dict[str, Any],
 ) -> None:
     max_columns = max((len(record["values"]) for record in records), default=0)
     table_headers = [
@@ -969,6 +1188,7 @@ def _write_evidence_workbook(
         "source_sheet",
         "source_row_index",
         *[f"col_{index}" for index in range(1, max_columns + 1)],
+        "source_node_refs_json",
         "source_refs_json",
     ]
     table_rows = [table_headers]
@@ -983,6 +1203,7 @@ def _write_evidence_workbook(
                 str(record["source_row_index"]),
                 *values,
                 *([""] * (max_columns - len(values))),
+                json.dumps(record.get("source_node_refs", []), ensure_ascii=False, sort_keys=True),
                 json.dumps(record["source_refs"], ensure_ascii=False, sort_keys=True),
             ]
         )
@@ -996,6 +1217,7 @@ def _write_evidence_workbook(
         "source_cell_index",
         "cell_ref",
         "value",
+        "source_node_refs_json",
         "source_ref_json",
     ]
     cell_rows = [cell_headers]
@@ -1010,11 +1232,46 @@ def _write_evidence_workbook(
                 str(cell["source_cell_index"]),
                 cell["cell_ref"],
                 cell["value"],
+                json.dumps(cell.get("source_node_refs", []), ensure_ascii=False, sort_keys=True),
                 json.dumps(cell["source_ref"], ensure_ascii=False, sort_keys=True),
             ]
         )
 
-    write_xlsx(path, [("Tables", table_rows), ("Cells", cell_rows)])
+    sheets = [("Tables", table_rows), ("Cells", cell_rows)]
+    if source_graph["node_count"]:
+        sheets.append(("SourceGraph", _source_graph_rows(source_graph)))
+    write_xlsx(path, sheets)
+
+
+def _source_graph_rows(source_graph: dict[str, Any]) -> list[list[object]]:
+    rows: list[list[object]] = [
+        [
+            "context_packet_id",
+            "source_graph_id",
+            "node_id",
+            "type",
+            "role",
+            "label",
+            "uri",
+            "locators_json",
+            "evidence_json",
+        ]
+    ]
+    for node in source_graph["nodes"]:
+        rows.append(
+            [
+                source_graph["context_packet_id"],
+                source_graph["source_graph_id"],
+                str(node.get("node_id") or ""),
+                str(node.get("type") or ""),
+                str(node.get("role") or ""),
+                str(node.get("label") or ""),
+                str(node.get("uri") or ""),
+                json.dumps(node.get("locators", []), ensure_ascii=False, sort_keys=True),
+                json.dumps(node.get("evidence", {}), ensure_ascii=False, sort_keys=True),
+            ]
+        )
+    return rows
 
 
 def _supported_count(sources: list[dict[str, Any]]) -> int:
