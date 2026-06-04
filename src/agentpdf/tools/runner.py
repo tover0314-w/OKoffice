@@ -162,7 +162,7 @@ from agentpdf.office.sheet import (
     write_sheet_workbook,
 )
 from agentpdf.office.word import extract_word_tables, inspect_word_document
-from agentpdf.office.workflows import extract_to_sheet
+from agentpdf.office.workflows import extract_to_sheet, sheet_to_deck
 from agentpdf.rag.local import (
     chat_pdf,
     cite_answer,
@@ -210,6 +210,20 @@ def run_office_workflow_extract_to_sheet(
     output_path: str | Path,
 ) -> ToolResult:
     return extract_to_sheet(input_paths, output_path)
+
+
+def run_office_workflow_sheet_to_deck(
+    workbook_path: str | Path,
+    output_path: str | Path,
+    title: str | None = None,
+    max_rows_per_sheet: int = 100,
+) -> ToolResult:
+    return sheet_to_deck(
+        workbook_path,
+        output_path,
+        title=title,
+        max_rows_per_sheet=max_rows_per_sheet,
+    )
 
 
 def run_word_inspect_document(path: str | Path) -> ToolResult:

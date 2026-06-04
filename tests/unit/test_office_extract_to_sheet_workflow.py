@@ -37,7 +37,7 @@ def test_extract_to_sheet_builds_evidence_workbook_from_docx_and_xlsx(tmp_path: 
     assert result.usage["records"][0]["values"] == ["Name", "Value"]
     assert result.usage["records"][2]["source_format"] == "xlsx"
     assert result.usage["records"][3]["source_refs"][1]["cell_ref"] == "B2"
-    assert "office.workflow.source_to_deck" in result.next_recommended_tools
+    assert "office.workflow.sheet_to_deck" in result.next_recommended_tools
     assert _sheet_names(output_path) == ["Tables", "Cells"]
 
 

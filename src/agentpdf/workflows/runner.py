@@ -13,6 +13,7 @@ SUPPORTED_LOCAL_WORKFLOW_TOOLS = {
     "deck.inspect.presentation",
     "office.inspect.file",
     "office.workflow.extract_to_sheet",
+    "office.workflow.sheet_to_deck",
     "pdf.inspect.document",
     "pdf.inspect.pages",
     "pdf.organize.merge",
@@ -373,6 +374,13 @@ def _run_local_step(tool: str, payload: dict[str, Any]) -> ToolResult:
         return runner.run_office_workflow_extract_to_sheet(
             input_paths=input_paths if isinstance(input_paths, list) else [],
             output_path=payload.get("output_path", payload.get("output", ".okoffice-out/evidence.xlsx")),
+        )
+    if tool == "office.workflow.sheet_to_deck":
+        return runner.run_office_workflow_sheet_to_deck(
+            workbook_path=payload.get("workbook_path", payload.get("path", payload.get("input_path", ""))),
+            output_path=payload.get("output_path", payload.get("output", ".okoffice-out/deck.pptx")),
+            title=str(payload["title"]) if payload.get("title") is not None else None,
+            max_rows_per_sheet=int(payload.get("max_rows_per_sheet", payload.get("max_rows", 100))),
         )
     if tool == "word.inspect.document":
         return runner.run_word_inspect_document(payload.get("path", payload.get("input_path", "")))

@@ -125,8 +125,8 @@
                          },
                          {
                              "name":  "office.workflow.sheet_to_deck",
-                             "status":  "planned",
-                             "description":  "Turn an evidence workbook into an editable PowerPoint deck with source refs.",
+                             "status":  "beta",
+                             "description":  "Profile an evidence workbook and create an editable PowerPoint deck outline with source refs.",
                              "domain":  "office",
                              "interfaces":  [
                                                 "cli",
@@ -134,7 +134,7 @@
                                                 "rest",
                                                 "sdk"
                                             ],
-                             "implemented":  false,
+                             "implemented":  true,
                              "oss_default":  true,
                              "requires_model":  false
                          },

@@ -18,7 +18,7 @@ from agentpdf.office.sheet import (
     write_sheet_workbook,
 )
 from agentpdf.office.word import extract_word_tables, inspect_word_document
-from agentpdf.office.workflows import extract_to_sheet
+from agentpdf.office.workflows import extract_to_sheet, sheet_to_deck
 from okoffice import __version__
 from okoffice.tools.registry import load_okoffice_manifest
 
@@ -215,6 +215,26 @@ def workflow_extract_to_sheet(
 ) -> None:
     """Extract source tables into a source-mapped evidence workbook."""
     _emit_result(extract_to_sheet(input_paths, output_path), json_output=json_output)
+
+
+@workflow_app.command("sheet-to-deck")
+def workflow_sheet_to_deck(
+    workbook_path: Annotated[Path, typer.Argument(help="Input XLSX workbook to profile and turn into a deck.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output PPTX deck path.")],
+    title: Annotated[str | None, typer.Option("--title", help="Deck title. Defaults to the workbook stem.")] = None,
+    max_rows_per_sheet: Annotated[int, typer.Option("--max-rows", help="Maximum non-empty rows read per sheet.")] = 100,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Turn an evidence workbook into an editable PowerPoint deck."""
+    _emit_result(
+        sheet_to_deck(
+            workbook_path,
+            output_path,
+            title=title,
+            max_rows_per_sheet=max_rows_per_sheet,
+        ),
+        json_output=json_output,
+    )
 
 
 @tools_app.command("list")

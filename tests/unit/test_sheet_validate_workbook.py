@@ -39,7 +39,7 @@ def test_validate_sheet_workbook_passes_for_source_mapped_workbook(tmp_path: Pat
     assert result.usage["summary"]["sheet_count"] == 2
     assert result.usage["summary"]["source_ref_row_count"] == 1
     assert result.usage["summary"]["blank_sheet_count"] == 0
-    assert "office.workflow.source_to_deck" in result.next_recommended_tools
+    assert "office.workflow.sheet_to_deck" in result.next_recommended_tools
 
 
 def test_validate_sheet_workbook_warns_on_blank_sheets_and_external_links(tmp_path: Path) -> None:

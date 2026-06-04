@@ -134,9 +134,9 @@ def _recommended_pipeline(
     if _needs_deck(output_formats):
         steps.append(
             {
-                "tool": "office.workflow.source_to_deck",
-                "status": "planned",
-                "reason": "Turn evidence, tables, and outline into a presentation.",
+                "tool": "office.workflow.sheet_to_deck",
+                "status": "beta",
+                "reason": "Profile an evidence workbook and create an editable presentation.",
             }
         )
     if _needs_doc(output_formats):

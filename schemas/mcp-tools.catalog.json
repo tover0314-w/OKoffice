@@ -38,6 +38,11 @@
       "status": "beta"
     },
     {
+      "name": "office_workflow_sheet_to_deck",
+      "maps_to": "office.workflow.sheet_to_deck",
+      "status": "beta"
+    },
+    {
       "name": "word_inspect_document",
       "maps_to": "word.inspect.document",
       "status": "beta"

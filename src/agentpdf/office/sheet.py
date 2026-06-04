@@ -237,7 +237,7 @@ def write_sheet_workbook(data: dict[str, Any] | list[dict[str, Any]], output_pat
             "sheet.inspect.workbook",
             "sheet.validate.workbook",
             "office.context.build_packet",
-            "office.workflow.source_to_deck",
+            "office.workflow.sheet_to_deck",
         ],
     )
 
@@ -341,7 +341,7 @@ def read_sheet_workbook(path: str | Path, max_rows_per_sheet: int = 100) -> Tool
             "sheet.profile.data",
             "sheet.validate.workbook",
             "office.context.build_packet",
-            "office.workflow.source_to_deck",
+            "office.workflow.sheet_to_deck",
         ],
     )
 
@@ -435,7 +435,7 @@ def profile_sheet_data(
             "sheet.write.workbook",
             "sheet.validate.workbook",
             "office.context.build_packet",
-            "office.workflow.source_to_deck",
+            "office.workflow.sheet_to_deck",
         ],
     )
 
@@ -581,7 +581,7 @@ def validate_sheet_workbook(path: str | Path) -> ToolResult:
         next_recommended_tools=[
             "sheet.extract.tables",
             "office.context.build_packet",
-            "office.workflow.source_to_deck",
+            "office.workflow.sheet_to_deck",
         ],
     )
 
