@@ -84,6 +84,7 @@ okoffice deck validate .okoffice-out/board-review.pptx --json
 okoffice workflow extract-to-sheet path/to/report.docx path/to/model.xlsx -o .okoffice-out/evidence.xlsx --json
 okoffice workflow sheet-to-deck .okoffice-out/evidence.xlsx -o .okoffice-out/board-review.pptx --title "Board Review" --json
 okoffice workflow board-pack .okoffice-out/evidence.xlsx .okoffice-out/board-review.pptx -o .okoffice-out/board-pack.zip --title "Board Review" --json
+okoffice bundle verify .okoffice-out/board-pack.zip --json
 
 okpdf inspect tests/fixtures/simple.pdf --json
 okpdf serve --mcp --safe-root .
@@ -110,6 +111,7 @@ okpdf serve --api
 | `office.workflow.extract_to_sheet` | beta | Builds a source-mapped XLSX evidence workbook from DOCX/XLSX tables. |
 | `office.workflow.sheet_to_deck` | beta | Profiles an evidence workbook and creates an editable PPTX review deck. |
 | `office.workflow.board_pack` | beta | Creates a local ZIP board pack with artifacts, manifest, validation report, and delivery metadata. |
+| `office.bundle.verify` | beta | Verifies board pack ZIP manifests, validation reports, artifact members, sizes, and SHA-256 checksums. |
 | `pdf.*` compatibility | stable/beta | 241 local PDF and agent setup tools remain available through `okpdf`, MCP, REST, and SDKs. |
 
 The codebase still exposes the compatibility Python package as `agentpdf` and the compatibility Node package as `@okpdf/agentpdf-node`. The target package identity is OKoffice; compatibility names are preserved deliberately.

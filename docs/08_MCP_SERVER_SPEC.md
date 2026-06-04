@@ -122,9 +122,14 @@ Implemented example:
 ```python
 office_inspect_file("model.xlsx")
 deck_validate_presentation(".okoffice-out/vendor-board-deck.pptx")
+office_workflow_board_pack(
+    [".okoffice-out/vendor-evidence.xlsx", ".okoffice-out/vendor-board-deck.pptx"],
+    ".okoffice-out/vendor-board-pack.zip",
+)
+office_bundle_verify(".okoffice-out/vendor-board-pack.zip")
 ```
 
-Returns a ToolResult JSON string with `tool: office.inspect.file`, `usage.file`, `usage.format`, `usage.safety`, warnings, validation, and `next_recommended_tools`.
+Returns a ToolResult JSON string. For `office.bundle.verify`, the JSON includes `tool: office.bundle.verify`, validation checks for manifest/report/member/hash/size integrity, warnings, artifact refs, and `next_recommended_tools`.
 
 ## Example MCP Tool Result
 

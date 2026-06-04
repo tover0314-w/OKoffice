@@ -18,7 +18,7 @@ from agentpdf.office.sheet import (
     write_sheet_workbook,
 )
 from agentpdf.office.word import extract_word_tables, inspect_word_document
-from agentpdf.office.workflows import board_pack, extract_to_sheet, sheet_to_deck
+from agentpdf.office.workflows import board_pack, extract_to_sheet, sheet_to_deck, verify_board_pack
 from okoffice import __version__
 from okoffice.tools.registry import load_okoffice_manifest
 
@@ -29,6 +29,7 @@ word_app = typer.Typer(help="Inspect and transform Word documents.")
 sheet_app = typer.Typer(help="Inspect and transform Excel workbooks.")
 deck_app = typer.Typer(help="Inspect and transform PowerPoint decks.")
 workflow_app = typer.Typer(help="Run local cross-format OKoffice workflows.")
+bundle_app = typer.Typer(help="Verify and export portable OKoffice artifact bundles.")
 
 
 @app.callback()
@@ -260,6 +261,15 @@ def workflow_board_pack(
     _emit_result(board_pack(files, output_path, title=title), json_output=json_output)
 
 
+@bundle_app.command("verify")
+def bundle_verify(
+    bundle_path: Annotated[Path, typer.Argument(help="OKoffice board pack ZIP path to verify.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Verify a local board pack ZIP manifest, validation report, members, and checksums."""
+    _emit_result(verify_board_pack(bundle_path), json_output=json_output)
+
+
 @tools_app.command("list")
 def tools_list(
     json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
@@ -298,6 +308,7 @@ app.add_typer(word_app, name="word")
 app.add_typer(sheet_app, name="sheet")
 app.add_typer(deck_app, name="deck")
 app.add_typer(workflow_app, name="workflow")
+app.add_typer(bundle_app, name="bundle")
 
 
 def _find_tool(name: str) -> dict[str, Any]:

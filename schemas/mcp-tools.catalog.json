@@ -48,6 +48,11 @@
       "status": "beta"
     },
     {
+      "name": "office_bundle_verify",
+      "maps_to": "office.bundle.verify",
+      "status": "beta"
+    },
+    {
       "name": "word_inspect_document",
       "maps_to": "word.inspect.document",
       "status": "beta"

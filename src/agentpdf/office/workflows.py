@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
-from zipfile import ZIP_DEFLATED, ZipFile
+from zipfile import ZIP_DEFLATED, BadZipFile, ZipFile
 
 from agentpdf.artifacts.store import build_artifact
 from agentpdf.office.deck import create_deck_from_outline, validate_deck_presentation
@@ -15,12 +16,13 @@ from agentpdf.office.word import extract_word_tables, inspect_word_document
 from agentpdf.office.xlsx import write_xlsx
 from agentpdf.schemas.errors import AgentPDFException
 from agentpdf.schemas.models import AgentPDFError, ToolResult, ValidationCheck, ValidationReport
-from agentpdf.security.paths import resolve_output_path
+from agentpdf.security.paths import resolve_input_path, resolve_output_path
 
 
 EXTRACT_TO_SHEET_TOOL_NAME = "office.workflow.extract_to_sheet"
 SHEET_TO_DECK_TOOL_NAME = "office.workflow.sheet_to_deck"
 BOARD_PACK_TOOL_NAME = "office.workflow.board_pack"
+BUNDLE_VERIFY_TOOL_NAME = "office.bundle.verify"
 TOOL_NAME = EXTRACT_TO_SHEET_TOOL_NAME
 XLSX_MIME_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 PPTX_MIME_TYPE = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
@@ -358,6 +360,172 @@ def board_pack(
     )
 
 
+def verify_board_pack(bundle_path: str | Path) -> ToolResult:
+    try:
+        bundle = resolve_input_path(bundle_path)
+    except AgentPDFException as exc:
+        return _failed(exc.to_error(), tool=BUNDLE_VERIFY_TOOL_NAME)
+
+    warnings: list[str] = []
+    try:
+        with ZipFile(bundle, "r") as archive:
+            member_names = archive.namelist()
+            member_set = set(member_names)
+            manifest, manifest_status = _read_bundle_json_member(
+                archive,
+                member_set=member_set,
+                member_name="okoffice-manifest.json",
+                warnings=warnings,
+            )
+            validation_report, validation_status = _read_bundle_json_member(
+                archive,
+                member_set=member_set,
+                member_name="okoffice-validation.json",
+                warnings=warnings,
+            )
+            files = manifest.get("files") if isinstance(manifest.get("files"), list) else []
+            expected_file_count = _coerce_non_negative_int(manifest.get("file_count"), fallback=len(files))
+            validation_results = (
+                validation_report.get("validation_results")
+                if isinstance(validation_report.get("validation_results"), list)
+                else []
+            )
+            verified_files = _verify_bundle_files(archive, member_set=member_set, files=files, warnings=warnings)
+    except BadZipFile:
+        return _failed(
+            AgentPDFError(
+                code="unsupported_file_type",
+                message="OKoffice board pack is not a readable ZIP file.",
+                details={"bundle_path": str(bundle_path)},
+            ),
+            tool=BUNDLE_VERIFY_TOOL_NAME,
+        )
+    except OSError as exc:
+        return _failed(
+            AgentPDFError(
+                code="artifact_validation_failed",
+                message=f"Unable to read OKoffice board pack: {exc}",
+                details={"bundle_path": str(bundle_path)},
+            ),
+            tool=BUNDLE_VERIFY_TOOL_NAME,
+        )
+
+    missing_file_count = sum(1 for file in verified_files if not file["member_present"])
+    hash_mismatch_count = sum(1 for file in verified_files if file["hash_status"] == "failed")
+    size_mismatch_count = sum(1 for file in verified_files if file["size_status"] == "failed")
+    verified_file_count = sum(1 for file in verified_files if file["integrity_status"] == "passed")
+    checks = [
+        ValidationCheck(
+            name="zip_readable",
+            status="passed",
+            details={"path": bundle.as_posix(), "member_count": len(member_names)},
+        ),
+        ValidationCheck(
+            name="manifest_present",
+            status="passed" if manifest_status == "passed" else "failed",
+            details={"member": "okoffice-manifest.json", "status": manifest_status},
+        ),
+        ValidationCheck(
+            name="validation_report_present",
+            status="passed" if validation_status == "passed" else "failed",
+            details={"member": "okoffice-validation.json", "status": validation_status},
+        ),
+        ValidationCheck(
+            name="manifest_product_ok",
+            status=_passed_or_failed(manifest.get("product") == "okoffice"),
+            details={"product": manifest.get("product")},
+        ),
+        ValidationCheck(
+            name="manifest_workflow_ok",
+            status=_passed_or_failed(manifest.get("workflow") == BOARD_PACK_TOOL_NAME),
+            details={"workflow": manifest.get("workflow"), "expected_workflow": BOARD_PACK_TOOL_NAME},
+        ),
+        ValidationCheck(
+            name="validation_report_product_ok",
+            status=_passed_or_failed(validation_report.get("product") == "okoffice"),
+            details={"product": validation_report.get("product")},
+        ),
+        ValidationCheck(
+            name="validation_report_workflow_ok",
+            status=_passed_or_failed(validation_report.get("workflow") == BOARD_PACK_TOOL_NAME),
+            details={"workflow": validation_report.get("workflow"), "expected_workflow": BOARD_PACK_TOOL_NAME},
+        ),
+        ValidationCheck(
+            name="manifest_file_count_matches",
+            status=_passed_or_failed(expected_file_count == len(files)),
+            details={"file_count": expected_file_count, "manifest_file_entries": len(files)},
+        ),
+        ValidationCheck(
+            name="artifact_members_present",
+            status=_passed_or_failed(missing_file_count == 0),
+            details={"manifest_file_count": len(files), "missing_file_count": missing_file_count},
+        ),
+        ValidationCheck(
+            name="artifact_hashes_match",
+            status=_passed_or_failed(hash_mismatch_count == 0),
+            details={"checked_file_count": len(files), "hash_mismatch_count": hash_mismatch_count},
+        ),
+        ValidationCheck(
+            name="artifact_sizes_match",
+            status=_passed_or_failed(size_mismatch_count == 0),
+            details={"checked_file_count": len(files), "size_mismatch_count": size_mismatch_count},
+        ),
+        ValidationCheck(
+            name="validation_result_count_matches",
+            status=_passed_or_failed(len(validation_results) == len(files)),
+            details={"validation_result_count": len(validation_results), "manifest_file_count": len(files)},
+        ),
+    ]
+    artifact = build_artifact(bundle, BUNDLE_VERIFY_TOOL_NAME)
+    return ToolResult(
+        job_id=_job_id(),
+        status="succeeded",
+        tool=BUNDLE_VERIFY_TOOL_NAME,
+        artifacts=[artifact],
+        validation=ValidationReport(
+            status=_validation_report_status_from_checks(checks),
+            checks=checks,
+            warnings=warnings,
+        ),
+        warnings=warnings,
+        usage={
+            "summary": {
+                "bundle_path": bundle.as_posix(),
+                "member_count": len(member_names),
+                "manifest_file_count": len(files),
+                "expected_file_count": expected_file_count,
+                "validation_result_count": len(validation_results),
+                "verified_file_count": verified_file_count,
+                "missing_file_count": missing_file_count,
+                "hash_mismatch_count": hash_mismatch_count,
+                "size_mismatch_count": size_mismatch_count,
+                "warning_count": len(warnings),
+            },
+            "bundle": {
+                "path": bundle.as_posix(),
+                "format": "zip",
+                "artifact_id": artifact.artifact_id,
+                "manifest_member": "okoffice-manifest.json",
+                "validation_member": "okoffice-validation.json",
+            },
+            "manifest": manifest,
+            "validation_report_summary": {
+                "product": validation_report.get("product"),
+                "workflow": validation_report.get("workflow"),
+                "status": validation_report.get("status"),
+                "warning_count": validation_report.get("warning_count", 0),
+                "validation_result_count": len(validation_results),
+            },
+            "files": verified_files,
+        },
+        next_recommended_tools=[
+            "office.artifacts.source_map",
+            "office.context.build_packet",
+            "office.workflow.extract_to_sheet",
+        ],
+    )
+
+
 def _board_pack_manifest(*, title: str | None, files: list[dict[str, Any]]) -> dict[str, Any]:
     return {
         "product": "okoffice",
@@ -436,6 +604,100 @@ def _write_board_pack_zip(
             "okoffice-validation.json",
             json.dumps(validation_report, ensure_ascii=False, indent=2, sort_keys=True),
         )
+
+
+def _read_bundle_json_member(
+    archive: ZipFile,
+    *,
+    member_set: set[str],
+    member_name: str,
+    warnings: list[str],
+) -> tuple[dict[str, Any], str]:
+    if member_name not in member_set:
+        warnings.append(f"Board pack JSON member missing: {member_name}")
+        return {}, "missing"
+    try:
+        payload = json.loads(archive.read(member_name).decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        warnings.append(f"Board pack JSON member invalid: {member_name} ({exc})")
+        return {}, "invalid"
+    if not isinstance(payload, dict):
+        warnings.append(f"Board pack JSON member must be an object: {member_name}")
+        return {}, "invalid"
+    return payload, "passed"
+
+
+def _verify_bundle_files(
+    archive: ZipFile,
+    *,
+    member_set: set[str],
+    files: list[Any],
+    warnings: list[str],
+) -> list[dict[str, Any]]:
+    verified_files: list[dict[str, Any]] = []
+    for index, raw_entry in enumerate(files, start=1):
+        entry = raw_entry if isinstance(raw_entry, dict) else {}
+        archive_path = str(entry.get("archive_path") or "")
+        expected_sha256 = str(entry.get("sha256") or "")
+        expected_size = _coerce_int(entry.get("size_bytes"), fallback=-1)
+        member_present = bool(archive_path and archive_path in member_set)
+        actual_sha256: str | None = None
+        actual_size: int | None = None
+        hash_status = "skipped"
+        size_status = "skipped"
+
+        if not archive_path:
+            warnings.append(f"Board pack artifact entry missing archive_path at index {index}")
+        elif not member_present:
+            warnings.append(f"Board pack artifact missing from ZIP: {archive_path}")
+        else:
+            data = archive.read(archive_path)
+            actual_sha256 = hashlib.sha256(data).hexdigest()
+            actual_size = len(data)
+            hash_status = "passed" if expected_sha256 and actual_sha256 == expected_sha256 else "failed"
+            size_status = "passed" if expected_size >= 0 and actual_size == expected_size else "failed"
+            if hash_status == "failed":
+                warnings.append(f"Board pack artifact sha256 mismatch: {archive_path}")
+            if size_status == "failed":
+                warnings.append(f"Board pack artifact size mismatch: {archive_path}")
+
+        integrity_status = "passed" if member_present and hash_status == "passed" and size_status == "passed" else "failed"
+        verified_files.append(
+            {
+                "index": index,
+                "archive_path": archive_path,
+                "name": entry.get("name"),
+                "detected_format": entry.get("detected_format"),
+                "domain": entry.get("domain"),
+                "validation_tool": entry.get("validation_tool"),
+                "validation_status": entry.get("validation_status"),
+                "member_present": member_present,
+                "expected_sha256": expected_sha256,
+                "actual_sha256": actual_sha256,
+                "hash_status": hash_status,
+                "expected_size_bytes": expected_size if expected_size >= 0 else None,
+                "actual_size_bytes": actual_size,
+                "size_status": size_status,
+                "integrity_status": integrity_status,
+            }
+        )
+    return verified_files
+
+
+def _passed_or_failed(condition: bool) -> str:
+    return "passed" if condition else "failed"
+
+
+def _coerce_non_negative_int(value: Any, *, fallback: int) -> int:
+    coerced = _coerce_int(value, fallback=fallback)
+    return coerced if coerced >= 0 else fallback
+
+
+def _coerce_int(value: Any, *, fallback: int) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return fallback
 
 
 def _artifact_archive_path(path: Path, used_paths: set[str]) -> str:

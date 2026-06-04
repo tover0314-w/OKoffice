@@ -353,6 +353,72 @@ Purpose: package multiple artifacts, source maps, validation reports, and manife
 
 Purpose: verify checksums, artifact presence, source refs, validation reports, and dependency/license notes.
 
+Current OSS implementation verifies OKoffice board pack ZIPs created by `office.workflow.board_pack`.
+
+CLI:
+
+```bash
+okoffice bundle verify .okoffice-out/board-pack.zip --json
+```
+
+MCP:
+
+```python
+office_bundle_verify(".okoffice-out/board-pack.zip")
+```
+
+REST:
+
+```http
+POST /v1/tools/office.bundle.verify/run
+```
+
+Input:
+
+```json
+{
+  "bundle_path": ".okoffice-out/board-pack.zip"
+}
+```
+
+Expected output highlights:
+
+```json
+{
+  "status": "succeeded",
+  "tool": "office.bundle.verify",
+  "validation": {"status": "passed"},
+  "usage": {
+    "summary": {
+      "manifest_file_count": 2,
+      "verified_file_count": 2,
+      "missing_file_count": 0,
+      "hash_mismatch_count": 0,
+      "size_mismatch_count": 0
+    }
+  }
+}
+```
+
+Error example:
+
+```json
+{
+  "status": "failed",
+  "tool": "office.bundle.verify",
+  "error": {
+    "code": "unsupported_file_type",
+    "message": "OKoffice board pack is not a readable ZIP file."
+  }
+}
+```
+
+Limitations:
+
+- Verifies the ZIP, `okoffice-manifest.json`, `okoffice-validation.json`, artifact member presence, byte size, and SHA-256.
+- Does not re-parse packaged DOCX/XLSX/PPTX/PDF contents; run format-specific validators before creating the board pack.
+- Does not execute macros, fetch remote assets, or call hosted services.
+
 Acceptance criteria:
 
 - Bundle verification is local-first.

@@ -86,6 +86,7 @@ from agentpdf.tools.runner import (
     run_metadata_update_outline,
     run_merge,
     run_n_up,
+    run_office_bundle_verify,
     run_office_inspect_file,
     run_office_workflow_board_pack,
     run_office_workflow_extract_to_sheet,
@@ -315,6 +316,10 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
             files=files if isinstance(files, list) else [],
             output_path=payload.get("output_path", payload.get("output", ".okoffice-out/board-pack.zip")),
             title=str(payload["title"]) if payload.get("title") is not None else None,
+        )
+    if tool_name == "office.bundle.verify":
+        return run_office_bundle_verify(
+            payload.get("bundle_path", payload.get("path", payload.get("input_path", ""))),
         )
     if tool_name == "word.inspect.document":
         return run_word_inspect_document(payload.get("path", payload.get("input_path", "")))

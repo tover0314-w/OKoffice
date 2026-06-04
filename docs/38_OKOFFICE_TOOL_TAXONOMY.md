@@ -79,7 +79,7 @@ Every tool returns:
 ### `office.bundle`
 
 - `office.bundle.export`
-- `office.bundle.verify`
+- `office.bundle.verify`: verify OKoffice board pack manifests, validation reports, artifact members, byte sizes, and SHA-256 checksums.
 - `office.bundle.graph`
 - `office.bundle.report`
 

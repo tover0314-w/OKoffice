@@ -46,6 +46,7 @@ okoffice deck validate .okoffice-out/board-review.pptx --json
 okoffice workflow extract-to-sheet path/to/report.docx path/to/model.xlsx -o .okoffice-out/evidence.xlsx --json
 okoffice workflow sheet-to-deck .okoffice-out/evidence.xlsx -o .okoffice-out/board-review.pptx --title "Board Review" --json
 okoffice workflow board-pack .okoffice-out/evidence.xlsx .okoffice-out/board-review.pptx -o .okoffice-out/board-pack.zip --title "Board Review" --json
+okoffice bundle verify .okoffice-out/board-pack.zip --json
 
 okpdf inspect tests/fixtures/simple.pdf --json
 okpdf serve --mcp --safe-root .
@@ -72,6 +73,7 @@ okpdf serve --api
 | `office.workflow.extract_to_sheet` | beta | 从 DOCX/XLSX 表格生成带 source refs 的 XLSX evidence workbook。 |
 | `office.workflow.sheet_to_deck` | beta | 分析 evidence workbook，并创建可编辑的 PPTX review deck。 |
 | `office.workflow.board_pack` | beta | 创建本地 ZIP board pack，包含 artifacts、manifest、validation report 和交付元数据。 |
+| `office.bundle.verify` | beta | 校验 board pack ZIP 的 manifest、validation report、artifact 成员、大小和 SHA-256。 |
 | `pdf.*` 兼容层 | stable/beta | 241 个本地 PDF 和 agent setup 工具继续通过 `okpdf`、MCP、REST、SDK 可用。 |
 
 ## 产品主循环

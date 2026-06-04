@@ -13,6 +13,27 @@ okoffice migration notes:
 - Target domains include `office.inspect.*`, `word.*`, `sheet.*`, `deck.*`, `office.context.*`, `office.evidence.*`, `office.workflow.*`, `office.validation.*`, and `office.bundle.*`.
 - The intended product is multi-format Office infrastructure; this table records the currently implemented PDF-domain foundation.
 
+Implemented okoffice target snapshot lives in `schemas/office-tool-manifest.target.json`. Current local target tools include:
+
+| Tool | Status | OSS default |
+|---|---:|---:|
+| `office.inspect.file` | beta | yes |
+| `word.inspect.document` | beta | yes |
+| `word.extract.tables` | beta | yes |
+| `sheet.inspect.workbook` | beta | yes |
+| `sheet.read.workbook` | beta | yes |
+| `sheet.profile.data` | beta | yes |
+| `sheet.extract.tables` | beta | yes |
+| `sheet.write.workbook` | beta | yes |
+| `sheet.validate.workbook` | beta | yes |
+| `deck.inspect.presentation` | beta | yes |
+| `deck.create.from_outline` | beta | yes |
+| `deck.validate.presentation` | beta | yes |
+| `office.workflow.extract_to_sheet` | beta | yes |
+| `office.workflow.sheet_to_deck` | beta | yes |
+| `office.workflow.board_pack` | beta | yes |
+| `office.bundle.verify` | beta | yes |
+
 | Tool | Category | Status | OSS default |
 |---|---|---:|---:|
 | `agent.setup.claude_code` | agent | beta | yes |

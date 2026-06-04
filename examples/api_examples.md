@@ -147,6 +147,23 @@ curl -X POST http://127.0.0.1:7331/v1/tools/office.workflow.board_pack/run \
 curl -X POST http://127.0.0.1:7331/v1/tools/office.bundle.verify/run \
   -H 'Content-Type: application/json' \
   -d '{
-    "bundle_path": ".okoffice-out/vendor-board-pack.okoffice.zip"
+    "bundle_path": ".okoffice-out/vendor-board-pack.zip"
   }'
+```
+
+Expected output highlights:
+
+```json
+{
+  "status": "succeeded",
+  "tool": "office.bundle.verify",
+  "validation": {"status": "passed"},
+  "usage": {
+    "summary": {
+      "manifest_file_count": 2,
+      "verified_file_count": 2,
+      "hash_mismatch_count": 0
+    }
+  }
+}
 ```

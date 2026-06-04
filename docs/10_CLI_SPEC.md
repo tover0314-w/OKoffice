@@ -62,9 +62,9 @@ okoffice deck create --from-workbook .okoffice-out/evidence.xlsx --profile board
 Workflows:
 
 ```bash
-okoffice workflow docset-to-sheet --file memo.docx --file diligence.pdf --schema examples/schemas/kpi-review.json -o .okoffice-out/evidence.xlsx --json
-okoffice workflow sheet-to-deck --workbook .okoffice-out/evidence.xlsx --profile board_review -o .okoffice-out/board-review.pptx --json
-okoffice workflow board-pack --file memo.docx --file diligence.pdf --file metrics.xlsx --out-dir .okoffice-out/board-pack --json
+okoffice workflow extract-to-sheet memo.docx metrics.xlsx -o .okoffice-out/evidence.xlsx --json
+okoffice workflow sheet-to-deck .okoffice-out/evidence.xlsx -o .okoffice-out/board-review.pptx --title "Board Review" --json
+okoffice workflow board-pack .okoffice-out/evidence.xlsx .okoffice-out/board-review.pptx -o .okoffice-out/board-pack.zip --title "Board Review" --json
 ```
 
 Patch:
@@ -79,8 +79,7 @@ okoffice patch verify patch.json artifact.updated.docx --json
 Bundle:
 
 ```bash
-okoffice bundle export --file evidence.xlsx --file memo.docx --file board-review.pptx --file board-review.pdf -o board-pack.okoffice.zip --json
-okoffice bundle verify board-pack.okoffice.zip --json
+okoffice bundle verify .okoffice-out/board-pack.zip --json
 ```
 
 Serve:

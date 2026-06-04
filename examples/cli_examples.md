@@ -101,6 +101,8 @@ okoffice workflow board-pack \
   -o .okoffice-out/vendor-board-pack.zip \
   --title "Vendor Board Review" \
   --json
+
+okoffice bundle verify .okoffice-out/vendor-board-pack.zip --json
 ```
 
 Expected artifacts:
@@ -110,6 +112,8 @@ Expected artifacts:
 - `okoffice-manifest.json`.
 - `okoffice-validation.json`.
 - `.zip` board pack bundle.
+
+The verify step returns `validation.status: passed` when the ZIP is readable, the manifest and validation report are present, artifact members exist, and every packaged artifact matches its recorded size and SHA-256.
 
 ## Patch And Verify
 
@@ -135,6 +139,12 @@ okoffice patch verify .okoffice-out/vendor-board-pack/memo.patch.json \
 ## Bundle
 
 ```bash
+okoffice bundle verify .okoffice-out/vendor-board-pack.zip --json
+```
+
+Target export shape:
+
+```bash
 okoffice bundle export \
   --file .okoffice-out/vendor-board-pack/vendor-evidence.xlsx \
   --file .okoffice-out/vendor-board-pack/memo.updated.docx \
@@ -142,8 +152,6 @@ okoffice bundle export \
   --file .okoffice-out/vendor-board-pack/handout.pdf \
   -o .okoffice-out/vendor-board-pack.okoffice.zip \
   --json
-
-okoffice bundle verify .okoffice-out/vendor-board-pack.okoffice.zip --json
 ```
 
 ## Serve Agents

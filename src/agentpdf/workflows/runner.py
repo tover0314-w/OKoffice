@@ -12,6 +12,7 @@ SUPPORTED_LOCAL_WORKFLOW_TOOLS = {
     "deck.create.from_outline",
     "deck.inspect.presentation",
     "deck.validate.presentation",
+    "office.bundle.verify",
     "office.inspect.file",
     "office.workflow.board_pack",
     "office.workflow.extract_to_sheet",
@@ -390,6 +391,10 @@ def _run_local_step(tool: str, payload: dict[str, Any]) -> ToolResult:
             files=files if isinstance(files, list) else [],
             output_path=payload.get("output_path", payload.get("output", ".okoffice-out/board-pack.zip")),
             title=str(payload["title"]) if payload.get("title") is not None else None,
+        )
+    if tool == "office.bundle.verify":
+        return runner.run_office_bundle_verify(
+            payload.get("bundle_path", payload.get("path", payload.get("input_path", ""))),
         )
     if tool == "word.inspect.document":
         return runner.run_word_inspect_document(payload.get("path", payload.get("input_path", "")))

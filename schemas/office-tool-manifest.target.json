@@ -154,6 +154,21 @@
                              "requires_model":  false
                          },
                          {
+                             "name":  "office.bundle.verify",
+                             "status":  "beta",
+                             "description":  "Verify a local OKoffice board pack ZIP manifest, validation report, artifact members, sizes, and SHA-256 checksums.",
+                             "domain":  "office",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  true,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
                              "name":  "office.manifest.show",
                              "status":  "beta",
                              "description":  "Return the target OKoffice tool map for agent runtimes.",

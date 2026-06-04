@@ -162,7 +162,7 @@ from agentpdf.office.sheet import (
     write_sheet_workbook,
 )
 from agentpdf.office.word import extract_word_tables, inspect_word_document
-from agentpdf.office.workflows import board_pack, extract_to_sheet, sheet_to_deck
+from agentpdf.office.workflows import board_pack, extract_to_sheet, sheet_to_deck, verify_board_pack
 from agentpdf.rag.local import (
     chat_pdf,
     cite_answer,
@@ -232,6 +232,10 @@ def run_office_workflow_board_pack(
     title: str | None = None,
 ) -> ToolResult:
     return board_pack(files, output_path, title=title)
+
+
+def run_office_bundle_verify(bundle_path: str | Path) -> ToolResult:
+    return verify_board_pack(bundle_path)
 
 
 def run_word_inspect_document(path: str | Path) -> ToolResult:

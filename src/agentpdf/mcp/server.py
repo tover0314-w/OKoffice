@@ -82,6 +82,7 @@ from agentpdf.tools.runner import (
     run_metadata_update_outline,
     run_merge,
     run_n_up,
+    run_office_bundle_verify,
     run_office_inspect_file,
     run_office_workflow_board_pack,
     run_office_workflow_extract_to_sheet,
@@ -193,6 +194,7 @@ def create_mcp_server() -> FastMCP:
     server.tool(name="office_workflow_extract_to_sheet")(office_workflow_extract_to_sheet)
     server.tool(name="office_workflow_sheet_to_deck")(office_workflow_sheet_to_deck)
     server.tool(name="office_workflow_board_pack")(office_workflow_board_pack)
+    server.tool(name="office_bundle_verify")(office_bundle_verify)
     server.tool(name="word_inspect_document")(word_inspect_document)
     server.tool(name="word_extract_tables")(word_extract_tables)
     server.tool(name="sheet_inspect_workbook")(sheet_inspect_workbook)
@@ -463,6 +465,11 @@ def office_workflow_sheet_to_deck(
 def office_workflow_board_pack(files: list[str], output_path: str, title: str | None = None) -> str:
     """Create a local OKoffice board pack ZIP with artifacts, manifest, and validation report."""
     return run_office_workflow_board_pack(files, output_path, title=title).model_dump_json()
+
+
+def office_bundle_verify(bundle_path: str) -> str:
+    """Verify an OKoffice board pack ZIP manifest, validation report, artifact members, and checksums."""
+    return run_office_bundle_verify(bundle_path).model_dump_json()
 
 
 def word_inspect_document(path: str) -> str:

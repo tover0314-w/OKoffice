@@ -68,6 +68,15 @@ office.workflow.docset_to_sheet
 -> office.bundle.verify
 ```
 
+Current local OSS slice:
+
+```text
+office.workflow.extract_to_sheet
+-> office.workflow.sheet_to_deck
+-> office.workflow.board_pack
+-> office.bundle.verify
+```
+
 Outputs:
 
 - evidence workbook;

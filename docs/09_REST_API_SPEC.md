@@ -136,6 +136,46 @@ Output should include:
 - Warnings for missing/low-confidence fields.
 - Next recommended tools such as `sheet.validation.formulas` or `office.workflow.sheet_to_deck`.
 
+## Example: Implemented Board Pack Verification
+
+```http
+POST /v1/tools/office.bundle.verify/run
+```
+
+Input:
+
+```json
+{
+  "bundle_path": ".okoffice-out/vendor-board-pack.zip"
+}
+```
+
+Output highlights:
+
+```json
+{
+  "status": "succeeded",
+  "tool": "office.bundle.verify",
+  "validation": {"status": "passed"},
+  "usage": {
+    "summary": {
+      "manifest_file_count": 2,
+      "verified_file_count": 2,
+      "missing_file_count": 0,
+      "hash_mismatch_count": 0,
+      "size_mismatch_count": 0
+    }
+  },
+  "next_recommended_tools": [
+    "office.artifacts.source_map",
+    "office.context.build_packet",
+    "office.workflow.extract_to_sheet"
+  ]
+}
+```
+
+If a member is tampered with, the HTTP request still returns a `ToolResult` with `status: succeeded` and `validation.status: failed`, so callers can inspect exact mismatch evidence. Unreadable or non-ZIP inputs return `status: failed` with `error.code: unsupported_file_type`.
+
 ## Hosted API Compatibility
 
 Design the local API so it can later support:
