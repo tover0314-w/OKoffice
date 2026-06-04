@@ -143,6 +143,7 @@ from agentpdf.tools.runner import (
     run_select_target_profile,
     run_sheet_extract_tables,
     run_sheet_inspect_workbook,
+    run_sheet_read_workbook,
     run_sheet_validate_workbook,
     run_sheet_write_workbook,
     run_split,
@@ -188,6 +189,7 @@ def create_mcp_server() -> FastMCP:
     server.tool(name="word_inspect_document")(word_inspect_document)
     server.tool(name="word_extract_tables")(word_extract_tables)
     server.tool(name="sheet_inspect_workbook")(sheet_inspect_workbook)
+    server.tool(name="sheet_read_workbook")(sheet_read_workbook)
     server.tool(name="sheet_extract_tables")(sheet_extract_tables)
     server.tool(name="sheet_write_workbook")(sheet_write_workbook)
     server.tool(name="sheet_validate_workbook")(sheet_validate_workbook)
@@ -446,6 +448,11 @@ def word_extract_tables(path: str) -> str:
 def sheet_inspect_workbook(path: str) -> str:
     """Inspect a local Excel workbook and recommend next tools."""
     return run_sheet_inspect_workbook(path).model_dump_json()
+
+
+def sheet_read_workbook(path: str, max_rows_per_sheet: int = 100) -> str:
+    """Read workbook sheets, rows, cells, formulas, and source refs as bounded JSON."""
+    return run_sheet_read_workbook(path, max_rows_per_sheet=max_rows_per_sheet).model_dump_json()
 
 
 def sheet_extract_tables(path: str) -> str:

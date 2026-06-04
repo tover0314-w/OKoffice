@@ -425,7 +425,7 @@
                          },
                          {
                              "name":  "sheet.read.workbook",
-                             "status":  "planned",
+                             "status":  "beta",
                              "description":  "Read workbook sheets, tables, formulas, styles, charts, comments, and metadata.",
                              "domain":  "sheet",
                              "interfaces":  [
@@ -434,7 +434,7 @@
                                                 "rest",
                                                 "sdk"
                                             ],
-                             "implemented":  false,
+                             "implemented":  true,
                              "oss_default":  true,
                              "requires_model":  false
                          },

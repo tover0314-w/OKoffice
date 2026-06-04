@@ -20,6 +20,7 @@ INSPECT_TOOL_NAME = "sheet.inspect.workbook"
 EXTRACT_TABLES_TOOL_NAME = "sheet.extract.tables"
 WRITE_WORKBOOK_TOOL_NAME = "sheet.write.workbook"
 VALIDATE_WORKBOOK_TOOL_NAME = "sheet.validate.workbook"
+READ_WORKBOOK_TOOL_NAME = "sheet.read.workbook"
 CELL_REF_RE = re.compile(r"^([A-Z]+)([0-9]+)$", re.IGNORECASE)
 XLSX_MIME_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
@@ -240,6 +241,110 @@ def write_sheet_workbook(data: dict[str, Any] | list[dict[str, Any]], output_pat
     )
 
 
+def read_sheet_workbook(path: str | Path, max_rows_per_sheet: int = 100) -> ToolResult:
+    preflight = inspect_office_file(path)
+    if preflight.status == "failed":
+        return _failed(
+            READ_WORKBOOK_TOOL_NAME,
+            preflight.error or AgentPDFError(code="unsupported_file_type", message="Sheet read failed."),
+        )
+    if preflight.usage["format"]["detected_format"] != "xlsx":
+        return _failed(
+            READ_WORKBOOK_TOOL_NAME,
+            AgentPDFError(
+                code="unsupported_file_type",
+                message="sheet.read.workbook requires an XLSX-compatible OOXML package.",
+                details={"detected_format": preflight.usage["format"]["detected_format"]},
+            ),
+        )
+
+    source_path = Path(preflight.usage["file"]["path"])
+    names = zip_names(source_path)
+    workbook_root = read_xml(source_path, "xl/workbook.xml")
+    if workbook_root is None:
+        return _failed(
+            READ_WORKBOOK_TOOL_NAME,
+            AgentPDFError(
+                code="unsupported_file_type",
+                message="sheet.read.workbook requires xl/workbook.xml in the XLSX package.",
+                details={"path": source_path.as_posix()},
+            ),
+        )
+
+    row_limit = max(0, int(max_rows_per_sheet))
+    sheet_names = _sheet_names(workbook_root)
+    worksheet_members = sorted_members(names, prefix="xl/worksheets/sheet")
+    shared_strings = _shared_strings(read_xml(source_path, "xl/sharedStrings.xml"))
+    sheets = _read_sheet_payloads(source_path, worksheet_members, sheet_names, shared_strings, row_limit)
+    source_refs = _source_refs_summary(sheets)
+    summary = {
+        "sheet_count": len(sheets),
+        "row_count": sum(int(sheet["row_count"]) for sheet in sheets),
+        "returned_row_count": sum(int(sheet["returned_row_count"]) for sheet in sheets),
+        "cell_count": sum(int(sheet["cell_count"]) for sheet in sheets),
+        "returned_cell_count": sum(int(sheet["returned_cell_count"]) for sheet in sheets),
+        "formula_count": sum(int(sheet["formula_count"]) for sheet in sheets),
+        "source_refs_sheet_present": source_refs["present"],
+        "source_ref_row_count": source_refs["row_count"],
+        "max_rows_per_sheet": row_limit,
+        "truncated": any(bool(sheet["truncated"]) for sheet in sheets),
+    }
+    warnings = list(preflight.warnings)
+    if summary["truncated"]:
+        warnings.append(f"Workbook rows were truncated to max_rows_per_sheet={row_limit}.")
+    checks = [
+        ValidationCheck(name="format_is_xlsx", status="passed", details=preflight.usage["format"]),
+        ValidationCheck(name="workbook_xml_present", status="passed", details={"member": "xl/workbook.xml"}),
+        ValidationCheck(
+            name="worksheets_read",
+            status="passed",
+            details={
+                "sheet_count": summary["sheet_count"],
+                "returned_row_count": summary["returned_row_count"],
+                "returned_cell_count": summary["returned_cell_count"],
+            },
+        ),
+        _validation_check(
+            "row_limit_applied",
+            condition=not summary["truncated"],
+            failed_status="warning",
+            passed_details={
+                "max_rows_per_sheet": row_limit,
+                "truncated": summary["truncated"],
+            },
+            failed_message="Workbook rows were truncated for bounded agent output.",
+        ),
+    ]
+
+    return ToolResult(
+        job_id=_job_id(),
+        status="succeeded",
+        tool=READ_WORKBOOK_TOOL_NAME,
+        validation=ValidationReport(
+            status=_validation_report_status(checks),
+            checks=checks,
+            warnings=warnings,
+        ),
+        warnings=warnings,
+        usage={
+            "workbook": {
+                "path": source_path.as_posix(),
+                "format": "xlsx",
+                "package_type": preflight.usage["format"]["package_type"],
+            },
+            "summary": summary,
+            "sheets": sheets,
+            "safety": preflight.usage["safety"],
+        },
+        next_recommended_tools=[
+            "sheet.profile.data",
+            "sheet.validate.workbook",
+            "office.context.build_packet",
+            "office.workflow.source_to_deck",
+        ],
+    )
+
+
 def validate_sheet_workbook(path: str | Path) -> ToolResult:
     preflight = inspect_office_file(path)
     if preflight.status == "failed":
@@ -449,6 +554,46 @@ def _validation_sheet_summaries(
             }
         )
     return summaries
+
+
+def _read_sheet_payloads(
+    path: Path,
+    worksheet_members: list[str],
+    sheet_names: list[str],
+    shared_strings: list[str],
+    row_limit: int,
+) -> list[dict[str, object]]:
+    sheets = []
+    for index, member in enumerate(worksheet_members, start=1):
+        worksheet_root = read_xml(path, member)
+        sheet_name = sheet_names[index - 1] if index <= len(sheet_names) else f"Sheet {index}"
+        dimension = ""
+        formula_count = 0
+        rows: list[dict[str, object]] = []
+        if worksheet_root is not None:
+            dimension_element = worksheet_root.find(".//main:dimension", SHEET_NS)
+            dimension = str(dimension_element.get("ref") or "") if dimension_element is not None else ""
+            formula_count = len(worksheet_root.findall(".//main:f", SHEET_NS))
+            rows = _worksheet_rows(path, worksheet_root, sheet_name, index, shared_strings)
+        returned_rows = rows[:row_limit]
+        sheets.append(
+            {
+                "name": sheet_name,
+                "sheet_index": index,
+                "member": member,
+                "dimension": dimension,
+                "row_count": len(rows),
+                "returned_row_count": len(returned_rows),
+                "cell_count": sum(len(row["cells"]) for row in rows if isinstance(row.get("cells"), list)),
+                "returned_cell_count": sum(
+                    len(row["cells"]) for row in returned_rows if isinstance(row.get("cells"), list)
+                ),
+                "formula_count": formula_count,
+                "truncated": len(returned_rows) < len(rows),
+                "rows": returned_rows,
+            }
+        )
+    return sheets
 
 
 def _source_refs_summary(sheets: list[dict[str, object]]) -> dict[str, object]:

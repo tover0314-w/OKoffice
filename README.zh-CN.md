@@ -35,6 +35,7 @@ okoffice inspect path/to/report.docx --json
 okoffice word inspect path/to/report.docx --json
 okoffice word extract-tables path/to/report.docx --json
 okoffice sheet inspect path/to/model.xlsx --json
+okoffice sheet read path/to/model.xlsx --max-rows 100 --json
 okoffice sheet extract-tables path/to/model.xlsx --json
 okoffice sheet write-workbook records.json -o .okoffice-out/model.xlsx --json
 okoffice sheet validate .okoffice-out/model.xlsx --json
@@ -55,6 +56,7 @@ okpdf serve --api
 | `word.inspect.document` | beta | 读取 DOCX 结构、标题、表格、批注、样式和安全标记。 |
 | `word.extract.tables` | beta | 把 DOCX 表格抽取成带 source refs 的 rows/cells。 |
 | `sheet.inspect.workbook` | beta | 读取 workbook sheets、dimension、公式、表、图表、外链和安全标记。 |
+| `sheet.read.workbook` | beta | 把 workbook rows、cells、公式和 source refs 读成有界的 agent JSON。 |
 | `sheet.extract.tables` | beta | 抽取工作表表格，保留 sheet、row、column、cell refs。 |
 | `sheet.write.workbook` | beta | 把 source-mapped records 写成本地 XLSX，并保留 provenance sheet。 |
 | `sheet.validate.workbook` | beta | 校验 XLSX 结构、非空 sheet、外链、安全标记和 SourceRefs 就绪状态。 |
@@ -85,7 +87,7 @@ okpdf serve --api
 | 领域 | 示例工具 |
 |---|---|
 | Inspect | `office.inspect.file`, `word.inspect.document`, `sheet.inspect.workbook`, `deck.inspect.presentation`, `pdf.inspect.document` |
-| Extract | `word.extract.tables`, `sheet.extract.tables`, `deck.extract.notes`, `pdf.convert.pdf_to_text` |
+| Extract | `word.extract.tables`, `sheet.read.workbook`, `sheet.extract.tables`, `deck.extract.notes`, `pdf.convert.pdf_to_text` |
 | Create | `word.write.document`, `sheet.write.workbook`, `deck.create.presentation`, `pdf.convert.markdown_to_pdf` |
 | Patch | `office.patch.plan`, `word.edit.patch`, `sheet.edit.patch`, `deck.edit.patch`, `pdf.patch.apply` |
 | Validate | `office.validation.run`, `word.validation.document`, `sheet.validate.workbook`, `deck.validation.contact_sheet`, `pdf.validation.render_check` |

@@ -61,6 +61,7 @@ SUPPORTED_LOCAL_WORKFLOW_TOOLS = {
     "pdf.workflow.createpdf",
     "sheet.extract.tables",
     "sheet.inspect.workbook",
+    "sheet.read.workbook",
     "sheet.validate.workbook",
     "sheet.write.workbook",
     "word.extract.tables",
@@ -377,6 +378,11 @@ def _run_local_step(tool: str, payload: dict[str, Any]) -> ToolResult:
         return runner.run_word_extract_tables(payload.get("path", payload.get("input_path", "")))
     if tool == "sheet.inspect.workbook":
         return runner.run_sheet_inspect_workbook(payload.get("path", payload.get("input_path", "")))
+    if tool == "sheet.read.workbook":
+        return runner.run_sheet_read_workbook(
+            payload.get("path", payload.get("input_path", "")),
+            max_rows_per_sheet=int(payload.get("max_rows_per_sheet", payload.get("max_rows", 100))),
+        )
     if tool == "sheet.extract.tables":
         return runner.run_sheet_extract_tables(payload.get("path", payload.get("input_path", "")))
     if tool == "sheet.write.workbook":

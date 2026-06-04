@@ -9,7 +9,13 @@ import typer
 from agentpdf.office.deck import inspect_deck_presentation
 from agentpdf.office.inspect import inspect_office_file
 from agentpdf.office.planner import plan_office_workflow
-from agentpdf.office.sheet import extract_sheet_tables, inspect_sheet_workbook, validate_sheet_workbook, write_sheet_workbook
+from agentpdf.office.sheet import (
+    extract_sheet_tables,
+    inspect_sheet_workbook,
+    read_sheet_workbook,
+    validate_sheet_workbook,
+    write_sheet_workbook,
+)
 from agentpdf.office.word import extract_word_tables, inspect_word_document
 from agentpdf.office.workflows import extract_to_sheet
 from okoffice import __version__
@@ -121,6 +127,16 @@ def sheet_extract_tables(
 ) -> None:
     """Extract workbook tables with sheet, row, column, and cell references."""
     _emit_result(extract_sheet_tables(path), json_output=json_output)
+
+
+@sheet_app.command("read")
+def sheet_read(
+    path: Annotated[Path, typer.Argument(help="XLSX artifact path to read.")],
+    max_rows_per_sheet: Annotated[int, typer.Option("--max-rows", help="Maximum non-empty rows returned per sheet.")] = 100,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Read workbook rows, cells, formulas, and source refs as bounded JSON."""
+    _emit_result(read_sheet_workbook(path, max_rows_per_sheet=max_rows_per_sheet), json_output=json_output)
 
 
 @sheet_app.command("write-workbook")

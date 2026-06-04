@@ -153,7 +153,13 @@ from agentpdf.core.pdf import (
 from agentpdf.ir.lite import parse_lite_pdf, write_document_ir_json, write_document_ir_markdown
 from agentpdf.office.deck import inspect_deck_presentation
 from agentpdf.office.inspect import inspect_office_file
-from agentpdf.office.sheet import extract_sheet_tables, inspect_sheet_workbook, validate_sheet_workbook, write_sheet_workbook
+from agentpdf.office.sheet import (
+    extract_sheet_tables,
+    inspect_sheet_workbook,
+    read_sheet_workbook,
+    validate_sheet_workbook,
+    write_sheet_workbook,
+)
 from agentpdf.office.word import extract_word_tables, inspect_word_document
 from agentpdf.office.workflows import extract_to_sheet
 from agentpdf.rag.local import (
@@ -215,6 +221,10 @@ def run_word_extract_tables(path: str | Path) -> ToolResult:
 
 def run_sheet_inspect_workbook(path: str | Path) -> ToolResult:
     return inspect_sheet_workbook(path)
+
+
+def run_sheet_read_workbook(path: str | Path, max_rows_per_sheet: int = 100) -> ToolResult:
+    return read_sheet_workbook(path, max_rows_per_sheet=max_rows_per_sheet)
 
 
 def run_sheet_extract_tables(path: str | Path) -> ToolResult:

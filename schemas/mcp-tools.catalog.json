@@ -53,6 +53,11 @@
       "status": "beta"
     },
     {
+      "name": "sheet_read_workbook",
+      "maps_to": "sheet.read.workbook",
+      "status": "beta"
+    },
+    {
       "name": "sheet_extract_tables",
       "maps_to": "sheet.extract.tables",
       "status": "beta"
