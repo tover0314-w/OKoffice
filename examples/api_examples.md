@@ -65,12 +65,30 @@ curl -X POST http://127.0.0.1:7331/v1/tools/office.context.build_packet/run \
   -H 'Content-Type: application/json' \
   -d '{
     "files": [
-      {"kind": "local_path", "path": "contracts/vendor-a.docx"},
-      {"kind": "local_path", "path": "invoices/vendor-a.pdf"},
-      {"kind": "local_path", "path": "metrics/vendor-model.xlsx"}
+      "contracts/vendor-a.docx",
+      "invoices/vendor-a.pdf",
+      "metrics/vendor-model.xlsx"
     ],
-    "output_path": ".okoffice-out/vendor.context.json"
+    "output_path": ".okoffice-out/vendor.context.json",
+    "title": "Vendor Context",
+    "intent": "Prepare a board review"
   }'
+```
+
+Expected output highlights:
+
+```json
+{
+  "status": "succeeded",
+  "tool": "office.context.build_packet",
+  "validation": {"status": "passed"},
+  "usage": {
+    "summary": {
+      "item_count": 3,
+      "source_node_count": 6
+    }
+  }
+}
 ```
 
 ## Extract Schema

@@ -136,6 +136,40 @@ Output should include:
 - Warnings for missing/low-confidence fields.
 - Next recommended tools such as `sheet.validation.formulas` or `office.workflow.sheet_to_deck`.
 
+## Example: Implemented Context Packet Build
+
+```http
+POST /v1/tools/office.context.build_packet/run
+```
+
+Input:
+
+```json
+{
+  "files": ["memo.docx", "metrics.xlsx", "board-review.pptx"],
+  "output_path": ".okoffice-out/context.packet.json",
+  "title": "Board Review Context",
+  "intent": "Prepare a source-mapped board pack"
+}
+```
+
+Output highlights:
+
+```json
+{
+  "status": "succeeded",
+  "tool": "office.context.build_packet",
+  "validation": {"status": "passed"},
+  "usage": {
+    "summary": {
+      "item_count": 3,
+      "source_node_count": 6,
+      "formats": {"docx": 1, "pptx": 1, "xlsx": 1}
+    }
+  }
+}
+```
+
 ## Example: Implemented Board Pack Verification
 
 ```http

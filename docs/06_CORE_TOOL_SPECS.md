@@ -87,6 +87,64 @@ Every core tool returns:
 
 For generated artifacts, the output must include checksums, file size, format, validation summary, source refs when available, and next recommended validation or review tools.
 
+## Context Tools
+
+### `office.context.build_packet`
+
+Purpose: build a local OKoffice context packet and source graph from Office-compatible files.
+
+CLI:
+
+```bash
+okoffice context build --file memo.docx --file model.xlsx -o .okoffice-out/context.packet.json --json
+```
+
+MCP:
+
+```python
+office_context_build_packet(["memo.docx", "model.xlsx"], ".okoffice-out/context.packet.json")
+```
+
+REST:
+
+```http
+POST /v1/tools/office.context.build_packet/run
+```
+
+Input:
+
+```json
+{
+  "files": ["memo.docx", "model.xlsx"],
+  "output_path": ".okoffice-out/context.packet.json",
+  "title": "Vendor Context",
+  "intent": "Prepare board review"
+}
+```
+
+Expected output highlights:
+
+```json
+{
+  "status": "succeeded",
+  "tool": "office.context.build_packet",
+  "validation": {"status": "passed"},
+  "usage": {
+    "summary": {
+      "item_count": 2,
+      "source_node_count": 4,
+      "formats": {"docx": 1, "xlsx": 1}
+    }
+  }
+}
+```
+
+Limitations:
+
+- Uses deterministic local `office.inspect.file` facts and native source locators.
+- Does not yet perform full Word/Excel/PowerPoint/PDF content extraction.
+- Does not call hosted AI providers, fetch remote assets, or mutate inputs.
+
 ## Core Inspect Tools
 
 ### `office.inspect.file`

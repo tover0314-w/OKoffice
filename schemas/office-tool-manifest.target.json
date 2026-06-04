@@ -80,8 +80,8 @@
                          },
                          {
                              "name":  "office.context.build_packet",
-                             "status":  "planned",
-                             "description":  "Build a reusable cross-format context packet from Word, Excel, PowerPoint, PDF, web, text, and data sources.",
+                             "status":  "beta",
+                             "description":  "Build a reusable cross-format context packet and source graph from local Word, Excel, PowerPoint, PDF, text, and data sources.",
                              "domain":  "office",
                              "interfaces":  [
                                                 "cli",
@@ -89,7 +89,7 @@
                                                 "rest",
                                                 "sdk"
                                             ],
-                             "implemented":  false,
+                             "implemented":  true,
                              "oss_default":  true,
                              "requires_model":  false
                          },

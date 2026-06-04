@@ -87,6 +87,7 @@ from agentpdf.tools.runner import (
     run_merge,
     run_n_up,
     run_office_bundle_verify,
+    run_office_context_build_packet,
     run_office_inspect_file,
     run_office_workflow_board_pack,
     run_office_workflow_extract_to_sheet,
@@ -297,6 +298,14 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
         )
     if tool_name == "office.inspect.file":
         return run_office_inspect_file(payload.get("path", payload.get("input_path", "")))
+    if tool_name == "office.context.build_packet":
+        files = payload.get("files", payload.get("input_paths", payload.get("paths", [])))
+        return run_office_context_build_packet(
+            files=files if isinstance(files, list) else [],
+            output_path=payload.get("output_path", payload.get("output", ".okoffice-out/context.packet.json")),
+            title=str(payload["title"]) if payload.get("title") is not None else None,
+            intent=str(payload["intent"]) if payload.get("intent") is not None else None,
+        )
     if tool_name == "office.workflow.extract_to_sheet":
         input_paths = payload.get("input_paths", payload.get("files", payload.get("paths", [])))
         return run_office_workflow_extract_to_sheet(

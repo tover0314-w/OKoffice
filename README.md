@@ -81,6 +81,7 @@ okoffice sheet validate .okoffice-out/model.xlsx --json
 okoffice deck inspect path/to/deck.pptx --json
 okoffice deck create-from-outline outline.json -o .okoffice-out/board-review.pptx --json
 okoffice deck validate .okoffice-out/board-review.pptx --json
+okoffice context build --file path/to/report.docx --file path/to/model.xlsx -o .okoffice-out/context.packet.json --json
 okoffice workflow extract-to-sheet path/to/report.docx path/to/model.xlsx -o .okoffice-out/evidence.xlsx --json
 okoffice workflow sheet-to-deck .okoffice-out/evidence.xlsx -o .okoffice-out/board-review.pptx --title "Board Review" --json
 okoffice workflow board-pack .okoffice-out/evidence.xlsx .okoffice-out/board-review.pptx -o .okoffice-out/board-pack.zip --title "Board Review" --json
@@ -95,8 +96,9 @@ okpdf serve --api
 
 | Area | Status | Notes |
 |---|---:|---|
-| `okoffice` CLI | beta | Target manifest, planning, Office inspect, Word/Sheet table extraction entrypoints. |
+| `okoffice` CLI | beta | Target manifest, planning, Office inspect, context build, table extraction, workflow, and bundle entrypoints. |
 | `office.inspect.file` | beta | Detects DOCX/XLSX/PPTX/PDF/text formats and returns safety metadata. |
+| `office.context.build_packet` | beta | Builds a local context packet and source graph from Office-compatible files. |
 | `word.inspect.document` | beta | Reads DOCX structure, headings, tables, comments, styles, and safety markers. |
 | `word.extract.tables` | beta | Extracts DOCX tables into normalized rows/cells with source refs. |
 | `sheet.inspect.workbook` | beta | Reads workbook sheets, dimensions, formulas, tables, charts, links, and safety markers. |

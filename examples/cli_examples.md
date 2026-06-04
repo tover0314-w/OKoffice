@@ -66,8 +66,16 @@ okoffice context build \
   --file invoices/vendor-a.pdf \
   --file notes/renewal-notes.md \
   -o .okoffice-out/vendor.context.json \
+  --title "Vendor Context" \
+  --intent "Prepare a board review" \
   --json
+```
 
+Current output includes `tool: office.context.build_packet`, a local context packet artifact, source graph nodes, format counts, validation checks, and next recommended tools.
+
+Target extraction flow:
+
+```bash
 okoffice extract schema .okoffice-out/vendor.context.json \
   --schema examples/schemas/vendor-renewal.json \
   -o .okoffice-out/vendor.evidence.json \

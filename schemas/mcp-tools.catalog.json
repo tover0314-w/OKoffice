@@ -33,6 +33,11 @@
       "status": "beta"
     },
     {
+      "name": "office_context_build_packet",
+      "maps_to": "office.context.build_packet",
+      "status": "beta"
+    },
+    {
       "name": "office_workflow_extract_to_sheet",
       "maps_to": "office.workflow.extract_to_sheet",
       "status": "beta"

@@ -121,6 +121,7 @@ Implemented example:
 
 ```python
 office_inspect_file("model.xlsx")
+office_context_build_packet(["memo.docx", "model.xlsx"], ".okoffice-out/context.packet.json")
 deck_validate_presentation(".okoffice-out/vendor-board-deck.pptx")
 office_workflow_board_pack(
     [".okoffice-out/vendor-evidence.xlsx", ".okoffice-out/vendor-board-deck.pptx"],

@@ -18,6 +18,7 @@ Implemented okoffice target snapshot lives in `schemas/office-tool-manifest.targ
 | Tool | Status | OSS default |
 |---|---:|---:|
 | `office.inspect.file` | beta | yes |
+| `office.context.build_packet` | beta | yes |
 | `word.inspect.document` | beta | yes |
 | `word.extract.tables` | beta | yes |
 | `sheet.inspect.workbook` | beta | yes |

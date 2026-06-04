@@ -6,6 +6,7 @@ from typing import Annotated, Any
 
 import typer
 
+from agentpdf.office.context import build_office_context_packet
 from agentpdf.office.deck import create_deck_from_outline, inspect_deck_presentation, validate_deck_presentation
 from agentpdf.office.inspect import inspect_office_file
 from agentpdf.office.planner import plan_office_workflow
@@ -28,6 +29,7 @@ tools_app = typer.Typer(help="Discover target okoffice tools and legacy compatib
 word_app = typer.Typer(help="Inspect and transform Word documents.")
 sheet_app = typer.Typer(help="Inspect and transform Excel workbooks.")
 deck_app = typer.Typer(help="Inspect and transform PowerPoint decks.")
+context_app = typer.Typer(help="Build local OKoffice context packets and source graphs.")
 workflow_app = typer.Typer(help="Run local cross-format OKoffice workflows.")
 bundle_app = typer.Typer(help="Verify and export portable OKoffice artifact bundles.")
 
@@ -214,6 +216,26 @@ def deck_create_from_outline(
     )
 
 
+@context_app.command("build")
+def context_build(
+    files: Annotated[
+        list[Path] | None,
+        typer.Option("--file", "-f", help="Input Office artifact path to include in the context packet."),
+    ] = None,
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output context packet JSON path.")] = Path(
+        ".okoffice-out/context.packet.json"
+    ),
+    title: Annotated[str | None, typer.Option("--title", help="Context packet title.")] = None,
+    intent: Annotated[str | None, typer.Option("--intent", help="User or agent intent for this packet.")] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Build a local context packet and source graph from Office-compatible files."""
+    _emit_result(
+        build_office_context_packet(files or [], output_path, title=title, intent=intent),
+        json_output=json_output,
+    )
+
+
 @workflow_app.command("extract-to-sheet")
 def workflow_extract_to_sheet(
     input_paths: Annotated[
@@ -307,6 +329,7 @@ app.add_typer(tools_app, name="tools")
 app.add_typer(word_app, name="word")
 app.add_typer(sheet_app, name="sheet")
 app.add_typer(deck_app, name="deck")
+app.add_typer(context_app, name="context")
 app.add_typer(workflow_app, name="workflow")
 app.add_typer(bundle_app, name="bundle")
 

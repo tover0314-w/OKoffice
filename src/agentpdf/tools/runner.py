@@ -152,6 +152,7 @@ from agentpdf.core.pdf import (
 )
 from agentpdf.ir.lite import parse_lite_pdf, write_document_ir_json, write_document_ir_markdown
 from agentpdf.office.deck import create_deck_from_outline, inspect_deck_presentation, validate_deck_presentation
+from agentpdf.office.context import build_office_context_packet
 from agentpdf.office.inspect import inspect_office_file
 from agentpdf.office.sheet import (
     extract_sheet_tables,
@@ -203,6 +204,15 @@ def run_inspect(path: str | Path) -> ToolResult:
 
 def run_office_inspect_file(path: str | Path) -> ToolResult:
     return inspect_office_file(path)
+
+
+def run_office_context_build_packet(
+    files: list[str | Path],
+    output_path: str | Path | None = None,
+    title: str | None = None,
+    intent: str | None = None,
+) -> ToolResult:
+    return build_office_context_packet(files, output_path, title=title, intent=intent)
 
 
 def run_office_workflow_extract_to_sheet(
