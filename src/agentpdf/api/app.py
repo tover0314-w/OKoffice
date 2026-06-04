@@ -88,7 +88,9 @@ from agentpdf.tools.runner import (
     run_n_up,
     run_office_bundle_verify,
     run_office_context_build_packet,
+    run_office_extract_schema,
     run_office_inspect_file,
+    run_office_validation_package,
     run_office_workflow_board_pack,
     run_office_workflow_extract_to_sheet,
     run_office_workflow_sheet_to_deck,
@@ -306,6 +308,14 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
             title=str(payload["title"]) if payload.get("title") is not None else None,
             intent=str(payload["intent"]) if payload.get("intent") is not None else None,
         )
+    if tool_name == "office.extract.schema":
+        return run_office_extract_schema(
+            context_packet=payload.get("context_packet") or payload.get("context_packet_path", ""),
+            schema=payload.get("schema", {}),
+            output_path=payload.get("output_path", payload.get("output")),
+        )
+    if tool_name == "office.validation.package":
+        return run_office_validation_package(payload.get("path", payload.get("input_path", "")))
     if tool_name == "office.workflow.extract_to_sheet":
         input_paths = payload.get("input_paths", payload.get("files", payload.get("paths", [])))
         return run_office_workflow_extract_to_sheet(

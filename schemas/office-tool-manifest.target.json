@@ -2,7 +2,7 @@
     "manifest_version":  "0.1",
     "product":  "okoffice",
     "compatibility_package":  "agentpdf",
-    "tool_count":  45,
+    "tool_count":  46,
     "domains":  [
                     "office",
                     "word",
@@ -95,7 +95,7 @@
                          },
                          {
                              "name":  "office.extract.schema",
-                             "status":  "planned",
+                             "status":  "beta",
                              "description":  "Extract schema-shaped rows from mixed Office/PDF sources with source refs, confidence, and warnings.",
                              "domain":  "office",
                              "interfaces":  [
@@ -104,7 +104,22 @@
                                                 "rest",
                                                 "sdk"
                                             ],
-                             "implemented":  false,
+                             "implemented":  true,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "office.validation.package",
+                             "status":  "beta",
+                             "description":  "Validate local Office package structure, unsafe entries, macro markers, and external relationships without executing embedded code.",
+                             "domain":  "office",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  true,
                              "oss_default":  true,
                              "requires_model":  false
                          },

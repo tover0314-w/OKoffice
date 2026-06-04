@@ -84,7 +84,9 @@ from agentpdf.tools.runner import (
     run_n_up,
     run_office_bundle_verify,
     run_office_context_build_packet,
+    run_office_extract_schema,
     run_office_inspect_file,
+    run_office_validation_package,
     run_office_workflow_board_pack,
     run_office_workflow_extract_to_sheet,
     run_office_workflow_sheet_to_deck,
@@ -193,6 +195,8 @@ def create_mcp_server() -> FastMCP:
     server.tool(name="agent_setup_openclaw")(agent_setup_openclaw)
     server.tool(name="office_inspect_file")(office_inspect_file)
     server.tool(name="office_context_build_packet")(office_context_build_packet)
+    server.tool(name="office_extract_schema")(office_extract_schema)
+    server.tool(name="office_validation_package")(office_validation_package)
     server.tool(name="office_workflow_extract_to_sheet")(office_workflow_extract_to_sheet)
     server.tool(name="office_workflow_sheet_to_deck")(office_workflow_sheet_to_deck)
     server.tool(name="office_workflow_board_pack")(office_workflow_board_pack)
@@ -452,6 +456,16 @@ def office_context_build_packet(
 ) -> str:
     """Build a local OKoffice context packet and source graph from Office-compatible files."""
     return run_office_context_build_packet(files, output_path, title=title, intent=intent).model_dump_json()
+
+
+def office_extract_schema(context_packet_path: str, schema: dict[str, object], output_path: str | None = None) -> str:
+    """Extract schema-shaped evidence from an OKoffice context packet."""
+    return run_office_extract_schema(context_packet_path, schema, output_path).model_dump_json()
+
+
+def office_validation_package(path: str) -> str:
+    """Validate a local Office package baseline without executing embedded code."""
+    return run_office_validation_package(path).model_dump_json()
 
 
 def office_workflow_extract_to_sheet(

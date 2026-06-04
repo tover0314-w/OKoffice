@@ -1,0 +1,21 @@
+{
+  "name": "vendor-renewal",
+  "fields": [
+    {
+      "name": "vendor",
+      "type": "string"
+    },
+    {
+      "name": "renewal_date",
+      "type": "date"
+    },
+    {
+      "name": "annual_amount",
+      "type": "number"
+    },
+    {
+      "name": "risk",
+      "type": "string"
+    }
+  ]
+}

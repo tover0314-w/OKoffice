@@ -45,6 +45,12 @@ okoffice context build --file memo.docx --file diligence.pdf --file metrics.xlsx
 okoffice extract schema .okoffice-out/context.json --schema examples/schemas/kpi-review.json -o .okoffice-out/evidence.json --json
 ```
 
+Validation:
+
+```bash
+okoffice validate package memo.docx --json
+```
+
 Workbook:
 
 ```bash

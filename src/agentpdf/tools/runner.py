@@ -153,6 +153,7 @@ from agentpdf.core.pdf import (
 from agentpdf.ir.lite import parse_lite_pdf, write_document_ir_json, write_document_ir_markdown
 from agentpdf.office.deck import create_deck_from_outline, inspect_deck_presentation, validate_deck_presentation
 from agentpdf.office.context import build_office_context_packet
+from agentpdf.office.extract import extract_schema
 from agentpdf.office.inspect import inspect_office_file
 from agentpdf.office.sheet import (
     extract_sheet_tables,
@@ -162,6 +163,7 @@ from agentpdf.office.sheet import (
     validate_sheet_workbook,
     write_sheet_workbook,
 )
+from agentpdf.office.validation import validate_office_package
 from agentpdf.office.word import extract_word_tables, inspect_word_document
 from agentpdf.office.workflows import board_pack, extract_to_sheet, sheet_to_deck, verify_board_pack
 from agentpdf.rag.local import (
@@ -213,6 +215,18 @@ def run_office_context_build_packet(
     intent: str | None = None,
 ) -> ToolResult:
     return build_office_context_packet(files, output_path, title=title, intent=intent)
+
+
+def run_office_extract_schema(
+    context_packet: dict[str, object] | str | Path,
+    schema: dict[str, object],
+    output_path: str | Path | None = None,
+) -> ToolResult:
+    return extract_schema(context_packet, schema, output_path=output_path)
+
+
+def run_office_validation_package(path: str | Path) -> ToolResult:
+    return validate_office_package(path)
 
 
 def run_office_workflow_extract_to_sheet(

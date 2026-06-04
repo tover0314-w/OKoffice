@@ -84,7 +84,7 @@ okoffice workflow extract-to-sheet \
 
 The workbook includes `Tables`, `Cells`, and `SourceGraph` sheets when a context packet is supplied. Row and cell records include `context_packet_id`, `source_graph_id`, and native source node refs when available.
 
-Target extraction flow:
+Current schema extraction flow:
 
 ```bash
 okoffice extract schema .okoffice-out/vendor.context.json \
@@ -96,6 +96,14 @@ okoffice sheet create-workbook .okoffice-out/vendor.evidence.json \
   -o .okoffice-out/vendor-evidence.xlsx \
   --json
 ```
+
+## Validate Package Safety
+
+```bash
+okoffice validate package contracts/vendor-a.docx --json
+```
+
+Expected output includes `tool: office.validation.package`, package type, member counts, unsafe entry checks, macro warnings, external relationship warnings, and `mutates_inputs: false`.
 
 ## Create Deck From Workbook
 

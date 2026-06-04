@@ -148,6 +148,43 @@ Limitations:
 - Does not yet perform full Word/Excel/PowerPoint/PDF content extraction.
 - Does not call hosted AI providers, fetch remote assets, or mutate inputs.
 
+### `office.extract.schema`
+
+Purpose: extract schema-shaped evidence from a local OKoffice context packet using deterministic local label/value matching.
+
+CLI:
+
+```bash
+okoffice extract schema .okoffice-out/context.packet.json --schema examples/schemas/vendor-renewal.json -o .okoffice-out/evidence.json --json
+```
+
+Expected output highlights:
+
+```json
+{
+  "status": "succeeded",
+  "tool": "office.extract.schema",
+  "usage": {
+    "summary": {
+      "field_count": 4,
+      "record_count": 3,
+      "missing_field_count": 1
+    },
+    "evidence": {
+      "context_packet_id": "ctxpkt_...",
+      "source_graph_id": "srcgraph_...",
+      "coverage": {"matched": 3, "total": 4, "ratio": 0.75}
+    }
+  }
+}
+```
+
+Limitations:
+
+- Uses local deterministic matching only; no hosted AI/model provider is called.
+- Emits missing-field warnings instead of inventing values.
+- Does not yet infer complex tables, formulas, or multi-hop claims beyond available source graph text/evidence.
+
 ## Core Inspect Tools
 
 ### `office.inspect.file`
@@ -387,6 +424,14 @@ Format-specific examples:
 ### `office.validation.package`
 
 Validates ZIP/package structure, relationships, content types, and unsafe entries.
+
+Current OSS implementation:
+
+- Validates OOXML ZIP readability and member names.
+- Requires `[Content_Types].xml`.
+- Warns on macro markers and external relationships.
+- Provides a PDF baseline through `office.inspect.file`.
+- Does not execute macros, embedded code, or remote assets.
 
 ### `word.validation.document`
 

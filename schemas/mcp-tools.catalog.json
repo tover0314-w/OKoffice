@@ -38,6 +38,16 @@
       "status": "beta"
     },
     {
+      "name": "office_extract_schema",
+      "maps_to": "office.extract.schema",
+      "status": "beta"
+    },
+    {
+      "name": "office_validation_package",
+      "maps_to": "office.validation.package",
+      "status": "beta"
+    },
+    {
       "name": "office_workflow_extract_to_sheet",
       "maps_to": "office.workflow.extract_to_sheet",
       "status": "beta"

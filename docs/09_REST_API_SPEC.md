@@ -173,6 +173,54 @@ Output highlights:
 
 The source graph always includes file and native artifact nodes. When the deterministic local parsers can inspect deeper structure, it also includes native child nodes such as `word.table`, `sheet.sheet`, `sheet.table`, `sheet.formula_summary`, and `deck.slide`. Enrichment warnings remain visible in `warnings` and `validation.warnings` without blocking baseline packet creation.
 
+## Example: Implemented Schema Extraction
+
+```http
+POST /v1/tools/office.extract.schema/run
+```
+
+Input:
+
+```json
+{
+  "context_packet_path": ".okoffice-out/context.packet.json",
+  "schema": {"fields": [{"name": "vendor", "type": "string"}]},
+  "output_path": ".okoffice-out/evidence.json"
+}
+```
+
+Output highlights:
+
+```json
+{
+  "status": "succeeded",
+  "tool": "office.extract.schema",
+  "usage": {"summary": {"field_count": 1, "record_count": 1}}
+}
+```
+
+## Example: Implemented Package Validation
+
+```http
+POST /v1/tools/office.validation.package/run
+```
+
+Input:
+
+```json
+{"path": "memo.docx"}
+```
+
+Output highlights:
+
+```json
+{
+  "status": "succeeded",
+  "tool": "office.validation.package",
+  "validation": {"status": "passed"}
+}
+```
+
 ## Example: Implemented Board Pack Verification
 
 ```http

@@ -148,6 +148,18 @@ curl -X POST http://127.0.0.1:7331/v1/tools/office.workflow.sheet_to_deck/run \
   }'
 ```
 
+Expected output includes `usage.evidence.records`, `usage.evidence.coverage`, source refs for matched fields, and warnings for missing fields.
+
+## Validate Package
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/office.validation.package/run \
+  -H 'Content-Type: application/json' \
+  -d '{"path": "contracts/vendor-a.docx"}'
+```
+
+Expected output includes `tool: office.validation.package`, ZIP member safety checks, `[Content_Types].xml` validation, macro warnings, and external relationship warnings.
+
 ## Validate Deck
 
 ```bash

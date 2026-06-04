@@ -14,7 +14,9 @@ SUPPORTED_LOCAL_WORKFLOW_TOOLS = {
     "deck.validate.presentation",
     "office.bundle.verify",
     "office.context.build_packet",
+    "office.extract.schema",
     "office.inspect.file",
+    "office.validation.package",
     "office.workflow.board_pack",
     "office.workflow.extract_to_sheet",
     "office.workflow.sheet_to_deck",
@@ -381,6 +383,14 @@ def _run_local_step(tool: str, payload: dict[str, Any]) -> ToolResult:
             title=str(payload["title"]) if payload.get("title") is not None else None,
             intent=str(payload["intent"]) if payload.get("intent") is not None else None,
         )
+    if tool == "office.extract.schema":
+        return runner.run_office_extract_schema(
+            context_packet=payload.get("context_packet") or payload.get("context_packet_path", ""),
+            schema=payload.get("schema", {}),
+            output_path=payload.get("output_path", payload.get("output")),
+        )
+    if tool == "office.validation.package":
+        return runner.run_office_validation_package(payload.get("path", payload.get("input_path", "")))
     if tool == "office.workflow.extract_to_sheet":
         input_paths = payload.get("input_paths", payload.get("files", payload.get("paths", [])))
         return runner.run_office_workflow_extract_to_sheet(

@@ -44,6 +44,8 @@ okoffice deck inspect path/to/deck.pptx --json
 okoffice deck create-from-outline outline.json -o .okoffice-out/board-review.pptx --json
 okoffice deck validate .okoffice-out/board-review.pptx --json
 okoffice context build --file path/to/report.docx --file path/to/model.xlsx -o .okoffice-out/context.packet.json --json
+okoffice extract schema .okoffice-out/context.packet.json --schema examples/schemas/vendor-renewal.json -o .okoffice-out/evidence.json --json
+okoffice validate package path/to/report.docx --json
 okoffice workflow extract-to-sheet --context-packet .okoffice-out/context.packet.json -o .okoffice-out/evidence.xlsx --json
 okoffice workflow extract-to-sheet path/to/report.docx path/to/model.xlsx -o .okoffice-out/evidence.xlsx --json
 okoffice workflow sheet-to-deck .okoffice-out/evidence.xlsx -o .okoffice-out/board-review.pptx --title "Board Review" --json
@@ -62,6 +64,8 @@ okpdf serve --api
 | `okoffice` CLI | beta | 已有 target manifest、plan、inspect、context build、表格抽取、workflow 和 bundle 入口。 |
 | `office.inspect.file` | beta | 检测 DOCX/XLSX/PPTX/PDF/text，并返回安全元数据。 |
 | `office.context.build_packet` | beta | 从 Office 兼容文件构建本地 context packet 和 source graph；可下钻到 Word 表格、Excel 工作表/区域/公式、PowerPoint 幻灯片节点。 |
+| `office.extract.schema` | beta | 从 context packet 抽取 schema-shaped evidence JSON，保留 source refs、coverage 和缺失字段 warnings。 |
+| `office.validation.package` | beta | 本地校验 OOXML/PDF package baseline、危险 ZIP entry、macro 标记和外部关系，不执行嵌入代码。 |
 | `word.inspect.document` | beta | 读取 DOCX 结构、标题、表格、批注、样式和安全标记。 |
 | `word.extract.tables` | beta | 把 DOCX 表格抽取成带 source refs 的 rows/cells。 |
 | `sheet.inspect.workbook` | beta | 读取 workbook sheets、dimension、公式、表、图表、外链和安全标记。 |

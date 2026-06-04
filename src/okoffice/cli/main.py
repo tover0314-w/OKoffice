@@ -8,6 +8,7 @@ import typer
 
 from agentpdf.office.context import build_office_context_packet
 from agentpdf.office.deck import create_deck_from_outline, inspect_deck_presentation, validate_deck_presentation
+from agentpdf.office.extract import extract_schema
 from agentpdf.office.inspect import inspect_office_file
 from agentpdf.office.planner import plan_office_workflow
 from agentpdf.office.sheet import (
@@ -18,6 +19,7 @@ from agentpdf.office.sheet import (
     validate_sheet_workbook,
     write_sheet_workbook,
 )
+from agentpdf.office.validation import validate_office_package
 from agentpdf.office.word import extract_word_tables, inspect_word_document
 from agentpdf.office.workflows import board_pack, extract_to_sheet, sheet_to_deck, verify_board_pack
 from okoffice import __version__
@@ -30,6 +32,8 @@ word_app = typer.Typer(help="Inspect and transform Word documents.")
 sheet_app = typer.Typer(help="Inspect and transform Excel workbooks.")
 deck_app = typer.Typer(help="Inspect and transform PowerPoint decks.")
 context_app = typer.Typer(help="Build local OKoffice context packets and source graphs.")
+extract_app = typer.Typer(help="Extract structured evidence from OKoffice context.")
+validate_app = typer.Typer(help="Validate Office artifacts and packages.")
 workflow_app = typer.Typer(help="Run local cross-format OKoffice workflows.")
 bundle_app = typer.Typer(help="Verify and export portable OKoffice artifact bundles.")
 
@@ -236,6 +240,29 @@ def context_build(
     )
 
 
+@extract_app.command("schema")
+def extract_schema_command(
+    context_packet_path: Annotated[Path, typer.Argument(help="OKoffice context packet JSON path.")],
+    schema_path: Annotated[Path, typer.Option("--schema", help="Schema JSON path.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output JSON evidence path.")] = Path(
+        ".okoffice-out/evidence.json"
+    ),
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Extract schema-shaped evidence from a context packet."""
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    _emit_result(extract_schema(context_packet_path, schema if isinstance(schema, dict) else {}, output_path), json_output=json_output)
+
+
+@validate_app.command("package")
+def validate_package(
+    path: Annotated[Path, typer.Argument(help="Office artifact path to validate.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Validate Office package structure and safety markers."""
+    _emit_result(validate_office_package(path), json_output=json_output)
+
+
 @workflow_app.command("extract-to-sheet")
 def workflow_extract_to_sheet(
     input_paths: Annotated[
@@ -339,6 +366,8 @@ app.add_typer(word_app, name="word")
 app.add_typer(sheet_app, name="sheet")
 app.add_typer(deck_app, name="deck")
 app.add_typer(context_app, name="context")
+app.add_typer(extract_app, name="extract")
+app.add_typer(validate_app, name="validate")
 app.add_typer(workflow_app, name="workflow")
 app.add_typer(bundle_app, name="bundle")
 

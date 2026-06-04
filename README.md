@@ -82,6 +82,8 @@ okoffice deck inspect path/to/deck.pptx --json
 okoffice deck create-from-outline outline.json -o .okoffice-out/board-review.pptx --json
 okoffice deck validate .okoffice-out/board-review.pptx --json
 okoffice context build --file path/to/report.docx --file path/to/model.xlsx -o .okoffice-out/context.packet.json --json
+okoffice extract schema .okoffice-out/context.packet.json --schema examples/schemas/vendor-renewal.json -o .okoffice-out/evidence.json --json
+okoffice validate package path/to/report.docx --json
 okoffice workflow extract-to-sheet --context-packet .okoffice-out/context.packet.json -o .okoffice-out/evidence.xlsx --json
 okoffice workflow extract-to-sheet path/to/report.docx path/to/model.xlsx -o .okoffice-out/evidence.xlsx --json
 okoffice workflow sheet-to-deck .okoffice-out/evidence.xlsx -o .okoffice-out/board-review.pptx --title "Board Review" --json
@@ -100,6 +102,8 @@ okpdf serve --api
 | `okoffice` CLI | beta | Target manifest, planning, Office inspect, context build, table extraction, workflow, and bundle entrypoints. |
 | `office.inspect.file` | beta | Detects DOCX/XLSX/PPTX/PDF/text formats and returns safety metadata. |
 | `office.context.build_packet` | beta | Builds a local context packet and source graph with file/native nodes plus Word table, Excel sheet/range/formula, and PowerPoint slide nodes when available. |
+| `office.extract.schema` | beta | Extracts schema-shaped evidence JSON from a context packet with source refs, coverage, and missing-field warnings. |
+| `office.validation.package` | beta | Validates OOXML/PDF package baseline, unsafe ZIP entries, macro markers, and external relationships without executing embedded code. |
 | `word.inspect.document` | beta | Reads DOCX structure, headings, tables, comments, styles, and safety markers. |
 | `word.extract.tables` | beta | Extracts DOCX tables into normalized rows/cells with source refs. |
 | `sheet.inspect.workbook` | beta | Reads workbook sheets, dimensions, formulas, tables, charts, links, and safety markers. |
