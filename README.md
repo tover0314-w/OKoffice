@@ -75,6 +75,7 @@ okoffice word extract-tables path/to/report.docx --json
 okoffice sheet inspect path/to/model.xlsx --json
 okoffice sheet extract-tables path/to/model.xlsx --json
 okoffice deck inspect path/to/deck.pptx --json
+okoffice workflow extract-to-sheet path/to/report.docx path/to/model.xlsx -o .okoffice-out/evidence.xlsx --json
 
 okpdf inspect tests/fixtures/simple.pdf --json
 okpdf serve --mcp --safe-root .
@@ -92,6 +93,7 @@ okpdf serve --api
 | `sheet.inspect.workbook` | beta | Reads workbook sheets, dimensions, formulas, tables, charts, links, and safety markers. |
 | `sheet.extract.tables` | beta | Extracts worksheet tables with sheet, row, column, and cell refs. |
 | `deck.inspect.presentation` | beta | Reads PPTX slide, notes, layout, theme, media, and chart facts. |
+| `office.workflow.extract_to_sheet` | beta | Builds a source-mapped XLSX evidence workbook from DOCX/XLSX tables. |
 | `pdf.*` compatibility | stable/beta | 241 local PDF and agent setup tools remain available through `okpdf`, MCP, REST, and SDKs. |
 
 The codebase still exposes the compatibility Python package as `agentpdf` and the compatibility Node package as `@okpdf/agentpdf-node`. The target package identity is OKoffice; compatibility names are preserved deliberately.

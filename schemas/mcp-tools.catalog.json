@@ -33,6 +33,11 @@
       "status": "beta"
     },
     {
+      "name": "office_workflow_extract_to_sheet",
+      "maps_to": "office.workflow.extract_to_sheet",
+      "status": "beta"
+    },
+    {
       "name": "word_inspect_document",
       "maps_to": "word.inspect.document",
       "status": "beta"

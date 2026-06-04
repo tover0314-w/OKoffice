@@ -185,7 +185,7 @@
                          },
                          {
                              "name":  "office.workflow.extract_to_sheet",
-                             "status":  "planned",
+                             "status":  "beta",
                              "description":  "Extract structured evidence from Word, PDF, deck, and sheet sources into an auditable workbook.",
                              "domain":  "office",
                              "interfaces":  [
@@ -194,7 +194,7 @@
                                                 "rest",
                                                 "sdk"
                                             ],
-                             "implemented":  false,
+                             "implemented":  true,
                              "oss_default":  true,
                              "requires_model":  false
                          },

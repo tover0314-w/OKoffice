@@ -81,6 +81,7 @@ from agentpdf.tools.runner import (
     run_merge,
     run_n_up,
     run_office_inspect_file,
+    run_office_workflow_extract_to_sheet,
     run_page_numbers,
     run_patch_apply,
     run_patch_plan,
@@ -181,6 +182,7 @@ def create_mcp_server() -> FastMCP:
     server.tool(name="agent_setup_kilo_code")(agent_setup_kilo_code)
     server.tool(name="agent_setup_openclaw")(agent_setup_openclaw)
     server.tool(name="office_inspect_file")(office_inspect_file)
+    server.tool(name="office_workflow_extract_to_sheet")(office_workflow_extract_to_sheet)
     server.tool(name="word_inspect_document")(word_inspect_document)
     server.tool(name="word_extract_tables")(word_extract_tables)
     server.tool(name="sheet_inspect_workbook")(sheet_inspect_workbook)
@@ -420,6 +422,11 @@ def pdf_inspect_document(path: str) -> str:
 def office_inspect_file(path: str) -> str:
     """Inspect a local Office-compatible file and recommend next tools."""
     return run_office_inspect_file(path).model_dump_json()
+
+
+def office_workflow_extract_to_sheet(input_paths: list[str], output_path: str) -> str:
+    """Extract Word and Excel source tables into an auditable evidence workbook."""
+    return run_office_workflow_extract_to_sheet(input_paths, output_path).model_dump_json()
 
 
 def word_inspect_document(path: str) -> str:

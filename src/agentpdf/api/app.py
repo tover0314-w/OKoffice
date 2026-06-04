@@ -85,6 +85,7 @@ from agentpdf.tools.runner import (
     run_merge,
     run_n_up,
     run_office_inspect_file,
+    run_office_workflow_extract_to_sheet,
     run_page_numbers,
     run_patch_apply,
     run_patch_plan,
@@ -287,6 +288,12 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
         )
     if tool_name == "office.inspect.file":
         return run_office_inspect_file(payload.get("path", payload.get("input_path", "")))
+    if tool_name == "office.workflow.extract_to_sheet":
+        input_paths = payload.get("input_paths", payload.get("files", payload.get("paths", [])))
+        return run_office_workflow_extract_to_sheet(
+            input_paths=input_paths if isinstance(input_paths, list) else [],
+            output_path=payload.get("output_path", payload.get("output", ".okoffice-out/evidence.xlsx")),
+        )
     if tool_name == "word.inspect.document":
         return run_word_inspect_document(payload.get("path", payload.get("input_path", "")))
     if tool_name == "word.extract.tables":

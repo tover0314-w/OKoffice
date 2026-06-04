@@ -155,6 +155,7 @@ from agentpdf.office.deck import inspect_deck_presentation
 from agentpdf.office.inspect import inspect_office_file
 from agentpdf.office.sheet import extract_sheet_tables, inspect_sheet_workbook
 from agentpdf.office.word import extract_word_tables, inspect_word_document
+from agentpdf.office.workflows import extract_to_sheet
 from agentpdf.rag.local import (
     chat_pdf,
     cite_answer,
@@ -195,6 +196,13 @@ def run_inspect(path: str | Path) -> ToolResult:
 
 def run_office_inspect_file(path: str | Path) -> ToolResult:
     return inspect_office_file(path)
+
+
+def run_office_workflow_extract_to_sheet(
+    input_paths: list[str | Path],
+    output_path: str | Path,
+) -> ToolResult:
+    return extract_to_sheet(input_paths, output_path)
 
 
 def run_word_inspect_document(path: str | Path) -> ToolResult:

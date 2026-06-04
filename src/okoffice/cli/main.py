@@ -11,6 +11,7 @@ from agentpdf.office.inspect import inspect_office_file
 from agentpdf.office.planner import plan_office_workflow
 from agentpdf.office.sheet import extract_sheet_tables, inspect_sheet_workbook
 from agentpdf.office.word import extract_word_tables, inspect_word_document
+from agentpdf.office.workflows import extract_to_sheet
 from okoffice import __version__
 from okoffice.tools.registry import load_okoffice_manifest
 
@@ -20,6 +21,7 @@ tools_app = typer.Typer(help="Discover target okoffice tools and legacy compatib
 word_app = typer.Typer(help="Inspect and transform Word documents.")
 sheet_app = typer.Typer(help="Inspect and transform Excel workbooks.")
 deck_app = typer.Typer(help="Inspect and transform PowerPoint decks.")
+workflow_app = typer.Typer(help="Run local cross-format OKoffice workflows.")
 
 
 @app.callback()
@@ -130,6 +132,19 @@ def deck_inspect(
     _emit_result(inspect_deck_presentation(path), json_output=json_output)
 
 
+@workflow_app.command("extract-to-sheet")
+def workflow_extract_to_sheet(
+    input_paths: Annotated[
+        list[Path],
+        typer.Argument(help="Input DOCX/XLSX sources to extract into an evidence workbook."),
+    ],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output XLSX evidence workbook path.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Extract source tables into a source-mapped evidence workbook."""
+    _emit_result(extract_to_sheet(input_paths, output_path), json_output=json_output)
+
+
 @tools_app.command("list")
 def tools_list(
     json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
@@ -167,6 +182,7 @@ app.add_typer(tools_app, name="tools")
 app.add_typer(word_app, name="word")
 app.add_typer(sheet_app, name="sheet")
 app.add_typer(deck_app, name="deck")
+app.add_typer(workflow_app, name="workflow")
 
 
 def _find_tool(name: str) -> dict[str, Any]:
