@@ -38,6 +38,7 @@ from agentpdf.tools.runner import (
     run_compare_version_report,
     run_deck_create_from_outline,
     run_deck_inspect_presentation,
+    run_deck_validate_presentation,
     run_create_markdown,
     run_create_text,
     run_create_agent,
@@ -200,6 +201,7 @@ def create_mcp_server() -> FastMCP:
     server.tool(name="sheet_validate_workbook")(sheet_validate_workbook)
     server.tool(name="deck_inspect_presentation")(deck_inspect_presentation)
     server.tool(name="deck_create_from_outline")(deck_create_from_outline)
+    server.tool(name="deck_validate_presentation")(deck_validate_presentation)
     server.tool(name="pdf_inspect_document")(pdf_inspect_document)
     server.tool(name="pdf_inspect_pages")(pdf_inspect_pages)
     server.tool(name="pdf_inspect_health")(pdf_inspect_health)
@@ -508,6 +510,11 @@ def deck_inspect_presentation(path: str) -> str:
 def deck_create_from_outline(outline: dict[str, object], output_path: str) -> str:
     """Create a local editable PPTX deck from a structured outline."""
     return run_deck_create_from_outline(outline, output_path).model_dump_json()
+
+
+def deck_validate_presentation(path: str) -> str:
+    """Validate a local PowerPoint deck for structure, safety, and placeholder leakage."""
+    return run_deck_validate_presentation(path).model_dump_json()
 
 
 def pdf_inspect_pages(input_path: str, pages: str = "all", render_check: bool = False) -> str:

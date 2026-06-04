@@ -112,7 +112,17 @@ curl -X POST http://127.0.0.1:7331/v1/tools/office.workflow.sheet_to_deck/run \
   -d '{
     "workbook_path": ".okoffice-out/vendor-evidence.xlsx",
     "output_path": ".okoffice-out/vendor-board-deck.pptx",
-    "profile": "board_review"
+    "title": "Vendor Board Review"
+  }'
+```
+
+## Validate Deck
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/deck.validate.presentation/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "path": ".okoffice-out/vendor-board-deck.pptx"
   }'
 ```
 

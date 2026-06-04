@@ -605,8 +605,8 @@
                          },
                          {
                              "name":  "deck.validate.presentation",
-                             "status":  "planned",
-                             "description":  "Validate slide counts, missing media, speaker notes, theme refs, and renderability.",
+                             "status":  "beta",
+                             "description":  "Validate PPTX structure, slide text, blank slides, placeholder leakage, safety markers, and source-map readiness.",
                              "domain":  "deck",
                              "interfaces":  [
                                                 "cli",
@@ -614,7 +614,7 @@
                                                 "rest",
                                                 "sdk"
                                             ],
-                             "implemented":  false,
+                             "implemented":  true,
                              "oss_default":  true,
                              "requires_model":  false
                          },

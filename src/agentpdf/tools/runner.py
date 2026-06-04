@@ -151,7 +151,7 @@ from agentpdf.core.pdf import (
     validate_pdfa_pdf,
 )
 from agentpdf.ir.lite import parse_lite_pdf, write_document_ir_json, write_document_ir_markdown
-from agentpdf.office.deck import create_deck_from_outline, inspect_deck_presentation
+from agentpdf.office.deck import create_deck_from_outline, inspect_deck_presentation, validate_deck_presentation
 from agentpdf.office.inspect import inspect_office_file
 from agentpdf.office.sheet import (
     extract_sheet_tables,
@@ -272,6 +272,10 @@ def run_deck_inspect_presentation(path: str | Path) -> ToolResult:
 
 def run_deck_create_from_outline(outline: dict[str, object], output_path: str | Path) -> ToolResult:
     return create_deck_from_outline(outline, output_path)
+
+
+def run_deck_validate_presentation(path: str | Path) -> ToolResult:
+    return validate_deck_presentation(path)
 
 
 def run_inspect_pages(

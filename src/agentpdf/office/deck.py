@@ -16,7 +16,10 @@ from agentpdf.security.paths import resolve_output_path
 
 INSPECT_TOOL_NAME = "deck.inspect.presentation"
 CREATE_FROM_OUTLINE_TOOL_NAME = "deck.create.from_outline"
+VALIDATE_TOOL_NAME = "deck.validate.presentation"
 PPTX_MIME_TYPE = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+REL_NS = {"rel": "http://schemas.openxmlformats.org/package/2006/relationships"}
+PLACEHOLDER_MARKERS = ("{{", "}}", "[[", "]]", "<<", ">>", "TODO", "TBD", "lorem ipsum")
 
 
 def inspect_deck_presentation(path: str | Path) -> ToolResult:
@@ -68,6 +71,148 @@ def inspect_deck_presentation(path: str | Path) -> ToolResult:
             "safety": preflight.usage["safety"],
         },
         next_recommended_tools=["deck.edit.patch", "deck.export.pdf", "office.context.build_packet"],
+    )
+
+
+def validate_deck_presentation(path: str | Path) -> ToolResult:
+    preflight = inspect_office_file(path)
+    if preflight.status == "failed":
+        return _failed(
+            VALIDATE_TOOL_NAME,
+            preflight.error or AgentPDFError(code="unsupported_file_type", message="Deck validation failed."),
+        )
+    if preflight.usage["format"]["detected_format"] != "pptx":
+        return _failed(
+            VALIDATE_TOOL_NAME,
+            AgentPDFError(
+                code="unsupported_file_type",
+                message="deck.validate.presentation requires a PPTX-compatible OOXML package.",
+                details={"detected_format": preflight.usage["format"]["detected_format"]},
+            ),
+        )
+
+    source_path = Path(preflight.usage["file"]["path"])
+    names = zip_names(source_path)
+    presentation_root = read_xml(source_path, "ppt/presentation.xml")
+    relationship_root = read_xml(source_path, "ppt/_rels/presentation.xml.rels")
+    slide_members = sorted_members(names, prefix="ppt/slides/slide")
+    slide_summaries = _slide_validation_summaries(source_path, slide_members)
+    missing_targets = _missing_slide_relationship_targets(slide_members, relationship_root)
+    blank_slide_count = sum(1 for slide in slide_summaries if slide["is_blank"])
+    placeholder_texts = [
+        text for slide in slide_summaries for text in slide["placeholder_texts"] if isinstance(text, str)
+    ]
+    text_run_count = sum(int(slide["text_run_count"]) for slide in slide_summaries)
+    safety = preflight.usage["safety"]
+    warnings = list(preflight.warnings)
+    if blank_slide_count:
+        warnings.append(f"Deck validation found blank slides: {blank_slide_count}.")
+    if placeholder_texts:
+        warnings.append(f"Deck validation found placeholder-like text runs: {len(placeholder_texts)}.")
+    if bool(safety.get("macro_enabled", False)):
+        warnings.append("Macro-enabled presentation markers were detected; macros are not executed.")
+    if bool(safety.get("has_external_relationships", False)):
+        warnings.append("External Office relationship targets were detected.")
+
+    checks = [
+        ValidationCheck(name="format_is_pptx", status="passed", details=preflight.usage["format"]),
+        _validation_check(
+            "presentation_xml_present",
+            condition=presentation_root is not None,
+            failed_status="failed",
+            passed_details={"member": "ppt/presentation.xml"},
+            failed_message="Presentation package is missing ppt/presentation.xml.",
+        ),
+        _validation_check(
+            "slide_count_nonzero",
+            condition=len(slide_members) > 0,
+            failed_status="failed",
+            passed_details={"slide_count": len(slide_members)},
+            failed_message="Presentation contains no slide XML parts.",
+        ),
+        _validation_check(
+            "slide_relationship_targets_present",
+            condition=not missing_targets,
+            failed_status="failed",
+            passed_details={"missing_target_count": len(missing_targets)},
+            failed_message="Presentation relationships do not reference every slide part.",
+        ),
+        _validation_check(
+            "text_runs_present",
+            condition=text_run_count > 0,
+            failed_status="warning",
+            passed_details={"text_run_count": text_run_count},
+            failed_message="Presentation contains no text runs.",
+        ),
+        _validation_check(
+            "blank_slides_absent",
+            condition=blank_slide_count == 0,
+            failed_status="warning",
+            passed_details={"blank_slide_count": blank_slide_count},
+            failed_message="Presentation contains blank slides.",
+        ),
+        _validation_check(
+            "placeholder_leakage_absent",
+            condition=not placeholder_texts,
+            failed_status="warning",
+            passed_details={"placeholder_text_count": len(placeholder_texts)},
+            failed_message="Presentation contains placeholder-like text.",
+        ),
+        _validation_check(
+            "macros_absent",
+            condition=not bool(safety.get("macro_enabled", False)),
+            failed_status="warning",
+            passed_details={"macro_enabled": bool(safety.get("macro_enabled", False))},
+            failed_message="Macro-enabled presentation markers detected.",
+        ),
+        _validation_check(
+            "external_relationships_absent",
+            condition=not bool(safety.get("has_external_relationships", False)),
+            failed_status="warning",
+            passed_details={"has_external_relationships": bool(safety.get("has_external_relationships", False))},
+            failed_message="External Office relationship targets detected.",
+        ),
+    ]
+
+    return ToolResult(
+        job_id=_job_id(),
+        status="succeeded",
+        tool=VALIDATE_TOOL_NAME,
+        validation=ValidationReport(
+            status=_validation_report_status(checks),
+            checks=checks,
+            warnings=warnings,
+        ),
+        warnings=warnings,
+        usage={
+            "presentation": {
+                "path": source_path.as_posix(),
+                "format": "pptx",
+                "package_type": preflight.usage["format"]["package_type"],
+            },
+            "summary": {
+                "slide_count": len(slide_members),
+                "text_run_count": text_run_count,
+                "blank_slide_count": blank_slide_count,
+                "placeholder_text_count": len(placeholder_texts),
+                "missing_relationship_target_count": len(missing_targets),
+                "notes_slide_count": count_members(names, prefix="ppt/notesSlides/"),
+                "layout_count": count_members(names, prefix="ppt/slideLayouts/"),
+                "theme_count": count_members(names, prefix="ppt/theme/"),
+                "media_count": _media_count(names),
+                "chart_count": count_members(names, prefix="ppt/charts/"),
+            },
+            "slides": slide_summaries,
+            "placeholder_texts": placeholder_texts[:25],
+            "missing_relationship_targets": missing_targets,
+            "safety": safety,
+        },
+        next_recommended_tools=[
+            "office.workflow.board_pack",
+            "deck.inspect.presentation",
+            "deck.export.pdf",
+            "office.context.build_packet",
+        ],
     )
 
 
@@ -325,6 +470,73 @@ def _slide_text_run_count(path: Path, slide_members: list[str]) -> int:
         if slide_root is not None:
             count += len(slide_root.findall(".//a:t", DECK_NS))
     return count
+
+
+def _slide_validation_summaries(path: Path, slide_members: list[str]) -> list[dict[str, Any]]:
+    summaries = []
+    for index, member in enumerate(slide_members, start=1):
+        slide_root = read_xml(path, member)
+        texts = []
+        if slide_root is not None:
+            texts = [str(text_node.text or "") for text_node in slide_root.findall(".//a:t", DECK_NS)]
+        nonempty_texts = [text.strip() for text in texts if text.strip()]
+        placeholder_texts = [text for text in nonempty_texts if _looks_like_placeholder(text)]
+        summaries.append(
+            {
+                "slide_index": index,
+                "member": member,
+                "text_run_count": len(texts),
+                "nonempty_text_run_count": len(nonempty_texts),
+                "character_count": sum(len(text) for text in nonempty_texts),
+                "is_blank": not nonempty_texts,
+                "placeholder_text_count": len(placeholder_texts),
+                "placeholder_texts": placeholder_texts[:10],
+            }
+        )
+    return summaries
+
+
+def _missing_slide_relationship_targets(slide_members: list[str], relationship_root: object | None) -> list[str]:
+    if relationship_root is None:
+        return list(slide_members)
+    targets = {
+        str(relationship.get("Target") or "").replace("\\", "/")
+        for relationship in relationship_root.findall(".//rel:Relationship", REL_NS)
+    }
+    expected_targets = {member.replace("ppt/", "") for member in slide_members}
+    return sorted(expected_targets - targets)
+
+
+def _looks_like_placeholder(text: str) -> bool:
+    normalized = text.lower()
+    return any(marker.lower() in normalized for marker in PLACEHOLDER_MARKERS)
+
+
+def _validation_check(
+    name: str,
+    *,
+    condition: bool,
+    failed_status: str,
+    passed_details: dict[str, Any],
+    failed_message: str,
+) -> ValidationCheck:
+    if condition:
+        return ValidationCheck(name=name, status="passed", details=passed_details)
+    return ValidationCheck(
+        name=name,
+        status=failed_status,
+        details=passed_details,
+        message=failed_message,
+    )
+
+
+def _validation_report_status(checks: list[ValidationCheck]) -> str:
+    statuses = [check.status for check in checks]
+    if "failed" in statuses:
+        return "failed"
+    if "warning" in statuses:
+        return "warning"
+    return "passed"
 
 
 def _media_count(names: set[str]) -> int:

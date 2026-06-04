@@ -11,6 +11,7 @@ from agentpdf.schemas.models import AgentPDFError, Artifact, ToolResult
 SUPPORTED_LOCAL_WORKFLOW_TOOLS = {
     "deck.create.from_outline",
     "deck.inspect.presentation",
+    "deck.validate.presentation",
     "office.inspect.file",
     "office.workflow.extract_to_sheet",
     "office.workflow.sheet_to_deck",
@@ -417,6 +418,8 @@ def _run_local_step(tool: str, payload: dict[str, Any]) -> ToolResult:
         )
     if tool == "deck.inspect.presentation":
         return runner.run_deck_inspect_presentation(payload.get("path", payload.get("input_path", "")))
+    if tool == "deck.validate.presentation":
+        return runner.run_deck_validate_presentation(payload.get("path", payload.get("input_path", "")))
     if tool == "pdf.inspect.document":
         return runner.run_inspect(payload.get("path", payload.get("input_path", "")))
     if tool == "pdf.inspect.pages":

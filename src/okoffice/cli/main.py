@@ -6,7 +6,7 @@ from typing import Annotated, Any
 
 import typer
 
-from agentpdf.office.deck import create_deck_from_outline, inspect_deck_presentation
+from agentpdf.office.deck import create_deck_from_outline, inspect_deck_presentation, validate_deck_presentation
 from agentpdf.office.inspect import inspect_office_file
 from agentpdf.office.planner import plan_office_workflow
 from agentpdf.office.sheet import (
@@ -188,6 +188,15 @@ def deck_inspect(
 ) -> None:
     """Inspect a local PowerPoint deck without mutating it."""
     _emit_result(inspect_deck_presentation(path), json_output=json_output)
+
+
+@deck_app.command("validate")
+def deck_validate(
+    path: Annotated[Path, typer.Argument(help="PPTX artifact path to validate.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Validate a local PowerPoint deck for structure, safety, and placeholder leakage."""
+    _emit_result(validate_deck_presentation(path), json_output=json_output)
 
 
 @deck_app.command("create-from-outline")

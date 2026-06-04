@@ -96,6 +96,8 @@ First target wrappers:
 - `word_inspect_document`
 - `sheet_inspect_workbook`
 - `deck_inspect_presentation`
+- `deck_create_from_outline`
+- `deck_validate_presentation`
 - `office_context_build_packet`
 - `office_extract_schema`
 - `sheet_create_workbook`
@@ -118,6 +120,7 @@ Implemented example:
 
 ```python
 office_inspect_file("model.xlsx")
+deck_validate_presentation(".okoffice-out/vendor-board-deck.pptx")
 ```
 
 Returns a ToolResult JSON string with `tool: office.inspect.file`, `usage.file`, `usage.format`, `usage.safety`, warnings, validation, and `next_recommended_tools`.

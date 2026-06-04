@@ -82,9 +82,13 @@ okoffice sheet create-workbook .okoffice-out/vendor.evidence.json \
 
 ```bash
 okoffice workflow sheet-to-deck \
-  --workbook .okoffice-out/vendor-evidence.xlsx \
-  --profile board_review \
+  .okoffice-out/vendor-evidence.xlsx \
   -o .okoffice-out/vendor-board-deck.pptx \
+  --title "Vendor Board Review" \
+  --json
+
+okoffice deck validate \
+  .okoffice-out/vendor-board-deck.pptx \
   --json
 ```
 

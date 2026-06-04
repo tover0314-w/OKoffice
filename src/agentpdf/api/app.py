@@ -42,6 +42,7 @@ from agentpdf.tools.runner import (
     run_compare_version_report,
     run_deck_create_from_outline,
     run_deck_inspect_presentation,
+    run_deck_validate_presentation,
     run_create_markdown,
     run_create_text,
     run_create_agent,
@@ -336,6 +337,8 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
         return run_sheet_validate_workbook(payload.get("path", payload.get("input_path", "")))
     if tool_name == "deck.inspect.presentation":
         return run_deck_inspect_presentation(payload.get("path", payload.get("input_path", "")))
+    if tool_name == "deck.validate.presentation":
+        return run_deck_validate_presentation(payload.get("path", payload.get("input_path", "")))
     if tool_name == "deck.create.from_outline":
         outline = payload.get("outline", payload)
         return run_deck_create_from_outline(

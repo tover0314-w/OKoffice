@@ -93,6 +93,11 @@
       "status": "beta"
     },
     {
+      "name": "deck_validate_presentation",
+      "maps_to": "deck.validate.presentation",
+      "status": "beta"
+    },
+    {
       "name": "pdf_inspect_document",
       "maps_to": "pdf.inspect.document",
       "status": "stable"

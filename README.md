@@ -80,6 +80,7 @@ okoffice sheet write-workbook records.json -o .okoffice-out/model.xlsx --json
 okoffice sheet validate .okoffice-out/model.xlsx --json
 okoffice deck inspect path/to/deck.pptx --json
 okoffice deck create-from-outline outline.json -o .okoffice-out/board-review.pptx --json
+okoffice deck validate .okoffice-out/board-review.pptx --json
 okoffice workflow extract-to-sheet path/to/report.docx path/to/model.xlsx -o .okoffice-out/evidence.xlsx --json
 okoffice workflow sheet-to-deck .okoffice-out/evidence.xlsx -o .okoffice-out/board-review.pptx --title "Board Review" --json
 
@@ -104,6 +105,7 @@ okpdf serve --api
 | `sheet.validate.workbook` | beta | Validates XLSX structure, non-empty sheets, external links, safety markers, and SourceRefs readiness. |
 | `deck.inspect.presentation` | beta | Reads PPTX slide, notes, layout, theme, media, and chart facts. |
 | `deck.create.from_outline` | beta | Creates editable local PPTX decks from structured outlines. |
+| `deck.validate.presentation` | beta | Validates PPTX structure, blank slides, placeholder leakage, safety markers, and source-map readiness. |
 | `office.workflow.extract_to_sheet` | beta | Builds a source-mapped XLSX evidence workbook from DOCX/XLSX tables. |
 | `office.workflow.sheet_to_deck` | beta | Profiles an evidence workbook and creates an editable PPTX review deck. |
 | `pdf.*` compatibility | stable/beta | 241 local PDF and agent setup tools remain available through `okpdf`, MCP, REST, and SDKs. |
