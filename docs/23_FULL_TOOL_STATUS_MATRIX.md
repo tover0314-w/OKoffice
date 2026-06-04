@@ -30,6 +30,7 @@ Implemented okoffice target snapshot lives in `schemas/office-tool-manifest.targ
 | `sheet.write.workbook` | beta | yes |
 | `sheet.validate.workbook` | beta | yes |
 | `deck.inspect.presentation` | beta | yes |
+| `deck.compose.plan` | beta | yes |
 | `deck.create.from_outline` | beta | yes |
 | `deck.validate.presentation` | beta | yes |
 | `office.workflow.extract_to_sheet` | beta | yes |

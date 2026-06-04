@@ -221,6 +221,38 @@ Output highlights:
 }
 ```
 
+## Example: Implemented Deck Composition Plan
+
+```http
+POST /v1/tools/deck.compose.plan/run
+```
+
+Input:
+
+```json
+{
+  "workbook_path": ".okoffice-out/vendor-evidence.xlsx",
+  "output_path": ".okoffice-out/vendor-deck.plan.json",
+  "title": "Vendor Board Review",
+  "style": "executive"
+}
+```
+
+Output highlights:
+
+```json
+{
+  "status": "succeeded",
+  "tool": "deck.compose.plan",
+  "usage": {
+    "summary": {"slide_count": 4},
+    "composition_ir": {"schema": "okoffice.deck.composition", "kind": "deck.composition"},
+    "outline": {"slides": []}
+  },
+  "next_recommended_tools": ["deck.create.from_outline", "deck.validate.presentation"]
+}
+```
+
 ## Example: Implemented Board Pack Verification
 
 ```http

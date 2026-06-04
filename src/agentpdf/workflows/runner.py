@@ -9,6 +9,7 @@ from agentpdf.schemas.models import AgentPDFError, Artifact, ToolResult
 
 
 SUPPORTED_LOCAL_WORKFLOW_TOOLS = {
+    "deck.compose.plan",
     "deck.create.from_outline",
     "deck.inspect.presentation",
     "deck.validate.presentation",
@@ -448,6 +449,14 @@ def _run_local_step(tool: str, payload: dict[str, Any]) -> ToolResult:
         return runner.run_deck_create_from_outline(
             outline=outline if isinstance(outline, dict) else {},
             output_path=payload.get("output_path", payload.get("output", ".okoffice-out/deck.pptx")),
+        )
+    if tool == "deck.compose.plan":
+        return runner.run_deck_compose_plan(
+            workbook_path=payload.get("workbook_path", payload.get("path", payload.get("input_path", ""))),
+            output_path=payload.get("output_path", payload.get("output")),
+            title=str(payload["title"]) if payload.get("title") is not None else None,
+            style=str(payload.get("style", "executive")),
+            max_rows_per_sheet=int(payload.get("max_rows_per_sheet", payload.get("max_rows", 100))),
         )
     if tool == "deck.inspect.presentation":
         return runner.run_deck_inspect_presentation(payload.get("path", payload.get("input_path", "")))

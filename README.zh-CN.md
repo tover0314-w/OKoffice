@@ -41,6 +41,7 @@ okoffice sheet extract-tables path/to/model.xlsx --json
 okoffice sheet write-workbook records.json -o .okoffice-out/model.xlsx --json
 okoffice sheet validate .okoffice-out/model.xlsx --json
 okoffice deck inspect path/to/deck.pptx --json
+okoffice deck compose-plan .okoffice-out/evidence.xlsx -o .okoffice-out/deck.plan.json --title "Board Review" --json
 okoffice deck create-from-outline outline.json -o .okoffice-out/board-review.pptx --json
 okoffice deck validate .okoffice-out/board-review.pptx --json
 okoffice context build --file path/to/report.docx --file path/to/model.xlsx -o .okoffice-out/context.packet.json --json
@@ -75,6 +76,7 @@ okpdf serve --api
 | `sheet.write.workbook` | beta | 把 source-mapped records 写成本地 XLSX，并保留 provenance sheet。 |
 | `sheet.validate.workbook` | beta | 校验 XLSX 结构、非空 sheet、外链、安全标记和 SourceRefs 就绪状态。 |
 | `deck.inspect.presentation` | beta | 读取 PPTX 幻灯片、notes、layout、theme、media 和 chart 信息。 |
+| `deck.compose.plan` | beta | 从 evidence workbook 生成带 source refs 的 deck-specific Composition IR 和 outline JSON，不直接写 PPTX。 |
 | `deck.create.from_outline` | beta | 从结构化 outline 创建可编辑的本地 PPTX。 |
 | `deck.validate.presentation` | beta | 校验 PPTX 结构、空白页、placeholder 泄漏、安全标记和 source-map 就绪状态。 |
 | `office.workflow.extract_to_sheet` | beta | 从 DOCX/XLSX 表格或 OKoffice context packet source graph 生成带 source refs 的 XLSX evidence workbook。 |
@@ -107,7 +109,7 @@ okpdf serve --api
 |---|---|
 | Inspect | `office.inspect.file`, `word.inspect.document`, `sheet.inspect.workbook`, `deck.inspect.presentation`, `pdf.inspect.document` |
 | Extract | `word.extract.tables`, `sheet.read.workbook`, `sheet.profile.data`, `sheet.extract.tables`, `deck.extract.notes`, `pdf.convert.pdf_to_text` |
-| Create | `word.write.document`, `sheet.write.workbook`, `deck.create.from_outline`, `pdf.convert.markdown_to_pdf` |
+| Create | `word.write.document`, `sheet.write.workbook`, `deck.compose.plan`, `deck.create.from_outline`, `pdf.convert.markdown_to_pdf` |
 | Patch | `office.patch.plan`, `word.edit.patch`, `sheet.edit.patch`, `deck.edit.patch`, `pdf.patch.apply` |
 | Validate | `office.validation.run`, `word.validation.document`, `sheet.validate.workbook`, `deck.validate.presentation`, `pdf.validation.render_check` |
 | Evidence | `office.context.build_packet`, `office.evidence.coverage`, `office.source_map.create` |

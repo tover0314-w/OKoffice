@@ -96,6 +96,7 @@ First target wrappers:
 - `word_inspect_document`
 - `sheet_inspect_workbook`
 - `deck_inspect_presentation`
+- `deck_compose_plan`
 - `deck_create_from_outline`
 - `deck_validate_presentation`
 - `office_context_build_packet`
@@ -125,6 +126,7 @@ office_context_build_packet(["memo.docx", "model.xlsx"], ".okoffice-out/context.
 office_extract_schema(".okoffice-out/context.packet.json", {"fields": [{"name": "vendor"}]}, ".okoffice-out/evidence.json")
 office_validation_package("memo.docx")
 office_workflow_extract_to_sheet([], ".okoffice-out/evidence.xlsx", context_packet_path=".okoffice-out/context.packet.json")
+deck_compose_plan(".okoffice-out/evidence.xlsx", ".okoffice-out/deck.plan.json", title="Board Review")
 deck_validate_presentation(".okoffice-out/vendor-board-deck.pptx")
 office_workflow_board_pack(
     [".okoffice-out/vendor-evidence.xlsx", ".okoffice-out/vendor-board-deck.pptx"],

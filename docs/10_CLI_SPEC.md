@@ -54,7 +54,7 @@ okoffice validate package memo.docx --json
 Workbook:
 
 ```bash
-okoffice sheet create-workbook .okoffice-out/evidence.json -o .okoffice-out/evidence.xlsx --json
+okoffice sheet write-workbook .okoffice-out/evidence.json -o .okoffice-out/evidence.xlsx --json
 okoffice sheet validate .okoffice-out/evidence.xlsx --json
 ```
 
@@ -62,6 +62,7 @@ Document and deck:
 
 ```bash
 okoffice word create-report --from-workbook .okoffice-out/evidence.xlsx -o .okoffice-out/memo.docx --json
+okoffice deck compose-plan .okoffice-out/evidence.xlsx -o .okoffice-out/deck.plan.json --title "Board Review" --json
 okoffice deck create --from-workbook .okoffice-out/evidence.xlsx --profile board_review -o .okoffice-out/board-review.pptx --json
 ```
 

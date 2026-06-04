@@ -2,7 +2,7 @@
     "manifest_version":  "0.1",
     "product":  "okoffice",
     "compatibility_package":  "agentpdf",
-    "tool_count":  46,
+    "tool_count":  48,
     "domains":  [
                     "office",
                     "word",
@@ -570,6 +570,21 @@
                                                 "sdk"
                                             ],
                              "implemented":  false,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "deck.compose.plan",
+                             "status":  "beta",
+                             "description":  "Compose source-mapped deck Composition IR and outline JSON from an evidence workbook without writing a PPTX.",
+                             "domain":  "deck",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  true,
                              "oss_default":  true,
                              "requires_model":  false
                          },

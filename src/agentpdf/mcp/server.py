@@ -36,6 +36,7 @@ from agentpdf.tools.runner import (
     run_compare_semantic_diff,
     run_compare_visual_diff,
     run_compare_version_report,
+    run_deck_compose_plan,
     run_deck_create_from_outline,
     run_deck_inspect_presentation,
     run_deck_validate_presentation,
@@ -210,6 +211,7 @@ def create_mcp_server() -> FastMCP:
     server.tool(name="sheet_write_workbook")(sheet_write_workbook)
     server.tool(name="sheet_validate_workbook")(sheet_validate_workbook)
     server.tool(name="deck_inspect_presentation")(deck_inspect_presentation)
+    server.tool(name="deck_compose_plan")(deck_compose_plan)
     server.tool(name="deck_create_from_outline")(deck_create_from_outline)
     server.tool(name="deck_validate_presentation")(deck_validate_presentation)
     server.tool(name="pdf_inspect_document")(pdf_inspect_document)
@@ -558,6 +560,23 @@ def deck_inspect_presentation(path: str) -> str:
 def deck_create_from_outline(outline: dict[str, object], output_path: str) -> str:
     """Create a local editable PPTX deck from a structured outline."""
     return run_deck_create_from_outline(outline, output_path).model_dump_json()
+
+
+def deck_compose_plan(
+    workbook_path: str,
+    output_path: str | None = None,
+    title: str | None = None,
+    style: str = "executive",
+    max_rows_per_sheet: int = 100,
+) -> str:
+    """Compose a source-mapped deck plan from a local workbook without writing a PPTX."""
+    return run_deck_compose_plan(
+        workbook_path,
+        output_path=output_path,
+        title=title,
+        style=style,
+        max_rows_per_sheet=max_rows_per_sheet,
+    ).model_dump_json()
 
 
 def deck_validate_presentation(path: str) -> str:

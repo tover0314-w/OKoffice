@@ -2,6 +2,7 @@
 
 from agentpdf.office.context import build_office_context_packet
 from agentpdf.office.deck import create_deck_from_outline, inspect_deck_presentation, validate_deck_presentation
+from agentpdf.office.deck_plan import compose_deck_plan
 from agentpdf.office.extract import extract_schema
 from agentpdf.office.manifest import load_office_tool_manifest
 from agentpdf.office.inspect import inspect_office_file
@@ -27,6 +28,7 @@ __all__ = [
     "extract_sheet_tables",
     "extract_schema",
     "extract_word_tables",
+    "compose_deck_plan",
     "create_deck_from_outline",
     "inspect_deck_presentation",
     "validate_deck_presentation",

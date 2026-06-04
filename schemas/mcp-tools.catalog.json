@@ -113,6 +113,11 @@
       "status": "beta"
     },
     {
+      "name": "deck_compose_plan",
+      "maps_to": "deck.compose.plan",
+      "status": "beta"
+    },
+    {
       "name": "deck_create_from_outline",
       "maps_to": "deck.create.from_outline",
       "status": "beta"

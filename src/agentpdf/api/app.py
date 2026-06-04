@@ -40,6 +40,7 @@ from agentpdf.tools.runner import (
     run_compare_semantic_diff,
     run_compare_visual_diff,
     run_compare_version_report,
+    run_deck_compose_plan,
     run_deck_create_from_outline,
     run_deck_inspect_presentation,
     run_deck_validate_presentation,
@@ -377,6 +378,14 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
         return run_deck_create_from_outline(
             outline=outline if isinstance(outline, dict) else {},
             output_path=payload.get("output_path", payload.get("output", ".okoffice-out/deck.pptx")),
+        )
+    if tool_name == "deck.compose.plan":
+        return run_deck_compose_plan(
+            workbook_path=payload.get("workbook_path", payload.get("path", payload.get("input_path", ""))),
+            output_path=payload.get("output_path", payload.get("output")),
+            title=str(payload["title"]) if payload.get("title") is not None else None,
+            style=str(payload.get("style", "executive")),
+            max_rows_per_sheet=int(payload.get("max_rows_per_sheet", payload.get("max_rows", 100))),
         )
     if tool_name == "pdf.inspect.document":
         return run_inspect(payload.get("path", ""))

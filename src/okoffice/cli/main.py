@@ -8,6 +8,7 @@ import typer
 
 from agentpdf.office.context import build_office_context_packet
 from agentpdf.office.deck import create_deck_from_outline, inspect_deck_presentation, validate_deck_presentation
+from agentpdf.office.deck_plan import compose_deck_plan
 from agentpdf.office.extract import extract_schema
 from agentpdf.office.inspect import inspect_office_file
 from agentpdf.office.planner import plan_office_workflow
@@ -216,6 +217,31 @@ def deck_create_from_outline(
     outline = json.loads(outline_path.read_text(encoding="utf-8"))
     _emit_result(
         create_deck_from_outline(outline if isinstance(outline, dict) else {}, output_path),
+        json_output=json_output,
+    )
+
+
+@deck_app.command("compose-plan")
+def deck_compose_plan(
+    workbook_path: Annotated[Path, typer.Argument(help="Input XLSX workbook to turn into a deck Composition IR.")],
+    output_path: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", help="Optional output JSON composition plan path."),
+    ] = None,
+    title: Annotated[str | None, typer.Option("--title", help="Deck title. Defaults to the workbook stem.")] = None,
+    style: Annotated[str, typer.Option("--style", help="Deck style label for the Composition IR.")] = "executive",
+    max_rows_per_sheet: Annotated[int, typer.Option("--max-rows", help="Maximum non-empty rows read per sheet.")] = 100,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Compose a source-mapped deck plan without writing a PPTX."""
+    _emit_result(
+        compose_deck_plan(
+            workbook_path,
+            output_path=output_path,
+            title=title,
+            style=style,
+            max_rows_per_sheet=max_rows_per_sheet,
+        ),
         json_output=json_output,
     )
 

@@ -385,6 +385,49 @@ Acceptance criteria:
 - Validates contact sheet/render preview when available.
 - Returns slide-level warnings for fit, missing evidence, or weak hierarchy.
 
+### `deck.compose.plan`
+
+Current OSS implementation.
+
+Purpose: compose source-mapped, deck-specific Composition IR and outline JSON from a local evidence workbook without writing a PPTX.
+
+CLI:
+
+```bash
+okoffice deck compose-plan .okoffice-out/evidence.xlsx -o .okoffice-out/deck.plan.json --title "Board Review" --json
+```
+
+Expected output highlights:
+
+```json
+{
+  "status": "succeeded",
+  "tool": "deck.compose.plan",
+  "usage": {
+    "summary": {
+      "slide_count": 4,
+      "source_coverage": {"status": "complete"}
+    },
+    "composition_ir": {
+      "schema": "okoffice.deck.composition",
+      "kind": "deck.composition",
+      "slides": [
+        {"slide_type": "sheet_snapshot", "claims": [], "source_refs": []}
+      ]
+    },
+    "outline": {"slides": []}
+  }
+}
+```
+
+Acceptance criteria:
+
+- Reads a bounded workbook profile and SourceRefs provenance sheet.
+- Produces slide plans, claims, workbook ranges, and source refs for agent review.
+- Optionally writes JSON plan output; never writes or mutates PPTX.
+- Does not call hosted AI providers or infer unsupported chart/design layout.
+- Recommends `deck.create.from_outline`, validation, and board-pack tools.
+
 ## Core Edit and Patch Tools
 
 ### `office.patch.plan`

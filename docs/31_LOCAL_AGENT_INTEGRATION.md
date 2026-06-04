@@ -76,7 +76,12 @@ MCP wrapper groups:
 - `deck_inspect_presentation`
 - `office_context_build_packet`
 - `office_extract_schema`
-- `sheet_create_evidence_workbook`
+- `office_validation_package`
+- `office_workflow_extract_to_sheet`
+- `sheet_write_workbook`
+- `deck_compose_plan`
+- `deck_create_from_outline`
+- `deck_validate_presentation`
 - `word_create_report`
 - `deck_create_presentation`
 - `office_workflow_docset_to_sheet`

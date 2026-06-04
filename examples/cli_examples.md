@@ -92,7 +92,7 @@ okoffice extract schema .okoffice-out/vendor.context.json \
   -o .okoffice-out/vendor.evidence.json \
   --json
 
-okoffice sheet create-workbook .okoffice-out/vendor.evidence.json \
+okoffice sheet write-workbook .okoffice-out/vendor.evidence.json \
   -o .okoffice-out/vendor-evidence.xlsx \
   --json
 ```
@@ -108,6 +108,12 @@ Expected output includes `tool: office.validation.package`, package type, member
 ## Create Deck From Workbook
 
 ```bash
+okoffice deck compose-plan \
+  .okoffice-out/vendor-evidence.xlsx \
+  -o .okoffice-out/vendor-deck.plan.json \
+  --title "Vendor Board Review" \
+  --json
+
 okoffice workflow sheet-to-deck \
   .okoffice-out/vendor-evidence.xlsx \
   -o .okoffice-out/vendor-board-deck.pptx \

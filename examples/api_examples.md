@@ -127,14 +127,39 @@ curl -X POST http://127.0.0.1:7331/v1/tools/office.extract.schema/run \
 ## Create Evidence Workbook
 
 ```bash
-curl -X POST http://127.0.0.1:7331/v1/tools/sheet.create.evidence_workbook/run \
+curl -X POST http://127.0.0.1:7331/v1/tools/sheet.write.workbook/run \
   -H 'Content-Type: application/json' \
   -d '{
-    "evidence_path": ".okoffice-out/vendor.evidence.json",
-    "output_path": ".okoffice-out/vendor-evidence.xlsx",
-    "style_pack": "evidence_workbook_clean"
+    "data": {
+      "records": [
+        {
+          "source_path": "contracts/vendor-a.docx",
+          "source_format": "docx",
+          "table_id": "table_1",
+          "source_row_index": 1,
+          "values": ["Vendor A", "2026-12-31", "250000"],
+          "source_refs": [{"source_ref": "docx:vendor-a:table_1:B2"}]
+        }
+      ]
+    },
+    "output_path": ".okoffice-out/vendor-evidence.xlsx"
   }'
 ```
+
+## Compose Deck Plan
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/deck.compose.plan/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "workbook_path": ".okoffice-out/vendor-evidence.xlsx",
+    "output_path": ".okoffice-out/vendor-deck.plan.json",
+    "title": "Vendor Board Review",
+    "style": "executive"
+  }'
+```
+
+Expected output includes `usage.composition_ir.slides`, slide claims, workbook ranges, source refs, and an `outline` that can be reviewed before creating a PPTX.
 
 ## Create Deck
 
