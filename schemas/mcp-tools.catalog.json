@@ -28,6 +28,11 @@
       "status": "beta"
     },
     {
+      "name": "office_inspect_file",
+      "maps_to": "office.inspect.file",
+      "status": "beta"
+    },
+    {
       "name": "pdf_inspect_document",
       "maps_to": "pdf.inspect.document",
       "status": "stable"

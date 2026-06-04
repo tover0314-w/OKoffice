@@ -79,6 +79,7 @@ from agentpdf.tools.runner import (
     run_metadata_update_outline,
     run_merge,
     run_n_up,
+    run_office_inspect_file,
     run_page_numbers,
     run_patch_apply,
     run_patch_plan,
@@ -174,6 +175,7 @@ def create_mcp_server() -> FastMCP:
     server.tool(name="agent_setup_codex")(agent_setup_codex)
     server.tool(name="agent_setup_kilo_code")(agent_setup_kilo_code)
     server.tool(name="agent_setup_openclaw")(agent_setup_openclaw)
+    server.tool(name="office_inspect_file")(office_inspect_file)
     server.tool(name="pdf_inspect_document")(pdf_inspect_document)
     server.tool(name="pdf_inspect_pages")(pdf_inspect_pages)
     server.tool(name="pdf_inspect_health")(pdf_inspect_health)
@@ -403,6 +405,11 @@ def agent_setup_openclaw(
 def pdf_inspect_document(path: str) -> str:
     """Inspect a local PDF document."""
     return run_inspect(path).model_dump_json()
+
+
+def office_inspect_file(path: str) -> str:
+    """Inspect a local Office-compatible file and recommend next tools."""
+    return run_office_inspect_file(path).model_dump_json()
 
 
 def pdf_inspect_pages(input_path: str, pages: str = "all", render_check: bool = False) -> str:

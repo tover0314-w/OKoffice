@@ -151,6 +151,7 @@ from agentpdf.core.pdf import (
     validate_pdfa_pdf,
 )
 from agentpdf.ir.lite import parse_lite_pdf, write_document_ir_json, write_document_ir_markdown
+from agentpdf.office.inspect import inspect_office_file
 from agentpdf.rag.local import (
     chat_pdf,
     cite_answer,
@@ -187,6 +188,10 @@ def run_inspect(path: str | Path) -> ToolResult:
         )
     except AgentPDFException as exc:
         return _failed(tool, exc.to_error())
+
+
+def run_office_inspect_file(path: str | Path) -> ToolResult:
+    return inspect_office_file(path)
 
 
 def run_inspect_pages(

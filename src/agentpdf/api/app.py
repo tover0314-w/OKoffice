@@ -83,6 +83,7 @@ from agentpdf.tools.runner import (
     run_metadata_update_outline,
     run_merge,
     run_n_up,
+    run_office_inspect_file,
     run_page_numbers,
     run_patch_apply,
     run_patch_plan,
@@ -279,6 +280,8 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
             args_prefix=[str(arg) for arg in args_prefix] if isinstance(args_prefix, list) else None,
             server_name=str(payload.get("server_name", "agentpdf")),
         )
+    if tool_name == "office.inspect.file":
+        return run_office_inspect_file(payload.get("path", payload.get("input_path", "")))
     if tool_name == "pdf.inspect.document":
         return run_inspect(payload.get("path", ""))
     if tool_name == "pdf.inspect.pages":

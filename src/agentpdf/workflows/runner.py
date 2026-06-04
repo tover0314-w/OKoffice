@@ -9,6 +9,7 @@ from agentpdf.schemas.models import AgentPDFError, Artifact, ToolResult
 
 
 SUPPORTED_LOCAL_WORKFLOW_TOOLS = {
+    "office.inspect.file",
     "pdf.inspect.document",
     "pdf.inspect.pages",
     "pdf.organize.merge",
@@ -354,6 +355,8 @@ def _run_local_step(tool: str, payload: dict[str, Any]) -> ToolResult:
             expected_page_count=expected_page_count,
             pages=str(payload.get("pages", "all")),
         )
+    if tool == "office.inspect.file":
+        return runner.run_office_inspect_file(payload.get("path", payload.get("input_path", "")))
     if tool == "pdf.inspect.document":
         return runner.run_inspect(payload.get("path", payload.get("input_path", "")))
     if tool == "pdf.inspect.pages":
