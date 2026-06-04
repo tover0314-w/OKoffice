@@ -147,6 +147,7 @@ from agentpdf.tools.runner import (
     run_select_target_profile,
     run_sheet_extract_tables,
     run_sheet_inspect_workbook,
+    run_sheet_validate_workbook,
     run_sheet_write_workbook,
     run_split,
     run_storyboard_plan,
@@ -309,6 +310,8 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
             data=data if isinstance(data, (dict, list)) else {},
             output_path=payload.get("output_path", payload.get("output", ".okoffice-out/workbook.xlsx")),
         )
+    if tool_name == "sheet.validate.workbook":
+        return run_sheet_validate_workbook(payload.get("path", payload.get("input_path", "")))
     if tool_name == "deck.inspect.presentation":
         return run_deck_inspect_presentation(payload.get("path", payload.get("input_path", "")))
     if tool_name == "pdf.inspect.document":

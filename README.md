@@ -75,6 +75,7 @@ okoffice word extract-tables path/to/report.docx --json
 okoffice sheet inspect path/to/model.xlsx --json
 okoffice sheet extract-tables path/to/model.xlsx --json
 okoffice sheet write-workbook records.json -o .okoffice-out/model.xlsx --json
+okoffice sheet validate .okoffice-out/model.xlsx --json
 okoffice deck inspect path/to/deck.pptx --json
 okoffice workflow extract-to-sheet path/to/report.docx path/to/model.xlsx -o .okoffice-out/evidence.xlsx --json
 
@@ -94,6 +95,7 @@ okpdf serve --api
 | `sheet.inspect.workbook` | beta | Reads workbook sheets, dimensions, formulas, tables, charts, links, and safety markers. |
 | `sheet.extract.tables` | beta | Extracts worksheet tables with sheet, row, column, and cell refs. |
 | `sheet.write.workbook` | beta | Writes source-mapped records into a local XLSX workbook with provenance sheets. |
+| `sheet.validate.workbook` | beta | Validates XLSX structure, non-empty sheets, external links, safety markers, and SourceRefs readiness. |
 | `deck.inspect.presentation` | beta | Reads PPTX slide, notes, layout, theme, media, and chart facts. |
 | `office.workflow.extract_to_sheet` | beta | Builds a source-mapped XLSX evidence workbook from DOCX/XLSX tables. |
 | `pdf.*` compatibility | stable/beta | 241 local PDF and agent setup tools remain available through `okpdf`, MCP, REST, and SDKs. |
@@ -108,7 +110,7 @@ The codebase still exposes the compatibility Python package as `agentpdf` and th
 | Extract | `word.extract.tables`, `sheet.extract.tables`, `deck.extract.notes`, `pdf.convert.pdf_to_text` |
 | Create | `word.write.document`, `sheet.write.workbook`, `deck.create.presentation`, `pdf.convert.markdown_to_pdf` |
 | Patch | `office.patch.plan`, `word.edit.patch`, `sheet.edit.patch`, `deck.edit.patch`, `pdf.patch.apply` |
-| Validate | `office.validation.run`, `word.validation.document`, `sheet.validation.formulas`, `deck.validation.contact_sheet`, `pdf.validation.render_check` |
+| Validate | `office.validation.run`, `word.validation.document`, `sheet.validate.workbook`, `deck.validation.contact_sheet`, `pdf.validation.render_check` |
 | Evidence | `office.context.build_packet`, `office.evidence.coverage`, `office.source_map.create` |
 | Workflow | `office.workflow.extract_to_sheet`, `office.workflow.sheet_to_deck`, `office.workflow.board_pack`, `pdf.workflow.run` |
 | Bundle | `office.bundle.export`, `office.bundle.verify`, `pdf.artifacts.export_bundle` |

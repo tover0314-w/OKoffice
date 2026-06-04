@@ -9,7 +9,7 @@ import typer
 from agentpdf.office.deck import inspect_deck_presentation
 from agentpdf.office.inspect import inspect_office_file
 from agentpdf.office.planner import plan_office_workflow
-from agentpdf.office.sheet import extract_sheet_tables, inspect_sheet_workbook, write_sheet_workbook
+from agentpdf.office.sheet import extract_sheet_tables, inspect_sheet_workbook, validate_sheet_workbook, write_sheet_workbook
 from agentpdf.office.word import extract_word_tables, inspect_word_document
 from agentpdf.office.workflows import extract_to_sheet
 from okoffice import __version__
@@ -132,6 +132,15 @@ def sheet_write_workbook(
     """Write an XLSX workbook from structured records with source refs."""
     payload = json.loads(data_path.read_text(encoding="utf-8"))
     _emit_result(write_sheet_workbook(payload, output_path), json_output=json_output)
+
+
+@sheet_app.command("validate")
+def sheet_validate(
+    path: Annotated[Path, typer.Argument(help="XLSX artifact path to validate.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Validate workbook structure, safety markers, and source-map readiness."""
+    _emit_result(validate_sheet_workbook(path), json_output=json_output)
 
 
 @deck_app.command("inspect")

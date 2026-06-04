@@ -19,6 +19,7 @@ from agentpdf.security.paths import resolve_output_path
 INSPECT_TOOL_NAME = "sheet.inspect.workbook"
 EXTRACT_TABLES_TOOL_NAME = "sheet.extract.tables"
 WRITE_WORKBOOK_TOOL_NAME = "sheet.write.workbook"
+VALIDATE_WORKBOOK_TOOL_NAME = "sheet.validate.workbook"
 CELL_REF_RE = re.compile(r"^([A-Z]+)([0-9]+)$", re.IGNORECASE)
 XLSX_MIME_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
@@ -232,7 +233,153 @@ def write_sheet_workbook(data: dict[str, Any] | list[dict[str, Any]], output_pat
         },
         next_recommended_tools=[
             "sheet.inspect.workbook",
-            "sheet.validation.formulas",
+            "sheet.validate.workbook",
+            "office.context.build_packet",
+            "office.workflow.source_to_deck",
+        ],
+    )
+
+
+def validate_sheet_workbook(path: str | Path) -> ToolResult:
+    preflight = inspect_office_file(path)
+    if preflight.status == "failed":
+        return _failed(
+            VALIDATE_WORKBOOK_TOOL_NAME,
+            preflight.error or AgentPDFError(code="unsupported_file_type", message="Sheet validation failed."),
+        )
+    if preflight.usage["format"]["detected_format"] != "xlsx":
+        return _failed(
+            VALIDATE_WORKBOOK_TOOL_NAME,
+            AgentPDFError(
+                code="unsupported_file_type",
+                message="sheet.validate.workbook requires an XLSX-compatible OOXML package.",
+                details={"detected_format": preflight.usage["format"]["detected_format"]},
+            ),
+        )
+
+    source_path = Path(preflight.usage["file"]["path"])
+    names = zip_names(source_path)
+    workbook_root = read_xml(source_path, "xl/workbook.xml")
+    if workbook_root is None:
+        return _failed(
+            VALIDATE_WORKBOOK_TOOL_NAME,
+            AgentPDFError(
+                code="unsupported_file_type",
+                message="sheet.validate.workbook requires xl/workbook.xml in the XLSX package.",
+                details={"path": source_path.as_posix()},
+            ),
+        )
+
+    sheet_names = _sheet_names(workbook_root)
+    worksheet_members = sorted_members(names, prefix="xl/worksheets/sheet")
+    shared_strings = _shared_strings(read_xml(source_path, "xl/sharedStrings.xml"))
+    sheets = _validation_sheet_summaries(source_path, worksheet_members, sheet_names, shared_strings)
+    source_refs = _source_refs_summary(sheets)
+    summary = {
+        "sheet_count": len(sheets),
+        "nonempty_sheet_count": sum(1 for sheet in sheets if int(sheet["nonempty_cell_count"]) > 0),
+        "blank_sheet_count": sum(1 for sheet in sheets if sheet["is_blank"]),
+        "formula_count": sum(int(sheet["formula_count"]) for sheet in sheets),
+        "table_count": count_members(names, prefix="xl/tables/"),
+        "chart_count": count_members(names, prefix="xl/charts/"),
+        "external_link_count": count_members(names, prefix="xl/externalLinks/"),
+        "source_refs_sheet_present": source_refs["present"],
+        "source_ref_row_count": source_refs["row_count"],
+        "macro_enabled": bool(preflight.usage["safety"].get("macro_enabled", False)),
+        "has_external_relationships": bool(preflight.usage["safety"].get("has_external_relationships", False)),
+    }
+    warnings = list(preflight.warnings)
+    checks = [
+        ValidationCheck(name="format_is_xlsx", status="passed", details=preflight.usage["format"]),
+        ValidationCheck(
+            name="workbook_xml_present",
+            status="passed",
+            details={"member": "xl/workbook.xml"},
+        ),
+        _validation_check(
+            "sheet_count_nonzero",
+            condition=summary["sheet_count"] > 0,
+            failed_status="failed",
+            passed_details={"sheet_count": summary["sheet_count"]},
+            failed_message="Workbook has no worksheets.",
+        ),
+        _validation_check(
+            "nonempty_workbook",
+            condition=summary["nonempty_sheet_count"] > 0,
+            failed_status="failed",
+            passed_details={"nonempty_sheet_count": summary["nonempty_sheet_count"]},
+            failed_message="Workbook contains no non-empty sheets.",
+        ),
+        _validation_check(
+            "blank_sheets_absent",
+            condition=summary["blank_sheet_count"] == 0,
+            failed_status="warning",
+            passed_details={"blank_sheet_count": summary["blank_sheet_count"]},
+            failed_message="Workbook contains blank sheets.",
+        ),
+        _validation_check(
+            "external_links_absent",
+            condition=summary["external_link_count"] == 0,
+            failed_status="warning",
+            passed_details={"external_link_count": summary["external_link_count"]},
+            failed_message="External workbook links detected.",
+        ),
+        _validation_check(
+            "source_refs_sheet_present",
+            condition=bool(source_refs["present"]),
+            failed_status="warning",
+            passed_details=source_refs,
+            failed_message="SourceRefs sheet is missing; provenance may be incomplete.",
+        ),
+        _validation_check(
+            "macros_absent",
+            condition=not summary["macro_enabled"],
+            failed_status="warning",
+            passed_details={"macro_enabled": summary["macro_enabled"]},
+            failed_message="Macro-enabled workbook markers detected; macros are not executed.",
+        ),
+        _validation_check(
+            "external_relationships_absent",
+            condition=not summary["has_external_relationships"],
+            failed_status="warning",
+            passed_details={"has_external_relationships": summary["has_external_relationships"]},
+            failed_message="External Office relationship targets were detected.",
+        ),
+    ]
+    if summary["blank_sheet_count"]:
+        blank_names = [str(sheet["name"]) for sheet in sheets if sheet["is_blank"]]
+        warnings.append(f"Workbook contains blank sheets: {', '.join(blank_names)}.")
+    if summary["external_link_count"]:
+        warnings.append(f"External workbook links detected: {summary['external_link_count']}.")
+    if not source_refs["present"]:
+        warnings.append("SourceRefs sheet is missing; provenance may be incomplete.")
+    if summary["macro_enabled"]:
+        warnings.append("Macro-enabled workbook markers were detected; macros are not executed.")
+    if summary["has_external_relationships"]:
+        warnings.append("External Office relationship targets were detected.")
+
+    return ToolResult(
+        job_id=_job_id(),
+        status="succeeded",
+        tool=VALIDATE_WORKBOOK_TOOL_NAME,
+        validation=ValidationReport(
+            status=_validation_report_status(checks),
+            checks=checks,
+            warnings=warnings,
+        ),
+        warnings=warnings,
+        usage={
+            "workbook": {
+                "path": source_path.as_posix(),
+                "format": "xlsx",
+                "package_type": preflight.usage["format"]["package_type"],
+            },
+            "summary": summary,
+            "sheets": sheets,
+            "safety": preflight.usage["safety"],
+        },
+        next_recommended_tools=[
+            "sheet.extract.tables",
             "office.context.build_packet",
             "office.workflow.source_to_deck",
         ],
@@ -268,6 +415,74 @@ def _sheet_summaries(path: Path, worksheet_members: list[str], sheet_names: list
             }
         )
     return summaries
+
+
+def _validation_sheet_summaries(
+    path: Path,
+    worksheet_members: list[str],
+    sheet_names: list[str],
+    shared_strings: list[str],
+) -> list[dict[str, object]]:
+    summaries = []
+    for index, member in enumerate(worksheet_members, start=1):
+        worksheet_root = read_xml(path, member)
+        sheet_name = sheet_names[index - 1] if index <= len(sheet_names) else f"Sheet {index}"
+        dimension = ""
+        formula_count = 0
+        rows: list[dict[str, object]] = []
+        if worksheet_root is not None:
+            dimension_element = worksheet_root.find(".//main:dimension", SHEET_NS)
+            dimension = str(dimension_element.get("ref") or "") if dimension_element is not None else ""
+            formula_count = len(worksheet_root.findall(".//main:f", SHEET_NS))
+            rows = _worksheet_rows(path, worksheet_root, sheet_name, index, shared_strings)
+        nonempty_cell_count = sum(len(row["cells"]) for row in rows if isinstance(row.get("cells"), list))
+        summaries.append(
+            {
+                "name": sheet_name,
+                "sheet_index": index,
+                "member": member,
+                "dimension": dimension,
+                "row_count": len(rows),
+                "nonempty_cell_count": nonempty_cell_count,
+                "formula_count": formula_count,
+                "is_blank": nonempty_cell_count == 0 and formula_count == 0,
+            }
+        )
+    return summaries
+
+
+def _source_refs_summary(sheets: list[dict[str, object]]) -> dict[str, object]:
+    for sheet in sheets:
+        normalized_name = str(sheet["name"]).replace(" ", "").replace("_", "").lower()
+        if normalized_name == "sourcerefs":
+            return {
+                "present": True,
+                "sheet_name": sheet["name"],
+                "row_count": max(0, int(sheet["row_count"]) - 1),
+            }
+    return {"present": False, "sheet_name": None, "row_count": 0}
+
+
+def _validation_check(
+    name: str,
+    *,
+    condition: bool,
+    failed_status: str,
+    passed_details: dict[str, object],
+    failed_message: str,
+) -> ValidationCheck:
+    if condition:
+        return ValidationCheck(name=name, status="passed", details=passed_details)
+    return ValidationCheck(name=name, status=failed_status, details=passed_details, message=failed_message)
+
+
+def _validation_report_status(checks: list[ValidationCheck]) -> str:
+    statuses = [check.status for check in checks]
+    if "failed" in statuses:
+        return "failed"
+    if "warning" in statuses:
+        return "warning"
+    return "passed"
 
 
 def _write_records(data: dict[str, Any] | list[dict[str, Any]]) -> list[dict[str, Any]]:

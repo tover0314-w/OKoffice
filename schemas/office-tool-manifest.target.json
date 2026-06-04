@@ -515,7 +515,7 @@
                          },
                          {
                              "name":  "sheet.validate.workbook",
-                             "status":  "planned",
+                             "status":  "beta",
                              "description":  "Validate formulas, dimensions, blank sheets, chart refs, and workbook renderability.",
                              "domain":  "sheet",
                              "interfaces":  [
@@ -524,7 +524,7 @@
                                                 "rest",
                                                 "sdk"
                                             ],
-                             "implemented":  false,
+                             "implemented":  true,
                              "oss_default":  true,
                              "requires_model":  false
                          },

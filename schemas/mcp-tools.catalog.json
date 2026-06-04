@@ -63,6 +63,11 @@
       "status": "beta"
     },
     {
+      "name": "sheet_validate_workbook",
+      "maps_to": "sheet.validate.workbook",
+      "status": "beta"
+    },
+    {
       "name": "deck_inspect_presentation",
       "maps_to": "deck.inspect.presentation",
       "status": "beta"
