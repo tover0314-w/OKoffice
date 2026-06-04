@@ -58,6 +58,11 @@
       "status": "beta"
     },
     {
+      "name": "sheet_profile_data",
+      "maps_to": "sheet.profile.data",
+      "status": "beta"
+    },
+    {
       "name": "sheet_extract_tables",
       "maps_to": "sheet.extract.tables",
       "status": "beta"

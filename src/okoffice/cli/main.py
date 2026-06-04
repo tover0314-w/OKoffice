@@ -12,6 +12,7 @@ from agentpdf.office.planner import plan_office_workflow
 from agentpdf.office.sheet import (
     extract_sheet_tables,
     inspect_sheet_workbook,
+    profile_sheet_data,
     read_sheet_workbook,
     validate_sheet_workbook,
     write_sheet_workbook,
@@ -137,6 +138,27 @@ def sheet_read(
 ) -> None:
     """Read workbook rows, cells, formulas, and source refs as bounded JSON."""
     _emit_result(read_sheet_workbook(path, max_rows_per_sheet=max_rows_per_sheet), json_output=json_output)
+
+
+@sheet_app.command("profile")
+def sheet_profile(
+    path: Annotated[Path, typer.Argument(help="XLSX artifact path to profile.")],
+    max_rows_per_sheet: Annotated[int, typer.Option("--max-rows", help="Maximum non-empty rows read per sheet.")] = 100,
+    include_source_refs: Annotated[
+        bool,
+        typer.Option("--include-source-refs", help="Profile the SourceRefs provenance sheet too."),
+    ] = False,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Profile workbook headers, data types, missing cells, formulas, and source coverage."""
+    _emit_result(
+        profile_sheet_data(
+            path,
+            max_rows_per_sheet=max_rows_per_sheet,
+            include_source_refs=include_source_refs,
+        ),
+        json_output=json_output,
+    )
 
 
 @sheet_app.command("write-workbook")

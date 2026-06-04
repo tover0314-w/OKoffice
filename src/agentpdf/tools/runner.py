@@ -156,6 +156,7 @@ from agentpdf.office.inspect import inspect_office_file
 from agentpdf.office.sheet import (
     extract_sheet_tables,
     inspect_sheet_workbook,
+    profile_sheet_data,
     read_sheet_workbook,
     validate_sheet_workbook,
     write_sheet_workbook,
@@ -225,6 +226,18 @@ def run_sheet_inspect_workbook(path: str | Path) -> ToolResult:
 
 def run_sheet_read_workbook(path: str | Path, max_rows_per_sheet: int = 100) -> ToolResult:
     return read_sheet_workbook(path, max_rows_per_sheet=max_rows_per_sheet)
+
+
+def run_sheet_profile_data(
+    path: str | Path,
+    max_rows_per_sheet: int = 100,
+    include_source_refs: bool = False,
+) -> ToolResult:
+    return profile_sheet_data(
+        path,
+        max_rows_per_sheet=max_rows_per_sheet,
+        include_source_refs=include_source_refs,
+    )
 
 
 def run_sheet_extract_tables(path: str | Path) -> ToolResult:

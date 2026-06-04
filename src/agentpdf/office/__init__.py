@@ -7,6 +7,7 @@ from agentpdf.office.planner import plan_office_workflow
 from agentpdf.office.sheet import (
     extract_sheet_tables,
     inspect_sheet_workbook,
+    profile_sheet_data,
     read_sheet_workbook,
     validate_sheet_workbook,
     write_sheet_workbook,
@@ -24,6 +25,7 @@ __all__ = [
     "inspect_word_document",
     "load_office_tool_manifest",
     "plan_office_workflow",
+    "profile_sheet_data",
     "read_sheet_workbook",
     "validate_sheet_workbook",
     "write_sheet_workbook",

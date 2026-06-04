@@ -147,6 +147,7 @@ from agentpdf.tools.runner import (
     run_select_target_profile,
     run_sheet_extract_tables,
     run_sheet_inspect_workbook,
+    run_sheet_profile_data,
     run_sheet_read_workbook,
     run_sheet_validate_workbook,
     run_sheet_write_workbook,
@@ -307,6 +308,12 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
         return run_sheet_read_workbook(
             payload.get("path", payload.get("input_path", "")),
             max_rows_per_sheet=int(payload.get("max_rows_per_sheet", payload.get("max_rows", 100))),
+        )
+    if tool_name == "sheet.profile.data":
+        return run_sheet_profile_data(
+            payload.get("path", payload.get("input_path", "")),
+            max_rows_per_sheet=int(payload.get("max_rows_per_sheet", payload.get("max_rows", 100))),
+            include_source_refs=bool(payload.get("include_source_refs", False)),
         )
     if tool_name == "sheet.extract.tables":
         return run_sheet_extract_tables(payload.get("path", payload.get("input_path", "")))

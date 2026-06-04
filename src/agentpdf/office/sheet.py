@@ -21,6 +21,7 @@ EXTRACT_TABLES_TOOL_NAME = "sheet.extract.tables"
 WRITE_WORKBOOK_TOOL_NAME = "sheet.write.workbook"
 VALIDATE_WORKBOOK_TOOL_NAME = "sheet.validate.workbook"
 READ_WORKBOOK_TOOL_NAME = "sheet.read.workbook"
+PROFILE_DATA_TOOL_NAME = "sheet.profile.data"
 CELL_REF_RE = re.compile(r"^([A-Z]+)([0-9]+)$", re.IGNORECASE)
 XLSX_MIME_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
@@ -345,6 +346,100 @@ def read_sheet_workbook(path: str | Path, max_rows_per_sheet: int = 100) -> Tool
     )
 
 
+def profile_sheet_data(
+    path: str | Path,
+    max_rows_per_sheet: int = 100,
+    include_source_refs: bool = False,
+) -> ToolResult:
+    read_result = read_sheet_workbook(path, max_rows_per_sheet=max_rows_per_sheet)
+    if read_result.status == "failed":
+        return _failed(
+            PROFILE_DATA_TOOL_NAME,
+            read_result.error or AgentPDFError(code="unsupported_file_type", message="Sheet profile failed."),
+        )
+
+    sheets = read_result.usage.get("sheets", [])
+    if not isinstance(sheets, list):
+        sheets = []
+    profiles = [
+        _profile_sheet_payload(sheet)
+        for sheet in sheets
+        if isinstance(sheet, dict) and (include_source_refs or not _is_source_refs_sheet(sheet))
+    ]
+    source_refs = _source_refs_summary([sheet for sheet in sheets if isinstance(sheet, dict)])
+    data_row_count = sum(int(profile["data_row_count"]) for profile in profiles)
+    missing_cell_count = sum(int(profile["missing_cell_count"]) for profile in profiles)
+    formula_cell_count = sum(int(profile["formula_cell_count"]) for profile in profiles)
+    column_count = sum(len(profile["columns"]) for profile in profiles)
+    source_coverage = _source_coverage_status(data_row_count, int(source_refs["row_count"]))
+    warnings = list(read_result.warnings)
+    if missing_cell_count:
+        warnings.append(f"Workbook profile found missing cells: {missing_cell_count}.")
+    if source_coverage["status"] in {"missing", "partial"}:
+        warnings.append(f"Workbook source coverage is {source_coverage['status']}.")
+
+    checks = [
+        ValidationCheck(
+            name="workbook_read",
+            status="passed",
+            details={
+                "sheet_count": read_result.usage["summary"]["sheet_count"],
+                "profiled_sheet_count": len(profiles),
+            },
+        ),
+        _validation_check(
+            "missing_cells_absent",
+            condition=missing_cell_count == 0,
+            failed_status="warning",
+            passed_details={"missing_cell_count": missing_cell_count},
+            failed_message="Workbook profile contains missing cells.",
+        ),
+        _validation_check(
+            "source_coverage_complete",
+            condition=source_coverage["status"] == "complete",
+            failed_status="warning",
+            passed_details=source_coverage,
+            failed_message="Workbook source refs do not cover all profiled data rows.",
+        ),
+    ]
+
+    return ToolResult(
+        job_id=_job_id(),
+        status="succeeded",
+        tool=PROFILE_DATA_TOOL_NAME,
+        validation=ValidationReport(
+            status=_validation_report_status(checks),
+            checks=checks,
+            warnings=warnings,
+        ),
+        warnings=warnings,
+        usage={
+            "workbook": read_result.usage["workbook"],
+            "summary": {
+                "sheet_count": read_result.usage["summary"]["sheet_count"],
+                "profiled_sheet_count": len(profiles),
+                "column_count": column_count,
+                "data_row_count": data_row_count,
+                "missing_cell_count": missing_cell_count,
+                "formula_cell_count": formula_cell_count,
+                "source_refs_sheet_present": source_refs["present"],
+                "source_ref_row_count": source_refs["row_count"],
+                "source_coverage": source_coverage,
+                "max_rows_per_sheet": max(0, int(max_rows_per_sheet)),
+                "include_source_refs": include_source_refs,
+            },
+            "profiles": profiles,
+            "safety": read_result.usage["safety"],
+        },
+        next_recommended_tools=[
+            "sheet.write.workbook",
+            "sheet.validate.workbook",
+            "office.context.build_packet",
+            "office.workflow.source_to_deck",
+        ],
+    )
+
+
 def validate_sheet_workbook(path: str | Path) -> ToolResult:
     preflight = inspect_office_file(path)
     if preflight.status == "failed":
@@ -598,14 +693,145 @@ def _read_sheet_payloads(
 
 def _source_refs_summary(sheets: list[dict[str, object]]) -> dict[str, object]:
     for sheet in sheets:
-        normalized_name = str(sheet["name"]).replace(" ", "").replace("_", "").lower()
-        if normalized_name == "sourcerefs":
+        if _is_source_refs_sheet(sheet):
             return {
                 "present": True,
                 "sheet_name": sheet["name"],
                 "row_count": max(0, int(sheet["row_count"]) - 1),
             }
     return {"present": False, "sheet_name": None, "row_count": 0}
+
+
+def _is_source_refs_sheet(sheet: dict[str, object]) -> bool:
+    normalized_name = str(sheet.get("name", "")).replace(" ", "").replace("_", "").lower()
+    return normalized_name == "sourcerefs"
+
+
+def _profile_sheet_payload(sheet: dict[str, object]) -> dict[str, object]:
+    rows = sheet.get("rows", [])
+    if not isinstance(rows, list) or not rows:
+        return {
+            "sheet_name": sheet.get("name", ""),
+            "sheet_index": sheet.get("sheet_index", 0),
+            "header_row_index": None,
+            "headers": [],
+            "data_row_count": 0,
+            "missing_cell_count": 0,
+            "formula_cell_count": 0,
+            "columns": [],
+        }
+    header_row = rows[0] if isinstance(rows[0], dict) else {}
+    headers = _headers_from_row(header_row)
+    data_rows = [row for row in rows[1:] if isinstance(row, dict)]
+    columns = [
+        _profile_column(column_index=index, header=header, data_rows=data_rows)
+        for index, header in enumerate(headers, start=1)
+    ]
+    return {
+        "sheet_name": sheet.get("name", ""),
+        "sheet_index": sheet.get("sheet_index", 0),
+        "header_row_index": header_row.get("row_index") if isinstance(header_row, dict) else None,
+        "headers": headers,
+        "data_row_count": len(data_rows),
+        "missing_cell_count": sum(int(column["missing_count"]) for column in columns),
+        "formula_cell_count": sum(int(column["formula_count"]) for column in columns),
+        "columns": columns,
+    }
+
+
+def _headers_from_row(row: dict[str, object]) -> list[str]:
+    cells = row.get("cells", [])
+    if not isinstance(cells, list):
+        return []
+    max_column = max(
+        (int(cell["column_index"]) for cell in cells if isinstance(cell, dict) and "column_index" in cell),
+        default=0,
+    )
+    values_by_column = {
+        int(cell["column_index"]): str(cell.get("value", "")).strip()
+        for cell in cells
+        if isinstance(cell, dict) and "column_index" in cell
+    }
+    return [values_by_column.get(index) or f"column_{index}" for index in range(1, max_column + 1)]
+
+
+def _profile_column(column_index: int, header: str, data_rows: list[dict[str, object]]) -> dict[str, object]:
+    missing_count = 0
+    nonempty_count = 0
+    formula_count = 0
+    type_counts: dict[str, int] = {"number": 0, "boolean": 0, "text": 0, "blank": 0}
+    examples: list[str] = []
+    for row in data_rows:
+        cell = _cell_for_column(row, column_index)
+        value = str(cell.get("value", "")).strip() if cell is not None else ""
+        if cell is not None and cell.get("formula"):
+            formula_count += 1
+        if value == "":
+            missing_count += 1
+            type_counts["blank"] += 1
+            continue
+        nonempty_count += 1
+        value_type = _profile_value_type(value)
+        type_counts[value_type] += 1
+        if len(examples) < 3:
+            examples.append(value)
+    return {
+        "header": header,
+        "column_index": column_index,
+        "column_ref": _column_letters(column_index),
+        "semantic_type": _semantic_type(type_counts),
+        "nonempty_count": nonempty_count,
+        "missing_count": missing_count,
+        "formula_count": formula_count,
+        "type_counts": type_counts,
+        "examples": examples,
+    }
+
+
+def _cell_for_column(row: dict[str, object], column_index: int) -> dict[str, object] | None:
+    cells = row.get("cells", [])
+    if not isinstance(cells, list):
+        return None
+    for cell in cells:
+        if isinstance(cell, dict) and int(cell.get("column_index", 0)) == column_index:
+            return cell
+    return None
+
+
+def _profile_value_type(value: str) -> str:
+    lowered = value.lower()
+    if lowered in {"true", "false"}:
+        return "boolean"
+    try:
+        float(value.replace(",", ""))
+    except ValueError:
+        return "text"
+    return "number"
+
+
+def _semantic_type(type_counts: dict[str, int]) -> str:
+    candidates = {key: value for key, value in type_counts.items() if key != "blank"}
+    if not candidates or max(candidates.values(), default=0) == 0:
+        return "blank"
+    return max(candidates, key=candidates.get)
+
+
+def _source_coverage_status(data_row_count: int, source_ref_row_count: int) -> dict[str, object]:
+    if data_row_count == 0:
+        status = "no_data"
+    elif source_ref_row_count >= data_row_count:
+        status = "complete"
+    elif source_ref_row_count > 0:
+        status = "partial"
+    else:
+        status = "missing"
+    ratio = 1.0 if data_row_count == 0 else min(source_ref_row_count, data_row_count) / data_row_count
+    return {
+        "status": status,
+        "data_row_count": data_row_count,
+        "source_ref_row_count": source_ref_row_count,
+        "coverage_ratio": ratio,
+    }
 
 
 def _validation_check(

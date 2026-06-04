@@ -440,7 +440,7 @@
                          },
                          {
                              "name":  "sheet.profile.data",
-                             "status":  "planned",
+                             "status":  "beta",
                              "description":  "Profile sheet data types, headers, empty ranges, anomalies, and source coverage.",
                              "domain":  "sheet",
                              "interfaces":  [
@@ -449,7 +449,7 @@
                                                 "rest",
                                                 "sdk"
                                             ],
-                             "implemented":  false,
+                             "implemented":  true,
                              "oss_default":  true,
                              "requires_model":  false
                          },
