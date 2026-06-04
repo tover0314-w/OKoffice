@@ -20,13 +20,14 @@ body:
       label: Area
       options:
         - Path safety
+        - Office package parsing / relationships
         - PDF parsing / rendering
         - Metadata removal
         - Redaction
         - Dependencies
         - Docker / sandboxing
         - MCP / REST exposure
-        - AI / optional workers
+        - AI, OCR, formula engines, or optional workers
         - Other
     validations:
       required: true

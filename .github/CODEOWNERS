@@ -3,12 +3,16 @@
 
 # Public contracts and tool surfaces need careful review.
 /schemas/ @tover0314-w
+/src/okoffice/ @tover0314-w
 /src/agentpdf/tools/ @tover0314-w
 /src/agentpdf/schemas/ @tover0314-w
 /src/agentpdf/mcp/ @tover0314-w
 /src/agentpdf/api/ @tover0314-w
 
 # Community, safety, dependency, and translation policy.
+/README.md @tover0314-w
+/README.zh-CN.md @tover0314-w
+/assets/brand/ @tover0314-w
 /SECURITY.md @tover0314-w
 /CONTRIBUTING.md @tover0314-w
 /community/ @tover0314-w

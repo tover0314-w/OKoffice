@@ -1,5 +1,5 @@
 name: Tool spec request
-description: Propose or refine a public PDF tool contract
+description: Propose or refine a public OKoffice tool contract
 title: "tool: "
 labels: ["enhancement", "area:tooling", "needs-triage"]
 body:
@@ -8,7 +8,21 @@ body:
     attributes:
       label: Tool name
       description: Use the public namespace if known.
-      placeholder: "pdf.organize.crop"
+      placeholder: "office.workflow.extract_to_sheet"
+    validations:
+      required: true
+  - type: dropdown
+    id: domain
+    attributes:
+      label: Domain
+      options:
+        - office.*
+        - word.*
+        - sheet.*
+        - deck.*
+        - pdf.* compatibility
+        - agent setup
+        - not sure yet
     validations:
       required: true
   - type: textarea
@@ -27,7 +41,7 @@ body:
     id: output
     attributes:
       label: Proposed output evidence
-      description: Include artifacts, validation, warnings, usage, and next recommended tools.
+      description: Include artifacts, validation, warnings, usage, native source refs, and next recommended tools.
       render: json
   - type: checkboxes
     id: interfaces
@@ -45,4 +59,4 @@ body:
     id: risks
     attributes:
       label: Safety, privacy, or license risks
-      description: Mention path safety, redaction, metadata, external calls, large files, or optional dependencies.
+      description: Mention path safety, macros, metadata, redaction, external calls, large files, optional workers, or dependency constraints.

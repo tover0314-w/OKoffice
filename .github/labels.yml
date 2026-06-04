@@ -12,7 +12,7 @@
   description: Translation, localization, multilingual README, or language-specific docs.
 - name: security
   color: b60205
-  description: Security-sensitive PDF, dependency, path, or redaction work.
+  description: Security-sensitive Office/PDF, dependency, path, metadata, or redaction work.
 - name: needs-triage
   color: fbca04
   description: Maintainers have not yet confirmed scope, labels, priority, or ownership.
@@ -34,9 +34,21 @@
 - name: area:tooling
   color: 5319e7
   description: Tool manifests, tool contracts, registry entries, or public tool specs.
+- name: area:office-workflow
+  color: 5319e7
+  description: Cross-format office workflows, source graphs, evidence packs, and bundles.
+- name: area:word
+  color: 5319e7
+  description: DOCX, Word document structure, tables, comments, styles, and validation.
+- name: area:sheet
+  color: 5319e7
+  description: XLSX, sheets, cells, tables, formulas, charts, and workbook validation.
+- name: area:deck
+  color: 5319e7
+  description: PPTX, slides, notes, layouts, themes, media, charts, and deck validation.
 - name: area:pdf-core
   color: 0e8a16
-  description: Deterministic PDF operations and file handling.
+  description: Deterministic PDF compatibility operations and file handling.
 - name: area:validation
   color: 0e8a16
   description: Output validation, render checks, blank-page checks, and reports.
@@ -46,6 +58,9 @@
 - name: area:docs
   color: 0075ca
   description: Public docs, examples, status matrices, and launch polish.
+- name: area:repo-ui
+  color: 0075ca
+  description: README, GitHub templates, badges, labels, profile polish, and contributor UX.
 - name: area:security
   color: b60205
   description: Path safety, metadata removal, redaction, permissions, or sandboxing.

@@ -1,5 +1,5 @@
 name: Feature request
-description: Suggest a new tool or product improvement
+description: Suggest a new tool, workflow, integration, or product improvement
 title: "feat: "
 labels: ["enhancement", "needs-triage"]
 body:
@@ -8,7 +8,7 @@ body:
     attributes:
       label: Problem
       description: What user, agent, or document workflow problem does this solve?
-      placeholder: "Agents need a safe way to..."
+      placeholder: "Agents need a safe way to turn multiple DOCX/PDF sources into an evidence workbook..."
     validations:
       required: true
   - type: textarea
@@ -23,17 +23,20 @@ body:
     attributes:
       label: Primary area
       options:
+        - office.* workflow
+        - word.* documents
+        - sheet.* workbooks
+        - deck.* presentations
+        - pdf.* compatibility
+        - Source graph / evidence / citations
+        - Validation / QA
         - CLI
         - MCP
         - REST API
         - TypeScript / Node SDK
-        - PDF core
-        - Validation
-        - Create / compose / patch
-        - Lite parse / local RAG
         - Security
-        - Documentation
-        - Infrastructure
+        - Documentation / repo UI
+        - Infrastructure / CI
     validations:
       required: true
   - type: checkboxes
@@ -44,6 +47,7 @@ body:
         - label: CLI
         - label: MCP
         - label: REST API / OpenAPI
+        - label: Python API
         - label: TypeScript / Node SDK
         - label: Tool manifest / schema catalog
         - label: Documentation examples
@@ -51,7 +55,7 @@ body:
     id: output-contract
     attributes:
       label: Expected structured output
-      description: What artifacts, validation evidence, warnings, usage fields, or next recommended tools should agents receive?
+      description: What artifacts, validation evidence, warnings, usage fields, source refs, or next recommended tools should agents receive?
       render: json
   - type: textarea
     id: alternatives
@@ -65,4 +69,4 @@ body:
       options:
         - label: This can work locally without a hosted cloud service.
         - label: This may require an optional worker or feature flag.
-        - label: This has security, privacy, license, or redaction implications.
+        - label: This has security, privacy, license, redaction, or external-call implications.

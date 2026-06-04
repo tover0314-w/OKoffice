@@ -1,14 +1,15 @@
-# okpdf Brand Assets
+# OKoffice Brand Assets
 
-This directory contains repository-ready brand assets for okpdf.
+This directory contains lightweight repository-ready brand assets for OKoffice.
 
 ## Files
 
-- `okpdf-logo.png`: primary README logo.
-- `okpdf-logo-agentic.png`: generated agent-native variant for social cards, docs, and launch experiments.
+- `okoffice-mark.svg`: primary README wordmark.
+- `okpdf-logo.png`: legacy compatibility placeholder from the former okpdf identity.
+- `okpdf-logo-agentic.png`: legacy generated variant from the former okpdf identity.
 
 ## Usage Notes
 
 - Keep the primary mark simple at small sizes.
-- Prefer the agentic variant when introducing MCP, local agents, or workflow automation.
+- Prefer the OKoffice mark for README, docs, and launch materials.
 - Do not embed external service marks or proprietary logos in generated brand assets.

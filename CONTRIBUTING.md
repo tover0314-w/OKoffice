@@ -1,32 +1,35 @@
-# Contributing to okpdf
+# Contributing to OKoffice
 
-Thank you for contributing. okpdf aims to become the open-source PDF infrastructure layer for AI agents, local document automation, and self-hosted workflows.
+Thank you for helping build OKoffice. The project is moving from a PDF-only identity toward local-first, agent-native Office infrastructure across Word, Excel, PowerPoint, PDF, and audit bundles.
+
+The current runnable compatibility package is still `agentpdf` / `okpdf`. Preserve those paths unless a migration task explicitly changes them.
 
 ## Contribution Types
 
 We welcome:
 
-- Core PDF tools.
-- CLI, MCP, REST, and TypeScript/Node SDK improvements.
-- Schemas, manifests, and tool contract refinements.
-- Document parsing, Document IR, local RAG, and evidence workflow improvements.
-- Tests, generated fixtures, and golden artifacts with clear provenance.
-- Documentation, examples, translations, and onboarding polish.
+- Word, Excel, PowerPoint, PDF, and cross-format workflow tools.
+- CLI, MCP, REST, Python, and TypeScript/Node SDK improvements.
+- Schemas, manifests, source locators, and public tool contract refinements.
+- Document IR, source graphs, evidence workflows, validation, and artifact bundles.
+- Tests, fixtures, golden artifacts, and examples with clear provenance.
+- Documentation, examples, translations, and GitHub repository polish.
 - Security hardening, sandboxing guidance, dependency review, and validation improvements.
-- Agent integrations and workflow recipes.
+- Agent integrations for Codex, Claude Code/Desktop, Cursor, OpenClaw, Kilo Code, Vercel AI SDK, and other tool-call runtimes.
 
 ## Development Setup
 
 ```bash
-git clone git@github.com:tover0314-w/okpdf.git
-cd okpdf
+git clone git@github.com:tover0314-w/OKoffice.git
+cd OKoffice
+
 python scripts/setup_dev.py
 python scripts/doctor.py
 pytest -q
-okpdf --help
+okoffice --help
 ```
 
-For the TypeScript/Node SDK:
+For the compatibility TypeScript/Node SDK:
 
 ```bash
 npm install
@@ -39,11 +42,13 @@ Every public tool should:
 
 - Return the standard `ToolResult` shape.
 - Include artifacts, validation evidence, warnings, usage, and next recommended tools.
+- Preserve native locators where relevant: paragraphs, tables, comments, cells, formulas, charts, slides, notes, pages, bboxes, and artifact refs.
 - Use stable error codes from `schemas/error-codes.yaml`.
 - Never silently mutate input files.
 - Write new output artifacts to explicit paths.
 - Reject path traversal and suspicious filenames.
 - Document CLI, MCP, REST, expected output, error output, limitations, and dependency/license notes.
+- Keep hosted/model/OCR/worker requirements behind explicit feature flags and docs.
 
 ## Pull Request Checklist
 
@@ -53,12 +58,12 @@ Before opening a PR:
 - [ ] `pytest -q` passes.
 - [ ] `npm --workspace @okpdf/agentpdf-node test` passes when Node SDK behavior is touched.
 - [ ] `ruff check src tests scripts` passes when Python code is touched.
-- [ ] Public schema or manifest changes are documented.
-- [ ] CLI, MCP, REST, and Node examples are updated when public behavior changes.
-- [ ] Generated PDFs include validation where applicable.
+- [ ] Public schema, manifest, or tool-status changes are documented.
+- [ ] CLI, MCP, REST, and SDK examples are updated when public behavior changes.
+- [ ] Generated Office/PDF artifacts include validation evidence where applicable.
 - [ ] New dependencies are reviewed against `community/DEPENDENCY_POLICY.md`.
 - [ ] No secrets, tokens, proprietary endpoints, private URLs, or machine-specific paths are included.
-- [ ] Documentation remains polished and readable.
+- [ ] README, translated README, and GitHub templates remain aligned when public positioning changes.
 
 ## Multilingual Docs
 
@@ -68,9 +73,9 @@ When changing setup, safety, public contracts, examples, or repository hygiene, 
 
 ## Repository Hygiene
 
-Do not commit local output directories, dependency folders, caches, secrets, personal agent configs, build artifacts, logs, databases, or ad hoc generated PDFs.
+Do not commit local output directories, dependency folders, caches, secrets, personal agent configs, build artifacts, logs, databases, or ad hoc generated Office/PDF artifacts.
 
-Generated PDFs should normally live under `.agentpdf-out/` and remain untracked. Commit generated PDFs only when they are small, license-safe, reproducible, and documented. See [docs/REPOSITORY_HYGIENE.md](docs/REPOSITORY_HYGIENE.md).
+Generated artifacts should normally live under `.okoffice-out/` or the compatibility `.agentpdf-out/` directory and remain untracked. Commit generated artifacts only when they are small, license-safe, reproducible, and documented. See [docs/REPOSITORY_HYGIENE.md](docs/REPOSITORY_HYGIENE.md).
 
 ## Security
 
@@ -78,12 +83,12 @@ Do not open public issues for vulnerabilities, exploit details, private document
 
 Security-sensitive areas include:
 
+- Office package parsing and relationship handling.
 - PDF parsing and rendering.
 - Path safety and filesystem access.
-- Metadata removal.
-- Redaction and redaction verification.
+- Metadata removal and redaction verification.
 - MCP/REST exposure.
-- Optional workers, OCR, AI parse, and external calls.
+- Optional workers, OCR, AI parse, formula engines, and external calls.
 
 ## Developer Certificate of Origin
 

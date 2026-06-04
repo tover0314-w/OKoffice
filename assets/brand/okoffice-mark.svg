@@ -1,0 +1,19 @@
+<svg width="720" height="180" viewBox="0 0 720 180" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">OKoffice</title>
+  <desc id="desc">A compact OKoffice wordmark with document, spreadsheet, slide, and PDF panels.</desc>
+  <rect width="720" height="180" rx="28" fill="#0B1220"/>
+  <rect x="34" y="34" width="52" height="70" rx="10" fill="#EAF2FF"/>
+  <path d="M48 54H72M48 70H70M48 86H64" stroke="#2563EB" stroke-width="5" stroke-linecap="round"/>
+  <rect x="74" y="56" width="52" height="70" rx="10" fill="#ECFDF5"/>
+  <path d="M88 78H112M88 94H112M88 110H112M96 70V118M104 70V118" stroke="#059669" stroke-width="4" stroke-linecap="round"/>
+  <rect x="114" y="34" width="52" height="70" rx="10" fill="#FFF7ED"/>
+  <path d="M130 86L142 62L154 86H130Z" fill="#EA580C"/>
+  <path d="M130 92H154" stroke="#EA580C" stroke-width="5" stroke-linecap="round"/>
+  <rect x="154" y="56" width="52" height="70" rx="10" fill="#FDF2F8"/>
+  <path d="M170 78H190M170 94H184M170 110H190" stroke="#DB2777" stroke-width="5" stroke-linecap="round"/>
+  <path d="M246 58C246 39.222 260.998 24 279.5 24C298.002 24 313 39.222 313 58C313 76.778 298.002 92 279.5 92C260.998 92 246 76.778 246 58ZM262 58C262 67.941 269.835 76 279.5 76C289.165 76 297 67.941 297 58C297 48.059 289.165 40 279.5 40C269.835 40 262 48.059 262 58Z" fill="#F8FAFC"/>
+  <path d="M323 25H339V54L365 25H386L356 57L388 91H366L339 61V91H323V25Z" fill="#F8FAFC"/>
+  <text x="246" y="132" fill="#CBD5E1" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="34" font-weight="650" letter-spacing="0">office</text>
+  <text x="430" y="74" fill="#F8FAFC" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="35" font-weight="700" letter-spacing="0">agent-native</text>
+  <text x="430" y="118" fill="#94A3B8" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="27" font-weight="500" letter-spacing="0">Word · Excel · PPT · PDF</text>
+</svg>
