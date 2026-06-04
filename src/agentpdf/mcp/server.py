@@ -36,6 +36,7 @@ from agentpdf.tools.runner import (
     run_compare_semantic_diff,
     run_compare_visual_diff,
     run_compare_version_report,
+    run_deck_inspect_presentation,
     run_create_markdown,
     run_create_text,
     run_create_agent,
@@ -139,6 +140,7 @@ from agentpdf.tools.runner import (
     run_security_verify_redaction,
     run_security_verify_signature,
     run_select_target_profile,
+    run_sheet_inspect_workbook,
     run_split,
     run_strikeout,
     run_storyboard_plan,
@@ -158,6 +160,7 @@ from agentpdf.tools.runner import (
     run_workflow_research_deck,
     run_workflow_report,
     run_workflow_run,
+    run_word_inspect_document,
     run_xlsx_to_pdf,
 )
 
@@ -176,6 +179,9 @@ def create_mcp_server() -> FastMCP:
     server.tool(name="agent_setup_kilo_code")(agent_setup_kilo_code)
     server.tool(name="agent_setup_openclaw")(agent_setup_openclaw)
     server.tool(name="office_inspect_file")(office_inspect_file)
+    server.tool(name="word_inspect_document")(word_inspect_document)
+    server.tool(name="sheet_inspect_workbook")(sheet_inspect_workbook)
+    server.tool(name="deck_inspect_presentation")(deck_inspect_presentation)
     server.tool(name="pdf_inspect_document")(pdf_inspect_document)
     server.tool(name="pdf_inspect_pages")(pdf_inspect_pages)
     server.tool(name="pdf_inspect_health")(pdf_inspect_health)
@@ -410,6 +416,21 @@ def pdf_inspect_document(path: str) -> str:
 def office_inspect_file(path: str) -> str:
     """Inspect a local Office-compatible file and recommend next tools."""
     return run_office_inspect_file(path).model_dump_json()
+
+
+def word_inspect_document(path: str) -> str:
+    """Inspect a local Word document and recommend next tools."""
+    return run_word_inspect_document(path).model_dump_json()
+
+
+def sheet_inspect_workbook(path: str) -> str:
+    """Inspect a local Excel workbook and recommend next tools."""
+    return run_sheet_inspect_workbook(path).model_dump_json()
+
+
+def deck_inspect_presentation(path: str) -> str:
+    """Inspect a local PowerPoint deck and recommend next tools."""
+    return run_deck_inspect_presentation(path).model_dump_json()
 
 
 def pdf_inspect_pages(input_path: str, pages: str = "all", render_check: bool = False) -> str:

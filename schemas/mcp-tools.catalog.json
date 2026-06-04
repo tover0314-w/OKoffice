@@ -33,6 +33,21 @@
       "status": "beta"
     },
     {
+      "name": "word_inspect_document",
+      "maps_to": "word.inspect.document",
+      "status": "beta"
+    },
+    {
+      "name": "sheet_inspect_workbook",
+      "maps_to": "sheet.inspect.workbook",
+      "status": "beta"
+    },
+    {
+      "name": "deck_inspect_presentation",
+      "maps_to": "deck.inspect.presentation",
+      "status": "beta"
+    },
+    {
       "name": "pdf_inspect_document",
       "maps_to": "pdf.inspect.document",
       "status": "stable"

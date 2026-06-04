@@ -40,6 +40,7 @@ from agentpdf.tools.runner import (
     run_compare_semantic_diff,
     run_compare_visual_diff,
     run_compare_version_report,
+    run_deck_inspect_presentation,
     run_create_markdown,
     run_create_text,
     run_create_agent,
@@ -143,6 +144,7 @@ from agentpdf.tools.runner import (
     run_security_verify_redaction,
     run_security_verify_signature,
     run_select_target_profile,
+    run_sheet_inspect_workbook,
     run_split,
     run_storyboard_plan,
     run_strikeout,
@@ -162,6 +164,7 @@ from agentpdf.tools.runner import (
     run_workflow_research_deck,
     run_workflow_report,
     run_workflow_run,
+    run_word_inspect_document,
     run_xlsx_to_pdf,
 )
 
@@ -282,6 +285,12 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
         )
     if tool_name == "office.inspect.file":
         return run_office_inspect_file(payload.get("path", payload.get("input_path", "")))
+    if tool_name == "word.inspect.document":
+        return run_word_inspect_document(payload.get("path", payload.get("input_path", "")))
+    if tool_name == "sheet.inspect.workbook":
+        return run_sheet_inspect_workbook(payload.get("path", payload.get("input_path", "")))
+    if tool_name == "deck.inspect.presentation":
+        return run_deck_inspect_presentation(payload.get("path", payload.get("input_path", "")))
     if tool_name == "pdf.inspect.document":
         return run_inspect(payload.get("path", ""))
     if tool_name == "pdf.inspect.pages":

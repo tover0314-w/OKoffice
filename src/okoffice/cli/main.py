@@ -6,15 +6,20 @@ from typing import Annotated, Any
 
 import typer
 
+from agentpdf.office.deck import inspect_deck_presentation
 from agentpdf.office.inspect import inspect_office_file
 from agentpdf.office.planner import plan_office_workflow
+from agentpdf.office.sheet import inspect_sheet_workbook
+from agentpdf.office.word import inspect_word_document
 from okoffice import __version__
 from okoffice.tools.registry import load_okoffice_manifest
 
 
 app = typer.Typer(help="okoffice local-first agent-native Office CLI")
 tools_app = typer.Typer(help="Discover target okoffice tools and legacy compatibility tools.")
-app.add_typer(tools_app, name="tools")
+word_app = typer.Typer(help="Inspect and transform Word documents.")
+sheet_app = typer.Typer(help="Inspect and transform Excel workbooks.")
+deck_app = typer.Typer(help="Inspect and transform PowerPoint decks.")
 
 
 @app.callback()
@@ -80,6 +85,33 @@ def inspect(
         raise typer.Exit(1)
 
 
+@word_app.command("inspect")
+def word_inspect(
+    path: Annotated[Path, typer.Argument(help="DOCX artifact path to inspect.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Inspect a local Word document without mutating it."""
+    _emit_result(inspect_word_document(path), json_output=json_output)
+
+
+@sheet_app.command("inspect")
+def sheet_inspect(
+    path: Annotated[Path, typer.Argument(help="XLSX artifact path to inspect.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Inspect a local Excel workbook without mutating it."""
+    _emit_result(inspect_sheet_workbook(path), json_output=json_output)
+
+
+@deck_app.command("inspect")
+def deck_inspect(
+    path: Annotated[Path, typer.Argument(help="PPTX artifact path to inspect.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Inspect a local PowerPoint deck without mutating it."""
+    _emit_result(inspect_deck_presentation(path), json_output=json_output)
+
+
 @tools_app.command("list")
 def tools_list(
     json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
@@ -113,9 +145,24 @@ def tools_show(
     typer.echo(f"{tool['name']}\nstatus: {tool['status']}\nimplemented: {tool.get('implemented', False)}")
 
 
+app.add_typer(tools_app, name="tools")
+app.add_typer(word_app, name="word")
+app.add_typer(sheet_app, name="sheet")
+app.add_typer(deck_app, name="deck")
+
+
 def _find_tool(name: str) -> dict[str, Any]:
     manifest = load_okoffice_manifest()
     for tool in [*manifest["target_tools"], *manifest["compatibility_tools"]]:
         if tool["name"] == name:
             return dict(tool)
     raise typer.BadParameter(f"Unknown okoffice tool: {name}")
+
+
+def _emit_result(result: object, json_output: bool) -> None:
+    if json_output:
+        typer.echo(result.model_dump_json())
+    else:
+        typer.echo(result.model_dump_json(indent=2))
+    if result.status == "failed":
+        raise typer.Exit(1)

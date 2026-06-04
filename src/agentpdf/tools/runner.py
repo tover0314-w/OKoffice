@@ -151,7 +151,10 @@ from agentpdf.core.pdf import (
     validate_pdfa_pdf,
 )
 from agentpdf.ir.lite import parse_lite_pdf, write_document_ir_json, write_document_ir_markdown
+from agentpdf.office.deck import inspect_deck_presentation
 from agentpdf.office.inspect import inspect_office_file
+from agentpdf.office.sheet import inspect_sheet_workbook
+from agentpdf.office.word import inspect_word_document
 from agentpdf.rag.local import (
     chat_pdf,
     cite_answer,
@@ -192,6 +195,18 @@ def run_inspect(path: str | Path) -> ToolResult:
 
 def run_office_inspect_file(path: str | Path) -> ToolResult:
     return inspect_office_file(path)
+
+
+def run_word_inspect_document(path: str | Path) -> ToolResult:
+    return inspect_word_document(path)
+
+
+def run_sheet_inspect_workbook(path: str | Path) -> ToolResult:
+    return inspect_sheet_workbook(path)
+
+
+def run_deck_inspect_presentation(path: str | Path) -> ToolResult:
+    return inspect_deck_presentation(path)
 
 
 def run_inspect_pages(
