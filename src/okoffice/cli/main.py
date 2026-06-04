@@ -18,7 +18,7 @@ from agentpdf.office.sheet import (
     write_sheet_workbook,
 )
 from agentpdf.office.word import extract_word_tables, inspect_word_document
-from agentpdf.office.workflows import extract_to_sheet, sheet_to_deck
+from agentpdf.office.workflows import board_pack, extract_to_sheet, sheet_to_deck
 from okoffice import __version__
 from okoffice.tools.registry import load_okoffice_manifest
 
@@ -244,6 +244,20 @@ def workflow_sheet_to_deck(
         ),
         json_output=json_output,
     )
+
+
+@workflow_app.command("board-pack")
+def workflow_board_pack(
+    files: Annotated[
+        list[Path],
+        typer.Argument(help="Input Office artifacts to include in the board pack."),
+    ],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output board pack ZIP path.")],
+    title: Annotated[str | None, typer.Option("--title", help="Board pack title.")] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Create a local board pack ZIP with artifacts, manifest, and validation report."""
+    _emit_result(board_pack(files, output_path, title=title), json_output=json_output)
 
 
 @tools_app.command("list")

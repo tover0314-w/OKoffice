@@ -133,12 +133,11 @@ curl -X POST http://127.0.0.1:7331/v1/tools/office.workflow.board_pack/run \
   -H 'Content-Type: application/json' \
   -d '{
     "files": [
-      "contracts/vendor-a.docx",
-      "invoices/vendor-a.pdf",
-      "metrics/vendor-model.xlsx"
+      ".okoffice-out/vendor-evidence.xlsx",
+      ".okoffice-out/vendor-board-deck.pptx"
     ],
-    "out_dir": ".okoffice-out/vendor-board-pack",
-    "profile": "board_review"
+    "output_path": ".okoffice-out/vendor-board-pack.zip",
+    "title": "Vendor Board Review"
   }'
 ```
 

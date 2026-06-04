@@ -83,6 +83,7 @@ from agentpdf.tools.runner import (
     run_merge,
     run_n_up,
     run_office_inspect_file,
+    run_office_workflow_board_pack,
     run_office_workflow_extract_to_sheet,
     run_office_workflow_sheet_to_deck,
     run_page_numbers,
@@ -191,6 +192,7 @@ def create_mcp_server() -> FastMCP:
     server.tool(name="office_inspect_file")(office_inspect_file)
     server.tool(name="office_workflow_extract_to_sheet")(office_workflow_extract_to_sheet)
     server.tool(name="office_workflow_sheet_to_deck")(office_workflow_sheet_to_deck)
+    server.tool(name="office_workflow_board_pack")(office_workflow_board_pack)
     server.tool(name="word_inspect_document")(word_inspect_document)
     server.tool(name="word_extract_tables")(word_extract_tables)
     server.tool(name="sheet_inspect_workbook")(sheet_inspect_workbook)
@@ -456,6 +458,11 @@ def office_workflow_sheet_to_deck(
         title=title,
         max_rows_per_sheet=max_rows_per_sheet,
     ).model_dump_json()
+
+
+def office_workflow_board_pack(files: list[str], output_path: str, title: str | None = None) -> str:
+    """Create a local OKoffice board pack ZIP with artifacts, manifest, and validation report."""
+    return run_office_workflow_board_pack(files, output_path, title=title).model_dump_json()
 
 
 def word_inspect_document(path: str) -> str:

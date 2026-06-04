@@ -83,6 +83,7 @@ okoffice deck create-from-outline outline.json -o .okoffice-out/board-review.ppt
 okoffice deck validate .okoffice-out/board-review.pptx --json
 okoffice workflow extract-to-sheet path/to/report.docx path/to/model.xlsx -o .okoffice-out/evidence.xlsx --json
 okoffice workflow sheet-to-deck .okoffice-out/evidence.xlsx -o .okoffice-out/board-review.pptx --title "Board Review" --json
+okoffice workflow board-pack .okoffice-out/evidence.xlsx .okoffice-out/board-review.pptx -o .okoffice-out/board-pack.zip --title "Board Review" --json
 
 okpdf inspect tests/fixtures/simple.pdf --json
 okpdf serve --mcp --safe-root .
@@ -108,6 +109,7 @@ okpdf serve --api
 | `deck.validate.presentation` | beta | Validates PPTX structure, blank slides, placeholder leakage, safety markers, and source-map readiness. |
 | `office.workflow.extract_to_sheet` | beta | Builds a source-mapped XLSX evidence workbook from DOCX/XLSX tables. |
 | `office.workflow.sheet_to_deck` | beta | Profiles an evidence workbook and creates an editable PPTX review deck. |
+| `office.workflow.board_pack` | beta | Creates a local ZIP board pack with artifacts, manifest, validation report, and delivery metadata. |
 | `pdf.*` compatibility | stable/beta | 241 local PDF and agent setup tools remain available through `okpdf`, MCP, REST, and SDKs. |
 
 The codebase still exposes the compatibility Python package as `agentpdf` and the compatibility Node package as `@okpdf/agentpdf-node`. The target package identity is OKoffice; compatibility names are preserved deliberately.
@@ -120,7 +122,7 @@ The codebase still exposes the compatibility Python package as `agentpdf` and th
 | Extract | `word.extract.tables`, `sheet.read.workbook`, `sheet.profile.data`, `sheet.extract.tables`, `deck.extract.notes`, `pdf.convert.pdf_to_text` |
 | Create | `word.write.document`, `sheet.write.workbook`, `deck.create.from_outline`, `pdf.convert.markdown_to_pdf` |
 | Patch | `office.patch.plan`, `word.edit.patch`, `sheet.edit.patch`, `deck.edit.patch`, `pdf.patch.apply` |
-| Validate | `office.validation.run`, `word.validation.document`, `sheet.validate.workbook`, `deck.validation.contact_sheet`, `pdf.validation.render_check` |
+| Validate | `office.validation.run`, `word.validation.document`, `sheet.validate.workbook`, `deck.validate.presentation`, `pdf.validation.render_check` |
 | Evidence | `office.context.build_packet`, `office.evidence.coverage`, `office.source_map.create` |
 | Workflow | `office.workflow.extract_to_sheet`, `office.workflow.sheet_to_deck`, `office.workflow.board_pack`, `pdf.workflow.run` |
 | Bundle | `office.bundle.export`, `office.bundle.verify`, `pdf.artifacts.export_bundle` |

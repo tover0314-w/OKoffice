@@ -87,6 +87,7 @@ from agentpdf.tools.runner import (
     run_merge,
     run_n_up,
     run_office_inspect_file,
+    run_office_workflow_board_pack,
     run_office_workflow_extract_to_sheet,
     run_office_workflow_sheet_to_deck,
     run_page_numbers,
@@ -307,6 +308,13 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
             output_path=payload.get("output_path", payload.get("output", ".okoffice-out/deck.pptx")),
             title=str(payload["title"]) if payload.get("title") is not None else None,
             max_rows_per_sheet=int(payload.get("max_rows_per_sheet", payload.get("max_rows", 100))),
+        )
+    if tool_name == "office.workflow.board_pack":
+        files = payload.get("files", payload.get("input_paths", payload.get("paths", [])))
+        return run_office_workflow_board_pack(
+            files=files if isinstance(files, list) else [],
+            output_path=payload.get("output_path", payload.get("output", ".okoffice-out/board-pack.zip")),
+            title=str(payload["title"]) if payload.get("title") is not None else None,
         )
     if tool_name == "word.inspect.document":
         return run_word_inspect_document(payload.get("path", payload.get("input_path", "")))

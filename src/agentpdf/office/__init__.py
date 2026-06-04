@@ -13,9 +13,10 @@ from agentpdf.office.sheet import (
     write_sheet_workbook,
 )
 from agentpdf.office.word import extract_word_tables, inspect_word_document
-from agentpdf.office.workflows import extract_to_sheet, sheet_to_deck
+from agentpdf.office.workflows import board_pack, extract_to_sheet, sheet_to_deck
 
 __all__ = [
+    "board_pack",
     "extract_to_sheet",
     "sheet_to_deck",
     "extract_sheet_tables",

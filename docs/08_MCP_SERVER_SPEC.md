@@ -105,6 +105,7 @@ First target wrappers:
 - `word_create_document`
 - `office_workflow_docset_to_sheet`
 - `office_workflow_sheet_to_deck`
+- `office_workflow_board_pack`
 - `office_bundle_export`
 - `office_bundle_verify`
 

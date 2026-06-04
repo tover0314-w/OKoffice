@@ -140,8 +140,8 @@
                          },
                          {
                              "name":  "office.workflow.board_pack",
-                             "status":  "planned",
-                             "description":  "Create a board pack containing workbook, memo, deck, optional PDF, source map, validation report, and bundle.",
+                             "status":  "beta",
+                             "description":  "Create a local ZIP board pack with Office artifacts, manifest, validation report, and delivery metadata.",
                              "domain":  "office",
                              "interfaces":  [
                                                 "cli",
@@ -149,7 +149,7 @@
                                                 "rest",
                                                 "sdk"
                                             ],
-                             "implemented":  false,
+                             "implemented":  true,
                              "oss_default":  true,
                              "requires_model":  false
                          },

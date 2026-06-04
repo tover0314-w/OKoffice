@@ -45,6 +45,7 @@ okoffice deck create-from-outline outline.json -o .okoffice-out/board-review.ppt
 okoffice deck validate .okoffice-out/board-review.pptx --json
 okoffice workflow extract-to-sheet path/to/report.docx path/to/model.xlsx -o .okoffice-out/evidence.xlsx --json
 okoffice workflow sheet-to-deck .okoffice-out/evidence.xlsx -o .okoffice-out/board-review.pptx --title "Board Review" --json
+okoffice workflow board-pack .okoffice-out/evidence.xlsx .okoffice-out/board-review.pptx -o .okoffice-out/board-pack.zip --title "Board Review" --json
 
 okpdf inspect tests/fixtures/simple.pdf --json
 okpdf serve --mcp --safe-root .
@@ -70,6 +71,7 @@ okpdf serve --api
 | `deck.validate.presentation` | beta | 校验 PPTX 结构、空白页、placeholder 泄漏、安全标记和 source-map 就绪状态。 |
 | `office.workflow.extract_to_sheet` | beta | 从 DOCX/XLSX 表格生成带 source refs 的 XLSX evidence workbook。 |
 | `office.workflow.sheet_to_deck` | beta | 分析 evidence workbook，并创建可编辑的 PPTX review deck。 |
+| `office.workflow.board_pack` | beta | 创建本地 ZIP board pack，包含 artifacts、manifest、validation report 和交付元数据。 |
 | `pdf.*` 兼容层 | stable/beta | 241 个本地 PDF 和 agent setup 工具继续通过 `okpdf`、MCP、REST、SDK 可用。 |
 
 ## 产品主循环
@@ -98,7 +100,7 @@ okpdf serve --api
 | Extract | `word.extract.tables`, `sheet.read.workbook`, `sheet.profile.data`, `sheet.extract.tables`, `deck.extract.notes`, `pdf.convert.pdf_to_text` |
 | Create | `word.write.document`, `sheet.write.workbook`, `deck.create.from_outline`, `pdf.convert.markdown_to_pdf` |
 | Patch | `office.patch.plan`, `word.edit.patch`, `sheet.edit.patch`, `deck.edit.patch`, `pdf.patch.apply` |
-| Validate | `office.validation.run`, `word.validation.document`, `sheet.validate.workbook`, `deck.validation.contact_sheet`, `pdf.validation.render_check` |
+| Validate | `office.validation.run`, `word.validation.document`, `sheet.validate.workbook`, `deck.validate.presentation`, `pdf.validation.render_check` |
 | Evidence | `office.context.build_packet`, `office.evidence.coverage`, `office.source_map.create` |
 | Workflow | `office.workflow.extract_to_sheet`, `office.workflow.sheet_to_deck`, `office.workflow.board_pack`, `pdf.workflow.run` |
 | Bundle | `office.bundle.export`, `office.bundle.verify`, `pdf.artifacts.export_bundle` |

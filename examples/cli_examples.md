@@ -96,22 +96,20 @@ okoffice deck validate \
 
 ```bash
 okoffice workflow board-pack \
-  --file contracts/vendor-a.docx \
-  --file invoices/vendor-a.pdf \
-  --file metrics/vendor-model.xlsx \
-  --out-dir .okoffice-out/vendor-board-pack \
+  .okoffice-out/vendor-evidence.xlsx \
+  .okoffice-out/vendor-board-deck.pptx \
+  -o .okoffice-out/vendor-board-pack.zip \
+  --title "Vendor Board Review" \
   --json
 ```
 
 Expected artifacts:
 
-- `.xlsx` evidence workbook.
-- `.docx` executive memo.
-- `.pptx` board deck.
-- optional `.pdf` handout.
-- source map.
-- validation reports.
-- `.okoffice.zip` bundle.
+- `artifacts/vendor-evidence.xlsx`.
+- `artifacts/vendor-board-deck.pptx`.
+- `okoffice-manifest.json`.
+- `okoffice-validation.json`.
+- `.zip` board pack bundle.
 
 ## Patch And Verify
 

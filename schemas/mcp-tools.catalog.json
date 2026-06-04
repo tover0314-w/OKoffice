@@ -43,6 +43,11 @@
       "status": "beta"
     },
     {
+      "name": "office_workflow_board_pack",
+      "maps_to": "office.workflow.board_pack",
+      "status": "beta"
+    },
+    {
       "name": "word_inspect_document",
       "maps_to": "word.inspect.document",
       "status": "beta"
