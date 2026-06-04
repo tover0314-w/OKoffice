@@ -143,6 +143,7 @@ from agentpdf.tools.runner import (
     run_select_target_profile,
     run_sheet_extract_tables,
     run_sheet_inspect_workbook,
+    run_sheet_write_workbook,
     run_split,
     run_strikeout,
     run_storyboard_plan,
@@ -187,6 +188,7 @@ def create_mcp_server() -> FastMCP:
     server.tool(name="word_extract_tables")(word_extract_tables)
     server.tool(name="sheet_inspect_workbook")(sheet_inspect_workbook)
     server.tool(name="sheet_extract_tables")(sheet_extract_tables)
+    server.tool(name="sheet_write_workbook")(sheet_write_workbook)
     server.tool(name="deck_inspect_presentation")(deck_inspect_presentation)
     server.tool(name="pdf_inspect_document")(pdf_inspect_document)
     server.tool(name="pdf_inspect_pages")(pdf_inspect_pages)
@@ -447,6 +449,11 @@ def sheet_inspect_workbook(path: str) -> str:
 def sheet_extract_tables(path: str) -> str:
     """Extract workbook tables with sheet, row, column, and cell references."""
     return run_sheet_extract_tables(path).model_dump_json()
+
+
+def sheet_write_workbook(data: dict[str, object], output_path: str) -> str:
+    """Write an XLSX workbook from structured records with source refs."""
+    return run_sheet_write_workbook(data, output_path).model_dump_json()
 
 
 def deck_inspect_presentation(path: str) -> str:

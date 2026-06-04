@@ -74,6 +74,7 @@ okoffice word inspect path/to/report.docx --json
 okoffice word extract-tables path/to/report.docx --json
 okoffice sheet inspect path/to/model.xlsx --json
 okoffice sheet extract-tables path/to/model.xlsx --json
+okoffice sheet write-workbook records.json -o .okoffice-out/model.xlsx --json
 okoffice deck inspect path/to/deck.pptx --json
 okoffice workflow extract-to-sheet path/to/report.docx path/to/model.xlsx -o .okoffice-out/evidence.xlsx --json
 
@@ -92,6 +93,7 @@ okpdf serve --api
 | `word.extract.tables` | beta | Extracts DOCX tables into normalized rows/cells with source refs. |
 | `sheet.inspect.workbook` | beta | Reads workbook sheets, dimensions, formulas, tables, charts, links, and safety markers. |
 | `sheet.extract.tables` | beta | Extracts worksheet tables with sheet, row, column, and cell refs. |
+| `sheet.write.workbook` | beta | Writes source-mapped records into a local XLSX workbook with provenance sheets. |
 | `deck.inspect.presentation` | beta | Reads PPTX slide, notes, layout, theme, media, and chart facts. |
 | `office.workflow.extract_to_sheet` | beta | Builds a source-mapped XLSX evidence workbook from DOCX/XLSX tables. |
 | `pdf.*` compatibility | stable/beta | 241 local PDF and agent setup tools remain available through `okpdf`, MCP, REST, and SDKs. |

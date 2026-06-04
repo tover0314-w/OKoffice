@@ -61,6 +61,7 @@ SUPPORTED_LOCAL_WORKFLOW_TOOLS = {
     "pdf.workflow.createpdf",
     "sheet.extract.tables",
     "sheet.inspect.workbook",
+    "sheet.write.workbook",
     "word.extract.tables",
     "word.inspect.document",
 }
@@ -377,6 +378,12 @@ def _run_local_step(tool: str, payload: dict[str, Any]) -> ToolResult:
         return runner.run_sheet_inspect_workbook(payload.get("path", payload.get("input_path", "")))
     if tool == "sheet.extract.tables":
         return runner.run_sheet_extract_tables(payload.get("path", payload.get("input_path", "")))
+    if tool == "sheet.write.workbook":
+        data = payload.get("data", payload)
+        return runner.run_sheet_write_workbook(
+            data=data if isinstance(data, (dict, list)) else {},
+            output_path=payload.get("output_path", payload.get("output", ".okoffice-out/workbook.xlsx")),
+        )
     if tool == "deck.inspect.presentation":
         return runner.run_deck_inspect_presentation(payload.get("path", payload.get("input_path", "")))
     if tool == "pdf.inspect.document":

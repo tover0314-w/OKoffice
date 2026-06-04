@@ -1,18 +1,26 @@
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
+from typing import Any
 from xml.etree import ElementTree
 from uuid import uuid4
 
+from agentpdf.artifacts.store import build_artifact
 from agentpdf.office.inspect import inspect_office_file
 from agentpdf.office.ooxml import SHEET_NS, count_members, read_xml, sorted_members, zip_names
+from agentpdf.office.xlsx import write_xlsx
+from agentpdf.schemas.errors import AgentPDFException
 from agentpdf.schemas.models import AgentPDFError, ToolResult, ValidationCheck, ValidationReport
+from agentpdf.security.paths import resolve_output_path
 
 
 INSPECT_TOOL_NAME = "sheet.inspect.workbook"
 EXTRACT_TABLES_TOOL_NAME = "sheet.extract.tables"
+WRITE_WORKBOOK_TOOL_NAME = "sheet.write.workbook"
 CELL_REF_RE = re.compile(r"^([A-Z]+)([0-9]+)$", re.IGNORECASE)
+XLSX_MIME_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 
 def inspect_sheet_workbook(path: str | Path) -> ToolResult:
@@ -127,6 +135,110 @@ def extract_sheet_tables(path: str | Path) -> ToolResult:
     )
 
 
+def write_sheet_workbook(data: dict[str, Any] | list[dict[str, Any]], output_path: str | Path) -> ToolResult:
+    try:
+        output = resolve_output_path(output_path)
+    except AgentPDFException as exc:
+        return _failed(WRITE_WORKBOOK_TOOL_NAME, exc.to_error())
+
+    records = _write_records(data)
+    if not records:
+        return _failed(
+            WRITE_WORKBOOK_TOOL_NAME,
+            AgentPDFError(
+                code="unsafe_input_rejected",
+                message="sheet.write.workbook requires at least one record or table row.",
+            ),
+        )
+
+    max_columns = max(len(record["values"]) for record in records)
+    source_ref_count = sum(len(record["source_refs"]) for record in records)
+    workbook_rows = [_workbook_headers(max_columns)]
+    source_rows = [
+        [
+            "record_index",
+            "source_path",
+            "source_format",
+            "table_id",
+            "source_sheet",
+            "source_row_index",
+            "source_refs_json",
+        ]
+    ]
+    for record_index, record in enumerate(records, start=1):
+        values = list(record["values"])
+        workbook_rows.append(
+            [
+                record["source_path"],
+                record["source_format"],
+                record["table_id"],
+                record["source_sheet"],
+                record["source_row_index"],
+                *values,
+                *([""] * (max_columns - len(values))),
+            ]
+        )
+        source_rows.append(
+            [
+                record_index,
+                record["source_path"],
+                record["source_format"],
+                record["table_id"],
+                record["source_sheet"],
+                record["source_row_index"],
+                json.dumps(record["source_refs"], ensure_ascii=False, sort_keys=True),
+            ]
+        )
+
+    write_xlsx(output, [("Workbook", workbook_rows), ("SourceRefs", source_rows)])
+    artifact = build_artifact(output, WRITE_WORKBOOK_TOOL_NAME)
+    return ToolResult(
+        job_id=_job_id(),
+        status="succeeded",
+        tool=WRITE_WORKBOOK_TOOL_NAME,
+        artifacts=[artifact],
+        validation=ValidationReport(
+            status="passed",
+            checks=[
+                ValidationCheck(
+                    name="records_normalized",
+                    status="passed",
+                    details={
+                        "record_count": len(records),
+                        "column_count": max_columns,
+                        "source_ref_count": source_ref_count,
+                    },
+                ),
+                ValidationCheck(
+                    name="workbook_written",
+                    status="passed",
+                    details={"path": output.as_posix(), "mime_type": XLSX_MIME_TYPE},
+                ),
+            ],
+        ),
+        usage={
+            "summary": {
+                "record_count": len(records),
+                "column_count": max_columns,
+                "source_ref_count": source_ref_count,
+            },
+            "workbook": {
+                "path": output.as_posix(),
+                "format": "xlsx",
+                "sheets": ["Workbook", "SourceRefs"],
+                "artifact_id": artifact.artifact_id,
+            },
+            "records": records,
+        },
+        next_recommended_tools=[
+            "sheet.inspect.workbook",
+            "sheet.validation.formulas",
+            "office.context.build_packet",
+            "office.workflow.source_to_deck",
+        ],
+    )
+
+
 def _sheet_names(workbook_root: object | None) -> list[str]:
     if workbook_root is None:
         return []
@@ -156,6 +268,80 @@ def _sheet_summaries(path: Path, worksheet_members: list[str], sheet_names: list
             }
         )
     return summaries
+
+
+def _write_records(data: dict[str, Any] | list[dict[str, Any]]) -> list[dict[str, Any]]:
+    payload: Any = data
+    if isinstance(payload, dict) and isinstance(payload.get("usage"), dict):
+        payload = payload["usage"]
+    if isinstance(payload, dict) and isinstance(payload.get("records"), list):
+        return [_normalize_write_record(record) for record in payload["records"] if isinstance(record, dict)]
+    if isinstance(payload, dict) and isinstance(payload.get("tables"), list):
+        return _write_records_from_tables(payload["tables"])
+    if isinstance(payload, list):
+        return [_normalize_write_record(record) for record in payload if isinstance(record, dict)]
+    return []
+
+
+def _write_records_from_tables(tables: list[Any]) -> list[dict[str, Any]]:
+    records = []
+    for table in tables:
+        if not isinstance(table, dict):
+            continue
+        table_source = table.get("source", {}) if isinstance(table.get("source"), dict) else {}
+        for row in table.get("rows", []):
+            if not isinstance(row, dict):
+                continue
+            cells = row.get("cells", []) if isinstance(row.get("cells"), list) else []
+            records.append(
+                _normalize_write_record(
+                    {
+                        "source_path": table_source.get("document_path") or table_source.get("workbook_path") or "",
+                        "source_format": "xlsx" if table_source.get("workbook_path") else "docx",
+                        "table_id": table.get("table_id", ""),
+                        "source_sheet": table_source.get("sheet_name", ""),
+                        "source_row_index": row.get("row_index", ""),
+                        "values": [_cell_payload_value(cell) for cell in cells if isinstance(cell, dict)],
+                        "source_refs": [
+                            cell.get("source", {}) for cell in cells if isinstance(cell, dict) and cell.get("source")
+                        ],
+                    }
+                )
+            )
+    return records
+
+
+def _normalize_write_record(record: dict[str, Any]) -> dict[str, Any]:
+    values = record.get("values", [])
+    if not isinstance(values, list):
+        values = [values]
+    source_refs = record.get("source_refs", [])
+    if not isinstance(source_refs, list):
+        source_refs = [source_refs]
+    return {
+        "source_path": str(record.get("source_path", "")),
+        "source_format": str(record.get("source_format", "")),
+        "table_id": str(record.get("table_id", "")),
+        "source_sheet": str(record.get("source_sheet", "")),
+        "source_row_index": str(record.get("source_row_index", "")),
+        "values": [str(value) for value in values],
+        "source_refs": [source_ref for source_ref in source_refs if isinstance(source_ref, dict)],
+    }
+
+
+def _workbook_headers(max_columns: int) -> list[str]:
+    return [
+        "source_path",
+        "source_format",
+        "table_id",
+        "source_sheet",
+        "source_row_index",
+        *[f"col_{index}" for index in range(1, max_columns + 1)],
+    ]
+
+
+def _cell_payload_value(cell: dict[str, Any]) -> str:
+    return str(cell.get("text", cell.get("value", "")))
 
 
 def _extract_worksheet_tables(

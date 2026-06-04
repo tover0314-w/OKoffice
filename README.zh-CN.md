@@ -36,6 +36,7 @@ okoffice word inspect path/to/report.docx --json
 okoffice word extract-tables path/to/report.docx --json
 okoffice sheet inspect path/to/model.xlsx --json
 okoffice sheet extract-tables path/to/model.xlsx --json
+okoffice sheet write-workbook records.json -o .okoffice-out/model.xlsx --json
 okoffice deck inspect path/to/deck.pptx --json
 okoffice workflow extract-to-sheet path/to/report.docx path/to/model.xlsx -o .okoffice-out/evidence.xlsx --json
 
@@ -54,6 +55,7 @@ okpdf serve --api
 | `word.extract.tables` | beta | 把 DOCX 表格抽取成带 source refs 的 rows/cells。 |
 | `sheet.inspect.workbook` | beta | 读取 workbook sheets、dimension、公式、表、图表、外链和安全标记。 |
 | `sheet.extract.tables` | beta | 抽取工作表表格，保留 sheet、row、column、cell refs。 |
+| `sheet.write.workbook` | beta | 把 source-mapped records 写成本地 XLSX，并保留 provenance sheet。 |
 | `deck.inspect.presentation` | beta | 读取 PPTX 幻灯片、notes、layout、theme、media 和 chart 信息。 |
 | `office.workflow.extract_to_sheet` | beta | 从 DOCX/XLSX 表格生成带 source refs 的 XLSX evidence workbook。 |
 | `pdf.*` 兼容层 | stable/beta | 241 个本地 PDF 和 agent setup 工具继续通过 `okpdf`、MCP、REST、SDK 可用。 |

@@ -9,7 +9,7 @@ import typer
 from agentpdf.office.deck import inspect_deck_presentation
 from agentpdf.office.inspect import inspect_office_file
 from agentpdf.office.planner import plan_office_workflow
-from agentpdf.office.sheet import extract_sheet_tables, inspect_sheet_workbook
+from agentpdf.office.sheet import extract_sheet_tables, inspect_sheet_workbook, write_sheet_workbook
 from agentpdf.office.word import extract_word_tables, inspect_word_document
 from agentpdf.office.workflows import extract_to_sheet
 from okoffice import __version__
@@ -121,6 +121,17 @@ def sheet_extract_tables(
 ) -> None:
     """Extract workbook tables with sheet, row, column, and cell references."""
     _emit_result(extract_sheet_tables(path), json_output=json_output)
+
+
+@sheet_app.command("write-workbook")
+def sheet_write_workbook(
+    data_path: Annotated[Path, typer.Argument(help="JSON records or ToolResult path to write as XLSX.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output XLSX workbook path.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Write an XLSX workbook from structured records with source refs."""
+    payload = json.loads(data_path.read_text(encoding="utf-8"))
+    _emit_result(write_sheet_workbook(payload, output_path), json_output=json_output)
 
 
 @deck_app.command("inspect")

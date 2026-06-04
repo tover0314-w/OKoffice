@@ -58,6 +58,11 @@
       "status": "beta"
     },
     {
+      "name": "sheet_write_workbook",
+      "maps_to": "sheet.write.workbook",
+      "status": "beta"
+    },
+    {
       "name": "deck_inspect_presentation",
       "maps_to": "deck.inspect.presentation",
       "status": "beta"

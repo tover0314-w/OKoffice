@@ -470,7 +470,7 @@
                          },
                          {
                              "name":  "sheet.write.workbook",
-                             "status":  "planned",
+                             "status":  "beta",
                              "description":  "Create XLSX workbooks from structured tables, formulas, charts, and validation notes.",
                              "domain":  "sheet",
                              "interfaces":  [
@@ -479,7 +479,7 @@
                                                 "rest",
                                                 "sdk"
                                             ],
-                             "implemented":  false,
+                             "implemented":  true,
                              "oss_default":  true,
                              "requires_model":  false
                          },
