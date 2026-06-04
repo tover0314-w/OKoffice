@@ -335,7 +335,7 @@
                          },
                          {
                              "name":  "word.extract.tables",
-                             "status":  "planned",
+                             "status":  "beta",
                              "description":  "Extract Word tables into normalized records with source cell locations.",
                              "domain":  "word",
                              "interfaces":  [
@@ -344,7 +344,7 @@
                                                 "rest",
                                                 "sdk"
                                             ],
-                             "implemented":  false,
+                             "implemented":  true,
                              "oss_default":  true,
                              "requires_model":  false
                          },
@@ -455,7 +455,7 @@
                          },
                          {
                              "name":  "sheet.extract.tables",
-                             "status":  "planned",
+                             "status":  "beta",
                              "description":  "Extract normalized tables from workbooks with sheet, row, column, and cell refs.",
                              "domain":  "sheet",
                              "interfaces":  [
@@ -464,7 +464,7 @@
                                                 "rest",
                                                 "sdk"
                                             ],
-                             "implemented":  false,
+                             "implemented":  true,
                              "oss_default":  true,
                              "requires_model":  false
                          },

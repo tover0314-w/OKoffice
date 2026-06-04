@@ -140,6 +140,7 @@ from agentpdf.tools.runner import (
     run_security_verify_redaction,
     run_security_verify_signature,
     run_select_target_profile,
+    run_sheet_extract_tables,
     run_sheet_inspect_workbook,
     run_split,
     run_strikeout,
@@ -160,6 +161,7 @@ from agentpdf.tools.runner import (
     run_workflow_research_deck,
     run_workflow_report,
     run_workflow_run,
+    run_word_extract_tables,
     run_word_inspect_document,
     run_xlsx_to_pdf,
 )
@@ -180,7 +182,9 @@ def create_mcp_server() -> FastMCP:
     server.tool(name="agent_setup_openclaw")(agent_setup_openclaw)
     server.tool(name="office_inspect_file")(office_inspect_file)
     server.tool(name="word_inspect_document")(word_inspect_document)
+    server.tool(name="word_extract_tables")(word_extract_tables)
     server.tool(name="sheet_inspect_workbook")(sheet_inspect_workbook)
+    server.tool(name="sheet_extract_tables")(sheet_extract_tables)
     server.tool(name="deck_inspect_presentation")(deck_inspect_presentation)
     server.tool(name="pdf_inspect_document")(pdf_inspect_document)
     server.tool(name="pdf_inspect_pages")(pdf_inspect_pages)
@@ -423,9 +427,19 @@ def word_inspect_document(path: str) -> str:
     return run_word_inspect_document(path).model_dump_json()
 
 
+def word_extract_tables(path: str) -> str:
+    """Extract Word tables into normalized records with source cell locations."""
+    return run_word_extract_tables(path).model_dump_json()
+
+
 def sheet_inspect_workbook(path: str) -> str:
     """Inspect a local Excel workbook and recommend next tools."""
     return run_sheet_inspect_workbook(path).model_dump_json()
+
+
+def sheet_extract_tables(path: str) -> str:
+    """Extract workbook tables with sheet, row, column, and cell references."""
+    return run_sheet_extract_tables(path).model_dump_json()
 
 
 def deck_inspect_presentation(path: str) -> str:

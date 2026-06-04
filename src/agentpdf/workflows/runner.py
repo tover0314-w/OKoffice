@@ -58,7 +58,9 @@ SUPPORTED_LOCAL_WORKFLOW_TOOLS = {
     "pdf.render.html_package",
     "pdf.qa.visual_report",
     "pdf.workflow.createpdf",
+    "sheet.extract.tables",
     "sheet.inspect.workbook",
+    "word.extract.tables",
     "word.inspect.document",
 }
 
@@ -362,8 +364,12 @@ def _run_local_step(tool: str, payload: dict[str, Any]) -> ToolResult:
         return runner.run_office_inspect_file(payload.get("path", payload.get("input_path", "")))
     if tool == "word.inspect.document":
         return runner.run_word_inspect_document(payload.get("path", payload.get("input_path", "")))
+    if tool == "word.extract.tables":
+        return runner.run_word_extract_tables(payload.get("path", payload.get("input_path", "")))
     if tool == "sheet.inspect.workbook":
         return runner.run_sheet_inspect_workbook(payload.get("path", payload.get("input_path", "")))
+    if tool == "sheet.extract.tables":
+        return runner.run_sheet_extract_tables(payload.get("path", payload.get("input_path", "")))
     if tool == "deck.inspect.presentation":
         return runner.run_deck_inspect_presentation(payload.get("path", payload.get("input_path", "")))
     if tool == "pdf.inspect.document":

@@ -153,8 +153,8 @@ from agentpdf.core.pdf import (
 from agentpdf.ir.lite import parse_lite_pdf, write_document_ir_json, write_document_ir_markdown
 from agentpdf.office.deck import inspect_deck_presentation
 from agentpdf.office.inspect import inspect_office_file
-from agentpdf.office.sheet import inspect_sheet_workbook
-from agentpdf.office.word import inspect_word_document
+from agentpdf.office.sheet import extract_sheet_tables, inspect_sheet_workbook
+from agentpdf.office.word import extract_word_tables, inspect_word_document
 from agentpdf.rag.local import (
     chat_pdf,
     cite_answer,
@@ -201,8 +201,16 @@ def run_word_inspect_document(path: str | Path) -> ToolResult:
     return inspect_word_document(path)
 
 
+def run_word_extract_tables(path: str | Path) -> ToolResult:
+    return extract_word_tables(path)
+
+
 def run_sheet_inspect_workbook(path: str | Path) -> ToolResult:
     return inspect_sheet_workbook(path)
+
+
+def run_sheet_extract_tables(path: str | Path) -> ToolResult:
+    return extract_sheet_tables(path)
 
 
 def run_deck_inspect_presentation(path: str | Path) -> ToolResult:

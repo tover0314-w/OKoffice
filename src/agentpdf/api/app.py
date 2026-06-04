@@ -144,6 +144,7 @@ from agentpdf.tools.runner import (
     run_security_verify_redaction,
     run_security_verify_signature,
     run_select_target_profile,
+    run_sheet_extract_tables,
     run_sheet_inspect_workbook,
     run_split,
     run_storyboard_plan,
@@ -164,6 +165,7 @@ from agentpdf.tools.runner import (
     run_workflow_research_deck,
     run_workflow_report,
     run_workflow_run,
+    run_word_extract_tables,
     run_word_inspect_document,
     run_xlsx_to_pdf,
 )
@@ -287,8 +289,12 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
         return run_office_inspect_file(payload.get("path", payload.get("input_path", "")))
     if tool_name == "word.inspect.document":
         return run_word_inspect_document(payload.get("path", payload.get("input_path", "")))
+    if tool_name == "word.extract.tables":
+        return run_word_extract_tables(payload.get("path", payload.get("input_path", "")))
     if tool_name == "sheet.inspect.workbook":
         return run_sheet_inspect_workbook(payload.get("path", payload.get("input_path", "")))
+    if tool_name == "sheet.extract.tables":
+        return run_sheet_extract_tables(payload.get("path", payload.get("input_path", "")))
     if tool_name == "deck.inspect.presentation":
         return run_deck_inspect_presentation(payload.get("path", payload.get("input_path", "")))
     if tool_name == "pdf.inspect.document":

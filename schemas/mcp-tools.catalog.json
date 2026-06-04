@@ -38,8 +38,18 @@
       "status": "beta"
     },
     {
+      "name": "word_extract_tables",
+      "maps_to": "word.extract.tables",
+      "status": "beta"
+    },
+    {
       "name": "sheet_inspect_workbook",
       "maps_to": "sheet.inspect.workbook",
+      "status": "beta"
+    },
+    {
+      "name": "sheet_extract_tables",
+      "maps_to": "sheet.extract.tables",
       "status": "beta"
     },
     {

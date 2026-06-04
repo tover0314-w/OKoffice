@@ -9,8 +9,8 @@ import typer
 from agentpdf.office.deck import inspect_deck_presentation
 from agentpdf.office.inspect import inspect_office_file
 from agentpdf.office.planner import plan_office_workflow
-from agentpdf.office.sheet import inspect_sheet_workbook
-from agentpdf.office.word import inspect_word_document
+from agentpdf.office.sheet import extract_sheet_tables, inspect_sheet_workbook
+from agentpdf.office.word import extract_word_tables, inspect_word_document
 from okoffice import __version__
 from okoffice.tools.registry import load_okoffice_manifest
 
@@ -94,6 +94,15 @@ def word_inspect(
     _emit_result(inspect_word_document(path), json_output=json_output)
 
 
+@word_app.command("extract-tables")
+def word_extract_tables(
+    path: Annotated[Path, typer.Argument(help="DOCX artifact path to extract tables from.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Extract Word tables into normalized agent-readable records."""
+    _emit_result(extract_word_tables(path), json_output=json_output)
+
+
 @sheet_app.command("inspect")
 def sheet_inspect(
     path: Annotated[Path, typer.Argument(help="XLSX artifact path to inspect.")],
@@ -101,6 +110,15 @@ def sheet_inspect(
 ) -> None:
     """Inspect a local Excel workbook without mutating it."""
     _emit_result(inspect_sheet_workbook(path), json_output=json_output)
+
+
+@sheet_app.command("extract-tables")
+def sheet_extract_tables(
+    path: Annotated[Path, typer.Argument(help="XLSX artifact path to extract tables from.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Extract workbook tables with sheet, row, column, and cell references."""
+    _emit_result(extract_sheet_tables(path), json_output=json_output)
 
 
 @deck_app.command("inspect")
