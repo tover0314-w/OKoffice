@@ -7,7 +7,10 @@ from typing import Any
 from uuid import uuid4
 
 from agentpdf.artifacts.store import build_artifact
+from agentpdf.office.deck import inspect_deck_presentation
 from agentpdf.office.inspect import inspect_office_file
+from agentpdf.office.sheet import extract_sheet_tables, inspect_sheet_workbook
+from agentpdf.office.word import extract_word_tables, inspect_word_document
 from agentpdf.schemas.errors import AgentPDFException
 from agentpdf.schemas.models import AgentPDFError, ToolResult, ValidationCheck, ValidationReport
 from agentpdf.security.paths import resolve_output_path
@@ -56,11 +59,12 @@ def build_office_context_packet(
             )
 
         item, file_node, native_node, edge = _context_item_from_inspect(inspect_result, index)
+        extra_nodes, extra_edges, extra_warnings = _enriched_source_nodes(inspect_result, index, native_node)
         items.append(item)
-        source_nodes.extend([file_node, native_node])
-        source_edges.append(edge)
+        source_nodes.extend([file_node, native_node, *extra_nodes])
+        source_edges.extend([edge, *extra_edges])
         sources.append(_source_summary(inspect_result, item["context_item_id"]))
-        warnings.extend(inspect_result.warnings)
+        warnings.extend([*inspect_result.warnings, *extra_warnings])
 
     source_graph = {
         "source_graph_version": "0.1",
@@ -105,7 +109,8 @@ def build_office_context_packet(
         ),
         ValidationCheck(
             name="source_warnings_collected",
-            status="warning" if warnings else "passed",
+            status="passed",
+            message="Source warnings are reported without blocking context packet construction." if warnings else None,
             details={"warning_count": len(warnings)},
         ),
     ]
@@ -127,6 +132,7 @@ def build_office_context_packet(
                 "item_count": len(items),
                 "source_node_count": len(source_nodes),
                 "source_edge_count": len(source_edges),
+                "native_node_count": len(source_nodes) - len(items),
                 "formats": formats,
                 "domains": domains,
                 "warning_count": len(warnings),
@@ -230,6 +236,224 @@ def _context_item_from_inspect(
         "relationship": "contains",
     }
     return item, file_node, native_node, edge
+
+
+def _enriched_source_nodes(
+    inspect_result: ToolResult,
+    index: int,
+    native_node: dict[str, Any],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[str]]:
+    detected_format = str(inspect_result.usage["format"]["detected_format"])
+    path = Path(str(inspect_result.usage["file"]["path"]))
+    try:
+        if detected_format == "docx":
+            return _word_source_nodes(path, index, native_node)
+        if detected_format == "xlsx":
+            return _sheet_source_nodes(path, index, native_node)
+        if detected_format == "pptx":
+            return _deck_source_nodes(path, index, native_node)
+    except Exception as exc:
+        return [], [], [f"{detected_format} source enrichment skipped: {exc}"]
+    return [], [], []
+
+
+def _word_source_nodes(
+    path: Path,
+    index: int,
+    native_node: dict[str, Any],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[str]]:
+    warnings: list[str] = []
+    nodes: list[dict[str, Any]] = []
+    inspect_result = inspect_word_document(path)
+    if inspect_result.status == "failed":
+        return [], [], _tool_warnings(inspect_result, "word.inspect.document")
+
+    table_result = extract_word_tables(path)
+    if table_result.status == "failed":
+        warnings.extend(_tool_warnings(table_result, "word.extract.tables"))
+        tables: list[dict[str, Any]] = []
+    else:
+        tables = [table for table in table_result.usage.get("tables", []) if isinstance(table, dict)]
+
+    structure = inspect_result.usage.get("structure", {})
+    for table in tables:
+        table_index = int(table.get("table_index", len(nodes) + 1))
+        row_count = len(table.get("rows", [])) if isinstance(table.get("rows"), list) else 0
+        cell_count = sum(
+            len(row.get("cells", []))
+            for row in table.get("rows", [])
+            if isinstance(row, dict) and isinstance(row.get("cells"), list)
+        )
+        nodes.append(
+            {
+                "node_id": f"src_{index:03d}_word_table_{table_index}",
+                "context_item_id": str(native_node["context_item_id"]),
+                "source_ref": f"{native_node['source_ref']}:table:{table_index}",
+                "type": "word.table",
+                "role": "source_table",
+                "label": f"{path.name} table {table_index}",
+                "uri": path.as_posix(),
+                "locators": [{"kind": "word_table", "path": path.as_posix(), "table_index": table_index}],
+                "evidence": {
+                    "table_id": table.get("table_id"),
+                    "row_count": row_count,
+                    "cell_count": cell_count,
+                    "document_structure": structure,
+                },
+            }
+        )
+    return nodes, _contains_edges(native_node, nodes), warnings
+
+
+def _sheet_source_nodes(
+    path: Path,
+    index: int,
+    native_node: dict[str, Any],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[str]]:
+    warnings: list[str] = []
+    nodes: list[dict[str, Any]] = []
+    inspect_result = inspect_sheet_workbook(path)
+    if inspect_result.status == "failed":
+        return [], [], _tool_warnings(inspect_result, "sheet.inspect.workbook")
+
+    sheets = [sheet for sheet in inspect_result.usage.get("sheets", []) if isinstance(sheet, dict)]
+    for sheet in sheets:
+        sheet_index = int(sheet.get("sheet_index", len(nodes) + 1))
+        sheet_name = str(sheet.get("name") or f"Sheet{sheet_index}")
+        nodes.append(
+            {
+                "node_id": f"src_{index:03d}_sheet_{sheet_index}",
+                "context_item_id": str(native_node["context_item_id"]),
+                "source_ref": f"{native_node['source_ref']}:sheet:{sheet_index}",
+                "type": "sheet.sheet",
+                "role": "worksheet",
+                "label": f"{path.name} {sheet_name}",
+                "uri": path.as_posix(),
+                "locators": [{"kind": "worksheet", "path": path.as_posix(), "sheet_name": sheet_name}],
+                "evidence": sheet,
+            }
+        )
+
+    table_result = extract_sheet_tables(path)
+    if table_result.status == "failed":
+        warnings.extend(_tool_warnings(table_result, "sheet.extract.tables"))
+        tables: list[dict[str, Any]] = []
+    else:
+        tables = [table for table in table_result.usage.get("tables", []) if isinstance(table, dict)]
+
+    for table in tables:
+        source = table.get("source") if isinstance(table.get("source"), dict) else {}
+        table_index = int(table.get("table_index", len(nodes) + 1))
+        sheet_name = str(source.get("sheet_name") or f"Sheet{source.get('sheet_index', 1)}")
+        range_ref = str(source.get("range_ref") or "")
+        row_count = len(table.get("rows", [])) if isinstance(table.get("rows"), list) else 0
+        cell_count = sum(
+            len(row.get("cells", []))
+            for row in table.get("rows", [])
+            if isinstance(row, dict) and isinstance(row.get("cells"), list)
+        )
+        nodes.append(
+            {
+                "node_id": f"src_{index:03d}_sheet_table_{table_index}",
+                "context_item_id": str(native_node["context_item_id"]),
+                "source_ref": f"{native_node['source_ref']}:table:{table_index}",
+                "type": "sheet.table",
+                "role": "source_table",
+                "label": f"{path.name} {sheet_name} {range_ref}",
+                "uri": path.as_posix(),
+                "locators": [
+                    {
+                        "kind": "sheet_range",
+                        "path": path.as_posix(),
+                        "sheet_name": sheet_name,
+                        "range_ref": range_ref,
+                    }
+                ],
+                "evidence": {
+                    "table_id": table.get("table_id"),
+                    "row_count": row_count,
+                    "cell_count": cell_count,
+                    "source": source,
+                },
+            }
+        )
+
+    formula_count = int(inspect_result.usage.get("formulas", {}).get("formula_count", 0))
+    if formula_count:
+        nodes.append(
+            {
+                "node_id": f"src_{index:03d}_sheet_formula_summary",
+                "context_item_id": str(native_node["context_item_id"]),
+                "source_ref": f"{native_node['source_ref']}:formulas",
+                "type": "sheet.formula_summary",
+                "role": "formula_evidence",
+                "label": f"{path.name} formulas",
+                "uri": path.as_posix(),
+                "locators": [{"kind": "workbook_formulas", "path": path.as_posix()}],
+                "evidence": {"formula_count": formula_count},
+            }
+        )
+    return nodes, _contains_edges(native_node, nodes), warnings
+
+
+def _deck_source_nodes(
+    path: Path,
+    index: int,
+    native_node: dict[str, Any],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[str]]:
+    inspect_result = inspect_deck_presentation(path)
+    if inspect_result.status == "failed":
+        return [], [], _tool_warnings(inspect_result, "deck.inspect.presentation")
+
+    presentation = inspect_result.usage.get("presentation", {})
+    slide_count = int(presentation.get("slide_count", 0))
+    text_run_count = int(presentation.get("text_run_count", 0))
+    nodes = [
+        {
+            "node_id": f"src_{index:03d}_deck_slide_{slide_index}",
+            "context_item_id": str(native_node["context_item_id"]),
+            "source_ref": f"{native_node['source_ref']}:slide:{slide_index}",
+            "type": "deck.slide",
+            "role": "slide",
+            "label": f"{path.name} slide {slide_index}",
+            "uri": path.as_posix(),
+            "locators": [
+                {
+                    "kind": "deck_slide",
+                    "path": path.as_posix(),
+                    "slide_index": slide_index,
+                    "package_part": f"ppt/slides/slide{slide_index}.xml",
+                }
+            ],
+            "evidence": {
+                "slide_index": slide_index,
+                "package_part": f"ppt/slides/slide{slide_index}.xml",
+                "presentation_text_run_count": text_run_count,
+            },
+        }
+        for slide_index in range(1, slide_count + 1)
+    ]
+    return nodes, _contains_edges(native_node, nodes), []
+
+
+def _contains_edges(parent_node: dict[str, Any], child_nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [
+        {
+            "edge_id": f"edge_{parent_node['node_id']}_to_{child['node_id']}",
+            "from": str(parent_node["node_id"]),
+            "to": str(child["node_id"]),
+            "relationship": "contains_source_node",
+        }
+        for child in child_nodes
+    ]
+
+
+def _tool_warnings(result: ToolResult, tool_name: str) -> list[str]:
+    if result.warnings:
+        return [f"{tool_name}: {warning}" for warning in result.warnings]
+    if result.error is not None:
+        return [f"{tool_name}: {result.error.message}"]
+    return [f"{tool_name}: source enrichment was skipped."]
 
 
 def _context_item_type(detected_format: str, domain: str) -> str:

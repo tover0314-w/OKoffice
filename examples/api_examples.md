@@ -85,7 +85,8 @@ Expected output highlights:
   "usage": {
     "summary": {
       "item_count": 3,
-      "source_node_count": 6
+      "source_node_count": 6,
+      "native_node_count": 3
     }
   }
 }

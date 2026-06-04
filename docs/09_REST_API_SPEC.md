@@ -164,11 +164,14 @@ Output highlights:
     "summary": {
       "item_count": 3,
       "source_node_count": 6,
+      "native_node_count": 3,
       "formats": {"docx": 1, "pptx": 1, "xlsx": 1}
     }
   }
 }
 ```
+
+The source graph always includes file and native artifact nodes. When the deterministic local parsers can inspect deeper structure, it also includes native child nodes such as `word.table`, `sheet.sheet`, `sheet.table`, `sheet.formula_summary`, and `deck.slide`. Enrichment warnings remain visible in `warnings` and `validation.warnings` without blocking baseline packet creation.
 
 ## Example: Implemented Board Pack Verification
 

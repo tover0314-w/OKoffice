@@ -98,7 +98,7 @@ okpdf serve --api
 |---|---:|---|
 | `okoffice` CLI | beta | Target manifest, planning, Office inspect, context build, table extraction, workflow, and bundle entrypoints. |
 | `office.inspect.file` | beta | Detects DOCX/XLSX/PPTX/PDF/text formats and returns safety metadata. |
-| `office.context.build_packet` | beta | Builds a local context packet and source graph from Office-compatible files. |
+| `office.context.build_packet` | beta | Builds a local context packet and source graph with file/native nodes plus Word table, Excel sheet/range/formula, and PowerPoint slide nodes when available. |
 | `word.inspect.document` | beta | Reads DOCX structure, headings, tables, comments, styles, and safety markers. |
 | `word.extract.tables` | beta | Extracts DOCX tables into normalized rows/cells with source refs. |
 | `sheet.inspect.workbook` | beta | Reads workbook sheets, dimensions, formulas, tables, charts, links, and safety markers. |

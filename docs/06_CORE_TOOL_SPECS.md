@@ -133,6 +133,7 @@ Expected output highlights:
     "summary": {
       "item_count": 2,
       "source_node_count": 4,
+      "native_node_count": 2,
       "formats": {"docx": 1, "xlsx": 1}
     }
   }
@@ -142,6 +143,8 @@ Expected output highlights:
 Limitations:
 
 - Uses deterministic local `office.inspect.file` facts and native source locators.
+- Adds native source graph child nodes when local parsers can inspect them: `word.table`, `sheet.sheet`, `sheet.table`, `sheet.formula_summary`, and `deck.slide`.
+- Parser-specific enrichment warnings are reported without blocking baseline context packet construction.
 - Does not yet perform full Word/Excel/PowerPoint/PDF content extraction.
 - Does not call hosted AI providers, fetch remote assets, or mutate inputs.
 

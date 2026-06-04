@@ -139,6 +139,8 @@ Target artifact types should include:
 
 The source graph is derived from the context packet and records all inputs and derived source nodes.
 
+The first implemented `office.context.build_packet` graph starts with `file` nodes and native artifact nodes such as `word.document`, `sheet.workbook`, `deck.presentation`, and `pdf.document`. When deterministic local parsers can inspect deeper structure, the graph adds child nodes such as `word.table`, `sheet.sheet`, `sheet.table`, `sheet.formula_summary`, and `deck.slide` with native locators and evidence summaries.
+
 ```json
 {
   "source_graph_id": "sg_...",

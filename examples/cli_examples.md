@@ -71,7 +71,7 @@ okoffice context build \
   --json
 ```
 
-Current output includes `tool: office.context.build_packet`, a local context packet artifact, source graph nodes, format counts, validation checks, and next recommended tools.
+Current output includes `tool: office.context.build_packet`, a local context packet artifact, file/native source graph nodes, native child nodes when available, format counts, validation checks, and next recommended tools.
 
 Target extraction flow:
 

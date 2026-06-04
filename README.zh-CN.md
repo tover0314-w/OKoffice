@@ -60,7 +60,7 @@ okpdf serve --api
 |---|---:|---|
 | `okoffice` CLI | beta | 已有 target manifest、plan、inspect、context build、表格抽取、workflow 和 bundle 入口。 |
 | `office.inspect.file` | beta | 检测 DOCX/XLSX/PPTX/PDF/text，并返回安全元数据。 |
-| `office.context.build_packet` | beta | 从 Office 兼容文件构建本地 context packet 和 source graph。 |
+| `office.context.build_packet` | beta | 从 Office 兼容文件构建本地 context packet 和 source graph；可下钻到 Word 表格、Excel 工作表/区域/公式、PowerPoint 幻灯片节点。 |
 | `word.inspect.document` | beta | 读取 DOCX 结构、标题、表格、批注、样式和安全标记。 |
 | `word.extract.tables` | beta | 把 DOCX 表格抽取成带 source refs 的 rows/cells。 |
 | `sheet.inspect.workbook` | beta | 读取 workbook sheets、dimension、公式、表、图表、外链和安全标记。 |
