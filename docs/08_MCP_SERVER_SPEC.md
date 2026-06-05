@@ -28,16 +28,16 @@ The current server exposes `pdf.*` tools through MCP wrappers. During migration,
 
 ## Discovery Resources
 
-Current resource:
+Current resources:
 
 ```text
 agentpdf_tool_manifest
+okoffice_tool_manifest
 ```
 
 Target resources:
 
 ```text
-okoffice_tool_manifest
 okoffice_format_capabilities
 okoffice_artifact_profiles
 okoffice_style_packs
@@ -228,10 +228,11 @@ Current examples live in:
 examples/mcp/
 ```
 
-The migration should preserve current `okpdf serve --mcp` behavior and add:
+The migration preserves current `okpdf serve --mcp` behavior and adds:
 
 ```bash
 okoffice serve --mcp --safe-root .
+okoffice agent setup claude-code --output .mcp.json --json
 ```
 
 ## Safety

@@ -45,12 +45,13 @@ from agentpdf.office.word_validation import validate_word_document
 from agentpdf.office.workers import inspect_office_workers
 from agentpdf.office.workflows import board_pack, docset_to_sheet, extract_to_sheet, sheet_to_deck, verify_board_pack
 from okoffice import __version__
+from okoffice.agents.claude_code import setup_claude_code_for_okoffice
 from okoffice.tools.registry import load_okoffice_manifest
 
 
 app = typer.Typer(help="okoffice local-first agent-native Office CLI")
-agent_app = typer.Typer(help="Generate local agent integration config.")
-agent_setup_app = typer.Typer(help="Generate MCP setup config for local agents.")
+agent_app = typer.Typer(help="Generate local OKoffice agent runtime configs.")
+agent_setup_app = typer.Typer(help="Set up specific agent runtimes.")
 tools_app = typer.Typer(help="Discover target okoffice tools and legacy compatibility tools.")
 word_app = typer.Typer(help="Inspect and transform Word documents.")
 sheet_app = typer.Typer(help="Inspect and transform Excel workbooks.")
@@ -89,7 +90,7 @@ def serve(
         typer.Option("--safe-root", help="Reserved local safe root for agent configs."),
     ] = None,
 ) -> None:
-    """Serve local okoffice interfaces."""
+    """Run the local OKoffice MCP server or REST API."""
     if mcp:
         from agentpdf.mcp.server import run_mcp_server
 
@@ -100,8 +101,50 @@ def serve(
 
         uvicorn.run("agentpdf.api.app:create_app", factory=True, host=host, port=port)
         return
-    typer.echo("Choose --mcp for the local MCP server or --api for the local REST server.")
+    typer.echo("Choose --mcp for the local MCP server or --api for the REST API.")
     raise typer.Exit(1)
+
+
+@agent_setup_app.command("claude-code")
+def agent_setup_claude_code(
+    output_path: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", help="Optional .mcp.json output path."),
+    ] = None,
+    safe_root: Annotated[
+        str,
+        typer.Option("--safe-root", help="Claude Code project safe root."),
+    ] = "${CLAUDE_PROJECT_DIR:-.}",
+    command: Annotated[
+        str,
+        typer.Option("--command", help="Executable used by Claude Code to start OKoffice."),
+    ] = "okoffice",
+    args_prefix: Annotated[
+        list[str] | None,
+        typer.Option("--arg-prefix", help="Extra args before 'serve', e.g. -m okoffice.cli."),
+    ] = None,
+    server_name: Annotated[
+        str,
+        typer.Option("--server-name", help="MCP server name in Claude Code config."),
+    ] = "okoffice",
+    scope: Annotated[
+        str,
+        typer.Option("--scope", help="Claude Code MCP scope: project, local, or user."),
+    ] = "project",
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Generate a Claude Code MCP config for local OKoffice tools."""
+    _emit_result(
+        setup_claude_code_for_okoffice(
+            output_path=output_path,
+            safe_root=safe_root,
+            command=command,
+            args_prefix=args_prefix,
+            server_name=server_name,
+            scope=scope,  # type: ignore[arg-type]
+        ),
+        json_output=json_output,
+    )
 
 
 @agent_setup_app.command("codex")

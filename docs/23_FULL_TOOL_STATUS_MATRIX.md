@@ -17,6 +17,7 @@ Implemented okoffice target snapshot lives in `schemas/office-tool-manifest.targ
 
 | Tool | Status | OSS default |
 |---|---:|---:|
+| office.agent.setup.claude_code | beta | yes |
 | office.inspect.file | beta | yes |
 | office.context.build_packet | beta | yes |
 | office.extract.schema | beta | yes |

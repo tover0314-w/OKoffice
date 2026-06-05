@@ -2,7 +2,7 @@
     "manifest_version":  "0.1",
     "product":  "okoffice",
     "compatibility_package":  "agentpdf",
-    "tool_count":  55,
+    "tool_count":  56,
     "domains":  [
                     "office",
                     "word",
@@ -229,6 +229,19 @@
                              "requires_model":  false
                          },
                          {
+                             "name":  "office.agent.setup.claude_code",
+                             "status":  "beta",
+                             "description":  "Generate a Claude Code MCP config that starts the local OKoffice server and recommends Office-native MCP tools.",
+                             "domain":  "office",
+                             "interfaces":  [
+                                                "cli",
+                                                "sdk"
+                                            ],
+                             "implemented":  true,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
                              "name":  "office.workflow.plan",
                              "status":  "beta",
                              "description":  "Plan a local-first cross-format Office workflow from goals, inputs, and outputs.",
@@ -260,7 +273,7 @@
                          },
                          {
                              "name":  "office.workflow.source_to_deck",
-                             "status":  "planned",
+                             "status":  "beta",
                              "description":  "Create a taste-reviewed presentation from gathered document evidence, tables, outlines, style packs, HTML preview packages, and editable PPTX export.",
                              "domain":  "office",
                              "interfaces":  [
@@ -269,13 +282,13 @@
                                                 "rest",
                                                 "sdk"
                                             ],
-                             "implemented":  false,
+                             "implemented":  true,
                              "oss_default":  true,
                              "requires_model":  true
                          },
                          {
                              "name":  "office.workflow.source_to_doc",
-                             "status":  "planned",
+                             "status":  "beta",
                              "description":  "Create a Word document from multi-source evidence and a structured writing brief.",
                              "domain":  "office",
                              "interfaces":  [
@@ -284,13 +297,13 @@
                                                 "rest",
                                                 "sdk"
                                             ],
-                             "implemented":  false,
+                             "implemented":  true,
                              "oss_default":  true,
                              "requires_model":  true
                          },
                          {
                              "name":  "office.workflow.multi_format_brief",
-                             "status":  "planned",
+                             "status":  "beta",
                              "description":  "Build a reusable task brief, evidence map, and output plan across Word, Excel, PPT, and PDF.",
                              "domain":  "office",
                              "interfaces":  [
@@ -299,7 +312,7 @@
                                                 "rest",
                                                 "sdk"
                                             ],
-                             "implemented":  false,
+                             "implemented":  true,
                              "oss_default":  true,
                              "requires_model":  false
                          },

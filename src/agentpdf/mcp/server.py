@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import json
+
 from typing import Literal
 
 from mcp.server.fastmcp import FastMCP
 
 from agentpdf.tools.registry import load_tool_manifest
+from okoffice.tools.registry import load_okoffice_manifest
 from agentpdf.tools.runner import (
     run_add_margin,
     run_add_shape,
@@ -207,6 +210,7 @@ def create_mcp_server() -> FastMCP:
         ),
     )
     server.tool(name="agentpdf_tool_manifest")(agentpdf_tool_manifest)
+    server.tool(name="okoffice_tool_manifest")(okoffice_tool_manifest)
     server.tool(name="agent_setup_claude_code")(agent_setup_claude_code)
     server.tool(name="agent_setup_codex")(agent_setup_codex)
     server.tool(name="agent_setup_kilo_code")(agent_setup_kilo_code)
@@ -401,6 +405,11 @@ def create_mcp_server() -> FastMCP:
 def agentpdf_tool_manifest() -> str:
     """Return the complete AgentPDF tool manifest with implementation statuses."""
     return load_tool_manifest().model_dump_json()
+
+
+def okoffice_tool_manifest() -> str:
+    """Return the OKoffice target manifest plus compatibility tool metadata."""
+    return json.dumps(load_okoffice_manifest(), ensure_ascii=False)
 
 
 def agent_setup_claude_code(

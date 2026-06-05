@@ -511,7 +511,7 @@ Limitations:
 
 ### `deck.render.html`
 
-Planned target tool.
+Current OSS beta implementation.
 
 Purpose: turn deck Composition IR, outline JSON, or a `deck.compose.plan` artifact into a self-contained HTML slide preview package that agents and humans can inspect before PPTX export.
 
@@ -545,7 +545,7 @@ Acceptance criteria:
 
 ### `deck.export.pptx`
 
-Planned target tool.
+Current OSS beta implementation.
 
 Purpose: convert a validated HTML slide package or component tree into an editable PPTX while preserving lineage back to the deck plan and HTML preview.
 
@@ -571,9 +571,9 @@ Expected output highlights:
 Acceptance criteria:
 
 - Writes a new PPTX and never mutates the HTML package or source workbook.
-- Preserves slide order, speaker notes, theme metadata, images, alt text, and source-map links where feasible.
-- Emits explicit warnings for non-editable visual fallbacks.
-- Reports worker unavailability as structured skip/failure evidence instead of pretending the export completed.
+- Preserves slide order and source-map links through the HTML manifest.
+- Uses the local HTML manifest and outline to produce editable text PPTX slides; full component-tree/layout-perfect export remains a future optional worker.
+- Emits route metadata as `html_manifest_to_editable_pptx_baseline` and writes a `.deck-source-map.json` sidecar.
 
 ### `deck.compose.plan`
 
