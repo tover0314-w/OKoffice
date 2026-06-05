@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from agentpdf.schemas.errors import KNOWN_ERROR_CODES
+from okoffice.schemas.errors import KNOWN_ERROR_CODES
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]

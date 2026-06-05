@@ -4,7 +4,7 @@ from typer.testing import CliRunner
 
 
 def test_office_workers_status_reports_feature_flagged_contracts() -> None:
-    from agentpdf.office.workers import inspect_office_workers
+    from okoffice.office.workers import inspect_office_workers
 
     result = inspect_office_workers()
 
@@ -36,7 +36,7 @@ def test_office_workers_status_reports_feature_flagged_contracts() -> None:
 
 
 def test_office_workers_status_reports_missing_enabled_dependency() -> None:
-    from agentpdf.office.workers import inspect_office_workers
+    from okoffice.office.workers import inspect_office_workers
 
     result = inspect_office_workers(
         feature_flags={"libreoffice": True},
@@ -59,7 +59,7 @@ def test_office_workers_status_reports_missing_enabled_dependency() -> None:
 
 
 def test_okoffice_workers_status_cli_returns_tool_result_json() -> None:
-    from okoffice.cli.main import app
+    from okoffice.cli_okoffice.main import app
 
     result = CliRunner().invoke(app, ["workers", "status", "--json"])
 
@@ -72,7 +72,7 @@ def test_okoffice_workers_status_cli_returns_tool_result_json() -> None:
 def test_office_workers_status_runs_through_rest_api() -> None:
     from fastapi.testclient import TestClient
 
-    from agentpdf.api.app import create_app
+    from okoffice.api.app import create_app
 
     response = TestClient(create_app()).post(
         "/v1/tools/office.workers.status/run",
@@ -89,7 +89,7 @@ def test_office_workers_status_runs_through_rest_api() -> None:
 
 
 def test_office_workers_status_runs_through_mcp_function() -> None:
-    from agentpdf.mcp.server import office_workers_status
+    from okoffice.mcp.server import office_workers_status
 
     payload = json.loads(
         office_workers_status(
@@ -103,7 +103,7 @@ def test_office_workers_status_runs_through_mcp_function() -> None:
 
 
 def test_office_workers_status_runs_through_generic_workflow_runner() -> None:
-    from agentpdf.workflows.runner import run_workflow
+    from okoffice.workflows.runner import run_workflow
 
     result = run_workflow(
         {

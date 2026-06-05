@@ -4,9 +4,9 @@ from pathlib import Path
 from PIL import Image
 from typer.testing import CliRunner
 
-from agentpdf.cli.main import app
-from agentpdf.context.packet import build_context_packet
-from agentpdf.tools.registry import load_tool_manifest
+from okoffice.cli.main import app
+from okoffice.context.packet import build_context_packet
+from okoffice.tools.registry import load_tool_manifest
 
 
 runner = CliRunner()
@@ -499,7 +499,7 @@ def test_workflow_run_cli_accepts_plan_output_with_bindings(
             "--binding",
             "<question>=What is the local text layer?",
             "--binding",
-            "<answer>=AgentPDF local text layer",
+            "<answer>=OKoffice local text layer",
             "--json",
         ],
     )
@@ -798,7 +798,7 @@ def test_text_and_metadata_cli(text_pdf: Path, metadata_pdf: Path, tmp_path: Pat
     )
 
     assert text.exit_code == 0
-    assert "AgentPDF local text layer" in json.loads(text.stdout)["usage"]["text"]
+    assert "OKoffice local text layer" in json.loads(text.stdout)["usage"]["text"]
     assert fonts.exit_code == 0
     assert json.loads(fonts.stdout)["tool"] == "pdf.convert.extract_fonts"
     assert read.exit_code == 0
@@ -1044,7 +1044,7 @@ def test_parse_lite_and_rag_cli(tmp_path: Path) -> None:
     index = tmp_path / "rag.index.json"
     ir_json = tmp_path / "rag.ir.json"
     markdown.write_text(
-        "# AgentPDF\n\nLocal RAG gives agents cited document evidence.\n",
+        "# OKoffice\n\nLocal RAG gives agents cited document evidence.\n",
         encoding="utf-8",
     )
     create_result = runner.invoke(
@@ -1164,7 +1164,7 @@ def test_parse_lite_and_rag_cli(tmp_path: Path) -> None:
 def test_ocr_cli_returns_regions(monkeypatch, tmp_path: Path) -> None:
     image = tmp_path / "scan.png"
     Image.new("RGB", (160, 80), color=(255, 255, 255)).save(image)
-    monkeypatch.setattr("agentpdf.ocr_scan.local._run_tesseract_tsv", _fake_tesseract_tsv)
+    monkeypatch.setattr("okoffice.ocr_scan.local._run_tesseract_tsv", _fake_tesseract_tsv)
 
     result = runner.invoke(app, ["ocr", "ocr", str(image), "--language", "eng", "--json"])
 
@@ -1204,7 +1204,7 @@ def test_serve_api_invokes_local_rest_server(monkeypatch) -> None:
     result = runner.invoke(app, ["serve", "--api"])
 
     assert result.exit_code == 0
-    assert called["app_path"] == "agentpdf.api.app:create_app"
+    assert called["app_path"] == "okoffice.api.app:create_app"
     assert called["kwargs"]["factory"] is True
     assert called["kwargs"]["host"] == "127.0.0.1"
     assert called["kwargs"]["port"] == 7331
@@ -1222,7 +1222,7 @@ def test_serve_api_accepts_host_and_port_for_containers(monkeypatch) -> None:
     result = runner.invoke(app, ["serve", "--api", "--host", "0.0.0.0", "--port", "7332"])
 
     assert result.exit_code == 0
-    assert called["app_path"] == "agentpdf.api.app:create_app"
+    assert called["app_path"] == "okoffice.api.app:create_app"
     assert called["kwargs"]["host"] == "0.0.0.0"
     assert called["kwargs"]["port"] == 7332
 

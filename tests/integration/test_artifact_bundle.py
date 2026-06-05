@@ -7,18 +7,18 @@ from jsonschema import Draft202012Validator
 from pypdf import PdfReader
 from typer.testing import CliRunner
 
-from agentpdf.artifacts import bundle as artifact_bundle
-from agentpdf.api.app import create_app
-from agentpdf.artifacts.bundle import export_artifact_bundle
-from agentpdf.cli.main import app
-from agentpdf.compose.context import compose_from_context
-from agentpdf.context.packet import build_context_packet
-from agentpdf.core.pdf import create_text_pdf
-from agentpdf.mcp import server as mcp_server
-from agentpdf.mcp.server import pdf_artifacts_export_bundle
-from agentpdf.patch.transaction import apply_patch_transaction, plan_patch_transaction
-from agentpdf.renderers.html_package import render_html_package
-from agentpdf.tools.runner import run_create_html_package
+from okoffice.artifacts import bundle as artifact_bundle
+from okoffice.api.app import create_app
+from okoffice.artifacts.bundle import export_artifact_bundle
+from okoffice.cli.main import app
+from okoffice.compose.context import compose_from_context
+from okoffice.context.packet import build_context_packet
+from okoffice.core.pdf import create_text_pdf
+from okoffice.mcp import server as mcp_server
+from okoffice.mcp.server import pdf_artifacts_export_bundle
+from okoffice.patch.transaction import apply_patch_transaction, plan_patch_transaction
+from okoffice.renderers.html_package import render_html_package
+from okoffice.tools.runner import run_create_html_package
 
 
 runner = CliRunner()
@@ -332,7 +332,7 @@ def test_artifact_manifest_tracks_html_first_package_lineage(tmp_path: Path) -> 
             "backend_id": "local_html_package_fallback",
             "renderer_backend": rendered.usage["renderer_backend"],
             "engine": "reportlab_text_fallback",
-            "source": "agentpdf.conversion.local.html_to_pdf",
+            "source": "okoffice.conversion.local.html_to_pdf",
             "is_browser_renderer": False,
             "fallback": True,
             "fallback_reason": "browser_renderer_worker_unavailable",
@@ -1096,7 +1096,7 @@ def test_export_artifact_bundle_writes_zip_manifest_and_checksums(tmp_path: Path
     composition_path = tmp_path / "report.composition.json"
     coverage_path = tmp_path / "report.coverage.json"
     output_path = tmp_path / "report.agentpdf-bundle.zip"
-    create_text_pdf("AgentPDF bundle evidence.", pdf_path)
+    create_text_pdf("OKoffice bundle evidence.", pdf_path)
     composition_path.write_text(json.dumps({"composition_ir": {"blocks": []}, "source_map": []}), encoding="utf-8")
     coverage_path.write_text(json.dumps({"coverage": {"coverage_ratio": 1.0}}), encoding="utf-8")
 
@@ -1117,11 +1117,11 @@ def test_export_artifact_bundle_writes_zip_manifest_and_checksums(tmp_path: Path
 
     with ZipFile(output_path) as archive:
         names = set(archive.namelist())
-        assert "agentpdf-bundle-manifest.json" in names
+        assert "okoffice-bundle-manifest.json" in names
         assert "checksums.sha256" in names
         assert "artifacts/report.pdf" in names
         assert "artifacts/report.composition.json" in names
-        manifest = json.loads(archive.read("agentpdf-bundle-manifest.json"))
+        manifest = json.loads(archive.read("okoffice-bundle-manifest.json"))
         checksums = archive.read("checksums.sha256").decode("utf-8")
 
     assert manifest["bundle_version"] == "0.1"
@@ -1137,7 +1137,7 @@ def test_verify_artifact_bundle_reports_manifest_and_checksum_status(tmp_path: P
     pdf_path = tmp_path / "report.pdf"
     composition_path = tmp_path / "report.composition.json"
     bundle_path = tmp_path / "report.agentpdf-bundle.zip"
-    create_text_pdf("AgentPDF bundle verification.", pdf_path)
+    create_text_pdf("OKoffice bundle verification.", pdf_path)
     composition_path.write_text(json.dumps({"composition_id": "cmp_demo", "blocks": []}), encoding="utf-8")
     export_artifact_bundle(
         artifact_paths=[pdf_path, composition_path],

@@ -6,8 +6,8 @@ from typer.testing import CliRunner
 
 
 def test_docset_to_sheet_workflow_builds_validated_evidence_workbook(tmp_path: Path) -> None:
-    from agentpdf.office.sheet import inspect_sheet_workbook
-    from agentpdf.office.workflows import docset_to_sheet
+    from okoffice.office.sheet import inspect_sheet_workbook
+    from okoffice.office.workflows import docset_to_sheet
 
     source = tmp_path / "memo.docx"
     output = tmp_path / "vendor-evidence.xlsx"
@@ -52,7 +52,7 @@ def test_docset_to_sheet_workflow_builds_validated_evidence_workbook(tmp_path: P
 
 
 def test_okoffice_docset_to_sheet_cli_returns_tool_result_json(tmp_path: Path) -> None:
-    from okoffice.cli.main import app
+    from okoffice.cli_okoffice.main import app
 
     source = tmp_path / "memo.docx"
     schema_path = tmp_path / "schema.json"
@@ -85,7 +85,7 @@ def test_okoffice_docset_to_sheet_cli_returns_tool_result_json(tmp_path: Path) -
 def test_docset_to_sheet_workflow_runs_through_rest_api(tmp_path: Path) -> None:
     from fastapi.testclient import TestClient
 
-    from agentpdf.api.app import create_app
+    from okoffice.api.app import create_app
 
     source = tmp_path / "memo.docx"
     output = tmp_path / "vendor-evidence.xlsx"
@@ -103,7 +103,7 @@ def test_docset_to_sheet_workflow_runs_through_rest_api(tmp_path: Path) -> None:
 
 
 def test_docset_to_sheet_workflow_runs_through_mcp_function(tmp_path: Path) -> None:
-    from agentpdf.mcp.server import office_workflow_docset_to_sheet
+    from okoffice.mcp.server import office_workflow_docset_to_sheet
 
     source = tmp_path / "memo.docx"
     output = tmp_path / "vendor-evidence.xlsx"
@@ -117,7 +117,7 @@ def test_docset_to_sheet_workflow_runs_through_mcp_function(tmp_path: Path) -> N
 
 
 def test_docset_to_sheet_workflow_runs_through_generic_workflow_runner(tmp_path: Path) -> None:
-    from agentpdf.workflows.runner import run_workflow
+    from okoffice.workflows.runner import run_workflow
 
     source = tmp_path / "memo.docx"
     output = tmp_path / "vendor-evidence.xlsx"

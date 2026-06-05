@@ -11,7 +11,7 @@ Target config path:
 Compatibility config path:
 
 ```text
-.agentpdf.yaml
+.okoffice.yaml
 ```
 
 Example:
@@ -87,7 +87,7 @@ AGENTPDF_MAX_FILE_SIZE_MB
 Current:
 
 ```bash
-okpdf serve --api
+okoffice serve --api
 ```
 
 Target:
@@ -101,7 +101,7 @@ okoffice serve --api --safe-root .
 Current:
 
 ```bash
-okpdf serve --mcp --safe-root .
+okoffice serve --mcp --safe-root .
 ```
 
 Target:
@@ -126,8 +126,8 @@ The result records feature flags, dependency availability, default-core status, 
 Current image:
 
 ```bash
-docker build -t okpdf/local:dev .
-docker run --rm -p 7331:7331 -v "$PWD:/workspace" okpdf/local:dev
+docker build -t okoffice/local:dev .
+docker run --rm -p 7331:7331 -v "$PWD:/workspace" okoffice/local:dev
 curl http://127.0.0.1:7331/healthz
 ```
 

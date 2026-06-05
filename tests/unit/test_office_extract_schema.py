@@ -6,7 +6,7 @@ from typer.testing import CliRunner
 
 
 def test_extract_schema_matches_context_packet_sources(tmp_path: Path) -> None:
-    from agentpdf.office.extract import extract_schema
+    from okoffice.office.extract import extract_schema
 
     output_path = tmp_path / "evidence.json"
 
@@ -33,7 +33,7 @@ def test_extract_schema_matches_context_packet_sources(tmp_path: Path) -> None:
 
 
 def test_extract_schema_loads_json_path_and_warns_for_missing_fields(tmp_path: Path) -> None:
-    from agentpdf.office.extract import extract_schema
+    from okoffice.office.extract import extract_schema
 
     context_path = tmp_path / "context.json"
     context_path.write_text(json.dumps(_context_packet()), encoding="utf-8")
@@ -50,11 +50,11 @@ def test_extract_schema_loads_json_path_and_warns_for_missing_fields(tmp_path: P
 
 
 def test_extract_schema_runs_through_agent_interfaces(tmp_path: Path) -> None:
-    from agentpdf.api.app import create_app
-    from agentpdf.mcp.server import office_extract_schema
-    from agentpdf.tools.runner import run_office_extract_schema
-    from agentpdf.workflows.runner import run_workflow
-    from okoffice.cli.main import app
+    from okoffice.api.app import create_app
+    from okoffice.mcp.server import office_extract_schema
+    from okoffice.tools.runner import run_office_extract_schema
+    from okoffice.workflows.runner import run_workflow
+    from okoffice.cli_okoffice.main import app
 
     context_path = tmp_path / "context.json"
     schema_path = tmp_path / "schema.json"
@@ -115,7 +115,7 @@ def test_extract_schema_runs_through_agent_interfaces(tmp_path: Path) -> None:
 
 
 def test_extract_schema_manifest_and_mcp_catalog_mark_tool_beta() -> None:
-    from okoffice.tools.registry import load_okoffice_manifest
+    from okoffice.tools.registry_okoffice import load_okoffice_manifest
 
     manifest = load_okoffice_manifest()
     target_tools = {tool["name"]: tool for tool in manifest["target_tools"]}

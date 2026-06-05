@@ -3,9 +3,9 @@ from pathlib import Path
 
 from pypdf import PdfWriter
 
-from agentpdf.authoring.qa import run_visual_qa, visual_report
-from agentpdf.renderers.html_package import render_html_package
-from agentpdf.tools.runner import run_create_html_package
+from okoffice.authoring.qa import run_visual_qa, visual_report
+from okoffice.renderers.html_package import render_html_package
+from okoffice.tools.runner import run_create_html_package
 
 
 def _pdf(path: Path, page_count: int = 1) -> None:

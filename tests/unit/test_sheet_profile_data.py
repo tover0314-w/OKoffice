@@ -7,7 +7,7 @@ from typer.testing import CliRunner
 
 
 def test_profile_sheet_data_reports_headers_types_missing_and_coverage(tmp_path: Path) -> None:
-    from agentpdf.office.sheet import profile_sheet_data
+    from okoffice.office.sheet import profile_sheet_data
 
     path = tmp_path / "profile.xlsx"
     _write_profile_xlsx(path)
@@ -45,7 +45,7 @@ def test_profile_sheet_data_reports_headers_types_missing_and_coverage(tmp_path:
 
 
 def test_profile_sheet_data_can_include_source_refs_sheet(tmp_path: Path) -> None:
-    from agentpdf.office.sheet import profile_sheet_data
+    from okoffice.office.sheet import profile_sheet_data
 
     path = tmp_path / "profile.xlsx"
     _write_profile_xlsx(path)
@@ -58,11 +58,11 @@ def test_profile_sheet_data_can_include_source_refs_sheet(tmp_path: Path) -> Non
 
 
 def test_profile_sheet_data_agent_interfaces(tmp_path: Path) -> None:
-    from agentpdf.api.app import create_app
-    from agentpdf.mcp.server import sheet_profile_data
-    from agentpdf.office.sheet import write_sheet_workbook
-    from agentpdf.workflows.runner import run_workflow
-    from okoffice.cli.main import app
+    from okoffice.api.app import create_app
+    from okoffice.mcp.server import sheet_profile_data
+    from okoffice.office.sheet import write_sheet_workbook
+    from okoffice.workflows.runner import run_workflow
+    from okoffice.cli_okoffice.main import app
 
     path = tmp_path / "model.xlsx"
     write_sheet_workbook(
@@ -89,7 +89,7 @@ def test_profile_sheet_data_agent_interfaces(tmp_path: Path) -> None:
 
 
 def test_sheet_profile_data_is_listed_in_manifests() -> None:
-    from okoffice.tools.registry import load_okoffice_manifest
+    from okoffice.tools.registry_okoffice import load_okoffice_manifest
 
     manifest = load_okoffice_manifest()
     target = {tool["name"]: tool for tool in manifest["target_tools"]}

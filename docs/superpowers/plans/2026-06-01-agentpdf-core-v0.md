@@ -1,8 +1,8 @@
-# AgentPDF Core V0 Implementation Plan
+# OKoffice Core V0 Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Turn the repository root into a runnable local-first AgentPDF Python package with typed public models, tool discovery, core PDF inspect/merge/split behavior, validation, artifacts, and a CLI.
+**Goal:** Turn the repository root into a runnable local-first OKoffice Python package with typed public models, tool discovery, core PDF inspect/merge/split behavior, validation, artifacts, and a CLI.
 
 **Architecture:** CLI and MCP call a small tool layer instead of manipulating PDFs directly. Public responses use Pydantic models and every generated PDF is registered as an artifact and validated. Rendering uses the license-compatible `pypdfium2` backend so local agents can produce real image artifacts.
 
@@ -13,21 +13,21 @@
 ## File Structure
 
 - Create `pyproject.toml`: package metadata, dependencies, CLI script, pytest config.
-- Create `src/agentpdf/__init__.py`: package version.
-- Create `src/agentpdf/__main__.py`: module entrypoint.
-- Create `src/agentpdf/cli/__init__.py`: CLI package marker.
-- Create `src/agentpdf/cli/__main__.py`: supports `python -m agentpdf.cli`.
-- Create `src/agentpdf/cli/main.py`: Typer CLI commands.
-- Create `src/agentpdf/schemas/models.py`: Pydantic contracts.
-- Create `src/agentpdf/schemas/errors.py`: stable error code loading/fallbacks.
-- Create `src/agentpdf/security/paths.py`: explicit safe path helpers.
-- Create `src/agentpdf/core/page_ranges.py`: robust page range parser.
-- Create `src/agentpdf/core/pdf.py`: deterministic PDF operations.
-- Create `src/agentpdf/artifacts/store.py`: local artifact metadata.
-- Create `src/agentpdf/validation/pdf.py`: generated PDF validation.
-- Create `src/agentpdf/tools/registry.py`: tool manifest and discovery.
-- Create `src/agentpdf/tools/runner.py`: stable tool result wrappers.
-- Create `src/agentpdf/mcp/server.py`: FastMCP local agent-callable server.
+- Create `src/okoffice/__init__.py`: package version.
+- Create `src/okoffice/__main__.py`: module entrypoint.
+- Create `src/okoffice/cli/__init__.py`: CLI package marker.
+- Create `src/okoffice/cli/__main__.py`: supports `python -m okoffice.cli`.
+- Create `src/okoffice/cli/main.py`: Typer CLI commands.
+- Create `src/okoffice/schemas/models.py`: Pydantic contracts.
+- Create `src/okoffice/schemas/errors.py`: stable error code loading/fallbacks.
+- Create `src/okoffice/security/paths.py`: explicit safe path helpers.
+- Create `src/okoffice/core/page_ranges.py`: robust page range parser.
+- Create `src/okoffice/core/pdf.py`: deterministic PDF operations.
+- Create `src/okoffice/artifacts/store.py`: local artifact metadata.
+- Create `src/okoffice/validation/pdf.py`: generated PDF validation.
+- Create `src/okoffice/tools/registry.py`: tool manifest and discovery.
+- Create `src/okoffice/tools/runner.py`: stable tool result wrappers.
+- Create `src/okoffice/mcp/server.py`: FastMCP local agent-callable server.
 - Create `tests/conftest.py`: fixture PDF generation.
 - Create `tests/unit/test_models.py`: model serialization tests.
 - Create `tests/unit/test_page_ranges.py`: page range parser tests.
@@ -39,20 +39,20 @@
 
 **Files:**
 - Create: `pyproject.toml`
-- Create: `src/agentpdf/__init__.py`
-- Create: `src/agentpdf/__main__.py`
-- Create: `src/agentpdf/cli/__init__.py`
-- Create: `src/agentpdf/cli/__main__.py`
-- Create: `src/agentpdf/cli/main.py`
+- Create: `src/okoffice/__init__.py`
+- Create: `src/okoffice/__main__.py`
+- Create: `src/okoffice/cli/__init__.py`
+- Create: `src/okoffice/cli/__main__.py`
+- Create: `src/okoffice/cli/main.py`
 - Create: `tests/unit/test_import.py`
 
 - [ ] **Step 1: Write import and CLI smoke tests**
 
 ```python
-def test_import_agentpdf() -> None:
-    import agentpdf
+def test_import_okoffice() -> None:
+    import okoffice
 
-    assert agentpdf.__version__ == "0.1.0"
+    assert okoffice.__version__ == "0.1.0"
 ```
 
 - [ ] **Step 2: Run the import test and confirm it fails before implementation**
@@ -63,18 +63,18 @@ Expected: FAIL because the root package does not exist yet.
 
 - [ ] **Step 3: Add root package metadata and module entrypoints**
 
-`pyproject.toml` should define `agentpdf = "agentpdf.cli.main:app"` and dependencies `pydantic`, `typer`, `rich`, and `pypdf`.
+`pyproject.toml` should define `okoffice = "okoffice.cli.main:app"` and dependencies `pydantic`, `typer`, `rich`, and `pypdf`.
 
 - [ ] **Step 4: Implement a minimal Typer CLI**
 
-`src/agentpdf/cli/main.py` should expose `app`, `version`, and a callback so `python -m agentpdf.cli --help` works.
+`src/okoffice/cli/main.py` should expose `app`, `version`, and a callback so `python -m okoffice.cli --help` works.
 
 - [ ] **Step 5: Run smoke checks**
 
 Run:
 
 ```bash
-python -m agentpdf.cli --help
+python -m okoffice.cli --help
 pytest tests/unit/test_import.py -q
 ```
 
@@ -83,8 +83,8 @@ Expected: both pass.
 ## Task 2: Public Pydantic Models
 
 **Files:**
-- Create: `src/agentpdf/schemas/models.py`
-- Create: `src/agentpdf/schemas/errors.py`
+- Create: `src/okoffice/schemas/models.py`
+- Create: `src/okoffice/schemas/errors.py`
 - Create: `tests/unit/test_models.py`
 
 - [ ] **Step 1: Write model serialization tests**
@@ -105,7 +105,7 @@ class ToolResult(BaseModel):
     warnings: list[str] = Field(default_factory=list)
     usage: dict[str, Any] = Field(default_factory=dict)
     next_recommended_tools: list[str] = Field(default_factory=list)
-    error: AgentPDFError | None = None
+    error: OKofficeError | None = None
 ```
 
 - [ ] **Step 3: Run model tests**
@@ -117,8 +117,8 @@ Expected: PASS.
 ## Task 3: Safe Paths and Page Ranges
 
 **Files:**
-- Create: `src/agentpdf/security/paths.py`
-- Create: `src/agentpdf/core/page_ranges.py`
+- Create: `src/okoffice/security/paths.py`
+- Create: `src/okoffice/core/page_ranges.py`
 - Create: `tests/unit/test_page_ranges.py`
 
 - [ ] **Step 1: Write page range tests**
@@ -131,7 +131,7 @@ Cover `1-3,7`, `all`, `odd`, `even`, reversed ranges, zero pages, and out-of-bou
 
 - [ ] **Step 3: Implement `parse_page_range()`**
 
-Return zero-based page indexes for internal use. Raise `AgentPDFException("invalid_page_range", ...)` for invalid input.
+Return zero-based page indexes for internal use. Raise `OKofficeException("invalid_page_range", ...)` for invalid input.
 
 - [ ] **Step 4: Run page range tests**
 
@@ -142,8 +142,8 @@ Expected: PASS.
 ## Task 4: Artifact Store and Validation
 
 **Files:**
-- Create: `src/agentpdf/artifacts/store.py`
-- Create: `src/agentpdf/validation/pdf.py`
+- Create: `src/okoffice/artifacts/store.py`
+- Create: `src/okoffice/validation/pdf.py`
 - Modify: `tests/unit/test_models.py`
 - Create: `tests/integration/test_pdf_tools.py`
 
@@ -168,7 +168,7 @@ Expected: tests that target implemented behavior pass.
 ## Task 5: Tool Registry
 
 **Files:**
-- Create: `src/agentpdf/tools/registry.py`
+- Create: `src/okoffice/tools/registry.py`
 - Create: `tests/unit/test_registry.py`
 
 - [ ] **Step 1: Write registry tests**
@@ -188,8 +188,8 @@ Expected: PASS.
 ## Task 6: Core PDF Operations
 
 **Files:**
-- Create: `src/agentpdf/core/pdf.py`
-- Create: `src/agentpdf/tools/runner.py`
+- Create: `src/okoffice/core/pdf.py`
+- Create: `src/okoffice/tools/runner.py`
 - Modify: `tests/integration/test_pdf_tools.py`
 
 - [ ] **Step 1: Write inspect/merge/split tests**
@@ -217,7 +217,7 @@ Expected: PASS.
 ## Task 7: CLI Tool Surface
 
 **Files:**
-- Modify: `src/agentpdf/cli/main.py`
+- Modify: `src/okoffice/cli/main.py`
 - Create: `tests/integration/test_cli.py`
 
 - [ ] **Step 1: Write CLI tests**
@@ -237,13 +237,13 @@ Expected: PASS.
 ## Task 8: Local MCP Agent Surface
 
 **Files:**
-- Create: `src/agentpdf/mcp/server.py`
-- Modify: `src/agentpdf/cli/main.py`
+- Create: `src/okoffice/mcp/server.py`
+- Modify: `src/okoffice/cli/main.py`
 - Create: `tests/integration/test_mcp_server.py`
 
 - [ ] **Step 1: Write MCP tests**
 
-Assert the FastMCP server exposes `agentpdf_tool_manifest`, `pdf_inspect_document`, `pdf_merge`, `pdf_split`, and `pdf_render_pages`.
+Assert the FastMCP server exposes `okoffice_tool_manifest`, `pdf_inspect_document`, `pdf_merge`, `pdf_split`, and `pdf_render_pages`.
 
 - [ ] **Step 2: Implement MCP wrappers**
 
@@ -251,7 +251,7 @@ Each MCP tool calls the same runner functions as the CLI and returns `ToolResult
 
 - [ ] **Step 3: Add CLI serve command**
 
-`agentpdf serve --mcp` starts the stdio MCP server; `--transport streamable-http` can be used for HTTP-compatible clients.
+`okoffice serve --mcp` starts the stdio MCP server; `--transport streamable-http` can be used for HTTP-compatible clients.
 
 - [ ] **Step 4: Run MCP tests**
 
@@ -275,16 +275,16 @@ Expected: PASS.
 Run:
 
 ```bash
-python -m agentpdf.cli --help
-agentpdf tools list --json
-agentpdf inspect tests/fixtures/simple.pdf --json
-agentpdf merge tests/fixtures/simple.pdf tests/fixtures/two_pages.pdf -o .agentpdf-out/merged.pdf --json
-agentpdf split tests/fixtures/two_pages.pdf --pages 1 -o .agentpdf-out/page-1.pdf --json
-agentpdf render tests/fixtures/simple.pdf --pages 1 --format png --out-dir .agentpdf-out/renders --json
-python -m agentpdf.cli serve --help
+python -m okoffice.cli --help
+okoffice tools list --json
+okoffice inspect tests/fixtures/simple.pdf --json
+okoffice merge tests/fixtures/simple.pdf tests/fixtures/two_pages.pdf -o .okoffice-out/merged.pdf --json
+okoffice split tests/fixtures/two_pages.pdf --pages 1 -o .okoffice-out/page-1.pdf --json
+okoffice render tests/fixtures/simple.pdf --pages 1 --format png --out-dir .okoffice-out/renders --json
+python -m okoffice.cli serve --help
 ```
 
-Expected: help/list/inspect/merge/split/render succeed. MCP serve help is available; long-running `agentpdf serve --mcp` is not run as a blocking final verification command.
+Expected: help/list/inspect/merge/split/render succeed. MCP serve help is available; long-running `okoffice serve --mcp` is not run as a blocking final verification command.
 
 - [ ] **Step 3: Record git limitation**
 

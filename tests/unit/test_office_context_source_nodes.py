@@ -4,7 +4,7 @@ from pathlib import Path
 
 
 def test_context_packet_adds_native_source_nodes_for_word_sheet_and_deck(tmp_path: Path) -> None:
-    from agentpdf.office.context import build_office_context_packet
+    from okoffice.office.context import build_office_context_packet
 
     docx_path = tmp_path / "memo.docx"
     xlsx_path = tmp_path / "model.xlsx"

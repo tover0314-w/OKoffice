@@ -6,8 +6,8 @@ The SDK should wrap the same ToolResult contract exposed by CLI, MCP, and REST. 
 
 Current compatibility clients:
 
-- Python import path: `agentpdf`
-- TypeScript package: `@okpdf/agentpdf-node`
+- Python import path: `okoffice`
+- TypeScript package: `@okoffice/okoffice-node`
 
 Target okoffice clients:
 
@@ -33,9 +33,9 @@ print(result.usage["sheet_count"])
 Compatibility:
 
 ```python
-from agentpdf import AgentPDF
+from okoffice import OKoffice
 
-client = AgentPDF.local()
+client = OKoffice.local()
 result = client.tools.run(
     "pdf.organize.merge",
     files=["a.pdf", "b.pdf"],
@@ -105,9 +105,9 @@ console.log(workbook.usage.sheet_count);
 Compatibility:
 
 ```ts
-import { AgentPDFClient } from "@okpdf/agentpdf-node";
+import { OKofficeClient } from "@okoffice/okoffice-node";
 
-const client = new AgentPDFClient({ baseUrl: "http://127.0.0.1:7331" });
+const client = new OKofficeClient({ baseUrl: "http://127.0.0.1:7331" });
 const result = await client.merge({
   inputPaths: ["a.pdf", "b.pdf"],
   outputPath: "merged.pdf",
@@ -150,7 +150,7 @@ client.bundle.export({
 });
 ```
 
-PDF compatibility methods can continue to mirror `@okpdf/agentpdf-node` until the migration is complete.
+PDF compatibility methods can continue to mirror `@okoffice/okoffice-node` until the migration is complete.
 
 ## SDK Principles
 
@@ -174,9 +174,9 @@ OkOfficeClient(url)   -> TypeScript REST client for Node.js agents and apps
 Compatibility:
 
 ```text
-AgentPDF.local()      -> compatibility PDF-domain client
-AgentPDF.api(url)     -> compatibility local/remote REST API client
-AgentPDFClient(url)   -> current TypeScript REST client
+OKoffice.local()      -> compatibility PDF-domain client
+OKoffice.api(url)     -> compatibility local/remote REST API client
+OKofficeClient(url)   -> current TypeScript REST client
 ```
 
 ## Async Jobs

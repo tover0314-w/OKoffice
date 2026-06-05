@@ -150,10 +150,10 @@ Current compatibility commands:
 
 ```bash
 pytest -q
-agentpdf tools list --json
-agentpdf inspect tests/fixtures/simple_text.pdf --json
-agentpdf merge tests/fixtures/simple_text.pdf tests/fixtures/multi_page.pdf -o .agentpdf-out/merged.pdf --json
-agentpdf validate .agentpdf-out/merged.pdf --json
+okoffice tools list --json
+okoffice inspect tests/fixtures/simple_text.pdf --json
+okoffice merge tests/fixtures/simple_text.pdf tests/fixtures/multi_page.pdf -o .okoffice-out/merged.pdf --json
+okoffice validate .okoffice-out/merged.pdf --json
 ```
 
 Target okoffice commands:

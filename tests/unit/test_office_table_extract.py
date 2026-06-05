@@ -7,7 +7,7 @@ from typer.testing import CliRunner
 
 
 def test_word_extract_tables_returns_normalized_cells(tmp_path: Path) -> None:
-    from agentpdf.office.word import extract_word_tables
+    from okoffice.office.word import extract_word_tables
 
     path = tmp_path / "memo.docx"
     _write_docx_with_table(path)
@@ -33,7 +33,7 @@ def test_word_extract_tables_returns_normalized_cells(tmp_path: Path) -> None:
 
 
 def test_sheet_extract_tables_returns_sheet_cell_refs(tmp_path: Path) -> None:
-    from agentpdf.office.sheet import extract_sheet_tables
+    from okoffice.office.sheet import extract_sheet_tables
 
     path = tmp_path / "model.xlsx"
     _write_xlsx_with_table(path)
@@ -62,7 +62,7 @@ def test_sheet_extract_tables_returns_sheet_cell_refs(tmp_path: Path) -> None:
 
 
 def test_okoffice_extract_table_cli_commands_return_json(tmp_path: Path) -> None:
-    from okoffice.cli.main import app
+    from okoffice.cli_okoffice.main import app
 
     docx_path = tmp_path / "memo.docx"
     xlsx_path = tmp_path / "model.xlsx"
@@ -80,9 +80,9 @@ def test_okoffice_extract_table_cli_commands_return_json(tmp_path: Path) -> None
 
 
 def test_extract_table_tools_run_through_agent_interfaces(tmp_path: Path) -> None:
-    from agentpdf.api.app import create_app
-    from agentpdf.mcp.server import sheet_extract_tables
-    from agentpdf.workflows.runner import run_workflow
+    from okoffice.api.app import create_app
+    from okoffice.mcp.server import sheet_extract_tables
+    from okoffice.workflows.runner import run_workflow
 
     docx_path = tmp_path / "memo.docx"
     xlsx_path = tmp_path / "model.xlsx"
@@ -114,7 +114,7 @@ def test_extract_table_tools_run_through_agent_interfaces(tmp_path: Path) -> Non
 
 
 def test_table_extract_manifest_and_mcp_catalog_mark_tools_beta() -> None:
-    from okoffice.tools.registry import load_okoffice_manifest
+    from okoffice.tools.registry_okoffice import load_okoffice_manifest
 
     manifest = load_okoffice_manifest()
     target_tools = {tool["name"]: tool for tool in manifest["target_tools"]}

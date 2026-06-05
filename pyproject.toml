@@ -1,5 +1,5 @@
 [project]
-name = "agentpdf"
+name = "okoffice"
 version = "0.1.0"
 description = "Agent-native Office infrastructure with a local-first PDF compatibility layer."
 readme = "README.md"
@@ -30,9 +30,9 @@ browser-renderer = [
 ]
 
 [project.scripts]
-agentpdf = "agentpdf.cli.main:app"
-okpdf = "agentpdf.cli.main:app"
-okoffice = "okoffice.cli.main:app"
+agentpdf = "okoffice.cli.main:app"
+okpdf = "okoffice.cli.main:app"
+okoffice = "okoffice.cli_okoffice.main:app"
 
 [build-system]
 requires = ["hatchling"]

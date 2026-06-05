@@ -3,7 +3,7 @@ from pathlib import Path
 
 
 def test_native_locators_round_trip_with_discriminated_kinds() -> None:
-    from agentpdf.office.ir import (
+    from okoffice.office.ir import (
         DeckLocator,
         PdfLocator,
         SheetLocator,
@@ -60,7 +60,7 @@ def test_native_locators_round_trip_with_discriminated_kinds() -> None:
 
 
 def test_office_ir_serializes_source_refs_for_workbook_formula() -> None:
-    from agentpdf.office.ir import OfficeIR, SheetLocator, SourceRef
+    from okoffice.office.ir import OfficeIR, SheetLocator, SourceRef
 
     ir = OfficeIR(
         ir_version="0.3",
@@ -94,7 +94,7 @@ def test_office_ir_serializes_source_refs_for_workbook_formula() -> None:
 
 
 def test_source_graph_and_office_ir_examples_validate() -> None:
-    from agentpdf.office.ir import OfficeIR, SourceGraph
+    from okoffice.office.ir import OfficeIR, SourceGraph
 
     source_graph = json.loads(Path("examples/ir/okoffice-source-graph.json").read_text(encoding="utf-8"))
     workbook_ir = json.loads(Path("examples/ir/workbook-office-ir.json").read_text(encoding="utf-8"))

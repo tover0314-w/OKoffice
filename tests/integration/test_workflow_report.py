@@ -2,8 +2,8 @@ from pathlib import Path
 
 from reportlab.pdfgen import canvas
 
-from agentpdf.workflows.reporter import create_workflow_report
-from agentpdf.workflows.runner import run_workflow
+from okoffice.workflows.reporter import create_workflow_report
+from okoffice.workflows.runner import run_workflow
 
 
 def test_workflow_report_summarizes_run_result_and_writes_markdown(
@@ -47,7 +47,7 @@ def test_workflow_report_summarizes_run_result_and_writes_markdown(
     assert report["failed_steps"] == 0
     assert report["artifact_count"] == 1
     assert report["tools"] == ["pdf.inspect.document", "pdf.ai.rag.ingest"]
-    assert report["markdown"].startswith("# AgentPDF Workflow Report")
+    assert report["markdown"].startswith("# OKoffice Workflow Report")
     assert "pdf.ai.rag.ingest" in report["markdown"]
     assert "output.index.json" not in report["markdown"]
 

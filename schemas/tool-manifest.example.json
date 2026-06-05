@@ -4,7 +4,7 @@
     {
       "name": "agent.setup.claude_code",
       "status": "beta",
-      "description": "Generate a Claude Code MCP config for local AgentPDF tools.",
+      "description": "Generate a Claude Code MCP config for local OKoffice tools.",
       "category": "agent",
       "interfaces": [
         "cli",
@@ -514,7 +514,7 @@
     {
       "name": "pdf.render.html_package",
       "status": "beta",
-      "description": "Validate an AgentPDF HTML package manifest and render it to PDF.",
+      "description": "Validate an OKoffice HTML package manifest and render it to PDF.",
       "category": "render",
       "interfaces": [
         "cli",

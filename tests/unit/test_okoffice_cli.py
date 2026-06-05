@@ -4,8 +4,8 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
-from agentpdf.cli.main import app
-from okoffice.cli.main import app as okoffice_app
+from okoffice.cli.main import app
+from okoffice.cli_okoffice.main import app as okoffice_app
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -15,7 +15,7 @@ runner = CliRunner()
 def test_pyproject_exposes_okoffice_console_script() -> None:
     pyproject = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
 
-    assert pyproject["project"]["scripts"]["okoffice"] == "okoffice.cli.main:app"
+    assert pyproject["project"]["scripts"]["okoffice"] == "okoffice.cli_okoffice.main:app"
 
 
 def test_office_manifest_command_returns_target_tool_map() -> None:

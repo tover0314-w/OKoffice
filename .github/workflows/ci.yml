@@ -46,4 +46,4 @@ jobs:
       - name: Install
         run: npm ci
       - name: Test Node SDK
-        run: npm --workspace @okpdf/agentpdf-node test
+        run: npm --workspace @okoffice/okoffice-node test

@@ -20,7 +20,7 @@ The public README should show:
 - Tagline: local-first, agent-native Office infrastructure.
 - One workflow diagram.
 - Quick install.
-- Current compatibility note: `okpdf` / `pdf.*` are the first implemented domain.
+- Current compatibility note: `okoffice` / `pdf.*` are the first implemented domain.
 - Target direction: `okoffice` / `office.*` for Word, Excel, PowerPoint, PDF, and bundles.
 - 5 useful CLI examples.
 - MCP example.

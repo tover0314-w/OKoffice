@@ -13,7 +13,7 @@ This repository should stay clean enough for agents, contributors, and enterpris
 
 ## Do Not Commit These
 
-- Local output directories: `.okoffice-out/`, `.agentpdf-out/`, `/outputs/`, `/artifacts/`, `/artifact-bundles/`, `renders/`.
+- Local output directories: `.okoffice-out/`, `.okoffice-out/`, `/outputs/`, `/artifacts/`, `/artifact-bundles/`, `renders/`.
 - Dependency directories: `node_modules/`, `.venv/`, `venv/`, `env/`.
 - Build products: `dist/`, `build/`, `packages/*/dist/`, `*.tsbuildinfo`.
 - Caches and reports: `.pytest_cache/`, `.ruff_cache/`, `.mypy_cache/`, `.coverage`, `htmlcov/`, `.cache/`.
@@ -23,7 +23,7 @@ This repository should stay clean enough for agents, contributors, and enterpris
 
 ## Generated Artifacts
 
-Generated Office/PDF artifacts should usually live under `.okoffice-out/` or the compatibility `.agentpdf-out/` directory and remain untracked.
+Generated Office/PDF artifacts should usually live under `.okoffice-out/` or the compatibility `.okoffice-out/` directory and remain untracked.
 
 Commit a generated artifact only when all of these are true:
 
@@ -41,7 +41,7 @@ Commit a generated artifact only when all of these are true:
 git status --short
 python scripts/doctor.py
 pytest -q
-npm --workspace @okpdf/agentpdf-node test
+npm --workspace @okoffice/okoffice-node test
 ruff check src tests scripts
 ```
 

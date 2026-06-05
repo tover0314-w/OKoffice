@@ -34,7 +34,7 @@ def main() -> int:
 def build_report() -> dict[str, Any]:
     checks = {
         "python": check_python(),
-        "agentpdf_import": check_agentpdf_import(),
+        "okoffice_import": check_okoffice_import(),
         "pypdf": check_import("pypdf"),
         "pypdfium2": check_import("pypdfium2"),
         "reportlab": check_import("reportlab"),
@@ -71,23 +71,23 @@ def check_python() -> dict[str, Any]:
     }
 
 
-def check_agentpdf_import() -> dict[str, Any]:
+def check_okoffice_import() -> dict[str, Any]:
     try:
-        import agentpdf
+        import okoffice
 
         return {
             "ok": True,
             "required": True,
             "category": "required_runtime",
-            "version": agentpdf.__version__,
-            "message": "agentpdf imports from the local workspace.",
+            "version": okoffice.__version__,
+            "message": "okoffice imports from the local workspace.",
         }
     except Exception as exc:  # pragma: no cover - defensive report path
         return {
             "ok": False,
             "required": True,
             "category": "required_runtime",
-            "message": f"Could not import agentpdf: {exc}",
+            "message": f"Could not import okoffice: {exc}",
         }
 
 
@@ -160,7 +160,7 @@ def check_cli_help() -> dict[str, Any]:
     env = os.environ.copy()
     env["PYTHONPATH"] = str(SRC) + os.pathsep + env.get("PYTHONPATH", "")
     compatibility_result = subprocess.run(
-        [sys.executable, "-m", "agentpdf.cli", "--help"],
+        [sys.executable, "-m", "okoffice.cli", "--help"],
         cwd=ROOT,
         env=env,
         capture_output=True,
@@ -168,7 +168,7 @@ def check_cli_help() -> dict[str, Any]:
         check=False,
     )
     public_result = subprocess.run(
-        [sys.executable, "-m", "okoffice.cli", "--help"],
+        [sys.executable, "-m", "okoffice.cli_okoffice", "--help"],
         cwd=ROOT,
         env=env,
         capture_output=True,
@@ -179,25 +179,22 @@ def check_cli_help() -> dict[str, Any]:
     public_output = (public_result.stdout or public_result.stderr).strip()
     compatibility_ok = (
         compatibility_result.returncode == 0
-        and (
-            "OKoffice agent-native Office infra CLI" in compatibility_output
-            or "AgentPDF Infra CLI" in compatibility_output
-        )
+        and "OKoffice agent-native Office infra CLI" in compatibility_output
     )
-    public_ok = public_result.returncode == 0 and "okoffice local-first agent-native Office CLI" in public_output
+    public_ok = public_result.returncode == 0 and "OKoffice agent-native Office infra CLI" in public_output
     return {
         "ok": compatibility_ok and public_ok,
         "required": True,
         "category": "required_runtime",
-        "message": "agentpdf compatibility CLI and okoffice public CLI help both work."
+        "message": "okoffice compatibility CLI and okoffice public CLI help both work."
         if compatibility_ok and public_ok
-        else "Run python -m agentpdf.cli --help and python -m okoffice.cli --help to inspect CLI setup.",
+        else "Run python -m okoffice.cli --help and python -m okoffice.cli_okoffice --help to inspect CLI setup.",
     }
 
 
 def check_rest_app() -> dict[str, Any]:
     try:
-        from agentpdf.api.app import create_app
+        from okoffice.api.app import create_app
 
         app = create_app()
         routes = sorted(getattr(route, "path", "") for route in app.routes)
@@ -219,7 +216,7 @@ def check_rest_app() -> dict[str, Any]:
 
 def check_mcp_server() -> dict[str, Any]:
     try:
-        from agentpdf.mcp.server import create_mcp_server
+        from okoffice.mcp.server import create_mcp_server
 
         create_mcp_server()
         return {
@@ -256,7 +253,7 @@ def check_cjk_fonts() -> dict[str, Any]:
         from reportlab.pdfbase import pdfmetrics
         from reportlab.pdfbase.cidfonts import UnicodeCIDFont
 
-        from agentpdf.core.pdf import CJK_CID_FONT, CJK_FONT_CANDIDATES, CJK_FONT_PATH_ENV
+        from okoffice.core.pdf import CJK_CID_FONT, CJK_FONT_CANDIDATES, CJK_FONT_PATH_ENV
 
         configured = [
             Path(raw_path.strip())
@@ -296,7 +293,7 @@ def next_steps(checks: dict[str, dict[str, Any]]) -> list[str]:
     steps: list[str] = []
     if not checks["python"]["ok"]:
         steps.append("Install Python 3.11 or newer.")
-    if not checks["agentpdf_import"]["ok"]:
+    if not checks["okoffice_import"]["ok"]:
         steps.append("Run: python scripts/setup_dev.py --python-only")
     for name in ["pypdf", "pypdfium2", "reportlab", "fastapi", "mcp", "typer"]:
         if not checks[name]["ok"]:
@@ -304,7 +301,7 @@ def next_steps(checks: dict[str, dict[str, Any]]) -> list[str]:
     if not checks["node"]["ok"] or not checks["npm"]["ok"]:
         steps.append("Install Node.js 20 or newer to use the TypeScript SDK.")
     if not checks["cli_help"]["ok"]:
-        steps.append("Run: python -m okoffice.cli --help and python -m agentpdf.cli --help")
+        steps.append("Run: python -m okoffice.cli --help and python -m okoffice.cli_okoffice --help")
     if not checks["rest_app"]["ok"] or not checks["mcp_server"]["ok"]:
         steps.append("Check local package imports and rerun: pytest tests/integration/test_api.py -q")
     if not steps:

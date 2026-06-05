@@ -33,7 +33,7 @@ For the compatibility TypeScript/Node SDK:
 
 ```bash
 npm install
-npm --workspace @okpdf/agentpdf-node test
+npm --workspace @okoffice/okoffice-node test
 ```
 
 ## Public Tool Expectations
@@ -56,7 +56,7 @@ Before opening a PR:
 
 - [ ] `python scripts/doctor.py` passes.
 - [ ] `pytest -q` passes.
-- [ ] `npm --workspace @okpdf/agentpdf-node test` passes when Node SDK behavior is touched.
+- [ ] `npm --workspace @okoffice/okoffice-node test` passes when Node SDK behavior is touched.
 - [ ] `ruff check src tests scripts` passes when Python code is touched.
 - [ ] Public schema, manifest, or tool-status changes are documented.
 - [ ] CLI, MCP, REST, and SDK examples are updated when public behavior changes.

@@ -104,8 +104,8 @@ Current compatibility commands should keep working but should not be the main pr
 
 ```bash
 python -m agentpdf.cli --help
-okpdf inspect tests/fixtures/simple.pdf
-okpdf merge a.pdf b.pdf -o merged.pdf
+okoffice inspect tests/fixtures/simple.pdf
+okoffice merge a.pdf b.pdf -o merged.pdf
 pytest -q
 ```
 

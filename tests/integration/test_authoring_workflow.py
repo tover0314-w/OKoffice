@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from agentpdf.tools.runner import (
+from okoffice.tools.runner import (
     run_authoring_plan,
     run_create_html_package,
     run_pages_write,
@@ -11,7 +11,7 @@ from agentpdf.tools.runner import (
     run_storyboard_plan,
     run_workflow_research_deck,
 )
-from agentpdf.workflows.runner import run_workflow
+from okoffice.workflows.runner import run_workflow
 
 
 def _brief() -> dict[str, object]:

@@ -53,6 +53,11 @@
       "status": "beta"
     },
     {
+      "name": "office_workflow_plan",
+      "maps_to": "office.workflow.plan",
+      "status": "beta"
+    },
+    {
       "name": "office_workflow_docset_to_sheet",
       "maps_to": "office.workflow.docset_to_sheet",
       "status": "beta"

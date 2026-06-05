@@ -1,6 +1,6 @@
 # Code of Conduct
 
-AgentPDF Infra follows a contributor-friendly, professional open-source conduct policy.
+OKoffice follows a contributor-friendly, professional open-source conduct policy.
 
 ## Expected behavior
 

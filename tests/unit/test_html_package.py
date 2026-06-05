@@ -5,8 +5,8 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-from agentpdf.renderers import html_package
-from agentpdf.schemas.errors import AgentPDFException
+from okoffice.renderers import html_package
+from okoffice.schemas.errors import OKofficeException
 
 
 def test_html_package_copies_local_image_assets_and_records_validation(tmp_path: Path) -> None:
@@ -101,7 +101,7 @@ def test_html_package_copies_local_image_assets_and_records_validation(tmp_path:
 
 
 def test_html_package_rejects_remote_image_assets(tmp_path: Path) -> None:
-    with pytest.raises(AgentPDFException) as exc_info:
+    with pytest.raises(OKofficeException) as exc_info:
         html_package.write_composition_html_package(
             composition_ir={
                 "composition_id": "comp_remote_asset",
@@ -172,7 +172,7 @@ def test_render_html_package_validates_manifest_assets_and_outputs_pdf(tmp_path:
     assert result.usage["renderer_backend"] == {
         "backend_id": "local_html_package_fallback",
         "engine": "reportlab_text_fallback",
-        "source": "agentpdf.conversion.local.html_to_pdf",
+        "source": "okoffice.conversion.local.html_to_pdf",
         "is_browser_renderer": False,
         "fallback": True,
         "fallback_reason": "browser_renderer_worker_unavailable",
@@ -211,7 +211,7 @@ def test_render_html_package_reports_requested_browser_backend_when_unavailable(
     output_pdf = tmp_path / "rendered.pdf"
 
     def missing_browser_render(**_kwargs: object):
-        raise AgentPDFException(
+        raise OKofficeException(
             "dependency_missing",
             "Chromium HTML rendering requires the optional Playwright dependency.",
         )
@@ -235,7 +235,7 @@ def test_render_html_package_reports_requested_browser_backend_when_unavailable(
     assert result.usage["renderer_backend"] == {
         "backend_id": "browser_chromium",
         "engine": "playwright_chromium",
-        "source": "agentpdf.renderers.browser_worker",
+        "source": "okoffice.renderers.browser_worker",
         "is_browser_renderer": True,
         "fallback": False,
         "available": False,
@@ -309,7 +309,7 @@ def test_render_html_package_uses_browser_backend_when_available(monkeypatch, tm
     assert result.usage["renderer_backend"] == {
         "backend_id": "browser_chromium",
         "engine": "playwright_chromium",
-        "source": "agentpdf.renderers.browser_worker",
+        "source": "okoffice.renderers.browser_worker",
         "is_browser_renderer": True,
         "fallback": False,
         "available": True,
@@ -398,7 +398,7 @@ def test_render_html_package_fails_when_manifest_asset_is_missing(tmp_path: Path
     packaged_asset = Path(package["html_package_manifest"]["assets"][0]["packaged_path"])
     packaged_asset.unlink()
 
-    with pytest.raises(AgentPDFException) as exc_info:
+    with pytest.raises(OKofficeException) as exc_info:
         html_package.render_html_package(
             package["html_package_manifest_path"],
             tmp_path / "rendered.pdf",

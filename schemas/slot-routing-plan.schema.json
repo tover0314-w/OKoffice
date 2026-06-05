@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://okpdf.dev/schemas/slot-routing-plan.schema.json",
-  "title": "AgentPDF Slot Routing Plan",
+  "title": "OKoffice Slot Routing Plan",
   "type": "object",
   "required": [
     "slot_routing_plan_version",

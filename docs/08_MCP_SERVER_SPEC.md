@@ -31,7 +31,7 @@ The current server exposes `pdf.*` tools through MCP wrappers. During migration,
 Current resources:
 
 ```text
-agentpdf_tool_manifest
+okoffice_tool_manifest
 okoffice_tool_manifest
 ```
 
@@ -109,6 +109,7 @@ First target wrappers:
 - `deck_validation_html_preview`
 - `deck_export_pptx`
 - `word_create_document`
+- `office_workflow_plan`
 - `office_workflow_docset_to_sheet`
 - `office_workflow_sheet_to_deck`
 - `office_workflow_board_pack`
@@ -132,6 +133,11 @@ office_inspect_file("model.xlsx")
 office_context_build_packet(["memo.docx", "model.xlsx"], ".okoffice-out/context.packet.json")
 office_extract_schema(".okoffice-out/context.packet.json", {"fields": [{"name": "vendor"}]}, ".okoffice-out/evidence.json")
 office_validation_package("memo.docx")
+office_workflow_plan(
+    "Build an evidence workbook and board deck.",
+    ["memo.docx", "filing.pdf"],
+    [".okoffice-out/model.xlsx", ".okoffice-out/board-deck.pptx"],
+)
 sheet_create_evidence_workbook(
     {
         "records": [
@@ -228,7 +234,7 @@ Current examples live in:
 examples/mcp/
 ```
 
-The migration preserves current `okpdf serve --mcp` behavior and adds:
+The migration preserves current `okoffice serve --mcp` behavior and adds:
 
 ```bash
 okoffice serve --mcp --safe-root .

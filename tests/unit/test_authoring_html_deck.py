@@ -3,10 +3,10 @@ from pathlib import Path
 
 import pytest
 
-from agentpdf.renderers.html_package import render_html_package
-from agentpdf.tools.runner import run_create_html_package
-from agentpdf.authoring.html_deck import write_authoring_html_package
-from agentpdf.authoring.models import DesignTokens, PageDocument, PageSpec
+from okoffice.renderers.html_package import render_html_package
+from okoffice.tools.runner import run_create_html_package
+from okoffice.authoring.html_deck import write_authoring_html_package
+from okoffice.authoring.models import DesignTokens, PageDocument, PageSpec
 
 
 def _page_document() -> PageDocument:
@@ -17,7 +17,7 @@ def _page_document() -> PageDocument:
             PageSpec(
                 page_number=1,
                 layout="cover",
-                title="AgentPDF Authoring",
+                title="OKoffice Authoring",
                 subtitle="A local-first deck",
                 blocks=[{"type": "hero", "text": "A local-first deck"}],
             ),
@@ -34,12 +34,12 @@ def _page_document() -> PageDocument:
                             {
                                 "claim": "Evidence-backed pages are clearer.",
                                 "evidence": "Cards keep source claims visible.",
-                                "source_title": "AgentPDF Spec",
+                                "source_title": "OKoffice Spec",
                             }
                         ],
                     },
                 ],
-                source_footer="Sources: AgentPDF Spec",
+                source_footer="Sources: OKoffice Spec",
                 evidence_refs=["ev_1"],
             ),
         ],
@@ -53,7 +53,7 @@ def test_write_authoring_html_package_writes_html_and_manifest(tmp_path: Path) -
     result = write_authoring_html_package(
         page_document=_page_document(),
         html_output_path=output,
-        title="AgentPDF Authoring",
+        title="OKoffice Authoring",
     )
 
     manifest_path = output.with_suffix(".html-manifest.json")
@@ -72,8 +72,8 @@ def test_write_authoring_html_package_writes_html_and_manifest(tmp_path: Path) -
     assert manifest["renderer_constraints"]["javascript"] == "blocked"
     assert 'data-agentpdf-authoring-document' in html
     assert 'data-page-number="1"' in html
-    assert "AgentPDF Authoring" in html
-    assert "Sources: AgentPDF Spec" in html
+    assert "OKoffice Authoring" in html
+    assert "Sources: OKoffice Spec" in html
     assert any(str(artifact.path) == str(output.resolve()) for artifact in result.artifacts)
 
 

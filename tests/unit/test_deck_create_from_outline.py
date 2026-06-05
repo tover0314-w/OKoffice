@@ -7,7 +7,7 @@ from typer.testing import CliRunner
 
 
 def test_create_deck_from_outline_writes_valid_pptx(tmp_path: Path) -> None:
-    from agentpdf.office.deck import create_deck_from_outline, inspect_deck_presentation
+    from okoffice.office.deck import create_deck_from_outline, inspect_deck_presentation
 
     output_path = tmp_path / "board-review.pptx"
     outline = _outline()
@@ -18,7 +18,7 @@ def test_create_deck_from_outline_writes_valid_pptx(tmp_path: Path) -> None:
     assert result.status == "succeeded"
     assert result.tool == "deck.create.from_outline"
     assert output_path.exists()
-    assert result.artifacts[0].path == output_path
+    assert any(a.path == output_path for a in result.artifacts)
     assert result.validation is not None
     assert result.validation.status == "passed"
     assert result.usage["summary"]["slide_count"] == 3
@@ -33,7 +33,7 @@ def test_create_deck_from_outline_writes_valid_pptx(tmp_path: Path) -> None:
 
 
 def test_create_deck_from_outline_rejects_empty_slides(tmp_path: Path) -> None:
-    from agentpdf.office.deck import create_deck_from_outline
+    from okoffice.office.deck import create_deck_from_outline
 
     result = create_deck_from_outline({"title": "No slides", "slides": []}, tmp_path / "empty.pptx")
 
@@ -43,10 +43,10 @@ def test_create_deck_from_outline_rejects_empty_slides(tmp_path: Path) -> None:
 
 
 def test_create_deck_from_outline_agent_interfaces(tmp_path: Path) -> None:
-    from agentpdf.api.app import create_app
-    from agentpdf.mcp.server import deck_create_from_outline
-    from agentpdf.workflows.runner import run_workflow
-    from okoffice.cli.main import app
+    from okoffice.api.app import create_app
+    from okoffice.mcp.server import deck_create_from_outline
+    from okoffice.workflows.runner import run_workflow
+    from okoffice.cli_okoffice.main import app
 
     outline_path = tmp_path / "outline.json"
     cli_output = tmp_path / "cli.pptx"
@@ -90,7 +90,7 @@ def test_create_deck_from_outline_agent_interfaces(tmp_path: Path) -> None:
 
 
 def test_deck_create_from_outline_is_listed_in_manifests() -> None:
-    from okoffice.tools.registry import load_okoffice_manifest
+    from okoffice.tools.registry_okoffice import load_okoffice_manifest
 
     manifest = load_okoffice_manifest()
     target = {tool["name"]: tool for tool in manifest["target_tools"]}

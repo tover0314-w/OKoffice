@@ -7,7 +7,7 @@ from typer.testing import CliRunner
 
 
 def test_build_context_packet_from_office_sources_writes_source_graph(tmp_path: Path) -> None:
-    from agentpdf.office.context import build_office_context_packet
+    from okoffice.office.context import build_office_context_packet
 
     docx_path, xlsx_path, pptx_path = _write_context_sources(tmp_path)
     output_path = tmp_path / "context.packet.json"
@@ -48,7 +48,7 @@ def test_build_context_packet_from_office_sources_writes_source_graph(tmp_path: 
 
 
 def test_build_context_packet_rejects_empty_inputs(tmp_path: Path) -> None:
-    from agentpdf.office.context import build_office_context_packet
+    from okoffice.office.context import build_office_context_packet
 
     result = build_office_context_packet([], tmp_path / "empty.json")
 
@@ -58,10 +58,10 @@ def test_build_context_packet_rejects_empty_inputs(tmp_path: Path) -> None:
 
 
 def test_context_packet_agent_interfaces(tmp_path: Path) -> None:
-    from agentpdf.api.app import create_app
-    from agentpdf.mcp.server import office_context_build_packet
-    from agentpdf.workflows.runner import run_workflow
-    from okoffice.cli.main import app
+    from okoffice.api.app import create_app
+    from okoffice.mcp.server import office_context_build_packet
+    from okoffice.workflows.runner import run_workflow
+    from okoffice.cli_okoffice.main import app
 
     docx_path, xlsx_path, _ = _write_context_sources(tmp_path)
     cli_output = tmp_path / "cli.context.json"
@@ -134,7 +134,7 @@ def test_context_packet_agent_interfaces(tmp_path: Path) -> None:
 
 
 def test_context_packet_is_listed_in_manifests() -> None:
-    from okoffice.tools.registry import load_okoffice_manifest
+    from okoffice.tools.registry_okoffice import load_okoffice_manifest
 
     manifest = load_okoffice_manifest()
     target = {tool["name"]: tool for tool in manifest["target_tools"]}

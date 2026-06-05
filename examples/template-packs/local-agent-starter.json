@@ -42,12 +42,12 @@
         }
       },
       "sample_data": {
-        "title": "AgentPDF Board Audit",
+        "title": "OKoffice Board Audit",
         "audience": "engineering leadership",
         "sections": [
           {
             "heading": "Executive Summary",
-            "body": "AgentPDF turns heterogeneous context into validated PDF artifacts."
+            "body": "OKoffice turns heterogeneous context into validated PDF artifacts."
           },
           {
             "heading": "Evidence",
@@ -216,7 +216,7 @@
       "sample_data": {
         "title": "Invoice INV-1001",
         "invoice_number": "INV-1001",
-        "client": "AgentPDF Labs",
+        "client": "OKoffice Labs",
         "due_date": "2026-06-30",
         "items": [
           {"description": "Template implementation", "quantity": 2, "unit_price": 500},

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://okpdf.dev/schemas/patch-manifest.schema.json",
-  "title": "AgentPDF Patch Manifest",
+  "title": "OKoffice Patch Manifest",
   "type": "object",
   "required": [
     "patch_manifest_version",

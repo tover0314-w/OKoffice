@@ -2,8 +2,8 @@ from pathlib import Path
 
 from reportlab.pdfgen import canvas
 
-from agentpdf.workflows.planner import plan_workflow
-from agentpdf.workflows.runner import run_workflow
+from okoffice.workflows.planner import plan_workflow
+from okoffice.workflows.runner import run_workflow
 
 
 def test_workflow_run_executes_local_agent_steps_with_evidence(tmp_path: Path) -> None:

@@ -6,8 +6,8 @@ from typer.testing import CliRunner
 
 
 def test_sheet_to_deck_profiles_workbook_and_writes_presentation(tmp_path: Path) -> None:
-    from agentpdf.office.deck import inspect_deck_presentation
-    from agentpdf.office.workflows import sheet_to_deck
+    from okoffice.office.deck import inspect_deck_presentation
+    from okoffice.office.workflows import sheet_to_deck
 
     workbook_path = tmp_path / "model.xlsx"
     deck_path = tmp_path / "board-review.pptx"
@@ -50,8 +50,8 @@ def test_sheet_to_deck_profiles_workbook_and_writes_presentation(tmp_path: Path)
 
 
 def test_sheet_to_deck_rejects_empty_profile(tmp_path: Path) -> None:
-    from agentpdf.office.workflows import sheet_to_deck
-    from agentpdf.office.xlsx import write_xlsx
+    from okoffice.office.workflows import sheet_to_deck
+    from okoffice.office.xlsx import write_xlsx
 
     workbook_path = tmp_path / "empty.xlsx"
     write_xlsx(workbook_path, [("Model", [["Metric", "Value"]])])
@@ -64,10 +64,10 @@ def test_sheet_to_deck_rejects_empty_profile(tmp_path: Path) -> None:
 
 
 def test_sheet_to_deck_agent_interfaces(tmp_path: Path) -> None:
-    from agentpdf.api.app import create_app
-    from agentpdf.mcp.server import office_workflow_sheet_to_deck
-    from agentpdf.workflows.runner import run_workflow
-    from okoffice.cli.main import app
+    from okoffice.api.app import create_app
+    from okoffice.mcp.server import office_workflow_sheet_to_deck
+    from okoffice.workflows.runner import run_workflow
+    from okoffice.cli_okoffice.main import app
 
     workbook_path = tmp_path / "model.xlsx"
     cli_output = tmp_path / "cli.pptx"
@@ -127,7 +127,7 @@ def test_sheet_to_deck_agent_interfaces(tmp_path: Path) -> None:
 
 
 def test_sheet_to_deck_is_listed_in_manifests() -> None:
-    from okoffice.tools.registry import load_okoffice_manifest
+    from okoffice.tools.registry_okoffice import load_okoffice_manifest
 
     manifest = load_okoffice_manifest()
     target = {tool["name"]: tool for tool in manifest["target_tools"]}
@@ -140,7 +140,7 @@ def test_sheet_to_deck_is_listed_in_manifests() -> None:
 
 
 def _write_model_workbook(path: Path) -> None:
-    from agentpdf.office.xlsx import write_xlsx
+    from okoffice.office.xlsx import write_xlsx
 
     write_xlsx(
         path,

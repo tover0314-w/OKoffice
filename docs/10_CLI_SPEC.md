@@ -13,8 +13,8 @@ okoffice
 Compatibility CLIs:
 
 ```text
-okpdf
-agentpdf
+okoffice
+okoffice
 ```
 
 Compatibility commands stay documented in `docs/42_LEGACY_PDF_COMPATIBILITY.md`. The main CLI spec is okoffice-first.
@@ -167,4 +167,4 @@ Example:
 
 ## Migration Rule
 
-Do not remove `okpdf` or `agentpdf` commands until `okoffice` commands are implemented, tested, documented, and released with clear compatibility notes.
+Do not remove `okoffice` or `okoffice` commands until `okoffice` commands are implemented, tested, documented, and released with clear compatibility notes.

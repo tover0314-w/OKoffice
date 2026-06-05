@@ -7,7 +7,7 @@ from tests.unit.test_deck_contact_sheet_validation import _write_deck
 
 
 def test_deck_presentation_validation_returns_structural_baseline(tmp_path: Path) -> None:
-    from agentpdf.office.deck_validation import validate_deck_presentation
+    from okoffice.office.deck_validation import validate_deck_presentation
 
     deck = _write_deck(tmp_path)
 
@@ -42,7 +42,7 @@ def test_deck_presentation_validation_returns_structural_baseline(tmp_path: Path
 
 
 def test_okoffice_deck_validate_presentation_cli_returns_tool_result_json(tmp_path: Path) -> None:
-    from okoffice.cli.main import app
+    from okoffice.cli_okoffice.main import app
 
     deck = _write_deck(tmp_path)
 
@@ -57,7 +57,7 @@ def test_okoffice_deck_validate_presentation_cli_returns_tool_result_json(tmp_pa
 def test_deck_presentation_validation_runs_through_rest_api(tmp_path: Path) -> None:
     from fastapi.testclient import TestClient
 
-    from agentpdf.api.app import create_app
+    from okoffice.api.app import create_app
 
     deck = _write_deck(tmp_path)
 
@@ -73,7 +73,7 @@ def test_deck_presentation_validation_runs_through_rest_api(tmp_path: Path) -> N
 
 
 def test_deck_presentation_validation_runs_through_mcp_function(tmp_path: Path) -> None:
-    from agentpdf.mcp.server import deck_validate_presentation
+    from okoffice.mcp.server import deck_validate_presentation
 
     deck = _write_deck(tmp_path)
 
@@ -85,7 +85,7 @@ def test_deck_presentation_validation_runs_through_mcp_function(tmp_path: Path) 
 
 
 def test_deck_presentation_validation_runs_through_workflow_runner(tmp_path: Path) -> None:
-    from agentpdf.workflows.runner import run_workflow
+    from okoffice.workflows.runner import run_workflow
 
     deck = _write_deck(tmp_path)
 

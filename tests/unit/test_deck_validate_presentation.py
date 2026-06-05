@@ -6,7 +6,7 @@ from typer.testing import CliRunner
 
 
 def test_validate_deck_presentation_reports_artifact_quality(tmp_path: Path) -> None:
-    from agentpdf.office.deck import create_deck_from_outline, validate_deck_presentation
+    from okoffice.office.deck import create_deck_from_outline, validate_deck_presentation
 
     deck_path = tmp_path / "board-review.pptx"
     create_deck_from_outline(_outline(), deck_path)
@@ -26,7 +26,7 @@ def test_validate_deck_presentation_reports_artifact_quality(tmp_path: Path) -> 
 
 
 def test_validate_deck_presentation_warns_on_placeholder_leakage(tmp_path: Path) -> None:
-    from agentpdf.office.deck import create_deck_from_outline, validate_deck_presentation
+    from okoffice.office.deck import create_deck_from_outline, validate_deck_presentation
 
     deck_path = tmp_path / "placeholder.pptx"
     outline = _outline()
@@ -44,11 +44,11 @@ def test_validate_deck_presentation_warns_on_placeholder_leakage(tmp_path: Path)
 
 
 def test_validate_deck_presentation_agent_interfaces(tmp_path: Path) -> None:
-    from agentpdf.api.app import create_app
-    from agentpdf.mcp.server import deck_validate_presentation
-    from agentpdf.office.deck import create_deck_from_outline
-    from agentpdf.workflows.runner import run_workflow
-    from okoffice.cli.main import app
+    from okoffice.api.app import create_app
+    from okoffice.mcp.server import deck_validate_presentation
+    from okoffice.office.deck import create_deck_from_outline
+    from okoffice.workflows.runner import run_workflow
+    from okoffice.cli_okoffice.main import app
 
     deck_path = tmp_path / "board-review.pptx"
     create_deck_from_outline(_outline(), deck_path)
@@ -69,7 +69,7 @@ def test_validate_deck_presentation_agent_interfaces(tmp_path: Path) -> None:
 
 
 def test_deck_validate_presentation_is_listed_in_manifests() -> None:
-    from okoffice.tools.registry import load_okoffice_manifest
+    from okoffice.tools.registry_okoffice import load_okoffice_manifest
 
     manifest = load_okoffice_manifest()
     target = {tool["name"]: tool for tool in manifest["target_tools"]}

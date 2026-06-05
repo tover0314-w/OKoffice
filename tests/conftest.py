@@ -27,14 +27,14 @@ def two_page_pdf(fixture_dir: Path) -> Path:
 @pytest.fixture()
 def text_pdf(fixture_dir: Path) -> Path:
     path = fixture_dir / "text.pdf"
-    _write_text_pdf(path, "AgentPDF local text layer")
+    _write_text_pdf(path, "OKoffice local text layer")
     return path
 
 
 @pytest.fixture()
 def metadata_pdf(fixture_dir: Path) -> Path:
     path = fixture_dir / "metadata.pdf"
-    _write_text_pdf(path, "Metadata fixture", title="Original Title", author="AgentPDF Tests")
+    _write_text_pdf(path, "Metadata fixture", title="Original Title", author="OKoffice Tests")
     return path
 
 

@@ -57,9 +57,9 @@ okoffice workflow sheet-to-deck .okoffice-out/evidence.xlsx -o .okoffice-out/boa
 okoffice workflow board-pack .okoffice-out/evidence.xlsx .okoffice-out/board-review.pptx -o .okoffice-out/board-pack.zip --title "Board Review" --json
 okoffice bundle verify .okoffice-out/board-pack.zip --json
 
-okpdf inspect tests/fixtures/simple.pdf --json
-okpdf serve --mcp --safe-root .
-okpdf serve --api
+okoffice inspect tests/fixtures/simple.pdf --json
+okoffice serve --mcp --safe-root .
+okoffice serve --api
 ```
 
 Deck 说明：当前 OSS beta 可以从 deck plan 直接创建确定性的可编辑 PPTX。OKoffice 目标路线是 taste-driven、HTML-first：
@@ -151,7 +151,7 @@ deck.compose.plan -> deck.render.html -> deck.validation.html_preview
 python scripts/setup_dev.py
 python scripts/doctor.py
 pytest -q
-npm --workspace @okpdf/agentpdf-node test
+npm --workspace @okoffice/okoffice-node test
 ruff check src tests scripts
 ```
 

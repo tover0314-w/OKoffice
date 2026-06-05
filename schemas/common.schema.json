@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://agentpdf.dev/schemas/common.json",
-  "title": "AgentPDF Common Types",
+  "title": "OKoffice Common Types",
   "type": "object",
   "$defs": {
     "FileRef": {

@@ -2,7 +2,7 @@
 
 okoffice's first implementation priority is local agent-callable Office tooling. Cloud workers can be added later, but CLI, MCP, REST, schemas, and SDKs must remain useful without paid services, hosted URLs, or proprietary keys.
 
-Compatibility note: the runnable implementation currently exposes PDF tools through `okpdf`, `agentpdf`, and `pdf.*`. Those names belong in compatibility docs. New agent integration docs should use okoffice target names first.
+Compatibility note: the runnable implementation currently exposes PDF tools through `okoffice`, `okoffice`, and `pdf.*`. Those names belong in compatibility docs. New agent integration docs should use okoffice target names first.
 
 ## Fast Setup
 
@@ -22,8 +22,8 @@ okoffice serve --api --safe-root .
 Current compatibility servers:
 
 ```bash
-okpdf serve --mcp --safe-root .
-okpdf serve --api
+okoffice serve --mcp --safe-root .
+okoffice serve --api
 ```
 
 ## Agent Surfaces

@@ -6,17 +6,17 @@ from fastapi.testclient import TestClient
 from reportlab.pdfgen import canvas
 from typer.testing import CliRunner
 
-import agentpdf.mcp.server as mcp_server
-from agentpdf.api.app import create_app
-from agentpdf.cli.main import app
-from agentpdf.compare.local import semantic_diff_pdf, version_report_pdf
-from agentpdf.ir.semantic import (
+import okoffice.mcp.server as mcp_server
+from okoffice.api.app import create_app
+from okoffice.cli.main import app
+from okoffice.compare.local import semantic_diff_pdf, version_report_pdf
+from okoffice.ir.semantic import (
     parse_charts_pdf,
     parse_figures_pdf,
     parse_formulas_pdf,
     parse_references_pdf,
 )
-from agentpdf.tools.registry import get_tool
+from okoffice.tools.registry import get_tool
 
 
 runner = CliRunner()

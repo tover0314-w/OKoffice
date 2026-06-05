@@ -14,7 +14,7 @@ okoffice integrations should expose the same ToolResult contract across all clie
 Current compatibility command:
 
 ```bash
-okpdf agent setup claude-code -o .mcp.json --json
+okoffice agent setup claude-code -o .mcp.json --json
 ```
 
 Beta okoffice command:
@@ -55,7 +55,7 @@ Generate a Codex-friendly local MCP config, then point Codex at the workspace `A
 Current:
 
 ```bash
-okpdf agent setup codex -o codex.mcp.json --safe-root . --json
+okoffice agent setup codex -o codex.mcp.json --safe-root . --json
 ```
 
 Beta okoffice command:
@@ -64,15 +64,15 @@ Beta okoffice command:
 okoffice agent setup codex -o codex.mcp.json --safe-root . --json
 ```
 
-The same setup is available as REST tool `agent.setup.codex`, MCP tool `agent_setup_codex`, and Node command. The okoffice CLI defaults to MCP server key `okoffice` and command `okoffice serve --mcp`; pass `--server-name agentpdf --command okpdf` for legacy configs.
+The same setup is available as REST tool `agent.setup.codex`, MCP tool `agent_setup_codex`, and Node command. The okoffice CLI defaults to MCP server key `okoffice` and command `okoffice serve --mcp`; pass `--server-name okoffice --command okoffice` for legacy configs.
 
 ## Kilo Code / OpenClaw
 
 Current:
 
 ```bash
-okpdf agent setup kilo-code -o kilo-code.mcp.json --safe-root . --json
-okpdf agent setup openclaw -o openclaw.mcp.json --safe-root . --json
+okoffice agent setup kilo-code -o kilo-code.mcp.json --safe-root . --json
+okoffice agent setup openclaw -o openclaw.mcp.json --safe-root . --json
 ```
 
 Beta okoffice commands:
@@ -134,10 +134,10 @@ const result = await okoffice.runTool("sheet.inspect.workbook", {
 Compatibility:
 
 ```ts
-import { AgentPDFClient } from "@okpdf/agentpdf-node";
+import { OKofficeClient } from "@okoffice/okoffice-node";
 
-const agentpdf = new AgentPDFClient({ baseUrl: process.env.AGENTPDF_BASE_URL });
-const result = await agentpdf.inspectDocument({ path: "report.pdf" });
+const okoffice = new OKofficeClient({ baseUrl: process.env.AGENTPDF_BASE_URL });
+const result = await okoffice.inspectDocument({ path: "report.pdf" });
 ```
 
 ## Browser/Web App

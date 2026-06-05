@@ -8,22 +8,22 @@ from fastapi.testclient import TestClient
 from jsonschema import Draft202012Validator
 from typer.testing import CliRunner
 
-from agentpdf.api.app import create_app
-from agentpdf.cli.main import app
-from agentpdf.context.packet import (
+from okoffice.api.app import create_app
+from okoffice.cli.main import app
+from okoffice.context.packet import (
     build_reusable_context_packet,
     create_code_snapshot,
     ingest_context_item,
     profile_data_source,
 )
-from agentpdf.schemas.errors import AgentPDFException
-from agentpdf.mcp.server import (
+from okoffice.schemas.errors import OKofficeException
+from okoffice.mcp.server import (
     pdf_context_code_snapshot,
     pdf_context_data_profile,
     pdf_context_ingest,
     pdf_context_packet,
 )
-from agentpdf.tools.registry import get_tool
+from okoffice.tools.registry import get_tool
 
 
 runner = CliRunner()
@@ -131,17 +131,17 @@ def test_context_web_link_rejects_unsafe_schemes() -> None:
     for url in ("javascript:alert(1)", "file:///etc/passwd", "ftp://example.com/source"):
         try:
             ingest_context_item({"url": url, "label": "Unsafe link"})
-        except AgentPDFException as exc:
+        except OKofficeException as exc:
             assert exc.code == "unsafe_input_rejected"
         else:  # pragma: no cover - defensive assertion for clearer test failures
             raise AssertionError(f"Expected unsafe_input_rejected for {url}")
 
 
 def test_context_web_capture_fetches_html_into_auditable_context_item(tmp_path: Path, monkeypatch) -> None:
-    context_web = importlib.import_module("agentpdf.context.web")
+    import okoffice.context.web as context_web
     html = (
-        b"<!doctype html><html><head><title>AgentPDF Context</title></head>"
-        b"<body><h1>AgentPDF Context</h1><p>Traceable web evidence for target PDFs.</p></body></html>"
+        b"<!doctype html><html><head><title>OKoffice Context</title></head>"
+        b"<body><h1>OKoffice Context</h1><p>Traceable web evidence for target PDFs.</p></body></html>"
     )
 
     class FakeResponse:
@@ -191,9 +191,9 @@ def test_context_web_capture_fetches_html_into_auditable_context_item(tmp_path: 
 
 
 def test_context_web_capture_is_exposed_to_cli_rest_mcp_and_registry(tmp_path: Path, monkeypatch) -> None:
-    context_web = importlib.import_module("agentpdf.context.web")
-    mcp_server = importlib.import_module("agentpdf.mcp.server")
-    html = b"<html><body><h1>AgentPDF Web Capture</h1><p>Captured for context packets.</p></body></html>"
+    import okoffice.context.web as context_web
+    import okoffice.mcp.server as mcp_server_mod
+    html = b"<html><body><h1>OKoffice Web Capture</h1><p>Captured for context packets.</p></body></html>"
 
     class FakeResponse:
         status = 200
@@ -239,7 +239,7 @@ def test_context_web_capture_is_exposed_to_cli_rest_mcp_and_registry(tmp_path: P
         },
     )
     mcp_result = json.loads(
-        mcp_server.pdf_context_web_capture(
+        mcp_server_mod.pdf_context_web_capture(
             "OKPDF.dev/docs/context",
             output_path=str(tmp_path / "mcp-web.context-item.json"),
             label="MCP Web Capture",
@@ -257,7 +257,7 @@ def test_context_web_capture_is_exposed_to_cli_rest_mcp_and_registry(tmp_path: P
 
 
 def test_context_web_capture_validates_final_redirect_host(monkeypatch) -> None:
-    context_web = importlib.import_module("agentpdf.context.web")
+    import okoffice.context.web as context_web
     html = b"<html><body><p>Redirected content</p></body></html>"
     checked_hosts: list[str | None] = []
 

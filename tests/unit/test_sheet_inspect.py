@@ -6,7 +6,7 @@ from typer.testing import CliRunner
 
 
 def test_sheet_inspect_workbook_reports_xlsx_structure(tmp_path: Path) -> None:
-    from agentpdf.office.sheet import inspect_sheet_workbook
+    from okoffice.office.sheet import inspect_sheet_workbook
 
     path = tmp_path / "model.xlsx"
     _write_xlsx_fixture(path)
@@ -75,7 +75,7 @@ def test_sheet_inspect_workbook_reports_xlsx_structure(tmp_path: Path) -> None:
 
 
 def test_sheet_inspect_workbook_rejects_non_xlsx_zip(tmp_path: Path) -> None:
-    from agentpdf.office.sheet import inspect_sheet_workbook
+    from okoffice.office.sheet import inspect_sheet_workbook
 
     path = tmp_path / "bad.xlsx"
     with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as archive:
@@ -89,7 +89,7 @@ def test_sheet_inspect_workbook_rejects_non_xlsx_zip(tmp_path: Path) -> None:
 
 
 def test_okoffice_sheet_inspect_cli_returns_tool_result_json(tmp_path: Path) -> None:
-    from okoffice.cli.main import app
+    from okoffice.cli_okoffice.main import app
 
     path = tmp_path / "model.xlsx"
     _write_xlsx_fixture(path)
@@ -106,7 +106,7 @@ def test_okoffice_sheet_inspect_cli_returns_tool_result_json(tmp_path: Path) -> 
 def test_sheet_inspect_workbook_runs_through_rest_api(tmp_path: Path) -> None:
     from fastapi.testclient import TestClient
 
-    from agentpdf.api.app import create_app
+    from okoffice.api.app import create_app
 
     path = tmp_path / "model.xlsx"
     _write_xlsx_fixture(path)
@@ -123,7 +123,7 @@ def test_sheet_inspect_workbook_runs_through_rest_api(tmp_path: Path) -> None:
 
 
 def test_sheet_inspect_workbook_runs_through_mcp_function(tmp_path: Path) -> None:
-    from agentpdf.mcp.server import sheet_inspect_workbook
+    from okoffice.mcp.server import sheet_inspect_workbook
 
     path = tmp_path / "model.xlsx"
     _write_xlsx_fixture(path)
@@ -136,7 +136,7 @@ def test_sheet_inspect_workbook_runs_through_mcp_function(tmp_path: Path) -> Non
 
 
 def test_sheet_inspect_workbook_runs_through_workflow_runner(tmp_path: Path) -> None:
-    from agentpdf.workflows.runner import run_workflow
+    from okoffice.workflows.runner import run_workflow
 
     path = tmp_path / "model.xlsx"
     _write_xlsx_fixture(path)

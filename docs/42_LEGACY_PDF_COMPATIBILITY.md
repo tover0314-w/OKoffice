@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The repository currently contains a large PDF-domain implementation under `agentpdf`, `okpdf`, and `pdf.*`. This remains useful and should not be broken casually, but it is no longer the product identity.
+The repository currently contains a large PDF-domain implementation under `okoffice`, `okoffice`, and `pdf.*`. This remains useful and should not be broken casually, but it is no longer the product identity.
 
 okoffice treats PDF as one supported format domain.
 
@@ -10,12 +10,12 @@ okoffice treats PDF as one supported format domain.
 
 Current names:
 
-- Python package: `agentpdf`
-- CLI: `okpdf`
-- TypeScript package: `@okpdf/agentpdf-node`
+- Python package: `okoffice`
+- CLI: `okoffice`
+- TypeScript package: `@okoffice/okoffice-node`
 - Tool namespace: `pdf.*`
 - Agent setup namespace: `agent.setup.*`
-- Output folder convention: `.agentpdf-out`
+- Output folder convention: `.okoffice-out`
 
 Target names:
 
@@ -30,8 +30,8 @@ Target names:
 
 Keep these until a separate code migration plan exists:
 
-- `agentpdf` imports.
-- `okpdf` command.
+- `okoffice` imports.
+- `okoffice` command.
 - current `pdf.*` machine manifest rows.
 - current PDF tests.
 - current Node package name.
@@ -76,17 +76,17 @@ PDF should not be the only artifact that okoffice can understand or create.
 ```bash
 python scripts/setup_dev.py
 python scripts/doctor.py
-okpdf tools list --json
-okpdf inspect tests/fixtures/simple.pdf --json
-okpdf merge a.pdf b.pdf -o merged.pdf --json
-okpdf serve --mcp --safe-root .
-okpdf serve --api
+okoffice tools list --json
+okoffice inspect tests/fixtures/simple.pdf --json
+okoffice merge a.pdf b.pdf -o merged.pdf --json
+okoffice serve --mcp --safe-root .
+okoffice serve --api
 ```
 
 ## Migration Strategy
 
 1. Add okoffice docs and target namespaces.
-2. Add `okoffice` CLI alias while preserving `okpdf`.
+2. Add `okoffice` CLI alias while preserving `okoffice`.
 3. Add okoffice manifests without breaking `pdf.*`.
 4. Add Office inspect/validate tools.
 5. Add cross-format workflows.

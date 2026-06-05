@@ -11,7 +11,7 @@ SHEET_NS = {"main": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
 
 
 def test_sheet_write_workbook_creates_source_mapped_xlsx(tmp_path: Path) -> None:
-    from agentpdf.office.sheet import write_sheet_workbook
+    from okoffice.office.sheet import write_sheet_workbook
 
     output_path = tmp_path / "modeled.xlsx"
 
@@ -32,7 +32,7 @@ def test_sheet_write_workbook_creates_source_mapped_xlsx(tmp_path: Path) -> None
 
 
 def test_sheet_create_evidence_workbook_is_canonical_source_mapped_xlsx(tmp_path: Path) -> None:
-    from agentpdf.office.sheet import create_evidence_workbook
+    from okoffice.office.sheet import create_evidence_workbook
 
     output_path = tmp_path / "evidence.xlsx"
 
@@ -48,7 +48,7 @@ def test_sheet_create_evidence_workbook_is_canonical_source_mapped_xlsx(tmp_path
 
 
 def test_sheet_write_workbook_cli_accepts_json_records(tmp_path: Path) -> None:
-    from okoffice.cli.main import app
+    from okoffice.cli_okoffice.main import app
 
     data_path = tmp_path / "records.json"
     output_path = tmp_path / "modeled.xlsx"
@@ -67,7 +67,7 @@ def test_sheet_write_workbook_cli_accepts_json_records(tmp_path: Path) -> None:
 
 
 def test_sheet_create_evidence_workbook_cli_accepts_json_records(tmp_path: Path) -> None:
-    from okoffice.cli.main import app
+    from okoffice.cli_okoffice.main import app
 
     data_path = tmp_path / "records.json"
     output_path = tmp_path / "evidence.xlsx"
@@ -86,9 +86,9 @@ def test_sheet_create_evidence_workbook_cli_accepts_json_records(tmp_path: Path)
 
 
 def test_sheet_write_workbook_runs_through_agent_interfaces(tmp_path: Path) -> None:
-    from agentpdf.api.app import create_app
-    from agentpdf.mcp.server import sheet_write_workbook
-    from agentpdf.workflows.runner import run_workflow
+    from okoffice.api.app import create_app
+    from okoffice.mcp.server import sheet_write_workbook
+    from okoffice.workflows.runner import run_workflow
 
     api_output = tmp_path / "api.xlsx"
     mcp_output = tmp_path / "mcp.xlsx"
@@ -121,9 +121,9 @@ def test_sheet_write_workbook_runs_through_agent_interfaces(tmp_path: Path) -> N
 
 
 def test_sheet_create_evidence_workbook_runs_through_agent_interfaces(tmp_path: Path) -> None:
-    from agentpdf.api.app import create_app
-    from agentpdf.mcp.server import sheet_create_evidence_workbook
-    from agentpdf.workflows.runner import run_workflow
+    from okoffice.api.app import create_app
+    from okoffice.mcp.server import sheet_create_evidence_workbook
+    from okoffice.workflows.runner import run_workflow
 
     api_output = tmp_path / "api-evidence.xlsx"
     mcp_output = tmp_path / "mcp-evidence.xlsx"
@@ -156,7 +156,7 @@ def test_sheet_create_evidence_workbook_runs_through_agent_interfaces(tmp_path: 
 
 
 def test_sheet_write_workbook_manifest_and_mcp_catalog_mark_tool_beta() -> None:
-    from okoffice.tools.registry import load_okoffice_manifest
+    from okoffice.tools.registry_okoffice import load_okoffice_manifest
 
     manifest = load_okoffice_manifest()
     target_tools = {tool["name"]: tool for tool in manifest["target_tools"]}

@@ -1,7 +1,7 @@
 {
   "title": "Invoice INV-1001",
   "invoice_number": "INV-1001",
-  "client": "AgentPDF Labs",
+  "client": "OKoffice Labs",
   "due_date": "2026-06-30",
   "items": [
     {

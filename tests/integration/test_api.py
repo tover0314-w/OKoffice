@@ -3,9 +3,9 @@ from pathlib import Path
 from PIL import Image
 from fastapi.testclient import TestClient
 
-from agentpdf.api.app import create_app
-from agentpdf.context.packet import build_context_packet
-from agentpdf.tools.registry import load_tool_manifest
+from okoffice.api.app import create_app
+from okoffice.context.packet import build_context_packet
+from okoffice.tools.registry import load_tool_manifest
 
 
 def test_api_healthz() -> None:
@@ -14,7 +14,7 @@ def test_api_healthz() -> None:
     response = client.get("/healthz")
 
     assert response.status_code == 200
-    assert response.json() == {"status": "ok", "service": "agentpdf"}
+    assert response.json() == {"status": "ok", "service": "okoffice"}
 
 
 def test_api_lists_complete_tool_manifest() -> None:
@@ -43,7 +43,7 @@ def test_api_runs_ocr_tool(monkeypatch, tmp_path: Path) -> None:
     client = TestClient(create_app())
     image = tmp_path / "scan.png"
     Image.new("RGB", (160, 80), color=(255, 255, 255)).save(image)
-    monkeypatch.setattr("agentpdf.ocr_scan.local._run_tesseract_tsv", _fake_tesseract_tsv)
+    monkeypatch.setattr("okoffice.ocr_scan.local._run_tesseract_tsv", _fake_tesseract_tsv)
 
     response = client.post(
         "/v1/tools/pdf.ocr_scan.ocr/run",
@@ -61,7 +61,7 @@ def test_api_runs_image_analyze_tool(monkeypatch, tmp_path: Path) -> None:
     client = TestClient(create_app())
     image = tmp_path / "scan.png"
     Image.new("RGB", (160, 80), color=(255, 255, 255)).save(image)
-    monkeypatch.setattr("agentpdf.ocr_scan.local._run_tesseract_tsv", _fake_tesseract_tsv)
+    monkeypatch.setattr("okoffice.ocr_scan.local._run_tesseract_tsv", _fake_tesseract_tsv)
 
     response = client.post(
         "/v1/tools/pdf.context.image_analyze/run",
@@ -698,7 +698,7 @@ def test_api_runs_text_and_metadata_tools(text_pdf: Path, metadata_pdf: Path, tm
     )
 
     assert text.status_code == 200
-    assert "AgentPDF local text layer" in text.json()["usage"]["text"]
+    assert "OKoffice local text layer" in text.json()["usage"]["text"]
     assert fonts.status_code == 200
     assert fonts.json()["tool"] == "pdf.convert.extract_fonts"
     assert read.status_code == 200
@@ -918,7 +918,7 @@ def test_api_runs_parse_lite_and_local_rag(tmp_path: Path) -> None:
     index = tmp_path / "rag.index.json"
     ir_json = tmp_path / "rag.ir.json"
     ir_markdown = tmp_path / "rag.md"
-    markdown = "# AgentPDF\n\nLocal RAG gives agents cited document evidence.\n"
+    markdown = "# OKoffice\n\nLocal RAG gives agents cited document evidence.\n"
     created = client.post(
         "/v1/tools/pdf.convert.markdown_to_pdf/run",
         json={"markdown": markdown, "output_path": str(source)},

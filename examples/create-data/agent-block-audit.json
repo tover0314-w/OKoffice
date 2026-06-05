@@ -34,9 +34,9 @@
       "type": "image",
       "title": "Architecture Figure",
       "target_slot": "evidence",
-      "path": "assets/brand/okpdf-logo.png",
+      "path": "assets/brand/okoffice-logo.png",
       "caption": "Local visual evidence rendered from an agent-supplied image block.",
-      "source_refs": ["path://assets/brand/okpdf-logo.png"]
+      "source_refs": ["path://assets/brand/okoffice-logo.png"]
     },
     {
       "block_id": "blk_agent_citation",
@@ -44,9 +44,9 @@
       "title": "Reference Note",
       "target_slot": "recommendations",
       "quote": "Local outputs need evidence, validation, and portable audit artifacts.",
-      "source": "https://okpdf.local/docs/local-agent-integration",
+      "source": "https://okoffice.local/docs/local-agent-integration",
       "page": "local",
-      "source_refs": ["https://okpdf.local/docs/local-agent-integration"]
+      "source_refs": ["https://okoffice.local/docs/local-agent-integration"]
     },
     {
       "block_id": "blk_agent_slide",

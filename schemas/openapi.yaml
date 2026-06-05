@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
-  title: AgentPDF Local API
+  title: OKoffice Local API
   version: 0.1.0
-  description: Local and hosted-compatible API for AgentPDF tools.
+  description: Local and hosted-compatible API for OKoffice tools.
 paths:
   /healthz:
     get:
@@ -39,7 +39,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AgentPDFErrorResponse'
+                $ref: '#/components/schemas/OKofficeErrorResponse'
   /v1/tools/{tool_name}/run:
     post:
       operationId: runTool
@@ -75,7 +75,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AgentPDFErrorResponse'
+                $ref: '#/components/schemas/OKofficeErrorResponse'
   /v1/jobs/{job_id}:
     get:
       operationId: getJob
@@ -99,7 +99,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AgentPDFErrorResponse'
+                $ref: '#/components/schemas/OKofficeErrorResponse'
   /v1/artifacts/{artifact_id}:
     get:
       operationId: getArtifact
@@ -123,7 +123,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AgentPDFErrorResponse'
+                $ref: '#/components/schemas/OKofficeErrorResponse'
   /v1/artifacts/{artifact_id}/download:
     get:
       operationId: downloadArtifact
@@ -146,7 +146,7 @@ components:
   schemas:
     ErrorEnvelope:
       type: object
-      description: Standard AgentPDF error response
+      description: Standard OKoffice error response
       required:
         - error
       properties:
@@ -168,7 +168,7 @@ components:
           type: string
     ToolResult:
       type: object
-      description: Standard AgentPDF tool result envelope.
+      description: Standard OKoffice tool result envelope.
       required:
         - job_id
         - status
@@ -206,12 +206,12 @@ components:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AgentPDFErrorResponse'
+                $ref: '#/components/schemas/OKofficeErrorResponse'
 components:
   schemas:
-    AgentPDFError:
+    OKofficeError:
       type: object
-      description: Standard AgentPDF error response
+      description: Standard OKoffice error response
       required:
         - code
         - message
@@ -227,13 +227,13 @@ components:
         details:
           type: object
           additionalProperties: true
-    AgentPDFErrorResponse:
+    OKofficeErrorResponse:
       type: object
       required:
         - error
       properties:
         error:
-          $ref: '#/components/schemas/AgentPDFError'
+          $ref: '#/components/schemas/OKofficeError'
     ToolResult:
       type: object
       required:
@@ -248,4 +248,4 @@ components:
         tool:
           type: string
         error:
-          $ref: '#/components/schemas/AgentPDFError'
+          $ref: '#/components/schemas/OKofficeError'

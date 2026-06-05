@@ -63,7 +63,7 @@
 ```bash
 python scripts/doctor.py
 pytest -q
-npm --workspace @okpdf/agentpdf-node test
+npm --workspace @okoffice/okoffice-node test
 ruff check src tests scripts
 ```
 

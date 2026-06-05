@@ -1,17 +1,17 @@
 services:
-  okpdf:
+  okoffice:
     build:
       context: .
-    image: okpdf/local:dev
+    image: okoffice/local:dev
     command: serve --api --host 0.0.0.0 --port 7331 --safe-root /workspace
     ports:
       - "7331:7331"
     volumes:
       - .:/workspace
     environment:
-      AGENTPDF_SAFE_ROOT: /workspace
-      AGENTPDF_ALLOW_CLOUD: "false"
-      AGENTPDF_ALLOW_URL_FETCH: "false"
+      OKOFFICE_SAFE_ROOT: /workspace
+      OKOFFICE_ALLOW_CLOUD: "false"
+      OKOFFICE_ALLOW_URL_FETCH: "false"
     healthcheck:
       test:
         - CMD

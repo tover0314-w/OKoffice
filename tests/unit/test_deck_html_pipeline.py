@@ -6,7 +6,7 @@ from typer.testing import CliRunner
 
 
 def test_deck_render_html_writes_preview_package_and_manifest(tmp_path: Path) -> None:
-    from agentpdf.office.deck import render_deck_html, validate_deck_html_preview
+    from okoffice.office.deck import render_deck_html, validate_deck_html_preview
 
     html_path = tmp_path / "board-review.html"
 
@@ -35,7 +35,7 @@ def test_deck_render_html_writes_preview_package_and_manifest(tmp_path: Path) ->
 
 
 def test_deck_html_preview_validation_reports_placeholder_leakage(tmp_path: Path) -> None:
-    from agentpdf.office.deck import render_deck_html, validate_deck_html_preview
+    from okoffice.office.deck import render_deck_html, validate_deck_html_preview
 
     html_path = tmp_path / "placeholder.html"
     payload = _plan_payload()
@@ -52,7 +52,7 @@ def test_deck_html_preview_validation_reports_placeholder_leakage(tmp_path: Path
 
 
 def test_deck_export_pptx_converts_html_preview_to_editable_pptx(tmp_path: Path) -> None:
-    from agentpdf.office.deck import export_deck_pptx, inspect_deck_presentation, render_deck_html
+    from okoffice.office.deck import export_deck_pptx, inspect_deck_presentation, render_deck_html
 
     html_path = tmp_path / "board-review.html"
     pptx_path = tmp_path / "board-review.pptx"
@@ -76,13 +76,13 @@ def test_deck_export_pptx_converts_html_preview_to_editable_pptx(tmp_path: Path)
 
 
 def test_deck_html_pipeline_renders_validates_and_exports_pptx_from_workbook_plan(tmp_path: Path) -> None:
-    from agentpdf.office.deck import (
+    from okoffice.office.deck import (
         export_deck_pptx,
         render_deck_html,
         validate_deck_html_preview,
         validate_deck_presentation,
     )
-    from agentpdf.office.deck_plan import compose_deck_plan
+    from okoffice.office.deck_plan import compose_deck_plan
 
     workbook_path = tmp_path / "evidence.xlsx"
     plan_path = tmp_path / "board-review.plan.json"
@@ -135,10 +135,10 @@ def test_deck_html_pipeline_renders_validates_and_exports_pptx_from_workbook_pla
 
 
 def test_deck_html_pipeline_agent_interfaces(tmp_path: Path) -> None:
-    from agentpdf.api.app import create_app
-    from agentpdf.mcp.server import deck_export_pptx, deck_render_html, deck_validation_html_preview
-    from agentpdf.workflows.runner import run_workflow
-    from okoffice.cli.main import app
+    from okoffice.api.app import create_app
+    from okoffice.mcp.server import deck_export_pptx, deck_render_html, deck_validation_html_preview
+    from okoffice.workflows.runner import run_workflow
+    from okoffice.cli_okoffice.main import app
 
     plan_path = tmp_path / "plan.json"
     cli_html = tmp_path / "cli.html"
@@ -190,7 +190,7 @@ def test_deck_html_pipeline_agent_interfaces(tmp_path: Path) -> None:
 
 
 def test_deck_html_pipeline_is_listed_in_manifests() -> None:
-    from okoffice.tools.registry import load_okoffice_manifest
+    from okoffice.tools.registry_okoffice import load_okoffice_manifest
 
     manifest = load_okoffice_manifest()
     target = {tool["name"]: tool for tool in manifest["target_tools"]}
@@ -209,7 +209,7 @@ def test_deck_html_pipeline_is_listed_in_manifests() -> None:
 
 
 def _write_html_pipeline_workbook(path: Path) -> None:
-    from agentpdf.office.xlsx import write_xlsx
+    from okoffice.office.xlsx import write_xlsx
 
     write_xlsx(
         path,

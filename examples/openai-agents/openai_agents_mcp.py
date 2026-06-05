@@ -11,7 +11,7 @@ async def main():
     ) as pdf_mcp:
         agent = Agent(
             name="PDF Operator",
-            instructions="Use AgentPDF tools to inspect, transform, and validate PDFs.",
+            instructions="Use OKoffice tools to inspect, transform, and validate PDFs.",
             mcp_servers=[pdf_mcp],
         )
         result = await Runner.run(agent, "Merge a.pdf and b.pdf into merged.pdf and validate it.")

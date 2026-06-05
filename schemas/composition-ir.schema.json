@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://okpdf.dev/schemas/composition-ir.schema.json",
-  "title": "AgentPDF Composition IR",
+  "title": "OKoffice Composition IR",
   "type": "object",
   "required": ["composition_version", "composition_id", "context_packet_id", "target_profile_id", "blocks"],
   "properties": {

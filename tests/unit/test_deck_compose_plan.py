@@ -6,7 +6,7 @@ from typer.testing import CliRunner
 
 
 def test_compose_deck_plan_returns_source_mapped_composition_ir(tmp_path: Path) -> None:
-    from agentpdf.office.deck_plan import compose_deck_plan
+    from okoffice.office.deck_plan import compose_deck_plan
 
     workbook_path = tmp_path / "evidence.xlsx"
     output_path = tmp_path / "composition-plan.json"
@@ -48,8 +48,8 @@ def test_compose_deck_plan_returns_source_mapped_composition_ir(tmp_path: Path) 
 
 
 def test_compose_deck_plan_rejects_empty_profile(tmp_path: Path) -> None:
-    from agentpdf.office.deck_plan import compose_deck_plan
-    from agentpdf.office.xlsx import write_xlsx
+    from okoffice.office.deck_plan import compose_deck_plan
+    from okoffice.office.xlsx import write_xlsx
 
     workbook_path = tmp_path / "empty.xlsx"
     write_xlsx(workbook_path, [("Model", [["Metric", "Value"]])])
@@ -62,8 +62,8 @@ def test_compose_deck_plan_rejects_empty_profile(tmp_path: Path) -> None:
 
 
 def test_compose_deck_plan_rejects_output_path_that_matches_input(tmp_path: Path) -> None:
-    from agentpdf.office.deck_plan import compose_deck_plan
-    from agentpdf.office.sheet import read_sheet_workbook
+    from okoffice.office.deck_plan import compose_deck_plan
+    from okoffice.office.sheet import read_sheet_workbook
 
     workbook_path = tmp_path / "evidence.xlsx"
     _write_evidence_workbook(workbook_path)
@@ -80,8 +80,8 @@ def test_compose_deck_plan_rejects_output_path_that_matches_input(tmp_path: Path
 
 
 def test_compose_deck_plan_loads_source_refs_beyond_profile_row_limit(tmp_path: Path) -> None:
-    from agentpdf.office.deck_plan import compose_deck_plan
-    from agentpdf.office.xlsx import write_xlsx
+    from okoffice.office.deck_plan import compose_deck_plan
+    from okoffice.office.xlsx import write_xlsx
 
     workbook_path = tmp_path / "large-source-map.xlsx"
     source_refs_rows = [["record_index", "source_path", "source_refs_json"]]
@@ -117,8 +117,8 @@ def test_compose_deck_plan_loads_source_refs_beyond_profile_row_limit(tmp_path: 
 
 
 def test_compose_deck_plan_handles_malformed_source_ref_record_index(tmp_path: Path) -> None:
-    from agentpdf.office.deck_plan import compose_deck_plan
-    from agentpdf.office.xlsx import write_xlsx
+    from okoffice.office.deck_plan import compose_deck_plan
+    from okoffice.office.xlsx import write_xlsx
 
     workbook_path = tmp_path / "bad-source-ref.xlsx"
     write_xlsx(
@@ -143,10 +143,10 @@ def test_compose_deck_plan_handles_malformed_source_ref_record_index(tmp_path: P
 
 
 def test_compose_deck_plan_agent_interfaces(tmp_path: Path) -> None:
-    from agentpdf.api.app import create_app
-    from agentpdf.mcp.server import deck_compose_plan
-    from agentpdf.workflows.runner import run_workflow
-    from okoffice.cli.main import app
+    from okoffice.api.app import create_app
+    from okoffice.mcp.server import deck_compose_plan
+    from okoffice.workflows.runner import run_workflow
+    from okoffice.cli_okoffice.main import app
 
     workbook_path = tmp_path / "evidence.xlsx"
     cli_output = tmp_path / "cli-plan.json"
@@ -201,7 +201,7 @@ def test_compose_deck_plan_agent_interfaces(tmp_path: Path) -> None:
 
 
 def test_deck_compose_plan_is_listed_in_manifests() -> None:
-    from okoffice.tools.registry import load_okoffice_manifest
+    from okoffice.tools.registry_okoffice import load_okoffice_manifest
 
     manifest = load_okoffice_manifest()
     target = {tool["name"]: tool for tool in manifest["target_tools"]}
@@ -217,7 +217,7 @@ def test_deck_compose_plan_is_listed_in_manifests() -> None:
 
 
 def _write_evidence_workbook(path: Path) -> None:
-    from agentpdf.office.xlsx import write_xlsx
+    from okoffice.office.xlsx import write_xlsx
 
     write_xlsx(
         path,

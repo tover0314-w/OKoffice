@@ -19,7 +19,7 @@ Deliverables:
 Acceptance:
 
 - README presents okoffice as the product.
-- `agentpdf/okpdf/pdf.*` appears as compatibility.
+- `okoffice/okoffice/pdf.*` appears as compatibility.
 - Docs and registry tests pass.
 
 ## Phase 2 - okoffice Namespace Skeleton
@@ -33,7 +33,7 @@ Deliverables:
 
 Acceptance:
 
-- Existing `okpdf` still works.
+- Existing `okoffice` still works.
 - `okoffice tools list --json` can show target and implemented tools without breaking current `pdf.*`.
 
 ## Phase 3 - Office IR And Source Locators

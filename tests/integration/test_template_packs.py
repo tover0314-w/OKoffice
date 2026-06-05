@@ -7,19 +7,19 @@ from PIL import Image
 from pypdf import PdfReader
 from typer.testing import CliRunner
 
-from agentpdf.api.app import create_app
-from agentpdf.cli.main import app
-from agentpdf.context.packet import build_context_packet
-from agentpdf.core.pdf import inspect_pdf_pages
-from agentpdf.creation.agent import (
+from okoffice.api.app import create_app
+from okoffice.cli.main import app
+from okoffice.context.packet import build_context_packet
+from okoffice.core.pdf import inspect_pdf_pages
+from okoffice.creation.agent import (
     create_pdf_from_template_pack,
     create_pdf_with_agent,
     list_template_packs,
     plan_template_pack_creation,
     validate_template_pack,
 )
-from agentpdf.evidence.coverage import create_coverage_report
-from agentpdf.mcp.server import (
+from okoffice.evidence.coverage import create_coverage_report
+from okoffice.mcp.server import (
     pdf_ai_create_agent,
     pdf_ai_create_from_template_pack,
     pdf_ai_create_plan_template_pack,
@@ -27,13 +27,13 @@ from agentpdf.mcp.server import (
     pdf_ai_create_validate_template_pack,
     pdf_patch_plan,
 )
-from agentpdf.patch.transaction import (
+from okoffice.patch.transaction import (
     apply_patch_transaction,
     plan_patch_transaction,
     preview_patch_transaction,
     verify_patch_transaction,
 )
-from agentpdf.tools.runner import run_patch_apply, run_patch_plan, run_patch_preview, run_patch_verify
+from okoffice.tools.runner import run_patch_apply, run_patch_plan, run_patch_preview, run_patch_verify
 
 
 runner = CliRunner()
@@ -68,7 +68,7 @@ def _example_pack() -> dict[str, object]:
                     }
                 },
                 "sample_data": {
-                    "title": "AgentPDF Board Audit",
+                    "title": "OKoffice Board Audit",
                     "audience": "engineering leadership",
                     "sections": [
                         {
@@ -194,7 +194,7 @@ def test_template_pack_planner_selects_template_from_context_and_profile(tmp_pat
             },
             {
                 "context_item_id": "ctx_code",
-                "path": "src/agentpdf/creation/agent.py",
+                "path": "src/okoffice/creation/agent.py",
                 "label": "Creation Agent Code",
             },
             {
@@ -278,7 +278,7 @@ def test_template_pack_create_agent_runs_plan_create_and_validation_chain(tmp_pa
     build_context_packet(
         [
             {"context_item_id": "ctx_brief", "text": "Create a technical audit PDF.", "label": "Brief"},
-            {"context_item_id": "ctx_code", "path": "src/agentpdf/creation/agent.py", "label": "Code"},
+            {"context_item_id": "ctx_code", "path": "src/okoffice/creation/agent.py", "label": "Code"},
             {
                 "context_item_id": "ctx_metrics",
                 "table": {"columns": ["metric", "value"], "rows": [["coverage", "1.0"]]},
@@ -398,7 +398,7 @@ def test_create_pdf_from_template_pack_writes_validated_pdf(tmp_path: Path) -> N
     assert result.usage["base_template"] == "business_report"
     assert result.usage["color_scheme"] == "executive_blue"
     text = "\n".join(page.extract_text() or "" for page in PdfReader(output_path).pages)
-    assert "AgentPDF Board Audit" in text
+    assert "OKoffice Board Audit" in text
     assert "Template packs let agents create validated PDFs locally" in text
 
 

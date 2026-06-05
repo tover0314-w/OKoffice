@@ -99,7 +99,7 @@ okoffice agent setup claude-code --output .mcp.json --json
 okoffice serve --mcp --safe-root .
 okoffice serve --api
 
-okpdf inspect tests/fixtures/simple.pdf --json
+okoffice inspect tests/fixtures/simple.pdf --json
 ```
 
 Deck note: the current OSS beta creates deterministic editable PPTX files directly from a deck plan. The target OKoffice deck pipeline is taste-driven and HTML-first:
@@ -144,7 +144,7 @@ See [Taste-Driven HTML-First Deck Pipeline](docs/43_TASTE_DRIVEN_DECK_PIPELINE.m
 | `office.bundle.verify` | beta | Verifies board pack ZIP manifests, validation reports, artifact members, sizes, and SHA-256 checksums. |
 | `pdf.*` compatibility | stable/beta | The full manifest currently covers 270 local PDF, Office, and agent setup tools available through `okpdf`, MCP, REST, and SDKs. |
 
-The codebase still exposes the compatibility Python package as `agentpdf` and the compatibility Node package as `@okpdf/agentpdf-node`. The target package identity is OKoffice; compatibility names are preserved deliberately.
+The codebase still exposes the compatibility Python package as `agentpdf` and the compatibility Node package as `@okoffice/okoffice-node`. The target package identity is OKoffice; compatibility names are preserved deliberately.
 
 ## Tool Surface
 
@@ -225,7 +225,7 @@ Hosted features must not be required for deterministic local OSS tools.
 python scripts/setup_dev.py
 python scripts/doctor.py
 pytest -q
-npm --workspace @okpdf/agentpdf-node test
+npm --workspace @okoffice/okoffice-node test
 ruff check src tests scripts
 ```
 

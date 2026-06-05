@@ -6,7 +6,7 @@ from typer.testing import CliRunner
 
 
 def test_word_inspect_document_reports_docx_structure(tmp_path: Path) -> None:
-    from agentpdf.office.word import inspect_word_document
+    from okoffice.office.word import inspect_word_document
 
     path = tmp_path / "memo.docx"
     _write_docx_fixture(path)
@@ -53,7 +53,7 @@ def test_word_inspect_document_reports_docx_structure(tmp_path: Path) -> None:
 
 
 def test_word_inspect_document_rejects_non_docx_zip(tmp_path: Path) -> None:
-    from agentpdf.office.word import inspect_word_document
+    from okoffice.office.word import inspect_word_document
 
     path = tmp_path / "bad.docx"
     with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as archive:
@@ -67,7 +67,7 @@ def test_word_inspect_document_rejects_non_docx_zip(tmp_path: Path) -> None:
 
 
 def test_okoffice_word_inspect_cli_returns_tool_result_json(tmp_path: Path) -> None:
-    from okoffice.cli.main import app
+    from okoffice.cli_okoffice.main import app
 
     path = tmp_path / "memo.docx"
     _write_docx_fixture(path)
@@ -84,7 +84,7 @@ def test_okoffice_word_inspect_cli_returns_tool_result_json(tmp_path: Path) -> N
 def test_word_inspect_document_runs_through_rest_api(tmp_path: Path) -> None:
     from fastapi.testclient import TestClient
 
-    from agentpdf.api.app import create_app
+    from okoffice.api.app import create_app
 
     path = tmp_path / "memo.docx"
     _write_docx_fixture(path)
@@ -101,7 +101,7 @@ def test_word_inspect_document_runs_through_rest_api(tmp_path: Path) -> None:
 
 
 def test_word_inspect_document_runs_through_mcp_function(tmp_path: Path) -> None:
-    from agentpdf.mcp.server import word_inspect_document
+    from okoffice.mcp.server import word_inspect_document
 
     path = tmp_path / "memo.docx"
     _write_docx_fixture(path)
@@ -114,7 +114,7 @@ def test_word_inspect_document_runs_through_mcp_function(tmp_path: Path) -> None
 
 
 def test_word_inspect_document_runs_through_workflow_runner(tmp_path: Path) -> None:
-    from agentpdf.workflows.runner import run_workflow
+    from okoffice.workflows.runner import run_workflow
 
     path = tmp_path / "memo.docx"
     _write_docx_fixture(path)

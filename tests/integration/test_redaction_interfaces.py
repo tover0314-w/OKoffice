@@ -7,11 +7,11 @@ from pypdf import PdfReader
 from reportlab.pdfgen import canvas
 from typer.testing import CliRunner
 
-import agentpdf.mcp.server as mcp_server
-from agentpdf.api.app import create_app
-from agentpdf.cli.main import app
-from agentpdf.security.local import redact_pdf, verify_redaction_pdf
-from agentpdf.tools.registry import get_tool
+import okoffice.mcp.server as mcp_server
+from okoffice.api.app import create_app
+from okoffice.cli.main import app
+from okoffice.security.local import redact_pdf, verify_redaction_pdf
+from okoffice.tools.registry import get_tool
 
 
 runner = CliRunner()

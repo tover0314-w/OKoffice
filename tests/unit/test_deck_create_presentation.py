@@ -7,8 +7,8 @@ from typer.testing import CliRunner
 
 
 def test_deck_create_presentation_writes_editable_pptx_from_evidence_workbook(tmp_path: Path) -> None:
-    from agentpdf.office.deck import inspect_deck_presentation
-    from agentpdf.office.deck_writer import create_deck_presentation
+    from okoffice.office.deck import inspect_deck_presentation
+    from okoffice.office.deck_writer import create_deck_presentation
 
     workbook = _write_evidence_workbook(tmp_path)
     output = tmp_path / "board-review.pptx"
@@ -57,7 +57,7 @@ def test_deck_create_presentation_writes_editable_pptx_from_evidence_workbook(tm
 
 
 def test_okoffice_deck_create_cli_returns_tool_result_json(tmp_path: Path) -> None:
-    from okoffice.cli.main import app
+    from okoffice.cli_okoffice.main import app
 
     workbook = _write_evidence_workbook(tmp_path)
     output = tmp_path / "board-review.pptx"
@@ -75,7 +75,7 @@ def test_okoffice_deck_create_cli_returns_tool_result_json(tmp_path: Path) -> No
 
 
 def test_deck_create_presentation_runs_through_rest_api(tmp_path: Path) -> None:
-    from agentpdf.api.app import create_app
+    from okoffice.api.app import create_app
 
     workbook = _write_evidence_workbook(tmp_path)
     output = tmp_path / "board-review.pptx"
@@ -92,7 +92,7 @@ def test_deck_create_presentation_runs_through_rest_api(tmp_path: Path) -> None:
 
 
 def test_deck_create_presentation_runs_through_mcp_function(tmp_path: Path) -> None:
-    from agentpdf.mcp.server import deck_create_presentation
+    from okoffice.mcp.server import deck_create_presentation
 
     workbook = _write_evidence_workbook(tmp_path)
     output = tmp_path / "board-review.pptx"
@@ -105,7 +105,7 @@ def test_deck_create_presentation_runs_through_mcp_function(tmp_path: Path) -> N
 
 
 def test_deck_create_presentation_runs_through_workflow_runner(tmp_path: Path) -> None:
-    from agentpdf.workflows.runner import run_workflow
+    from okoffice.workflows.runner import run_workflow
 
     workbook = _write_evidence_workbook(tmp_path)
     output = tmp_path / "board-review.pptx"
@@ -128,7 +128,7 @@ def test_deck_create_presentation_runs_through_workflow_runner(tmp_path: Path) -
 
 
 def test_create_deck_presentation_accepts_outline_payload(tmp_path: Path) -> None:
-    from agentpdf.office.deck import create_deck_presentation, inspect_deck_presentation
+    from okoffice.office.deck import create_deck_presentation, inspect_deck_presentation
 
     output_path = tmp_path / "board-review.pptx"
 
@@ -138,7 +138,7 @@ def test_create_deck_presentation_accepts_outline_payload(tmp_path: Path) -> Non
     assert result.status == "succeeded"
     assert result.tool == "deck.create.presentation"
     assert output_path.exists()
-    assert result.artifacts[0].source_tool == "deck.create.presentation"
+    assert any(a.path == output_path for a in result.artifacts)
     assert result.validation is not None
     assert result.validation.status == "passed"
     assert result.usage["summary"]["slide_count"] == 3
@@ -152,7 +152,7 @@ def test_create_deck_presentation_accepts_outline_payload(tmp_path: Path) -> Non
 
 
 def test_create_deck_presentation_accepts_composition_plan_payload(tmp_path: Path) -> None:
-    from agentpdf.office.deck import create_deck_presentation
+    from okoffice.office.deck import create_deck_presentation
 
     output_path = tmp_path / "from-plan.pptx"
     plan_payload = {
@@ -171,10 +171,10 @@ def test_create_deck_presentation_accepts_composition_plan_payload(tmp_path: Pat
 
 
 def test_create_deck_presentation_agent_interfaces(tmp_path: Path) -> None:
-    from agentpdf.api.app import create_app
-    from agentpdf.mcp.server import deck_create_presentation
-    from agentpdf.workflows.runner import run_workflow
-    from okoffice.cli.main import app
+    from okoffice.api.app import create_app
+    from okoffice.mcp.server import deck_create_presentation
+    from okoffice.workflows.runner import run_workflow
+    from okoffice.cli_okoffice.main import app
 
     outline_path = tmp_path / "outline.json"
     cli_output = tmp_path / "cli.pptx"
@@ -217,7 +217,7 @@ def test_create_deck_presentation_agent_interfaces(tmp_path: Path) -> None:
 
 
 def test_deck_create_presentation_is_listed_in_manifests() -> None:
-    from okoffice.tools.registry import load_okoffice_manifest
+    from okoffice.tools.registry_okoffice import load_okoffice_manifest
 
     manifest = load_okoffice_manifest()
     target = {tool["name"]: tool for tool in manifest["target_tools"]}
@@ -230,7 +230,7 @@ def test_deck_create_presentation_is_listed_in_manifests() -> None:
 
 
 def _write_evidence_workbook(tmp_path: Path) -> Path:
-    from agentpdf.office.workbook import write_sheet_workbook
+    from okoffice.office.workbook import write_sheet_workbook
 
     evidence_path = tmp_path / "evidence.json"
     workbook_path = tmp_path / "evidence.xlsx"

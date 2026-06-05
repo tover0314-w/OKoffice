@@ -7,7 +7,7 @@ from typer.testing import CliRunner
 
 
 def test_validate_sheet_workbook_passes_for_source_mapped_workbook(tmp_path: Path) -> None:
-    from agentpdf.office.sheet import validate_sheet_workbook, write_sheet_workbook
+    from okoffice.office.sheet import validate_sheet_workbook, write_sheet_workbook
 
     path = tmp_path / "model.xlsx"
     write_sheet_workbook(
@@ -43,7 +43,7 @@ def test_validate_sheet_workbook_passes_for_source_mapped_workbook(tmp_path: Pat
 
 
 def test_validate_sheet_workbook_warns_on_blank_sheets_and_external_links(tmp_path: Path) -> None:
-    from agentpdf.office.sheet import validate_sheet_workbook
+    from okoffice.office.sheet import validate_sheet_workbook
 
     path = tmp_path / "risky.xlsx"
     _write_risky_xlsx(path)
@@ -63,11 +63,11 @@ def test_validate_sheet_workbook_warns_on_blank_sheets_and_external_links(tmp_pa
 
 
 def test_validate_sheet_workbook_agent_interfaces(tmp_path: Path) -> None:
-    from agentpdf.api.app import create_app
-    from agentpdf.mcp.server import sheet_validate_workbook
-    from agentpdf.office.sheet import write_sheet_workbook
-    from agentpdf.workflows.runner import run_workflow
-    from okoffice.cli.main import app
+    from okoffice.api.app import create_app
+    from okoffice.mcp.server import sheet_validate_workbook
+    from okoffice.office.sheet import write_sheet_workbook
+    from okoffice.workflows.runner import run_workflow
+    from okoffice.cli_okoffice.main import app
 
     path = tmp_path / "model.xlsx"
     write_sheet_workbook([{"values": ["Revenue", "42"], "source_refs": [{"cell_ref": "A1"}]}], path)
@@ -88,7 +88,7 @@ def test_validate_sheet_workbook_agent_interfaces(tmp_path: Path) -> None:
 
 
 def test_sheet_validate_workbook_is_listed_in_manifests() -> None:
-    from okoffice.tools.registry import load_okoffice_manifest
+    from okoffice.tools.registry_okoffice import load_okoffice_manifest
 
     manifest = load_okoffice_manifest()
     target = {tool["name"]: tool for tool in manifest["target_tools"]}

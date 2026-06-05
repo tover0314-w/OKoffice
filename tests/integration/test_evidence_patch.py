@@ -6,15 +6,15 @@ from PIL import Image
 from pypdf import PdfReader
 from typer.testing import CliRunner
 
-from agentpdf.api.app import create_app
-from agentpdf.cli.main import app
-from agentpdf.compose.context import compose_from_context
-from agentpdf.context.packet import build_context_packet
-from agentpdf.core.pdf import inspect_pdf_pages
-from agentpdf.evidence.citations import cite_claims
-from agentpdf.evidence.coverage import create_coverage_report
-from agentpdf.evidence.source_map import map_sources
-from agentpdf.mcp.server import (
+from okoffice.api.app import create_app
+from okoffice.cli.main import app
+from okoffice.compose.context import compose_from_context
+from okoffice.context.packet import build_context_packet
+from okoffice.core.pdf import inspect_pdf_pages
+from okoffice.evidence.citations import cite_claims
+from okoffice.evidence.coverage import create_coverage_report
+from okoffice.evidence.source_map import map_sources
+from okoffice.mcp.server import (
     pdf_evidence_coverage_report,
     pdf_evidence_cite_claims,
     pdf_evidence_map_sources,
@@ -23,7 +23,7 @@ from agentpdf.mcp.server import (
     pdf_patch_preview,
     pdf_patch_verify,
 )
-from agentpdf.patch.transaction import apply_patch_transaction, plan_patch_transaction, preview_patch_transaction, verify_patch_transaction
+from okoffice.patch.transaction import apply_patch_transaction, plan_patch_transaction, preview_patch_transaction, verify_patch_transaction
 
 
 runner = CliRunner()

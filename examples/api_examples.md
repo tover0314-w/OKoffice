@@ -11,7 +11,7 @@ okoffice serve --api --safe-root .
 Compatibility server while the CLI migrates:
 
 ```bash
-okpdf serve --api
+okoffice serve --api
 ```
 
 ## List Tools

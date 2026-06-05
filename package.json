@@ -1,16 +1,16 @@
 {
-  "name": "okpdf-workspace",
+  "name": "okoffice-workspace",
   "private": true,
   "workspaces": [
     "packages/*"
   ],
   "scripts": {
-    "build:node": "npm --workspace @okpdf/agentpdf-node run build",
+    "build:node": "npm --workspace @okoffice/okoffice-node run build",
     "doctor": "python scripts/doctor.py",
-    "pack:node": "npm --workspace @okpdf/agentpdf-node pack --dry-run",
+    "pack:node": "npm --workspace @okoffice/okoffice-node pack --dry-run",
     "setup": "python scripts/setup_dev.py",
     "smoke": "python scripts/smoke.py",
-    "test": "pytest -q && npm --workspace @okpdf/agentpdf-node test",
-    "test:node": "npm --workspace @okpdf/agentpdf-node test"
+    "test": "pytest -q && npm --workspace @okoffice/okoffice-node test",
+    "test:node": "npm --workspace @okoffice/okoffice-node test"
   }
 }

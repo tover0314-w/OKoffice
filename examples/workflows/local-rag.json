@@ -1,7 +1,7 @@
 {
   "name": "local-rag-cited-answer",
-  "input_path": ".agentpdf-out/numbered.pdf",
-  "artifact_dir": ".agentpdf-out/workflows/local-rag",
+  "input_path": ".okoffice-out/numbered.pdf",
+  "artifact_dir": ".okoffice-out/workflows/local-rag",
   "bindings": {
     "<question>": "What does this document say?",
     "<answer>": "This document is locally indexed."

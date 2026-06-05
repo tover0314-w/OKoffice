@@ -7,7 +7,7 @@ from typer.testing import CliRunner
 
 
 def test_word_inspect_document_reports_structure(tmp_path: Path) -> None:
-    from agentpdf.office.word import inspect_word_document
+    from okoffice.office.word import inspect_word_document
 
     path = tmp_path / "memo.docx"
     _write_docx(path)
@@ -27,7 +27,7 @@ def test_word_inspect_document_reports_structure(tmp_path: Path) -> None:
 
 
 def test_sheet_inspect_workbook_reports_sheets_and_formulas(tmp_path: Path) -> None:
-    from agentpdf.office.sheet import inspect_sheet_workbook
+    from okoffice.office.sheet import inspect_sheet_workbook
 
     path = tmp_path / "model.xlsx"
     _write_xlsx(path)
@@ -48,7 +48,7 @@ def test_sheet_inspect_workbook_reports_sheets_and_formulas(tmp_path: Path) -> N
 
 
 def test_deck_inspect_presentation_reports_slide_assets(tmp_path: Path) -> None:
-    from agentpdf.office.deck import inspect_deck_presentation
+    from okoffice.office.deck import inspect_deck_presentation
 
     path = tmp_path / "deck.pptx"
     _write_pptx(path)
@@ -68,7 +68,7 @@ def test_deck_inspect_presentation_reports_slide_assets(tmp_path: Path) -> None:
 
 
 def test_okoffice_domain_inspect_cli_commands_return_json(tmp_path: Path) -> None:
-    from okoffice.cli.main import app
+    from okoffice.cli_okoffice.main import app
 
     docx_path = tmp_path / "memo.docx"
     xlsx_path = tmp_path / "model.xlsx"
@@ -91,9 +91,9 @@ def test_okoffice_domain_inspect_cli_commands_return_json(tmp_path: Path) -> Non
 
 
 def test_domain_inspect_tools_run_through_agent_interfaces(tmp_path: Path) -> None:
-    from agentpdf.api.app import create_app
-    from agentpdf.mcp.server import sheet_inspect_workbook
-    from agentpdf.workflows.runner import run_workflow
+    from okoffice.api.app import create_app
+    from okoffice.mcp.server import sheet_inspect_workbook
+    from okoffice.workflows.runner import run_workflow
 
     docx_path = tmp_path / "memo.docx"
     xlsx_path = tmp_path / "model.xlsx"

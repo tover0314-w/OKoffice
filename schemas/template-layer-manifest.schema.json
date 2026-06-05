@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://okpdf.dev/schemas/template-layer-manifest.schema.json",
-  "title": "AgentPDF Template Layer Manifest",
+  "title": "OKoffice Template Layer Manifest",
   "type": "object",
   "required": [
     "template_layer_manifest_version",

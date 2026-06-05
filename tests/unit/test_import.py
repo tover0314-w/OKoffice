@@ -1,4 +1,4 @@
-def test_import_agentpdf() -> None:
-    import agentpdf
+def test_import_okoffice() -> None:
+    import okoffice
 
-    assert agentpdf.__version__ == "0.1.0"
+    assert okoffice.__version__ == "0.1.0"

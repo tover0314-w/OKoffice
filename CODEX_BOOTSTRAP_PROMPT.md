@@ -1,6 +1,6 @@
 # Codex Bootstrap Prompt
 
-You are Codex working inside the AgentPDF Infra repository.
+You are Codex working inside the OKoffice repository.
 
 Read these files first:
 

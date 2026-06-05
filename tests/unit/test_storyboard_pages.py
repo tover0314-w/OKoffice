@@ -1,7 +1,7 @@
-from agentpdf.authoring.models import AuthoringBrief, EvidenceCard
-from agentpdf.authoring.pages import write_pages_from_storyboard
-from agentpdf.authoring.router import plan_authoring_route
-from agentpdf.authoring.storyboard import plan_storyboard
+from okoffice.authoring.models import AuthoringBrief, EvidenceCard
+from okoffice.authoring.pages import write_pages_from_storyboard
+from okoffice.authoring.router import plan_authoring_route
+from okoffice.authoring.storyboard import plan_storyboard, validate_claim_spine
 
 
 def _brief() -> AuthoringBrief:
@@ -178,3 +178,172 @@ def test_write_pages_from_storyboard_returns_failed_tool_result_for_bad_design_t
     assert result.error is not None
     assert result.error.code == "unsafe_input_rejected"
     assert result.error.details["payload"] == "design_tokens"
+
+
+# --- Phase 4: Narrative Arc Tests ---
+
+
+class TestArcTemplates:
+    def test_pitch_deck_arc_has_six_pages(self) -> None:
+        brief = AuthoringBrief(topic="Startup pitch", page_count=6, style="pitch_deck")
+        result = plan_storyboard(brief=brief)
+        storyboard = result.usage["storyboard"]
+        page_types = [p["page_type"] for p in storyboard["pages"]]
+        assert page_types == ["cover", "problem", "solution", "market", "traction", "ask"]
+
+    def test_board_review_arc(self) -> None:
+        brief = AuthoringBrief(topic="Board review", page_count=6, style="board_review")
+        result = plan_storyboard(brief=brief)
+        storyboard = result.usage["storyboard"]
+        page_types = [p["page_type"] for p in storyboard["pages"]]
+        assert page_types == ["cover", "executive_summary", "performance", "risk_compliance", "recommendation", "conclusion_sources"]
+
+    def test_research_brief_arc(self) -> None:
+        brief = AuthoringBrief(topic="Research brief", page_count=6, style="research_brief")
+        result = plan_storyboard(brief=brief)
+        storyboard = result.usage["storyboard"]
+        page_types = [p["page_type"] for p in storyboard["pages"]]
+        assert page_types == ["cover", "executive_summary", "methodology", "findings", "implications", "conclusion_sources"]
+
+    def test_status_update_arc(self) -> None:
+        brief = AuthoringBrief(topic="Status update", page_count=5, style="status_update")
+        result = plan_storyboard(brief=brief)
+        storyboard = result.usage["storyboard"]
+        page_types = [p["page_type"] for p in storyboard["pages"]]
+        assert page_types == ["cover", "summary", "progress", "blockers", "next_steps"]
+
+    def test_training_arc(self) -> None:
+        brief = AuthoringBrief(topic="Training module", page_count=6, style="training")
+        result = plan_storyboard(brief=brief)
+        storyboard = result.usage["storyboard"]
+        page_types = [p["page_type"] for p in storyboard["pages"]]
+        assert page_types == ["cover", "why_it_matters", "core_concept", "example", "practice", "summary"]
+
+    def test_unknown_style_falls_back_to_default_arc(self) -> None:
+        brief = AuthoringBrief(topic="Custom style", page_count=4, style="custom_unknown")
+        result = plan_storyboard(brief=brief)
+        storyboard = result.usage["storyboard"]
+        assert result.status == "succeeded"
+        assert storyboard["pages"][0]["page_type"] == "cover"
+        assert storyboard["pages"][-1]["page_type"] == "conclusion_sources"
+
+    def test_pitch_deck_with_extra_pages_adds_deep_dives(self) -> None:
+        brief = AuthoringBrief(topic="Extended pitch", page_count=9, style="pitch_deck")
+        result = plan_storyboard(brief=brief)
+        storyboard = result.usage["storyboard"]
+        assert len(storyboard["pages"]) == 9
+        assert storyboard["pages"][-1]["page_type"] == "ask"
+        deep_dive_pages = [p for p in storyboard["pages"] if p["page_type"].startswith("deep_dive_")]
+        assert len(deep_dive_pages) == 3
+
+
+class TestInsightTitles:
+    def test_evidence_card_claim_used_as_title(self) -> None:
+        brief = AuthoringBrief(topic="Market analysis", page_count=8, style="business_research")
+        cards = [
+            EvidenceCard(
+                id="ev1",
+                claim="Mobile monetization remains strong",
+                evidence="Revenue growth continues.",
+                source_title="State of Mobile 2026",
+                source_url="https://example.com",
+                usable_for=["market_context"],
+            ),
+        ]
+        result = plan_storyboard(brief=brief, evidence_cards=cards)
+        storyboard = result.usage["storyboard"]
+        market_page = next(p for p in storyboard["pages"] if p["page_type"] == "market_context")
+        assert market_page["title"] == "Mobile monetization remains strong"
+
+    def test_evidence_card_too_long_claim_not_used_as_title(self) -> None:
+        brief = AuthoringBrief(topic="Market analysis", page_count=8, style="business_research")
+        long_claim = "A" * 90
+        cards = [
+            EvidenceCard(
+                id="ev1",
+                claim=long_claim,
+                evidence="Revenue growth continues.",
+                source_title="State of Mobile 2026",
+                source_url="https://example.com",
+                usable_for=["market_context"],
+            ),
+        ]
+        result = plan_storyboard(brief=brief, evidence_cards=cards)
+        storyboard = result.usage["storyboard"]
+        market_page = next(p for p in storyboard["pages"] if p["page_type"] == "market_context")
+        assert market_page["title"] != long_claim
+
+    def test_cover_page_uses_topic_not_insight(self) -> None:
+        brief = AuthoringBrief(topic="My Topic", page_count=8)
+        cards = [
+            EvidenceCard(
+                id="ev1",
+                claim="Some insight for cover",
+                evidence="Evidence.",
+                source_title="Source",
+                source_url="https://example.com",
+                usable_for=["cover"],
+            ),
+        ]
+        result = plan_storyboard(brief=brief, evidence_cards=cards)
+        storyboard = result.usage["storyboard"]
+        assert storyboard["pages"][0]["title"] == "My Topic"
+
+
+class TestClaimSpineValidation:
+    def test_valid_storyboard_passes_spine_check(self) -> None:
+        brief = AuthoringBrief(topic="Strategy deck", page_count=8)
+        result = plan_storyboard(brief=brief)
+        storyboard = result.usage["storyboard"]
+        from okoffice.authoring.models import Storyboard
+        parsed = Storyboard.model_validate(storyboard)
+        spine = validate_claim_spine(parsed)
+        assert spine["valid"] is True
+        assert len(spine["issues"]) == 0
+        assert len(spine["spine"]) == 8
+
+    def test_empty_core_claim_flagged(self) -> None:
+        from okoffice.authoring.models import Storyboard, StoryboardPage
+        pages = [
+            StoryboardPage(page_number=1, page_type="cover", title="T", core_claim="Frame the topic.", layout="cover"),
+            StoryboardPage(page_number=2, page_type="body", title="B", core_claim="", layout="title_bullets"),
+        ]
+        storyboard = Storyboard(storyboard_id="s1", page_count=2, pages=pages)
+        spine = validate_claim_spine(storyboard)
+        assert spine["valid"] is False
+        assert any("empty core claim" in issue for issue in spine["issues"])
+
+    def test_duplicate_claim_flagged(self) -> None:
+        from okoffice.authoring.models import Storyboard, StoryboardPage
+        pages = [
+            StoryboardPage(page_number=1, page_type="cover", title="T", core_claim="Same claim here", layout="cover"),
+            StoryboardPage(page_number=2, page_type="body", title="B", core_claim="Same claim here", layout="title_bullets"),
+        ]
+        storyboard = Storyboard(storyboard_id="s2", page_count=2, pages=pages)
+        spine = validate_claim_spine(storyboard)
+        assert spine["valid"] is False
+        assert any("repeats" in issue for issue in spine["issues"])
+
+    def test_closing_page_without_action_flagged(self) -> None:
+        from okoffice.authoring.models import Storyboard, StoryboardPage
+        pages = [
+            StoryboardPage(page_number=1, page_type="cover", title="T", core_claim="Frame.", layout="cover"),
+            StoryboardPage(page_number=2, page_type="conclusion_sources", title="End", core_claim="Just some data.", layout="sources"),
+        ]
+        storyboard = Storyboard(storyboard_id="s3", page_count=2, pages=pages)
+        spine = validate_claim_spine(storyboard)
+        assert spine["valid"] is False
+        assert any("call to action" in issue.lower() or "conclusion" in issue.lower() for issue in spine["issues"])
+
+    def test_plan_storyboard_includes_claim_spine_in_usage(self) -> None:
+        brief = AuthoringBrief(topic="Strategy deck", page_count=8)
+        result = plan_storyboard(brief=brief)
+        assert "claim_spine" in result.usage
+        assert result.usage["claim_spine"]["valid"] is True
+        assert len(result.usage["claim_spine"]["spine"]) == 8
+
+    def test_plan_storyboard_includes_spine_validation_check(self) -> None:
+        brief = AuthoringBrief(topic="Strategy deck", page_count=8)
+        result = plan_storyboard(brief=brief)
+        check_names = [c.name for c in result.validation.checks]
+        assert "claim_spine_coherent" in check_names

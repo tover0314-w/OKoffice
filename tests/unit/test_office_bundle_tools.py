@@ -6,7 +6,7 @@ from typer.testing import CliRunner
 
 
 def test_office_bundle_export_and_verify_wrap_existing_bundle_engine(tmp_path: Path) -> None:
-    from agentpdf.office.bundle import export_office_bundle, verify_office_bundle
+    from okoffice.office.bundle import export_office_bundle, verify_office_bundle
 
     artifact = tmp_path / "evidence.txt"
     bundle = tmp_path / "board-pack.okoffice.zip"
@@ -28,7 +28,7 @@ def test_office_bundle_export_and_verify_wrap_existing_bundle_engine(tmp_path: P
 
     with ZipFile(bundle) as archive:
         names = set(archive.namelist())
-        assert "agentpdf-bundle-manifest.json" in names
+        assert "okoffice-bundle-manifest.json" in names
         assert "checksums.sha256" in names
         assert "artifacts/evidence.txt" in names
 
@@ -42,7 +42,7 @@ def test_office_bundle_export_and_verify_wrap_existing_bundle_engine(tmp_path: P
 
 
 def test_okoffice_bundle_cli_exports_and_verifies(tmp_path: Path) -> None:
-    from okoffice.cli.main import app
+    from okoffice.cli_okoffice.main import app
 
     artifact = tmp_path / "evidence.txt"
     bundle = tmp_path / "board-pack.okoffice.zip"
@@ -69,7 +69,7 @@ def test_okoffice_bundle_cli_exports_and_verifies(tmp_path: Path) -> None:
 def test_office_bundle_tools_run_through_rest_api(tmp_path: Path) -> None:
     from fastapi.testclient import TestClient
 
-    from agentpdf.api.app import create_app
+    from okoffice.api.app import create_app
 
     artifact = tmp_path / "evidence.txt"
     bundle = tmp_path / "board-pack.okoffice.zip"
@@ -92,7 +92,7 @@ def test_office_bundle_tools_run_through_rest_api(tmp_path: Path) -> None:
 
 
 def test_office_bundle_tools_run_through_mcp_functions(tmp_path: Path) -> None:
-    from agentpdf.mcp.server import office_bundle_export, office_bundle_verify
+    from okoffice.mcp.server import office_bundle_export, office_bundle_verify
 
     artifact = tmp_path / "evidence.txt"
     bundle = tmp_path / "board-pack.okoffice.zip"
@@ -110,7 +110,7 @@ def test_office_bundle_tools_run_through_mcp_functions(tmp_path: Path) -> None:
 
 
 def test_office_bundle_tools_run_through_workflow_runner(tmp_path: Path) -> None:
-    from agentpdf.workflows.runner import run_workflow
+    from okoffice.workflows.runner import run_workflow
 
     artifact = tmp_path / "evidence.txt"
     bundle = tmp_path / "board-pack.okoffice.zip"

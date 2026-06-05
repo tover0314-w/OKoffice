@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://okpdf.dev/schemas/evidence-coverage-report.schema.json",
-  "title": "AgentPDF Evidence Coverage Report",
+  "title": "OKoffice Evidence Coverage Report",
   "type": "object",
   "required": ["coverage_report_version", "composition_id", "coverage", "block_evidence", "uncovered_blocks", "source_refs"],
   "additionalProperties": true,

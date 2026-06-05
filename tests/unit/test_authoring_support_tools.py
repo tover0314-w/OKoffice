@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from agentpdf.authoring.design import select_design_tokens
-from agentpdf.authoring.pages import write_pages_from_storyboard
-from agentpdf.authoring.research import extract_evidence_cards, normalize_source_cards, plan_research
-from agentpdf.authoring.revise import revise_pages
-from agentpdf.authoring.storyboard import plan_storyboard
+from okoffice.authoring.design import select_design_tokens
+from okoffice.authoring.pages import write_pages_from_storyboard
+from okoffice.authoring.research import extract_evidence_cards, normalize_source_cards, plan_research
+from okoffice.authoring.revise import revise_pages
+from okoffice.authoring.storyboard import plan_storyboard
 
 
 def _brief() -> dict[str, object]:

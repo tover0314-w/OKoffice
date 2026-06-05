@@ -1,6 +1,6 @@
 # Security Policy
 
-AgentPDF Infra processes potentially sensitive documents. Security is a core product feature.
+OKoffice processes potentially sensitive documents. Security is a core product feature.
 
 ## Supported versions
 

@@ -1,14 +1,14 @@
-# AgentPDF Core V0 Design
+# OKoffice Core V0 Design
 
 ## Purpose
 
-Build the first runnable open-source AgentPDF implementation from the current development harness. The V0 should turn the repository root into a Python package with a real CLI, public Pydantic contracts, a stable tool registry, local artifact and validation models, and the first deterministic PDF tools.
+Build the first runnable open-source OKoffice implementation from the current development harness. The V0 should turn the repository root into a Python package with a real CLI, public Pydantic contracts, a stable tool registry, local artifact and validation models, and the first deterministic PDF tools.
 
 ## Scope
 
 Core V0 implements:
 
-- Root-level Python package under `src/agentpdf`.
+- Root-level Python package under `src/okoffice`.
 - `pyproject.toml` with local-first, license-safe default dependencies.
 - Pydantic public models for files, artifacts, jobs, validation reports, tool results, errors, and tool manifests.
 - Tool registry with the complete public namespace loaded from the existing manifest where possible.
@@ -38,7 +38,7 @@ CLI and MCP commands should not contain PDF manipulation logic. They normalize u
 
 ## Open-Source Reference Direction
 
-AgentPDF should actively study strong open-source PDF projects, especially pdf-craft, but borrow patterns instead of copying implementation code. Relevant pdf-craft-inspired patterns for this project are:
+OKoffice should actively study strong open-source PDF projects, especially pdf-craft, but borrow patterns instead of copying implementation code. Relevant pdf-craft-inspired patterns for this project are:
 
 - Local-first document processing by default.
 - Clear separation between PDF handlers, OCR/model workers, and output transformers.
@@ -99,7 +99,7 @@ The complete public manifest remains visible from day one, even when many tools 
 
 The local MCP server exposes these implemented tools under agent-friendly names:
 
-- `agentpdf_tool_manifest`
+- `okoffice_tool_manifest`
 - `pdf_inspect_document`
 - `pdf_merge`
 - `pdf_split`
@@ -130,13 +130,13 @@ Tests should create or use local fixture PDFs and prove:
 Acceptance commands for this V0:
 
 ```bash
-python -m agentpdf.cli --help
-agentpdf tools list --json
-agentpdf inspect tests/fixtures/simple.pdf --json
-agentpdf merge tests/fixtures/simple.pdf tests/fixtures/two_pages.pdf -o .agentpdf-out/merged.pdf --json
-agentpdf split tests/fixtures/two_pages.pdf --pages 1 -o .agentpdf-out/page-1.pdf --json
-agentpdf render tests/fixtures/simple.pdf --pages 1 --format png --out-dir .agentpdf-out/renders --json
-agentpdf serve --mcp
+python -m okoffice.cli --help
+okoffice tools list --json
+okoffice inspect tests/fixtures/simple.pdf --json
+okoffice merge tests/fixtures/simple.pdf tests/fixtures/two_pages.pdf -o .okoffice-out/merged.pdf --json
+okoffice split tests/fixtures/two_pages.pdf --pages 1 -o .okoffice-out/page-1.pdf --json
+okoffice render tests/fixtures/simple.pdf --pages 1 --format png --out-dir .okoffice-out/renders --json
+okoffice serve --mcp
 pytest -q
 ```
 

@@ -6,10 +6,10 @@ from fastapi.testclient import TestClient
 from PIL import Image
 from typer.testing import CliRunner
 
-import agentpdf.mcp.server as mcp_server
-from agentpdf.api.app import create_app
-from agentpdf.cli.main import app
-from agentpdf.tools.registry import get_tool
+import okoffice.mcp.server as mcp_server
+from okoffice.api.app import create_app
+from okoffice.cli.main import app
+from okoffice.tools.registry import get_tool
 
 
 runner = CliRunner()

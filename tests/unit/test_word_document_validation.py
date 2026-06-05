@@ -7,7 +7,7 @@ from tests.unit.test_word_inspect import _write_docx_fixture
 
 
 def test_word_document_validation_returns_structural_baseline(tmp_path: Path) -> None:
-    from agentpdf.office.word_validation import validate_word_document
+    from okoffice.office.word_validation import validate_word_document
 
     path = tmp_path / "memo.docx"
     _write_docx_fixture(path)
@@ -48,7 +48,7 @@ def test_word_document_validation_returns_structural_baseline(tmp_path: Path) ->
 
 
 def test_okoffice_word_validate_document_cli_returns_tool_result_json(tmp_path: Path) -> None:
-    from okoffice.cli.main import app
+    from okoffice.cli_okoffice.main import app
 
     path = tmp_path / "memo.docx"
     _write_docx_fixture(path)
@@ -64,7 +64,7 @@ def test_okoffice_word_validate_document_cli_returns_tool_result_json(tmp_path: 
 def test_word_document_validation_runs_through_rest_api(tmp_path: Path) -> None:
     from fastapi.testclient import TestClient
 
-    from agentpdf.api.app import create_app
+    from okoffice.api.app import create_app
 
     path = tmp_path / "memo.docx"
     _write_docx_fixture(path)
@@ -81,7 +81,7 @@ def test_word_document_validation_runs_through_rest_api(tmp_path: Path) -> None:
 
 
 def test_word_document_validation_runs_through_mcp_function(tmp_path: Path) -> None:
-    from agentpdf.mcp.server import word_validate_document
+    from okoffice.mcp.server import word_validate_document
 
     path = tmp_path / "memo.docx"
     _write_docx_fixture(path)
@@ -94,7 +94,7 @@ def test_word_document_validation_runs_through_mcp_function(tmp_path: Path) -> N
 
 
 def test_word_document_validation_runs_through_workflow_runner(tmp_path: Path) -> None:
-    from agentpdf.workflows.runner import run_workflow
+    from okoffice.workflows.runner import run_workflow
 
     path = tmp_path / "memo.docx"
     _write_docx_fixture(path)

@@ -13,8 +13,8 @@ ROOT = Path(__file__).resolve().parents[2]
 def test_okpdf_console_script_alias_is_declared() -> None:
     data = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
 
-    assert data["project"]["scripts"]["agentpdf"] == "agentpdf.cli.main:app"
-    assert data["project"]["scripts"]["okpdf"] == "agentpdf.cli.main:app"
+    assert data["project"]["scripts"]["agentpdf"] == "okoffice.cli.main:app"
+    assert data["project"]["scripts"]["okpdf"] == "okoffice.cli.main:app"
 
 
 def test_doctor_reports_ready_json() -> None:
@@ -29,7 +29,7 @@ def test_doctor_reports_ready_json() -> None:
     payload = json.loads(result.stdout)
     assert payload["status"] == "ok"
     assert payload["checks"]["python"]["ok"] is True
-    assert payload["checks"]["agentpdf_import"]["ok"] is True
+    assert payload["checks"]["okoffice_import"]["ok"] is True
     assert payload["checks"]["node"]["ok"] is True
     for check_name in [
         "pypdf",
@@ -72,8 +72,8 @@ def test_docker_self_hosted_entrypoint_is_declared() -> None:
 
     assert "FROM python:3.12-slim" in dockerfile
     assert "python -m pip install -e ." in dockerfile
-    assert "USER okpdf" in dockerfile
-    assert 'ENTRYPOINT ["okpdf"]' in dockerfile
+    assert "USER okoffice" in dockerfile
+    assert 'ENTRYPOINT ["okoffice"]' in dockerfile
     assert 'CMD ["serve", "--api", "--host", "0.0.0.0", "--port", "7331", "--safe-root", "/workspace"]' in dockerfile
     assert "EXPOSE 7331" in dockerfile
 
@@ -83,5 +83,5 @@ def test_docker_self_hosted_entrypoint_is_declared() -> None:
     assert "0.0.0.0" in compose
     assert "/healthz" in compose
 
-    for ignored_path in [".git", "node_modules", ".agentpdf-out", ".pytest-tmp", "packages/*/dist"]:
+    for ignored_path in [".git", "node_modules", ".okoffice-out", ".pytest-tmp", "packages/*/dist"]:
         assert ignored_path in dockerignore

@@ -20,7 +20,7 @@ It then executes an auditable workflow:
 ingest sources -> extract evidence -> create model/workbook -> compose report/deck/PDF -> validate -> export bundle
 ```
 
-The current AgentPDF/okpdf harness becomes the PDF domain inside okoffice. Existing `pdf.*` tools stay compatible while new `office.*` tools define the broader target surface.
+The current OKoffice/okoffice harness becomes the PDF domain inside okoffice. Existing `pdf.*` tools stay compatible while new `office.*` tools define the broader target surface.
 
 ## 2. Why This Product Should Exist
 
@@ -206,7 +206,7 @@ Compatibility:
 
 - Existing `pdf.*` tools remain valid.
 - `office.pdf.*` can eventually wrap or alias `pdf.*`.
-- The Python package may remain `agentpdf` until a compatibility plan introduces `okoffice`.
+- The Python package may remain `okoffice` until a compatibility plan introduces `okoffice`.
 
 ## 7. Core Data Model
 
@@ -411,7 +411,7 @@ Optional or hosted:
 - Team/workspace/account/billing features.
 - Enterprise policy, audit logs, SSO, VPC/on-prem.
 
-## 11. Migration Plan From AgentPDF
+## 11. Migration Plan From OKoffice
 
 Phase 1:
 

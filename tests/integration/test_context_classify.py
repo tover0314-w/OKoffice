@@ -5,12 +5,12 @@ from fastapi.testclient import TestClient
 from PIL import Image
 from typer.testing import CliRunner
 
-from agentpdf.api.app import create_app
-from agentpdf.cli.main import app
-from agentpdf.context.classify import classify_context
-from agentpdf.context.packet import build_context_packet
-from agentpdf.mcp.server import pdf_context_classify
-from agentpdf.tools.registry import get_tool
+from okoffice.api.app import create_app
+from okoffice.cli.main import app
+from okoffice.context.classify import classify_context
+from okoffice.context.packet import build_context_packet
+from okoffice.mcp.server import pdf_context_classify
+from okoffice.tools.registry import get_tool
 
 
 runner = CliRunner()

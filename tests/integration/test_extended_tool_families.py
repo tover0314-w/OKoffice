@@ -5,7 +5,7 @@ from PIL import Image
 from pypdf import PdfReader
 from reportlab.pdfgen import canvas
 
-from agentpdf.conversion.local import (
+from okoffice.conversion.local import (
     docx_to_pdf,
     pdf_to_docx,
     pdf_to_html,
@@ -15,8 +15,8 @@ from agentpdf.conversion.local import (
     url_to_pdf,
     xlsx_to_pdf,
 )
-from agentpdf.forms.local import create_form_pdf, import_form_data_pdf, validate_form_pdf
-from agentpdf.ocr_scan.local import (
+from okoffice.forms.local import create_form_pdf, import_form_data_pdf, validate_form_pdf
+from okoffice.ocr_scan.local import (
     despeckle_pdf,
     multilingual_ocr_pdf,
     ocr_pdf,
@@ -24,8 +24,8 @@ from agentpdf.ocr_scan.local import (
     searchable_pdf,
     scan_to_pdf,
 )
-from agentpdf.optimize.local import subset_fonts_pdf, to_pdfa_pdf
-from agentpdf.security.local import (
+from okoffice.optimize.local import subset_fonts_pdf, to_pdfa_pdf
+from okoffice.security.local import (
     decrypt_authorized_pdf,
     encrypt_pdf,
     malware_scan_pdf,
@@ -43,7 +43,7 @@ def test_office_url_and_pdf_conversion_tools_write_local_artifacts(tmp_path: Pat
     pptx = tmp_path / "source.pptx"
     xlsx = tmp_path / "source.xlsx"
     _write_text_pdf(pdf, ["Quarterly revenue was 15%."])
-    html.write_text("<h1>AgentPDF</h1><p>URL conversion body.</p>", encoding="utf-8")
+    html.write_text("<h1>OKoffice</h1><p>URL conversion body.</p>", encoding="utf-8")
     _write_minimal_docx(docx, ["DOCX heading", "DOCX body"])
     _write_minimal_pptx(pptx, ["Slide one", "Slide two"])
     _write_minimal_xlsx(xlsx, [["metric", "value"], ["latency", "42"]])
@@ -131,7 +131,7 @@ def test_ocr_pdf_returns_text_regions_from_local_engine(monkeypatch, tmp_path: P
     image = tmp_path / "scan.png"
     Image.new("RGB", (160, 80), color=(255, 255, 255)).save(image)
 
-    monkeypatch.setattr("agentpdf.ocr_scan.local._run_tesseract_tsv", _fake_tesseract_tsv)
+    monkeypatch.setattr("okoffice.ocr_scan.local._run_tesseract_tsv", _fake_tesseract_tsv)
 
     result = ocr_pdf(image, languages=["eng"])
 
@@ -156,7 +156,7 @@ def test_searchable_pdf_writes_ocr_text_layer(monkeypatch, tmp_path: Path) -> No
     output = tmp_path / "searchable.pdf"
     Image.new("RGB", (160, 80), color=(255, 255, 255)).save(image)
     scan_to_pdf([image], image_pdf)
-    monkeypatch.setattr("agentpdf.ocr_scan.local._run_tesseract_tsv", _fake_tesseract_tsv)
+    monkeypatch.setattr("okoffice.ocr_scan.local._run_tesseract_tsv", _fake_tesseract_tsv)
 
     result = searchable_pdf(image_pdf, output_path=output, languages=["eng"])
 
@@ -170,7 +170,7 @@ def test_searchable_pdf_writes_ocr_text_layer(monkeypatch, tmp_path: Path) -> No
 
 
 def test_ocr_pdf_reports_missing_engine(monkeypatch, tmp_path: Path) -> None:
-    from agentpdf.tools.runner import run_ocr
+    from okoffice.tools.runner import run_ocr
 
     image = tmp_path / "scan.png"
     Image.new("RGB", (160, 80), color=(255, 255, 255)).save(image)

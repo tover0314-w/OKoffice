@@ -1,4 +1,4 @@
-from agentpdf.authoring.models import (
+from okoffice.authoring.models import (
     AuthoringBrief,
     DesignTokens,
     EvidenceCard,
@@ -10,9 +10,9 @@ from agentpdf.authoring.models import (
 
 
 def test_authoring_brief_normalizes_defaults() -> None:
-    brief = AuthoringBrief(topic="AgentPDF authoring", page_count=6)
+    brief = AuthoringBrief(topic="OKoffice authoring", page_count=6)
 
-    assert brief.topic == "AgentPDF authoring"
+    assert brief.topic == "OKoffice authoring"
     assert brief.page_count == 6
     assert brief.language == "en"
     assert brief.deliverable == "deck"
@@ -57,7 +57,7 @@ def test_storyboard_and_page_document_dump_json() -> None:
             StoryboardPage(
                 page_number=1,
                 page_type="cover",
-                title="AgentPDF",
+                title="OKoffice",
                 core_claim="Frame the deck.",
                 layout="cover",
             ),
@@ -75,7 +75,7 @@ def test_storyboard_and_page_document_dump_json() -> None:
         page_document_id="pages_test",
         page_count=2,
         pages=[
-            PageSpec(page_number=1, layout="cover", title="AgentPDF"),
+            PageSpec(page_number=1, layout="cover", title="OKoffice"),
             PageSpec(
                 page_number=2,
                 layout="three_cards",

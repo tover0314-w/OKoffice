@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from agentpdf.schemas.models import (
-    AgentPDFError,
+from okoffice.schemas.models import (
+    OKofficeError,
     Artifact,
     FileRef,
     ToolManifest,
@@ -52,7 +52,7 @@ def test_failed_tool_result_contains_stable_error() -> None:
         job_id="job_failed",
         status="failed",
         tool="pdf.inspect.document",
-        error=AgentPDFError(code="file_not_found", message="Input file not found."),
+        error=OKofficeError(code="file_not_found", message="Input file not found."),
     )
 
     payload = result.model_dump(mode="json")

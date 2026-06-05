@@ -30,7 +30,7 @@ The existing implementation exposes `pdf.*` tools through compatibility names. T
 Compatibility rules:
 
 - Keep `pdf.*` stable while introducing okoffice docs and future `office.*` aliases.
-- Do not remove `agentpdf` imports until compatibility entrypoints exist.
+- Do not remove `okoffice` imports until compatibility entrypoints exist.
 - Treat PDF as the first implemented okoffice domain.
 - Document gaps honestly instead of pretending DOCX/XLSX/PPTX behavior is already complete.
 

@@ -1,6 +1,6 @@
 # 32 - TypeScript And Node.js SDK
 
-okoffice uses Python for the local core and TypeScript for agent/app ergonomics. The TypeScript package currently lives in `packages/agentpdf-node` and talks to the local REST API.
+okoffice uses Python for the local core and TypeScript for agent/app ergonomics. The TypeScript package currently lives in `packages/okoffice-node` and talks to the local REST API.
 
 Target package:
 
@@ -11,7 +11,7 @@ Target package:
 Compatibility package:
 
 ```text
-@okpdf/agentpdf-node
+@okoffice/okoffice-node
 ```
 
 ## Why This Boundary
@@ -27,13 +27,13 @@ Compatibility package:
 ```bash
 npm install
 npm run build:node
-npm test --workspace @okpdf/agentpdf-node
+npm test --workspace @okoffice/okoffice-node
 ```
 
 Run the local API:
 
 ```bash
-okpdf serve --api
+okoffice serve --api
 ```
 
 ## Target Local Development
@@ -48,9 +48,9 @@ okoffice serve --api
 ## Current Compatibility Usage
 
 ```ts
-import { AgentPDFClient } from "@okpdf/agentpdf-node";
+import { OKofficeClient } from "@okoffice/okoffice-node";
 
-const client = new AgentPDFClient({ baseUrl: "http://127.0.0.1:7331" });
+const client = new OKofficeClient({ baseUrl: "http://127.0.0.1:7331" });
 
 const tools = await client.listTools();
 const result = await client.runTool("pdf.inspect.document", {
@@ -162,7 +162,7 @@ The SDK should not:
 
 During migration:
 
-- Keep `AgentPDFClient`.
+- Keep `OKofficeClient`.
 - Add `OkOfficeClient` as a wrapper or alias once REST routes support `office.*`.
 - Keep existing tests for `pdf.*`.
 - Add new tests for `office.*` request shaping before implementation.

@@ -6,7 +6,7 @@ from typer.testing import CliRunner
 
 
 def test_deck_inspect_presentation_reports_pptx_structure(tmp_path: Path) -> None:
-    from agentpdf.office.deck import inspect_deck_presentation
+    from okoffice.office.deck import inspect_deck_presentation
 
     path = tmp_path / "board.pptx"
     _write_pptx_fixture(path)
@@ -78,7 +78,7 @@ def test_deck_inspect_presentation_reports_pptx_structure(tmp_path: Path) -> Non
 
 
 def test_deck_inspect_presentation_rejects_non_pptx_zip(tmp_path: Path) -> None:
-    from agentpdf.office.deck import inspect_deck_presentation
+    from okoffice.office.deck import inspect_deck_presentation
 
     path = tmp_path / "bad.pptx"
     with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as archive:
@@ -92,7 +92,7 @@ def test_deck_inspect_presentation_rejects_non_pptx_zip(tmp_path: Path) -> None:
 
 
 def test_okoffice_deck_inspect_cli_returns_tool_result_json(tmp_path: Path) -> None:
-    from okoffice.cli.main import app
+    from okoffice.cli_okoffice.main import app
 
     path = tmp_path / "board.pptx"
     _write_pptx_fixture(path)
@@ -109,7 +109,7 @@ def test_okoffice_deck_inspect_cli_returns_tool_result_json(tmp_path: Path) -> N
 def test_deck_inspect_presentation_runs_through_rest_api(tmp_path: Path) -> None:
     from fastapi.testclient import TestClient
 
-    from agentpdf.api.app import create_app
+    from okoffice.api.app import create_app
 
     path = tmp_path / "board.pptx"
     _write_pptx_fixture(path)
@@ -126,7 +126,7 @@ def test_deck_inspect_presentation_runs_through_rest_api(tmp_path: Path) -> None
 
 
 def test_deck_inspect_presentation_runs_through_mcp_function(tmp_path: Path) -> None:
-    from agentpdf.mcp.server import deck_inspect_presentation
+    from okoffice.mcp.server import deck_inspect_presentation
 
     path = tmp_path / "board.pptx"
     _write_pptx_fixture(path)
@@ -139,7 +139,7 @@ def test_deck_inspect_presentation_runs_through_mcp_function(tmp_path: Path) -> 
 
 
 def test_deck_inspect_presentation_runs_through_workflow_runner(tmp_path: Path) -> None:
-    from agentpdf.workflows.runner import run_workflow
+    from okoffice.workflows.runner import run_workflow
 
     path = tmp_path / "board.pptx"
     _write_pptx_fixture(path)

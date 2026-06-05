@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://okpdf.dev/schemas/context-packet.schema.json",
-  "title": "AgentPDF Context Packet",
+  "title": "OKoffice Context Packet",
   "type": "object",
   "required": ["context_packet_version", "context_packet_id", "items", "source_graph"],
   "properties": {

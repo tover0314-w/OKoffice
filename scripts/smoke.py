@@ -13,8 +13,8 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Run a tiny okpdf local smoke test.")
-    parser.add_argument("--out-dir", type=Path, default=Path(".agentpdf-out/smoke"))
+    parser = argparse.ArgumentParser(description="Run a tiny okoffice local smoke test.")
+    parser.add_argument("--out-dir", type=Path, default=Path(".okoffice-out/smoke"))
     parser.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
     args = parser.parse_args()
 
@@ -27,12 +27,12 @@ def main() -> int:
 
 
 def run_smoke(out_dir: Path) -> dict[str, Any]:
-    from agentpdf.tools.runner import run_create_text, run_extract_text, run_inspect
+    from okoffice.tools.runner import run_create_text, run_extract_text, run_inspect
 
     out_dir.mkdir(parents=True, exist_ok=True)
     created_pdf = out_dir / "hello.pdf"
 
-    created = run_create_text("Hello from okpdf smoke test.", created_pdf)
+    created = run_create_text("Hello from okoffice smoke test.", created_pdf)
     inspected = run_inspect(created_pdf)
     extracted = run_extract_text(created_pdf)
 
@@ -40,7 +40,7 @@ def run_smoke(out_dir: Path) -> dict[str, Any]:
         "create_text_pdf": created.status == "succeeded",
         "inspect_created_pdf": inspected.status == "succeeded",
         "extract_text": extracted.status == "succeeded"
-        and "Hello from okpdf smoke test." in str(extracted.usage.get("text", "")),
+        and "Hello from okoffice smoke test." in str(extracted.usage.get("text", "")),
     }
 
     return {
@@ -58,7 +58,7 @@ def run_smoke(out_dir: Path) -> dict[str, Any]:
 
 
 def print_text_report(report: dict[str, Any]) -> None:
-    print(f"okpdf smoke: {report['status']}")
+    print(f"okoffice smoke: {report['status']}")
     for name, ok in report["checks"].items():
         print(f"- {name}: {'ok' if ok else 'failed'}")
     print(f"Created: {report['artifacts']['created_pdf']}")

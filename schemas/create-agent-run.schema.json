@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://okpdf.dev/schemas/create-agent-run.schema.json",
-  "title": "AgentPDF Create Agent Run",
+  "title": "OKoffice Create Agent Run",
   "type": "object",
   "required": [
     "create_agent_run_version",

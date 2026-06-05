@@ -1,5 +1,5 @@
-from agentpdf.authoring.models import AuthoringBrief
-from agentpdf.authoring.router import plan_authoring_route
+from okoffice.authoring.models import AuthoringBrief
+from okoffice.authoring.router import plan_authoring_route
 
 
 def test_plan_authoring_route_prefers_html_for_visual_deck() -> None:

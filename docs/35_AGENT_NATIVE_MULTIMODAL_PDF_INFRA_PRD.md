@@ -50,7 +50,7 @@ New PDF work should be justified by one of:
 - Do not keep adding PDF-only utility breadth as the default roadmap.
 - Do not claim arbitrary perfect PDF body editing.
 - Do not make PDF template creation the main okoffice creation story.
-- Do not let `agentpdf` or `okpdf` branding dominate public docs.
+- Do not let `okoffice` or `okoffice` branding dominate public docs.
 
 ## Migration Rule
 

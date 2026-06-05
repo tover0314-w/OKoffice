@@ -9,16 +9,16 @@ from PIL import Image
 from pypdf import PdfReader
 from typer.testing import CliRunner
 
-from agentpdf.api.app import create_app
-from agentpdf.cli.main import app
-from agentpdf.compose.context import compose_from_context, plan_composition, render_composition_ir
-from agentpdf.context.packet import build_context_packet
-from agentpdf.context.image import analyze_image
-from agentpdf.core.pdf import create_text_pdf, inspect_pdf_pages
-from agentpdf.evidence.context_packet_report import create_context_packet_report
-from agentpdf.renderers.html_package import write_composition_html_package
-import agentpdf.mcp.server as mcp_server
-from agentpdf.mcp.server import (
+from okoffice.api.app import create_app
+from okoffice.cli.main import app
+from okoffice.compose.context import compose_from_context, plan_composition, render_composition_ir
+from okoffice.context.packet import build_context_packet
+from okoffice.context.image import analyze_image
+from okoffice.core.pdf import create_text_pdf, inspect_pdf_pages
+from okoffice.evidence.context_packet_report import create_context_packet_report
+from okoffice.renderers.html_package import write_composition_html_package
+import okoffice.mcp.server as mcp_server
+from okoffice.mcp.server import (
     pdf_compose_from_context,
     pdf_compose_plan,
     pdf_compose_render_ir,
@@ -170,7 +170,7 @@ def test_context_packet_report_cli_rest_and_mcp_are_exposed(tmp_path: Path) -> N
         "/v1/tools/pdf.evidence.context_packet_report/run",
         json={"context_packet_path": str(packet_path), "output_path": str(api_pdf)},
     )
-    from agentpdf.mcp.server import pdf_evidence_context_packet_report
+    from okoffice.mcp.server import pdf_evidence_context_packet_report
 
     mcp_result = json.loads(pdf_evidence_context_packet_report(str(packet_path), str(mcp_pdf)))
 
@@ -225,7 +225,7 @@ def test_build_context_packet_adds_local_image_visual_evidence(tmp_path: Path) -
 def test_image_analyze_returns_local_metadata_and_ocr_regions(monkeypatch, tmp_path: Path) -> None:
     image_path = tmp_path / "scan.png"
     Image.new("RGB", (160, 80), color=(255, 255, 255)).save(image_path)
-    monkeypatch.setattr("agentpdf.ocr_scan.local._run_tesseract_tsv", _fake_tesseract_tsv)
+    monkeypatch.setattr("okoffice.ocr_scan.local._run_tesseract_tsv", _fake_tesseract_tsv)
 
     result = analyze_image(image_path, languages=["eng"])
 
@@ -343,7 +343,7 @@ def test_compose_from_context_creates_pdf_with_source_map_and_coverage(tmp_path:
         packet,
         target_profile={
             "profile_id": "technical_audit",
-            "title": "AgentPDF Technical Audit",
+            "title": "OKoffice Technical Audit",
             "audience": "agent infrastructure maintainers",
             "style_pack": "paper_ink",
             "sections": ["Executive Summary", "Evidence Table", "Code Review", "Source Map"],
@@ -375,7 +375,7 @@ def test_compose_from_context_creates_pdf_with_source_map_and_coverage(tmp_path:
     page_facts = inspect_pdf_pages(output_pdf, pages="all")
     assert sum(page["image_count"] for page in page_facts["pages"]) >= 1
     text = "\n".join(page.extract_text() or "" for page in PdfReader(output_pdf).pages)
-    assert "AgentPDF Technical Audit" in text
+    assert "OKoffice Technical Audit" in text
     assert "risky_total" in text
     assert "latency_ms" in text
     assert "screenshot.png" in text
@@ -930,7 +930,7 @@ def test_compose_slide_deck_profile_creates_slide_like_pdf(tmp_path: Path) -> No
     assert facts["page_count"] == result.usage["slide_count"]
     assert sum(page["image_count"] for page in facts["pages"]) >= 1
     text = "\n".join(page.extract_text() or "" for page in PdfReader(output_pdf).pages)
-    assert "AgentPDF Slide Deck" in text
+    assert "OKoffice Slide Deck" in text
     assert "Capability Matrix" in text
     assert "Architecture Diagram" in text
     assert "Source Map" in text

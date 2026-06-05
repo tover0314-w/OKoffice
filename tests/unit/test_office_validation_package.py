@@ -7,7 +7,7 @@ from typer.testing import CliRunner
 
 
 def test_validate_office_package_passes_valid_docx(tmp_path: Path) -> None:
-    from agentpdf.office.validation import validate_office_package
+    from okoffice.office.validation import validate_office_package
 
     path = tmp_path / "memo.docx"
     _write_ooxml(path, "word/document.xml")
@@ -29,7 +29,7 @@ def test_validate_office_package_passes_valid_docx(tmp_path: Path) -> None:
 
 
 def test_validate_office_package_rejects_unsafe_zip_member(tmp_path: Path) -> None:
-    from agentpdf.office.validation import validate_office_package
+    from okoffice.office.validation import validate_office_package
 
     path = tmp_path / "unsafe.docx"
     _write_ooxml(path, "word/document.xml")
@@ -48,7 +48,7 @@ def test_validate_office_package_rejects_unsafe_zip_member(tmp_path: Path) -> No
 
 
 def test_validate_office_package_warns_for_macros_and_external_relationships(tmp_path: Path) -> None:
-    from agentpdf.office.validation import validate_office_package
+    from okoffice.office.validation import validate_office_package
 
     path = tmp_path / "macro.docm"
     _write_ooxml(path, "word/document.xml")
@@ -79,7 +79,7 @@ def test_validate_office_package_warns_for_macros_and_external_relationships(tmp
 
 
 def test_validate_office_package_warns_when_relationship_scan_is_limited(tmp_path: Path) -> None:
-    from agentpdf.office.validation import MAX_XML_SCAN_BYTES, validate_office_package
+    from okoffice.office.validation import MAX_XML_SCAN_BYTES, validate_office_package
 
     path = tmp_path / "large-rels.docx"
     _write_ooxml(path, "word/document.xml")
@@ -100,10 +100,10 @@ def test_validate_office_package_warns_when_relationship_scan_is_limited(tmp_pat
 
 
 def test_validate_office_package_runs_through_agent_interfaces(tmp_path: Path) -> None:
-    from agentpdf.api.app import create_app
-    from agentpdf.mcp.server import office_validation_package
-    from agentpdf.tools.runner import run_office_validation_package
-    from okoffice.cli.main import app
+    from okoffice.api.app import create_app
+    from okoffice.mcp.server import office_validation_package
+    from okoffice.tools.runner import run_office_validation_package
+    from okoffice.cli_okoffice.main import app
 
     path = tmp_path / "memo.docx"
     _write_ooxml(path, "word/document.xml")
@@ -122,7 +122,7 @@ def test_validate_office_package_runs_through_agent_interfaces(tmp_path: Path) -
 
 
 def test_validate_office_package_manifest_and_mcp_catalog_mark_tool_beta() -> None:
-    from okoffice.tools.registry import load_okoffice_manifest
+    from okoffice.tools.registry_okoffice import load_okoffice_manifest
 
     manifest = load_okoffice_manifest()
     target_tools = {tool["name"]: tool for tool in manifest["target_tools"]}

@@ -1,1 +1,2 @@
-"""OKoffice agent runtime integration helpers."""
+"""Agent runtime integration helpers."""
+

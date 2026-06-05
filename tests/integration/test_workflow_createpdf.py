@@ -2,8 +2,8 @@ import json
 from pathlib import Path
 from zipfile import ZipFile
 
-from agentpdf.context.packet import build_context_packet
-from agentpdf.tools.runner import run_workflow_createpdf
+from okoffice.context.packet import build_context_packet
+from okoffice.tools.runner import run_workflow_createpdf
 
 
 def test_workflow_createpdf_generates_validated_audited_html_first_pdf(tmp_path: Path) -> None:
@@ -243,7 +243,7 @@ def test_workflow_createpdf_exports_and_verifies_audit_bundle(tmp_path: Path) ->
     with ZipFile(bundle_path) as archive:
         names = set(archive.namelist())
 
-    assert "agentpdf-bundle-manifest.json" in names
+    assert "okoffice-bundle-manifest.json" in names
     assert "checksums.sha256" in names
     assert "artifacts/bundle-createpdf.pdf" in names
     assert "artifacts/bundle-createpdf.artifact-manifest.json" in names

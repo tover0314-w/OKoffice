@@ -4,8 +4,8 @@ from pypdf import PdfReader
 from PIL import Image
 from reportlab.pdfgen import canvas
 
-from agentpdf.artifacts.store import build_artifact
-from agentpdf.core.pdf import (
+from okoffice.artifacts.store import build_artifact
+from okoffice.core.pdf import (
     add_page_numbers_pdf,
     add_margin_pdf,
     add_shape_pdf,
@@ -43,8 +43,8 @@ from agentpdf.core.pdf import (
     update_outline_pdf,
     validate_pdfa_pdf,
 )
-from agentpdf.tools.runner import run_page_count_check, run_security_remove_metadata
-from agentpdf.validation.pdf import blank_page_check_pdf, render_check_pdf, validate_pdf
+from okoffice.tools.runner import run_page_count_check, run_security_remove_metadata
+from okoffice.validation.pdf import blank_page_check_pdf, render_check_pdf, validate_pdf
 
 
 def test_build_artifact_records_pdf_metadata(simple_pdf: Path) -> None:
@@ -344,7 +344,7 @@ def test_extract_text_pdf_returns_page_text(text_pdf: Path) -> None:
 
     assert result.status == "succeeded"
     assert result.tool == "pdf.convert.pdf_to_text"
-    assert "AgentPDF local text layer" in result.usage["text"]
+    assert "OKoffice local text layer" in result.usage["text"]
     assert result.usage["pages"][0]["page_number"] == 1
 
 
@@ -363,7 +363,7 @@ def test_read_metadata_pdf_returns_document_info(metadata_pdf: Path) -> None:
     assert result.status == "succeeded"
     assert result.tool == "pdf.metadata.read"
     assert result.usage["metadata"]["Title"] == "Original Title"
-    assert result.usage["metadata"]["Author"] == "AgentPDF Tests"
+    assert result.usage["metadata"]["Author"] == "OKoffice Tests"
 
 
 def test_update_metadata_pdf_writes_new_validated_output(metadata_pdf: Path, tmp_path: Path) -> None:

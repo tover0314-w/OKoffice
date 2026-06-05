@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://okpdf.dev/schemas/template-pack-plan.schema.json",
-  "title": "AgentPDF Template Pack Plan",
+  "title": "OKoffice Template Pack Plan",
   "type": "object",
   "required": [
     "template_pack_plan_version",

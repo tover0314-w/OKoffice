@@ -6,11 +6,11 @@ from fastapi.testclient import TestClient
 from reportlab.pdfgen import canvas
 from typer.testing import CliRunner
 
-import agentpdf.compare.local as compare_local
-import agentpdf.mcp.server as mcp_server
-from agentpdf.api.app import create_app
-from agentpdf.cli.main import app
-from agentpdf.tools.registry import get_tool
+import okoffice.compare.local as compare_local
+import okoffice.mcp.server as mcp_server
+from okoffice.api.app import create_app
+from okoffice.cli.main import app
+from okoffice.tools.registry import get_tool
 
 
 runner = CliRunner()

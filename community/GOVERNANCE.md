@@ -1,6 +1,6 @@
 # Governance
 
-AgentPDF Infra should begin with a benevolent-maintainer model and evolve into a small maintainer council as contributors grow.
+OKoffice should begin with a benevolent-maintainer model and evolve into a small maintainer council as contributors grow.
 
 ## Roles
 

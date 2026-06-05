@@ -5,7 +5,7 @@ This directory contains lightweight repository-ready brand assets for OKoffice.
 ## Files
 
 - `okoffice-mark.svg`: primary README wordmark.
-- `okpdf-logo.png`: legacy compatibility placeholder from the former okpdf identity.
+- `okpdf-logo.png`: legacy compatibility placeholder from the okpdf identity.
 - `okpdf-logo-agentic.png`: legacy generated variant from the former okpdf identity.
 
 ## Usage Notes

@@ -7,7 +7,7 @@ from typer.testing import CliRunner
 
 
 def test_verify_board_pack_checks_manifest_validation_and_artifact_hashes(tmp_path: Path) -> None:
-    from agentpdf.office.workflows import board_pack, verify_board_pack
+    from okoffice.office.workflows import board_pack, verify_board_pack
 
     workbook_path, deck_path = _write_board_pack_inputs(tmp_path)
     bundle_path = tmp_path / "board-pack.zip"
@@ -35,7 +35,7 @@ def test_verify_board_pack_checks_manifest_validation_and_artifact_hashes(tmp_pa
 
 
 def test_verify_board_pack_reports_hash_mismatch_without_mutating_bundle(tmp_path: Path) -> None:
-    from agentpdf.office.workflows import board_pack, verify_board_pack
+    from okoffice.office.workflows import board_pack, verify_board_pack
 
     workbook_path, deck_path = _write_board_pack_inputs(tmp_path)
     bundle_path = tmp_path / "board-pack.zip"
@@ -66,11 +66,11 @@ def test_verify_board_pack_reports_hash_mismatch_without_mutating_bundle(tmp_pat
 
 
 def test_bundle_verify_agent_interfaces(tmp_path: Path) -> None:
-    from agentpdf.api.app import create_app
-    from agentpdf.mcp.server import office_bundle_verify
-    from agentpdf.office.workflows import board_pack
-    from agentpdf.workflows.runner import run_workflow
-    from okoffice.cli.main import app
+    from okoffice.api.app import create_app
+    from okoffice.mcp.server import office_bundle_verify
+    from okoffice.office.workflows import board_pack
+    from okoffice.workflows.runner import run_workflow
+    from okoffice.cli_okoffice.main import app
 
     workbook_path, deck_path = _write_board_pack_inputs(tmp_path)
     bundle_path = tmp_path / "board-pack.zip"
@@ -105,7 +105,7 @@ def test_bundle_verify_agent_interfaces(tmp_path: Path) -> None:
 
 
 def test_bundle_verify_is_listed_in_manifests() -> None:
-    from okoffice.tools.registry import load_okoffice_manifest
+    from okoffice.tools.registry_okoffice import load_okoffice_manifest
 
     manifest = load_okoffice_manifest()
     target = {tool["name"]: tool for tool in manifest["target_tools"]}
@@ -118,8 +118,8 @@ def test_bundle_verify_is_listed_in_manifests() -> None:
 
 
 def _write_board_pack_inputs(tmp_path: Path) -> tuple[Path, Path]:
-    from agentpdf.office.deck import create_deck_from_outline
-    from agentpdf.office.xlsx import write_xlsx
+    from okoffice.office.deck import create_deck_from_outline
+    from okoffice.office.xlsx import write_xlsx
 
     workbook_path = tmp_path / "model.xlsx"
     deck_path = tmp_path / "board-review.pptx"

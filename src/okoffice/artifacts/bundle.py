@@ -1,0 +1,2283 @@
+from __future__ import annotations
+
+import hashlib
+import json
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any
+from uuid import uuid4
+from zipfile import ZIP_DEFLATED, BadZipFile, ZipFile
+
+from okoffice.artifacts.store import build_artifact
+from okoffice.evidence.source_map import map_sources
+from okoffice.schemas.errors import OKofficeException
+from okoffice.schemas.models import ToolResult, ValidationCheck, ValidationReport
+
+
+def create_artifact_manifest(
+    artifact_paths: list[str | Path],
+    output_path: str | Path | None = None,
+    title: str | None = None,
+    metadata: dict[str, Any] | None = None,
+) -> ToolResult:
+    tool = "pdf.artifacts.manifest"
+    if not artifact_paths:
+        raise OKofficeException("invalid_input", "artifact_paths must include at least one file.")
+
+    input_artifacts = [_input_artifact(path) for path in artifact_paths]
+    manifest_entries: list[dict[str, Any]] = []
+    evidence_links: dict[str, list[str]] = {}
+    source_refs: set[str] = set()
+    context_packet_refs: list[dict[str, Any]] = []
+    html_package_refs: list[dict[str, Any]] = []
+    html_render_profile_refs: list[dict[str, Any]] = []
+    renderer_backend_refs: list[dict[str, Any]] = []
+    html_layer_refs: list[dict[str, Any]] = []
+    html_layer_patch_refs: list[dict[str, Any]] = []
+    source_graph_node_refs: list[dict[str, Any]] = []
+    source_graph_edge_refs: list[dict[str, Any]] = []
+    source_graph_ids: set[str] = set()
+    context_evidence_index: dict[str, dict[str, Any]] = {}
+    json_parse_warnings: list[str] = []
+
+    for artifact in input_artifacts:
+        path = artifact.path
+        artifact_kind = _artifact_kind(path)
+        entry = {
+            **artifact.model_dump(mode="json"),
+            "artifact_kind": artifact_kind,
+            "retention_hint": artifact.retention_hint,
+        }
+        if artifact_kind != "file":
+            evidence_links.setdefault(artifact_kind, []).append(path.as_posix())
+
+        json_payload = _read_json_artifact(path, warnings=json_parse_warnings)
+        if isinstance(json_payload, dict):
+            if artifact_kind == "file" and _context_packet_ref(path, json_payload):
+                artifact_kind = "context"
+                entry["artifact_kind"] = artifact_kind
+                evidence_links.setdefault(artifact_kind, []).append(path.as_posix())
+            entry["json_top_level_keys"] = sorted(str(key) for key in json_payload.keys())
+            extracted_refs = sorted(_collect_source_refs(json_payload))
+            entry["source_refs"] = extracted_refs
+            source_refs.update(extracted_refs)
+            if "validation" in json_payload:
+                evidence_links.setdefault("validation", []).append(path.as_posix())
+            if artifact_kind == "html_package":
+                html_package_ref = _html_package_ref(path, json_payload)
+                if html_package_ref:
+                    html_package_refs.append(html_package_ref)
+                    entry.update({key: value for key, value in html_package_ref.items() if key != "path"})
+                    html_render_profile_ref = _html_render_profile_ref(
+                        path,
+                        json_payload,
+                        html_package_ref=html_package_ref,
+                    )
+                    if html_render_profile_ref:
+                        html_render_profile_refs.append(html_render_profile_ref)
+                        entry.update(
+                            {
+                                key: value
+                                for key, value in html_render_profile_ref.items()
+                                if key
+                                not in {
+                                    "path",
+                                    "html_path",
+                                    "html_package_id",
+                                }
+                            }
+                        )
+                    renderer_backend_ref = _renderer_backend_ref(
+                        path,
+                        json_payload,
+                        html_package_ref=html_package_ref,
+                    )
+                    if renderer_backend_ref:
+                        renderer_backend_refs.append(renderer_backend_ref)
+                        entry["renderer_backend_id"] = renderer_backend_ref.get("backend_id")
+                        entry.update(
+                            {
+                                key: value
+                                for key, value in renderer_backend_ref.items()
+                                if key
+                                not in {
+                                    "path",
+                                    "html_path",
+                                    "html_package_id",
+                                    "renderer_backend",
+                                }
+                            }
+                        )
+                    package_layer_refs = _html_layer_refs(path, json_payload, html_package_ref=html_package_ref)
+                    if package_layer_refs:
+                        html_layer_refs.extend(package_layer_refs)
+                        entry["html_layer_count"] = len(package_layer_refs)
+                        entry["html_layers"] = package_layer_refs
+            html_layer_patch_ref = _html_layer_patch_ref(path, json_payload)
+            if html_layer_patch_ref:
+                html_layer_patch_refs.append(html_layer_patch_ref)
+                entry["html_layer_patch"] = html_layer_patch_ref
+            if artifact_kind == "context":
+                context_packet_ref = _context_packet_ref(path, json_payload)
+                if context_packet_ref:
+                    context_packet_refs.append(context_packet_ref)
+                    source_graph_id = context_packet_ref.get("source_graph_id")
+                    if source_graph_id:
+                        source_graph_ids.add(str(source_graph_id))
+                _merge_context_evidence_index(
+                    context_evidence_index,
+                    _context_evidence_records(path, json_payload),
+                )
+                _merge_context_evidence_index(
+                    context_evidence_index,
+                    _source_graph_evidence_records(path, json_payload),
+                )
+                source_graph_node_refs.extend(_source_graph_node_refs(path, json_payload))
+                source_graph_edge_refs.extend(_source_graph_edge_refs(json_payload))
+        manifest_entries.append(entry)
+
+    sorted_source_refs = sorted(source_refs)
+    sorted_context_packet_refs = sorted(
+        context_packet_refs,
+        key=lambda item: (str(item.get("context_packet_id") or ""), str(item.get("path") or "")),
+    )
+    sorted_html_package_refs = sorted(
+        html_package_refs,
+        key=lambda item: (str(item.get("html_package_id") or ""), str(item.get("path") or "")),
+    )
+    sorted_html_render_profile_refs = sorted(
+        html_render_profile_refs,
+        key=lambda item: (
+            str(item.get("render_profile_id") or ""),
+            str(item.get("html_package_id") or ""),
+            str(item.get("path") or ""),
+        ),
+    )
+    sorted_renderer_backend_refs = sorted(
+        renderer_backend_refs,
+        key=lambda item: (
+            str(item.get("backend_id") or ""),
+            str(item.get("html_package_id") or ""),
+            str(item.get("path") or ""),
+        ),
+    )
+    sorted_html_layer_refs = sorted(
+        html_layer_refs,
+        key=lambda item: (
+            str(item.get("html_package_id") or ""),
+            str(item.get("layer_id") or ""),
+            str(item.get("block_id") or ""),
+        ),
+    )
+    sorted_html_layer_patch_refs = sorted(
+        html_layer_patch_refs,
+        key=lambda item: (str(item.get("patch_id") or ""), str(item.get("patch_applied_path") or "")),
+    )
+    sorted_source_graph_node_refs = sorted(
+        source_graph_node_refs,
+        key=lambda item: (
+            str(item.get("source_graph_id") or ""),
+            str(item.get("node_id") or ""),
+            str(item.get("source_ref") or ""),
+        ),
+    )
+    sorted_source_graph_edge_refs = sorted(
+        source_graph_edge_refs,
+        key=lambda item: (
+            str(item.get("source_graph_id") or ""),
+            str(item.get("from_node_id") or ""),
+            str(item.get("to_node_id") or ""),
+            str(item.get("relation") or ""),
+        ),
+    )
+    artifact_manifest = {
+        "manifest_version": "0.1",
+        "manifest_id": f"artifact_manifest_{uuid4().hex[:16]}",
+        "title": title or "OKoffice Artifact Manifest",
+        "created_at": datetime.now(UTC).isoformat(),
+        "artifact_count": len(manifest_entries),
+        "metadata": _json_safe_dict(metadata or {}),
+        "artifacts": manifest_entries,
+        "evidence_links": {key: sorted(paths) for key, paths in sorted(evidence_links.items())},
+        "source_refs": sorted_source_refs,
+        "source_ref_count": len(sorted_source_refs),
+        "context_packet_refs": sorted_context_packet_refs,
+        "context_packet_count": len(sorted_context_packet_refs),
+        "html_package_refs": sorted_html_package_refs,
+        "html_package_count": len(sorted_html_package_refs),
+        "html_render_profile_refs": sorted_html_render_profile_refs,
+        "html_render_profile_count": len(sorted_html_render_profile_refs),
+        "renderer_backend_refs": sorted_renderer_backend_refs,
+        "renderer_backend_count": len(sorted_renderer_backend_refs),
+        "html_layer_refs": sorted_html_layer_refs,
+        "html_layer_count": len(sorted_html_layer_refs),
+        "html_layer_patch_refs": sorted_html_layer_patch_refs,
+        "html_layer_patch_count": len(sorted_html_layer_patch_refs),
+        "source_graph_ids": sorted(source_graph_ids),
+        "source_graph_node_refs": sorted_source_graph_node_refs,
+        "source_graph_node_count": len(sorted_source_graph_node_refs),
+        "source_graph_edge_refs": sorted_source_graph_edge_refs,
+        "source_graph_edge_count": len(sorted_source_graph_edge_refs),
+        "context_evidence_index": dict(sorted(context_evidence_index.items())),
+        "safety": {
+            "contains_input_hashes": True,
+            "mutates_inputs": False,
+            "paths_are_resolved": True,
+        },
+    }
+
+    artifacts = []
+    if output_path is not None:
+        destination = Path(output_path)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_text(json.dumps(artifact_manifest, indent=2), encoding="utf-8")
+        artifacts.append(build_artifact(destination, source_tool=tool))
+
+    return ToolResult(
+        job_id=f"job_{uuid4().hex[:16]}",
+        status="succeeded",
+        tool=tool,
+        artifacts=artifacts,
+        warnings=json_parse_warnings,
+        usage={
+            "artifact_manifest": artifact_manifest,
+            "artifact_count": len(manifest_entries),
+            "source_ref_count": len(sorted_source_refs),
+            "evidence_link_count": sum(len(paths) for paths in evidence_links.values()),
+            "total_input_bytes": sum(int(entry["size_bytes"]) for entry in manifest_entries),
+        },
+        next_recommended_tools=["pdf.artifacts.export_bundle", "pdf.artifacts.graph"],
+    )
+
+
+def build_artifact_graph(
+    artifact_manifest_path: str | Path | None = None,
+    artifact_paths: list[str | Path] | None = None,
+    output_path: str | Path | None = None,
+    title: str | None = None,
+) -> ToolResult:
+    tool = "pdf.artifacts.graph"
+    manifest, manifest_path = _load_graph_manifest(
+        artifact_manifest_path=artifact_manifest_path,
+        artifact_paths=artifact_paths or [],
+    )
+    artifact_entries = manifest.get("artifacts")
+    if not isinstance(artifact_entries, list) or not artifact_entries:
+        raise OKofficeException("invalid_input", "Artifact graph input manifest must include at least one artifact.")
+
+    manifest_id = str(manifest.get("manifest_id") or f"artifact_manifest_inline_{uuid4().hex[:8]}")
+    graph_title = title or str(manifest.get("title") or "OKoffice Artifact Graph")
+    manifest_node_id = f"manifest:{manifest_id}"
+    nodes: list[dict[str, Any]] = [
+        {
+            "id": manifest_node_id,
+            "type": "manifest",
+            "label": graph_title,
+            "manifest_id": manifest_id,
+            "path": manifest_path.as_posix() if manifest_path else None,
+            "artifact_count": len(artifact_entries),
+        }
+    ]
+    edges: list[dict[str, Any]] = []
+    source_ref_index: dict[str, dict[str, Any]] = {}
+    html_render_profile_index: dict[str, dict[str, Any]] = {}
+    renderer_backend_index: dict[str, dict[str, Any]] = {}
+    html_layer_index: dict[str, dict[str, Any]] = {}
+    source_graph_node_index: dict[str, dict[str, Any]] = {}
+    html_layer_patch_refs = _manifest_html_layer_patch_refs(manifest)
+    artifact_ids_by_kind: dict[str, list[str]] = {}
+    artifact_node_ids_by_path: dict[str, str] = {}
+    context_evidence_index = _manifest_context_evidence_index(manifest)
+
+    for index, entry in enumerate(artifact_entries, start=1):
+        if not isinstance(entry, dict):
+            continue
+        artifact_id = _artifact_node_id(entry, index)
+        path = str(entry.get("path") or entry.get("source_path") or "")
+        artifact_kind = str(entry.get("artifact_kind") or _artifact_kind(Path(path)))
+        artifact_node_ids_by_path[path] = artifact_id
+        artifact_ids_by_kind.setdefault(artifact_kind, []).append(artifact_id)
+        source_refs = _entry_source_refs(entry)
+        nodes.append(
+            {
+                "id": artifact_id,
+                "type": "artifact",
+                "label": _artifact_label(path, index),
+                "path": path,
+                "artifact_kind": artifact_kind,
+                "sha256": entry.get("sha256"),
+                "size_bytes": entry.get("size_bytes"),
+                "mime_type": entry.get("mime_type"),
+                "page_count": entry.get("page_count"),
+                "source_tool": entry.get("source_tool"),
+                "retention_hint": entry.get("retention_hint"),
+                "source_refs": source_refs,
+            }
+        )
+        _add_edge(
+            edges,
+            manifest_node_id,
+            artifact_id,
+            "includes_artifact",
+            evidence="artifact_manifest.artifacts",
+            details={"artifact_kind": artifact_kind, "index": index},
+        )
+        for source_ref in source_refs:
+            source_node_id = _source_ref_node_id(source_ref)
+            indexed = source_ref_index.setdefault(
+                source_ref,
+                {
+                    "node_id": source_node_id,
+                    "artifact_ids": [],
+                    "artifact_paths": [],
+                    "artifact_count": 0,
+                },
+            )
+            indexed["artifact_ids"].append(artifact_id)
+            indexed["artifact_paths"].append(path)
+            indexed["artifact_count"] = len(indexed["artifact_ids"])
+            context_record = context_evidence_index.get(source_ref)
+            if context_record:
+                _merge_graph_context_record(indexed, context_record)
+            _add_edge(
+                edges,
+                artifact_id,
+                source_node_id,
+                "uses_source_ref",
+                evidence="artifact_manifest.artifacts[].source_refs",
+            )
+
+    for profile_ref in _manifest_html_render_profile_refs(manifest):
+        profile_id = str(profile_ref.get("render_profile_id") or "").strip()
+        if not profile_id:
+            continue
+        profile_node_id = _html_render_profile_node_id(profile_id)
+        package_id = str(profile_ref.get("html_package_id") or "").strip()
+        package_path = str(profile_ref.get("path") or "").strip()
+        indexed = html_render_profile_index.setdefault(
+            profile_id,
+            {
+                "node_id": profile_node_id,
+                "render_profile_id": profile_id,
+                "html_package_ids": [],
+                "html_package_paths": [],
+                "html_package_count": 0,
+                "renderer_contract": profile_ref.get("renderer_contract"),
+                "page_size": profile_ref.get("page_size"),
+                "prefer_css_page_size": profile_ref.get("prefer_css_page_size"),
+                "print_background": profile_ref.get("print_background"),
+                "javascript_enabled": profile_ref.get("javascript_enabled"),
+                "remote_assets_enabled": profile_ref.get("remote_assets_enabled"),
+                "render_profile": profile_ref.get("render_profile"),
+                "renderer_constraints": profile_ref.get("renderer_constraints"),
+            },
+        )
+        if package_id:
+            _append_unique(indexed["html_package_ids"], package_id)
+            indexed["html_package_ids"].sort()
+        if package_path:
+            _append_unique(indexed["html_package_paths"], package_path)
+            indexed["html_package_paths"].sort()
+        indexed["html_package_count"] = len(indexed.get("html_package_ids", []))
+        package_artifact_id = artifact_node_ids_by_path.get(package_path)
+        if package_artifact_id:
+            _add_edge(
+                edges,
+                package_artifact_id,
+                profile_node_id,
+                "html_package_uses_render_profile",
+                evidence="artifact_manifest.html_render_profile_refs",
+                details={"html_package_id": package_id, "render_profile_id": profile_id},
+            )
+
+    for profile_id, indexed in sorted(html_render_profile_index.items()):
+        nodes.append(
+            {
+                "id": indexed["node_id"],
+                "type": "html_render_profile",
+                "label": profile_id,
+                **_drop_empty_values({key: value for key, value in indexed.items() if key != "node_id"}),
+            }
+        )
+
+    for backend_ref in _manifest_renderer_backend_refs(manifest):
+        backend_id = str(backend_ref.get("backend_id") or "").strip()
+        if not backend_id:
+            continue
+        backend_node_id = _renderer_backend_node_id(backend_id)
+        package_id = str(backend_ref.get("html_package_id") or "").strip()
+        package_path = str(backend_ref.get("path") or "").strip()
+        indexed = renderer_backend_index.setdefault(
+            backend_id,
+            {
+                "node_id": backend_node_id,
+                "backend_id": backend_id,
+                "html_package_ids": [],
+                "html_package_paths": [],
+                "html_package_count": 0,
+                "engine": backend_ref.get("engine"),
+                "source": backend_ref.get("source"),
+                "is_browser_renderer": backend_ref.get("is_browser_renderer"),
+                "fallback": backend_ref.get("fallback"),
+                "fallback_reason": backend_ref.get("fallback_reason"),
+                "layout_fidelity": backend_ref.get("layout_fidelity"),
+                "network": backend_ref.get("network"),
+                "javascript": backend_ref.get("javascript"),
+                "file_urls": backend_ref.get("file_urls"),
+                "renderer_backend": backend_ref.get("renderer_backend"),
+            },
+        )
+        if package_id:
+            _append_unique(indexed["html_package_ids"], package_id)
+            indexed["html_package_ids"].sort()
+        if package_path:
+            _append_unique(indexed["html_package_paths"], package_path)
+            indexed["html_package_paths"].sort()
+        indexed["html_package_count"] = len(indexed.get("html_package_ids", []))
+        package_artifact_id = artifact_node_ids_by_path.get(package_path)
+        if package_artifact_id:
+            _add_edge(
+                edges,
+                package_artifact_id,
+                backend_node_id,
+                "html_package_uses_renderer_backend",
+                evidence="artifact_manifest.renderer_backend_refs",
+                details={"html_package_id": package_id, "backend_id": backend_id},
+            )
+
+    for backend_id, indexed in sorted(renderer_backend_index.items()):
+        nodes.append(
+            {
+                "id": indexed["node_id"],
+                "type": "renderer_backend",
+                "label": backend_id,
+                **_drop_empty_values({key: value for key, value in indexed.items() if key != "node_id"}),
+            }
+        )
+
+    for layer_ref in _manifest_html_layer_refs(manifest):
+        layer_id = str(layer_ref.get("layer_id") or "").strip()
+        if not layer_id:
+            continue
+        layer_node_id = _html_layer_node_id(layer_id)
+        package_artifact_id = artifact_node_ids_by_path.get(str(layer_ref.get("path") or ""))
+        source_refs = _entry_source_refs(layer_ref)
+        layer_record = {
+            "node_id": layer_node_id,
+            "layer_id": layer_id,
+            "html_package_id": layer_ref.get("html_package_id"),
+            "path": layer_ref.get("path"),
+            "html_path": layer_ref.get("html_path"),
+            "block_id": layer_ref.get("block_id"),
+            "block_type": layer_ref.get("block_type"),
+            "target_slot": layer_ref.get("target_slot"),
+            "source_refs": source_refs,
+            "anchor": layer_ref.get("anchor"),
+            "bbox_precision": layer_ref.get("bbox_precision"),
+        }
+        html_layer_index[layer_id] = _drop_empty_values(layer_record)
+        nodes.append(
+            {
+                "id": layer_node_id,
+                "type": "html_layer",
+                "label": layer_id,
+                **_drop_empty_values({key: value for key, value in layer_record.items() if key != "node_id"}),
+            }
+        )
+        if package_artifact_id:
+            _add_edge(
+                edges,
+                package_artifact_id,
+                layer_node_id,
+                "defines_html_layer",
+                evidence="artifact_manifest.html_layer_refs",
+                details={"html_package_id": layer_ref.get("html_package_id")},
+            )
+        for source_ref in source_refs:
+            source_node_id = _source_ref_node_id(source_ref)
+            indexed = source_ref_index.setdefault(
+                source_ref,
+                {
+                    "node_id": source_node_id,
+                    "artifact_ids": [],
+                    "artifact_paths": [],
+                    "artifact_count": 0,
+                },
+            )
+            layer_ids = indexed.setdefault("html_layer_ids", [])
+            if isinstance(layer_ids, list):
+                _append_unique(layer_ids, layer_id)
+                layer_ids.sort()
+            indexed["html_layer_count"] = len(indexed.get("html_layer_ids", []))
+            _add_edge(
+                edges,
+                layer_node_id,
+                source_node_id,
+                "layer_uses_source_ref",
+                evidence="artifact_manifest.html_layer_refs[].source_refs",
+            )
+
+    _add_html_layer_patch_edges(
+        edges,
+        html_layer_patch_refs=html_layer_patch_refs,
+        artifact_node_ids_by_path=artifact_node_ids_by_path,
+    )
+
+    for node_ref in _manifest_source_graph_node_refs(manifest):
+        graph_node_key = str(node_ref.get("graph_node_key") or "").strip()
+        if not graph_node_key:
+            continue
+        source_graph_node_id = _source_graph_node_ref_node_id(graph_node_key)
+        source_ref = str(node_ref.get("source_ref") or "").strip()
+        record = {
+            "node_id": source_graph_node_id,
+            "graph_node_key": graph_node_key,
+            "source_graph_id": node_ref.get("source_graph_id"),
+            "context_packet_id": node_ref.get("context_packet_id"),
+            "source_graph_node_id": node_ref.get("node_id"),
+            "context_item_id": node_ref.get("context_item_id"),
+            "source_ref": source_ref or None,
+            "type": node_ref.get("type"),
+            "role": node_ref.get("role"),
+            "label": node_ref.get("label"),
+            "uri": node_ref.get("uri"),
+            "evidence": node_ref.get("evidence") if isinstance(node_ref.get("evidence"), dict) else None,
+        }
+        source_graph_node_index[graph_node_key] = _drop_empty_values(record)
+        nodes.append(
+            {
+                "id": source_graph_node_id,
+                "type": "source_graph_node",
+                "label": str(node_ref.get("label") or graph_node_key),
+                **_drop_empty_values({key: value for key, value in record.items() if key != "node_id"}),
+            }
+        )
+        if source_ref:
+            source_node_id = _source_ref_node_id(source_ref)
+            indexed = source_ref_index.setdefault(
+                source_ref,
+                {
+                    "node_id": source_node_id,
+                    "artifact_ids": [],
+                    "artifact_paths": [],
+                    "artifact_count": 0,
+                },
+            )
+            context_record = context_evidence_index.get(source_ref)
+            if context_record:
+                _merge_graph_context_record(indexed, context_record)
+            node_keys = indexed.setdefault("source_graph_node_keys", [])
+            if isinstance(node_keys, list):
+                _append_unique(node_keys, graph_node_key)
+                node_keys.sort()
+            indexed["source_graph_node_count"] = len(indexed.get("source_graph_node_keys", []))
+            _add_edge(
+                edges,
+                source_graph_node_id,
+                source_node_id,
+                "source_graph_node_defines_source_ref",
+                evidence="artifact_manifest.source_graph_node_refs",
+            )
+
+    for edge_ref in _manifest_source_graph_edge_refs(manifest):
+        source_graph_id = str(edge_ref.get("source_graph_id") or "").strip()
+        from_key = f"{source_graph_id}:{edge_ref.get('from_node_id')}"
+        to_key = f"{source_graph_id}:{edge_ref.get('to_node_id')}"
+        from_node_id = _source_graph_node_ref_node_id(from_key)
+        to_node_id = _source_graph_node_ref_node_id(to_key)
+        relation = str(edge_ref.get("relation") or "source_graph_edge")
+        _add_edge(
+            edges,
+            from_node_id,
+            to_node_id,
+            relation,
+            evidence="artifact_manifest.source_graph_edge_refs",
+            details={key: value for key, value in edge_ref.items() if key not in {"from_node_id", "to_node_id"}},
+        )
+
+    for source_ref, indexed in sorted(source_ref_index.items()):
+        source_node = {
+            "id": indexed["node_id"],
+            "type": "source_ref",
+            "label": source_ref,
+            "source_ref": source_ref,
+            "artifact_count": indexed["artifact_count"],
+        }
+        source_node.update(_source_ref_node_context_fields(indexed))
+        nodes.append(source_node)
+
+    _add_artifact_convention_edges(edges, artifact_ids_by_kind)
+    evidence_link_index = _evidence_link_index(manifest, artifact_node_ids_by_path)
+    warnings = []
+    if not source_ref_index:
+        warnings.append("Artifact graph contains no source refs; lineage is limited to artifact inclusion edges.")
+    if not any(edge["relation"] != "includes_artifact" for edge in edges):
+        warnings.append("Artifact graph contains no inferred lineage or source-ref edges.")
+
+    artifact_graph = {
+        "artifact_graph_version": "0.1",
+        "artifact_graph_id": f"artifact_graph_{uuid4().hex[:16]}",
+        "title": graph_title,
+        "created_at": datetime.now(UTC).isoformat(),
+        "manifest_id": manifest_id,
+        "manifest_path": manifest_path.as_posix() if manifest_path else None,
+        "artifact_count": len(artifact_entries),
+        "source_ref_count": len(source_ref_index),
+        "html_render_profile_count": len(html_render_profile_index),
+        "renderer_backend_count": len(renderer_backend_index),
+        "html_layer_count": len(html_layer_index),
+        "html_layer_patch_count": len(html_layer_patch_refs),
+        "source_graph_node_count": len(source_graph_node_index),
+        "source_graph_edge_count": len(_manifest_source_graph_edge_refs(manifest)),
+        "node_count": len(nodes),
+        "edge_count": len(edges),
+        "nodes": nodes,
+        "edges": edges,
+        "source_ref_index": source_ref_index,
+        "html_render_profile_index": html_render_profile_index,
+        "renderer_backend_index": renderer_backend_index,
+        "html_layer_index": html_layer_index,
+        "source_graph_node_index": source_graph_node_index,
+        "evidence_link_index": evidence_link_index,
+        "context_evidence_index": context_evidence_index,
+        "context_packet_refs": manifest.get("context_packet_refs", []),
+        "html_package_refs": manifest.get("html_package_refs", []),
+        "html_render_profile_refs": manifest.get("html_render_profile_refs", []),
+        "renderer_backend_refs": manifest.get("renderer_backend_refs", []),
+        "html_layer_refs": manifest.get("html_layer_refs", []),
+        "html_layer_patch_refs": html_layer_patch_refs,
+        "source_graph_ids": manifest.get("source_graph_ids", []),
+        "source_graph_node_refs": manifest.get("source_graph_node_refs", []),
+        "source_graph_edge_refs": manifest.get("source_graph_edge_refs", []),
+        "safety": {
+            "mutates_inputs": False,
+            "paths_are_resolved": True,
+            "lineage_inference": "local_manifest_conventions",
+            "inferred_edges_are_marked": True,
+        },
+    }
+
+    artifacts = []
+    if output_path is not None:
+        destination = Path(output_path)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_text(json.dumps(artifact_graph, indent=2), encoding="utf-8")
+        artifacts.append(build_artifact(destination, source_tool=tool))
+
+    validation = ValidationReport(
+        status="passed",
+        checks=[
+            ValidationCheck(
+                name="artifact_graph_has_artifacts",
+                status="passed",
+                details={"artifact_count": len(artifact_entries)},
+            ),
+            ValidationCheck(
+                name="source_refs_indexed",
+                status="passed",
+                details={"source_ref_count": len(source_ref_index)},
+            ),
+            ValidationCheck(
+                name="lineage_edges_present",
+                status="passed",
+                details={"edge_count": len(edges)},
+            ),
+        ],
+        warnings=warnings,
+    )
+    return ToolResult(
+        job_id=f"job_{uuid4().hex[:16]}",
+        status="succeeded",
+        tool=tool,
+        artifacts=artifacts,
+        validation=validation,
+        warnings=warnings,
+        usage={
+            "artifact_graph": artifact_graph,
+            "manifest_id": manifest_id,
+            "artifact_count": len(artifact_entries),
+            "source_ref_count": len(source_ref_index),
+            "edge_count": len(edges),
+        },
+        next_recommended_tools=["pdf.artifacts.export_bundle", "pdf.workflow.report"],
+    )
+
+
+def build_artifact_source_map(
+    composition: dict[str, Any] | str | Path | None = None,
+    composition_path: str | Path | None = None,
+    source_map: dict[str, Any] | list[dict[str, Any]] | str | Path | None = None,
+    source_map_path: str | Path | None = None,
+    context_packet: dict[str, Any] | str | Path | None = None,
+    context_packet_path: str | Path | None = None,
+    artifact_manifest_path: str | Path | None = None,
+    artifact_paths: list[str | Path] | None = None,
+    output_path: str | Path | None = None,
+    title: str | None = None,
+) -> ToolResult:
+    tool = "pdf.artifacts.source_map"
+    composition_input = _source_map_composition_input(
+        composition=composition,
+        composition_path=composition_path,
+        source_map=source_map,
+        source_map_path=source_map_path,
+    )
+    context_input = context_packet if context_packet is not None else context_packet_path
+    mapped = map_sources(composition=composition_input, context_packet=context_input)
+    source_map_report = mapped.usage.get("source_map_report")
+    if not isinstance(source_map_report, dict):
+        raise OKofficeException("invalid_input", "Could not build source map report.")
+    source_entries = mapped.usage.get("source_map")
+    if not isinstance(source_entries, list):
+        source_entries = []
+
+    composition_payload = _load_optional_json(composition_input, "Composition")
+    composition_ir = _composition_payload_ir(composition_payload)
+    blocks = _composition_blocks_for_artifact_source_map(composition_ir)
+    block_index = _artifact_block_index(blocks=blocks, source_entries=source_entries)
+    source_ref_index = _artifact_source_ref_index(source_entries)
+    page_index = _artifact_page_index(source_entries)
+    manifest, manifest_path = _optional_artifact_manifest(
+        artifact_manifest_path=artifact_manifest_path,
+        artifact_paths=artifact_paths or [],
+    )
+    generated_artifacts = _generated_artifacts_from_manifest(manifest)
+    artifact_source_map = {
+        "artifact_source_map_version": "0.1",
+        "artifact_source_map_id": f"artifact_srcmap_{uuid4().hex[:16]}",
+        "title": title or "OKoffice Artifact Source Map",
+        "created_at": datetime.now(UTC).isoformat(),
+        "composition_id": source_map_report.get("composition_id") or composition_ir.get("composition_id"),
+        "context_packet_id": source_map_report.get("context_packet_id"),
+        "artifact_manifest_id": manifest.get("manifest_id") if manifest else None,
+        "artifact_manifest_path": manifest_path.as_posix() if manifest_path else None,
+        "generated_artifacts": generated_artifacts,
+        "source_map": source_entries,
+        "block_index": block_index,
+        "source_ref_index": source_ref_index,
+        "page_index": page_index,
+        "coverage": mapped.usage.get("coverage", {}),
+        "unmatched_source_refs": mapped.usage.get("unmatched_source_refs", []),
+        "unmapped_targets": mapped.usage.get("unmapped_targets", []),
+        "source_graph": source_map_report.get("source_graph"),
+        "safety": {
+            "mutates_inputs": False,
+            "paths_are_resolved": True,
+            "uses_local_source_map_only": True,
+            "does_not_infer_missing_bboxes": True,
+        },
+    }
+
+    artifacts = []
+    if output_path is not None:
+        destination = Path(output_path)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_text(json.dumps(artifact_source_map, indent=2), encoding="utf-8")
+        artifacts.append(build_artifact(destination, source_tool=tool))
+
+    warnings = list(mapped.warnings)
+    if not generated_artifacts:
+        warnings.append("No generated PDF artifacts were provided through an artifact manifest.")
+    validation = ValidationReport(
+        status="passed",
+        checks=[
+            ValidationCheck(
+                name="source_map_entries_present",
+                status="passed" if source_entries else "warning",
+                details={"entry_count": len(source_entries)},
+                message=None if source_entries else "No source map entries were found.",
+            ),
+            ValidationCheck(
+                name="block_index_built",
+                status="passed",
+                details={"block_count": len(block_index)},
+            ),
+            ValidationCheck(
+                name="source_ref_index_built",
+                status="passed",
+                details={"source_ref_count": len(source_ref_index)},
+            ),
+        ],
+        warnings=warnings,
+    )
+    return ToolResult(
+        job_id=f"job_{uuid4().hex[:16]}",
+        status="succeeded",
+        tool=tool,
+        artifacts=artifacts,
+        validation=validation,
+        warnings=warnings,
+        usage={
+            "artifact_source_map": artifact_source_map,
+            "source_map": source_entries,
+            "block_count": len(block_index),
+            "source_ref_count": len(source_ref_index),
+            "page_ref_count": sum(len(page["mappings"]) for page in page_index.values()),
+            "generated_artifact_count": len(generated_artifacts),
+        },
+        next_recommended_tools=["pdf.artifacts.graph", "pdf.artifacts.export_bundle", "pdf.patch.plan"],
+    )
+
+
+def export_artifact_bundle(
+    artifact_paths: list[str | Path],
+    output_path: str | Path,
+    title: str | None = None,
+    metadata: dict[str, Any] | None = None,
+) -> ToolResult:
+    tool = "pdf.artifacts.export_bundle"
+    if not artifact_paths:
+        raise OKofficeException("invalid_input", "artifact_paths must include at least one file.")
+
+    input_artifacts = [_input_artifact(path) for path in artifact_paths]
+    bundle_entries = _bundle_entries(input_artifacts)
+    bundle_manifest = {
+        "bundle_version": "0.1",
+        "bundle_id": f"bundle_{uuid4().hex[:16]}",
+        "title": title or "OKoffice Artifact Bundle",
+        "created_at": datetime.now(UTC).isoformat(),
+        "artifact_count": len(bundle_entries),
+        "metadata": _json_safe_dict(metadata or {}),
+        "artifacts": bundle_entries,
+        "safety": {
+            "contains_input_hashes": True,
+            "mutates_inputs": False,
+            "zip_paths_are_sanitized": True,
+        },
+    }
+    checksums = "\n".join(f"{entry['sha256']}  {entry['bundle_path']}" for entry in bundle_entries) + "\n"
+
+    destination = Path(output_path)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    with ZipFile(destination, mode="w", compression=ZIP_DEFLATED) as archive:
+        archive.writestr("okoffice-bundle-manifest.json", json.dumps(bundle_manifest, indent=2))
+        archive.writestr("checksums.sha256", checksums)
+        for source, entry in zip(input_artifacts, bundle_entries, strict=True):
+            archive.write(source.path, entry["bundle_path"])
+
+    artifact = build_artifact(destination, source_tool=tool)
+    return ToolResult(
+        job_id=f"job_{uuid4().hex[:16]}",
+        status="succeeded",
+        tool=tool,
+        artifacts=[artifact],
+        usage={
+            "bundle_manifest": bundle_manifest,
+            "file_count": len(bundle_entries),
+            "bundle_entries": [entry["bundle_path"] for entry in bundle_entries],
+            "checksums": checksums.strip().splitlines(),
+            "total_input_bytes": sum(int(entry["size_bytes"]) for entry in bundle_entries),
+        },
+        next_recommended_tools=["pdf.workflow.report", "pdf.validation.validate_output"],
+    )
+
+
+def verify_artifact_bundle(bundle_path: str | Path) -> ToolResult:
+    tool = "pdf.artifacts.verify_bundle"
+    resolved = Path(bundle_path).resolve()
+    if not resolved.exists():
+        raise OKofficeException("file_not_found", f"Bundle file not found: {resolved}")
+    if not resolved.is_file():
+        raise OKofficeException("invalid_input", f"Bundle path must be a file: {resolved}")
+
+    checks: list[ValidationCheck] = []
+    warnings: list[str] = []
+    manifest: dict[str, Any] = {}
+    artifact_count = 0
+    verified_artifact_count = 0
+    missing_artifacts: list[str] = []
+    checksum_mismatches: list[str] = []
+    duplicate_bundle_paths: list[str] = []
+    checksum_file_entries: dict[str, str] = {}
+
+    try:
+        with ZipFile(resolved) as archive:
+            names = archive.namelist()
+            name_counts = {name: names.count(name) for name in set(names)}
+            duplicate_bundle_paths = sorted(name for name, count in name_counts.items() if count > 1)
+            if duplicate_bundle_paths:
+                warnings.extend(f"Duplicate ZIP entry: {name}" for name in duplicate_bundle_paths)
+
+            if "okoffice-bundle-manifest.json" not in names:
+                checks.append(
+                    ValidationCheck(
+                        name="manifest_present",
+                        status="failed",
+                        message="Bundle is missing okoffice-bundle-manifest.json.",
+                    )
+                )
+            else:
+                checks.append(ValidationCheck(name="manifest_present", status="passed"))
+                try:
+                    manifest = json.loads(archive.read("okoffice-bundle-manifest.json"))
+                    if not isinstance(manifest, dict):
+                        raise ValueError("manifest JSON must be an object")
+                    checks.append(ValidationCheck(name="manifest_parseable", status="passed"))
+                except (json.JSONDecodeError, ValueError) as exc:
+                    checks.append(
+                        ValidationCheck(
+                            name="manifest_parseable",
+                            status="failed",
+                            message=f"Bundle manifest is not valid JSON: {exc}",
+                        )
+                    )
+
+            if "checksums.sha256" in names:
+                checksum_file_entries = _read_checksum_file(archive.read("checksums.sha256").decode("utf-8"))
+                checks.append(
+                    ValidationCheck(
+                        name="checksums_file_present",
+                        status="passed",
+                        details={"entry_count": len(checksum_file_entries)},
+                    )
+                )
+            else:
+                checks.append(
+                    ValidationCheck(
+                        name="checksums_file_present",
+                        status="failed",
+                        message="Bundle is missing checksums.sha256.",
+                    )
+                )
+
+            artifact_entries = manifest.get("artifacts", []) if manifest else []
+            if not isinstance(artifact_entries, list):
+                artifact_entries = []
+                checks.append(
+                    ValidationCheck(
+                        name="manifest_artifacts_list",
+                        status="failed",
+                        message="Bundle manifest artifacts must be a list.",
+                    )
+                )
+            else:
+                checks.append(ValidationCheck(name="manifest_artifacts_list", status="passed"))
+
+            artifact_count = len(artifact_entries)
+            declared_count = manifest.get("artifact_count") if manifest else None
+            count_matches = declared_count == artifact_count
+            checks.append(
+                ValidationCheck(
+                    name="artifact_count_matches_manifest",
+                    status="passed" if count_matches else "failed",
+                    details={"declared": declared_count, "actual": artifact_count},
+                    message=None if count_matches else "artifact_count does not match artifacts length.",
+                )
+            )
+
+            for entry in artifact_entries:
+                if not isinstance(entry, dict):
+                    checks.append(
+                        ValidationCheck(
+                            name="artifact_entry_shape",
+                            status="failed",
+                            message="Artifact manifest entry must be an object.",
+                        )
+                    )
+                    continue
+                bundle_entry_path = str(entry.get("bundle_path") or "")
+                expected_sha = str(entry.get("sha256") or "")
+                if not bundle_entry_path.startswith("artifacts/") or "/" in bundle_entry_path.removeprefix("artifacts/"):
+                    checks.append(
+                        ValidationCheck(
+                            name="artifact_path_sanitized",
+                            status="failed",
+                            details={"bundle_path": bundle_entry_path},
+                            message="Artifact bundle_path must be a sanitized artifacts/<filename> path.",
+                        )
+                    )
+                    continue
+                if bundle_entry_path not in names:
+                    missing_artifacts.append(bundle_entry_path)
+                    checks.append(
+                        ValidationCheck(
+                            name="artifact_present",
+                            status="failed",
+                            details={"bundle_path": bundle_entry_path},
+                            message=f"Missing artifact entry: {bundle_entry_path}",
+                        )
+                    )
+                    continue
+
+                actual_sha = hashlib.sha256(archive.read(bundle_entry_path)).hexdigest()
+                checksum_line_sha = checksum_file_entries.get(bundle_entry_path)
+                checksum_matches = actual_sha == expected_sha and (
+                    checksum_line_sha is None or checksum_line_sha == expected_sha
+                )
+                if checksum_matches:
+                    verified_artifact_count += 1
+                else:
+                    checksum_mismatches.append(bundle_entry_path)
+                    warnings.append(f"Checksum mismatch for {bundle_entry_path}.")
+                checks.append(
+                    ValidationCheck(
+                        name="artifact_checksum",
+                        status="passed" if checksum_matches else "failed",
+                        details={
+                            "bundle_path": bundle_entry_path,
+                            "expected_sha256": expected_sha,
+                            "actual_sha256": actual_sha,
+                            "checksums_file_sha256": checksum_line_sha,
+                        },
+                        message=None if checksum_matches else f"Checksum mismatch for {bundle_entry_path}.",
+                    )
+                )
+    except BadZipFile as exc:
+        raise OKofficeException("invalid_input", f"Bundle is not a readable ZIP file: {resolved}") from exc
+
+    if missing_artifacts:
+        warnings.extend(f"Missing artifact entry: {path}" for path in missing_artifacts)
+
+    validation_status = "failed" if any(check.status == "failed" for check in checks) else "passed"
+    validation = ValidationReport(status=validation_status, checks=checks, warnings=warnings)
+    return ToolResult(
+        job_id=f"job_{uuid4().hex[:16]}",
+        status="succeeded" if validation_status == "passed" else "failed",
+        tool=tool,
+        validation=validation,
+        warnings=warnings,
+        usage={
+            "bundle_verification": {
+                "bundle_path": resolved.as_posix(),
+                "manifest": manifest,
+                "artifact_count": artifact_count,
+                "verified_artifact_count": verified_artifact_count,
+                "missing_artifacts": missing_artifacts,
+                "checksum_mismatches": checksum_mismatches,
+                "duplicate_bundle_paths": duplicate_bundle_paths,
+                "checksum_file_entry_count": len(checksum_file_entries),
+            }
+        },
+        next_recommended_tools=["pdf.workflow.report", "pdf.inspect.document"],
+    )
+
+
+def _source_map_composition_input(
+    composition: dict[str, Any] | str | Path | None,
+    composition_path: str | Path | None,
+    source_map: dict[str, Any] | list[dict[str, Any]] | str | Path | None,
+    source_map_path: str | Path | None,
+) -> dict[str, Any] | str | Path:
+    if composition_path is not None:
+        return composition_path
+    if composition is not None:
+        return composition
+    source_value = source_map if source_map is not None else source_map_path
+    if source_value is None:
+        raise OKofficeException("invalid_input", "Provide composition_path, composition, source_map_path, or source_map.")
+    payload = _load_optional_json(source_value, "Source map")
+    if isinstance(payload.get("source_map"), list):
+        return payload
+    if isinstance(payload.get("source_map_report"), dict):
+        return {"source_map": payload["source_map_report"].get("source_map", [])}
+    if isinstance(source_value, list):
+        return {"source_map": source_value}
+    raise OKofficeException("invalid_input", "Source map input must be an array or object containing source_map.")
+
+
+def _load_optional_json(value: Any, label: str) -> dict[str, Any]:
+    if isinstance(value, dict):
+        return value
+    if isinstance(value, list):
+        return {"source_map": value}
+    resolved = Path(value).resolve()
+    if not resolved.exists():
+        raise OKofficeException("file_not_found", f"{label} JSON not found: {resolved}")
+    try:
+        payload = json.loads(resolved.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise OKofficeException("invalid_input", f"{label} JSON is not valid JSON: {resolved}") from exc
+    if isinstance(payload, list):
+        return {"source_map": payload}
+    if not isinstance(payload, dict):
+        raise OKofficeException("invalid_input", f"{label} JSON must be an object or array.")
+    return payload
+
+
+def _composition_payload_ir(payload: dict[str, Any]) -> dict[str, Any]:
+    if isinstance(payload.get("composition_ir"), dict):
+        return payload["composition_ir"]
+    usage = payload.get("usage")
+    if isinstance(usage, dict) and isinstance(usage.get("composition_ir"), dict):
+        return usage["composition_ir"]
+    if isinstance(payload.get("blocks"), list):
+        return payload
+    return {}
+
+
+def _composition_blocks_for_artifact_source_map(composition_ir: dict[str, Any]) -> list[dict[str, Any]]:
+    blocks = composition_ir.get("blocks", [])
+    if not isinstance(blocks, list):
+        return []
+    return [block for block in blocks if isinstance(block, dict)]
+
+
+def _artifact_block_index(
+    blocks: list[dict[str, Any]],
+    source_entries: list[Any],
+) -> dict[str, dict[str, Any]]:
+    index: dict[str, dict[str, Any]] = {}
+    for block in blocks:
+        block_id = str(block.get("block_id") or "").strip()
+        if not block_id:
+            continue
+        index[block_id] = {
+            "block_id": block_id,
+            "block_type": block.get("type"),
+            "title": block.get("title"),
+            "target_slot": block.get("target_slot"),
+            "source_refs": _sorted_strings(block.get("source_refs")),
+            "page_refs": [],
+            "mapping_count": 0,
+        }
+    for entry in source_entries:
+        if not isinstance(entry, dict):
+            continue
+        block_id = str(entry.get("block_id") or "").strip()
+        if not block_id:
+            continue
+        block_record = index.setdefault(
+            block_id,
+            {
+                "block_id": block_id,
+                "block_type": entry.get("block_type"),
+                "title": None,
+                "target_slot": entry.get("target_slot"),
+                "source_refs": [],
+                "page_refs": [],
+                "mapping_count": 0,
+            },
+        )
+        source_ref = str(entry.get("source_ref") or "").strip()
+        if source_ref and source_ref not in block_record["source_refs"]:
+            block_record["source_refs"].append(source_ref)
+            block_record["source_refs"].sort()
+        page_ref = _page_ref_from_source_entry(entry)
+        if page_ref:
+            block_record["page_refs"].append(page_ref)
+        block_record["mapping_count"] += 1
+    for block_record in index.values():
+        block_record["page_refs"] = _sorted_page_refs(block_record["page_refs"])
+    return dict(sorted(index.items()))
+
+
+def _artifact_source_ref_index(source_entries: list[Any]) -> dict[str, dict[str, Any]]:
+    index: dict[str, dict[str, Any]] = {}
+    for entry in source_entries:
+        if not isinstance(entry, dict):
+            continue
+        source_ref = str(entry.get("source_ref") or "").strip()
+        if not source_ref:
+            continue
+        record = index.setdefault(
+            source_ref,
+            {
+                "source_ref": source_ref,
+                "mapping_count": 0,
+                "block_ids": [],
+                "target_slots": [],
+                "page_refs": [],
+                "evidence_kinds": [],
+                "source_match_status": "unmatched",
+            },
+        )
+        record["mapping_count"] += 1
+        _append_unique(record["block_ids"], entry.get("block_id"))
+        _append_unique(record["target_slots"], entry.get("target_slot"))
+        _append_unique(record["evidence_kinds"], entry.get("evidence_kind"))
+        page_ref = _page_ref_from_source_entry(entry)
+        if page_ref:
+            record["page_refs"].append(page_ref)
+        statuses = set(record.get("_statuses", []))
+        statuses.add(str(entry.get("source_match_status") or "unmatched"))
+        record["_statuses"] = sorted(statuses)
+    for record in index.values():
+        statuses = set(record.pop("_statuses", []))
+        if statuses == {"matched"}:
+            record["source_match_status"] = "matched"
+        elif len(statuses) > 1:
+            record["source_match_status"] = "mixed"
+        record["block_ids"].sort()
+        record["target_slots"].sort()
+        record["evidence_kinds"].sort()
+        record["page_refs"] = _sorted_page_refs(record["page_refs"])
+    return dict(sorted(index.items()))
+
+
+def _artifact_page_index(source_entries: list[Any]) -> dict[str, dict[str, Any]]:
+    index: dict[str, dict[str, Any]] = {}
+    for entry in source_entries:
+        if not isinstance(entry, dict) or entry.get("page_number") is None:
+            continue
+        page_number = int(entry["page_number"])
+        key = str(page_number)
+        record = index.setdefault(
+            key,
+            {
+                "page_number": page_number,
+                "block_ids": [],
+                "source_refs": [],
+                "mappings": [],
+            },
+        )
+        _append_unique(record["block_ids"], entry.get("block_id"))
+        _append_unique(record["source_refs"], entry.get("source_ref"))
+        record["mappings"].append(
+            {
+                "mapping_id": entry.get("mapping_id"),
+                "block_id": entry.get("block_id"),
+                "source_ref": entry.get("source_ref"),
+                "bbox": entry.get("bbox"),
+            }
+        )
+    for record in index.values():
+        record["block_ids"].sort()
+        record["source_refs"].sort()
+        record["mappings"] = sorted(
+            record["mappings"],
+            key=lambda item: (str(item.get("block_id") or ""), str(item.get("source_ref") or "")),
+        )
+    return dict(sorted(index.items(), key=lambda item: int(item[0])))
+
+
+def _page_ref_from_source_entry(entry: dict[str, Any]) -> dict[str, Any] | None:
+    if entry.get("page_number") is None:
+        return None
+    page_ref: dict[str, Any] = {
+        "page_number": int(entry["page_number"]),
+        "block_id": entry.get("block_id"),
+        "source_ref": entry.get("source_ref"),
+        "mapping_id": entry.get("mapping_id"),
+    }
+    if entry.get("bbox") is not None:
+        page_ref["bbox"] = entry["bbox"]
+    return {key: value for key, value in page_ref.items() if value is not None}
+
+
+def _sorted_page_refs(page_refs: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return sorted(
+        page_refs,
+        key=lambda item: (
+            int(item.get("page_number") or 0),
+            str(item.get("block_id") or ""),
+            str(item.get("source_ref") or ""),
+        ),
+    )
+
+
+def _optional_artifact_manifest(
+    artifact_manifest_path: str | Path | None,
+    artifact_paths: list[str | Path],
+) -> tuple[dict[str, Any], Path | None]:
+    if artifact_manifest_path is None and not artifact_paths:
+        return {}, None
+    return _load_graph_manifest(artifact_manifest_path=artifact_manifest_path, artifact_paths=artifact_paths)
+
+
+def _generated_artifacts_from_manifest(manifest: dict[str, Any]) -> list[dict[str, Any]]:
+    entries = manifest.get("artifacts")
+    if not isinstance(entries, list):
+        return []
+    generated = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        artifact_kind = str(entry.get("artifact_kind") or "")
+        mime_type = str(entry.get("mime_type") or "")
+        if artifact_kind != "pdf" and mime_type != "application/pdf":
+            continue
+        generated.append(
+            {
+                "path": entry.get("path"),
+                "artifact_kind": artifact_kind or "pdf",
+                "mime_type": mime_type,
+                "sha256": entry.get("sha256"),
+                "page_count": entry.get("page_count"),
+                "size_bytes": entry.get("size_bytes"),
+            }
+        )
+    return generated
+
+
+def _sorted_strings(value: Any) -> list[str]:
+    if isinstance(value, str) and value.strip():
+        return [value.strip()]
+    if isinstance(value, list):
+        return sorted({str(item).strip() for item in value if str(item).strip()})
+    return []
+
+
+def _append_unique(items: list[Any], value: Any) -> None:
+    if value is None:
+        return
+    text = str(value).strip()
+    if text and text not in items:
+        items.append(text)
+
+
+def _html_package_ref(path: Path, payload: dict[str, Any]) -> dict[str, Any] | None:
+    package_id = _optional_text(payload.get("html_package_id"))
+    html_path = _optional_path_text(payload.get("html_path"))
+    renderer_contract = _optional_text(payload.get("renderer_contract"))
+    if not package_id and not html_path and not renderer_contract:
+        return None
+    record = {
+        "html_package_id": package_id or f"htmlpkg_{path.stem}",
+        "path": path.as_posix(),
+        "html_path": html_path,
+        "renderer_contract": renderer_contract,
+        "source_format": _optional_text(payload.get("source_format")),
+        "asset_count": _optional_int(payload.get("asset_count")),
+        "layer_map_count": _optional_int(payload.get("layer_map_count")),
+        "validation_status": _html_package_validation_status(payload),
+    }
+    return _drop_empty_values(record)
+
+
+def _html_render_profile_ref(
+    path: Path,
+    payload: dict[str, Any],
+    *,
+    html_package_ref: dict[str, Any],
+) -> dict[str, Any] | None:
+    render_profile = payload.get("render_profile")
+    renderer_constraints = payload.get("renderer_constraints")
+    if not isinstance(render_profile, dict):
+        return None
+    profile_id = _optional_text(render_profile.get("profile_id"))
+    if not profile_id:
+        return None
+    record = {
+        "html_package_id": html_package_ref.get("html_package_id"),
+        "path": path.as_posix(),
+        "html_path": html_package_ref.get("html_path"),
+        "renderer_contract": html_package_ref.get("renderer_contract"),
+        "render_profile_id": profile_id,
+        "render_profile": _json_safe_dict(render_profile),
+        "renderer_constraints": _json_safe_dict(renderer_constraints) if isinstance(renderer_constraints, dict) else None,
+        "page_size": _optional_text(render_profile.get("page_size")),
+        "prefer_css_page_size": _optional_bool(render_profile.get("prefer_css_page_size")),
+        "print_background": _optional_bool(render_profile.get("print_background")),
+        "javascript_enabled": _optional_bool(render_profile.get("javascript_enabled")),
+        "remote_assets_enabled": _optional_bool(render_profile.get("remote_assets_enabled")),
+    }
+    return _drop_empty_values(record)
+
+
+def _renderer_backend_ref(
+    path: Path,
+    payload: dict[str, Any],
+    *,
+    html_package_ref: dict[str, Any],
+) -> dict[str, Any] | None:
+    renderer_backend = payload.get("renderer_backend")
+    if not isinstance(renderer_backend, dict):
+        renderer_backend = _inferred_renderer_backend(payload)
+    if not isinstance(renderer_backend, dict):
+        return None
+    backend_id = _optional_text(renderer_backend.get("backend_id"))
+    if not backend_id:
+        return None
+    record = {
+        "html_package_id": html_package_ref.get("html_package_id"),
+        "path": path.as_posix(),
+        "html_path": html_package_ref.get("html_path"),
+        "renderer_contract": html_package_ref.get("renderer_contract"),
+        "backend_id": backend_id,
+        "renderer_backend": _json_safe_dict(renderer_backend),
+        "engine": _optional_text(renderer_backend.get("engine")),
+        "source": _optional_text(renderer_backend.get("source")),
+        "is_browser_renderer": _optional_bool(renderer_backend.get("is_browser_renderer")),
+        "fallback": _optional_bool(renderer_backend.get("fallback")),
+        "fallback_reason": _optional_text(renderer_backend.get("fallback_reason")),
+        "layout_fidelity": _optional_text(renderer_backend.get("layout_fidelity")),
+        "network": _optional_text(renderer_backend.get("network")),
+        "javascript": _optional_text(renderer_backend.get("javascript")),
+        "file_urls": _optional_text(renderer_backend.get("file_urls")),
+    }
+    return _drop_empty_values(record)
+
+
+def _inferred_renderer_backend(payload: dict[str, Any]) -> dict[str, Any] | None:
+    render_profile = payload.get("render_profile")
+    renderer_constraints = payload.get("renderer_constraints")
+    if not isinstance(render_profile, dict) or not isinstance(renderer_constraints, dict):
+        return None
+    backend_id = _optional_text(render_profile.get("fallback_renderer"))
+    if backend_id != "local_html_package_fallback":
+        return None
+    return {
+        "backend_id": "local_html_package_fallback",
+        "engine": "reportlab_text_fallback",
+        "source": "okoffice.conversion.local.html_to_pdf",
+        "is_browser_renderer": False,
+        "fallback": True,
+        "fallback_reason": "browser_renderer_worker_unavailable",
+        "layout_fidelity": "text_layout_approximation",
+        "network": str(renderer_constraints.get("network") or "blocked"),
+        "javascript": str(renderer_constraints.get("javascript") or "blocked"),
+        "file_urls": str(renderer_constraints.get("file_urls") or "blocked"),
+    }
+
+
+def _html_layer_refs(
+    path: Path,
+    payload: dict[str, Any],
+    *,
+    html_package_ref: dict[str, Any],
+) -> list[dict[str, Any]]:
+    layer_map = payload.get("layer_map")
+    if not isinstance(layer_map, list):
+        return []
+    package_id = str(html_package_ref.get("html_package_id") or "")
+    html_path = html_package_ref.get("html_path")
+    refs: list[dict[str, Any]] = []
+    for layer in layer_map:
+        if not isinstance(layer, dict):
+            continue
+        layer_id = _optional_text(layer.get("layer_id"))
+        block_id = _optional_text(layer.get("block_id"))
+        if not layer_id and block_id:
+            layer_id = f"html_layer_{block_id}"
+        if not layer_id:
+            continue
+        anchor = layer.get("anchor") if isinstance(layer.get("anchor"), dict) else {}
+        bbox_precision = _optional_text(anchor.get("bbox_precision")) if isinstance(anchor, dict) else None
+        record = {
+            "html_package_id": package_id,
+            "path": path.as_posix(),
+            "html_path": html_path,
+            "layer_id": layer_id,
+            "block_id": block_id,
+            "block_type": _optional_text(layer.get("block_type")),
+            "target_slot": _optional_text(layer.get("target_slot")),
+            "source_refs": _sorted_strings(layer.get("source_refs")),
+            "anchor": _json_safe_dict(anchor) if anchor else None,
+            "bbox_precision": bbox_precision,
+            "edit_policy": _json_safe_dict(layer["edit_policy"]) if isinstance(layer.get("edit_policy"), dict) else None,
+        }
+        refs.append(_drop_empty_values(record))
+    return refs
+
+
+def _html_layer_patch_ref(path: Path, payload: dict[str, Any]) -> dict[str, Any] | None:
+    patch_manifest = payload.get("patch_manifest")
+    if not isinstance(patch_manifest, dict):
+        patch_manifest = payload
+    html_layer_patch = patch_manifest.get("html_layer_patch")
+    if not isinstance(html_layer_patch, dict):
+        html_layer_patch = payload.get("html_layer_patch")
+    if not isinstance(html_layer_patch, dict):
+        return None
+    if patch_manifest.get("apply_mode") != "html_layer_rerender" and html_layer_patch.get("mode") != "html_layer_rerender":
+        return None
+    patch_id = _optional_text(patch_manifest.get("patch_id")) or _optional_text(payload.get("patch_id"))
+    record = {
+        "patch_id": patch_id,
+        "patch_applied_path": path.as_posix(),
+        "mode": _optional_text(html_layer_patch.get("mode")) or "html_layer_rerender",
+        "source_html_path": _optional_path_text(html_layer_patch.get("source_html_path")),
+        "source_html_package_manifest_path": _optional_path_text(
+            html_layer_patch.get("source_html_package_manifest_path")
+        ),
+        "output_path": _optional_path_text(patch_manifest.get("output_path")),
+        "html_output_path": _optional_path_text(html_layer_patch.get("html_output_path")),
+        "html_package_manifest_path": _optional_path_text(
+            html_layer_patch.get("html_package_manifest_path")
+        ),
+        "rewritten_layer_ids": _sorted_strings(html_layer_patch.get("rewritten_layer_ids")),
+        "bbox_precision": _optional_text(html_layer_patch.get("bbox_precision")),
+        "mutates_input": bool(html_layer_patch.get("mutates_input", False)),
+        "claims_layout_preservation": bool(html_layer_patch.get("claims_layout_preservation", False)),
+    }
+    return _drop_empty_values(record)
+
+
+def _html_package_validation_status(payload: dict[str, Any]) -> str | None:
+    validation = payload.get("validation")
+    if isinstance(validation, dict):
+        return _optional_text(validation.get("status"))
+    return None
+
+
+def _context_packet_ref(path: Path, payload: dict[str, Any]) -> dict[str, Any] | None:
+    packet_id = str(payload.get("context_packet_id") or "").strip()
+    items = _context_packet_items(payload)
+    if not packet_id and not items:
+        return None
+    source_graph = payload.get("source_graph")
+    source_graph_id = ""
+    if isinstance(source_graph, dict):
+        source_graph_id = str(source_graph.get("source_graph_id") or "").strip()
+    source_refs: set[str] = set()
+    for item in items:
+        source_refs.update(_collect_source_refs(item))
+    record: dict[str, Any] = {
+        "context_packet_id": packet_id or f"context_packet_{path.stem}",
+        "path": path.as_posix(),
+        "source_graph_id": source_graph_id or None,
+        "item_count": len(items),
+        "source_ref_count": len(source_refs),
+    }
+    return {key: value for key, value in record.items() if value is not None}
+
+
+def _context_evidence_records(path: Path, payload: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    packet_id = str(payload.get("context_packet_id") or "").strip()
+    records: dict[str, dict[str, Any]] = {}
+    for item in _context_packet_items(payload):
+        source_ref = str(item.get("source_ref") or "").strip()
+        if not source_ref:
+            refs = _sorted_strings(item.get("source_refs"))
+            source_ref = refs[0] if refs else ""
+        if not source_ref:
+            continue
+        evidence_kinds = _context_item_evidence_kinds(item)
+        primary_evidence_kind = evidence_kinds[0] if evidence_kinds else None
+        record: dict[str, Any] = {
+            "source_ref": source_ref,
+            "context_item_ids": _sorted_strings(item.get("context_item_id")),
+            "context_packet_ids": _sorted_strings(packet_id),
+            "context_item_type": _optional_text(item.get("type")),
+            "role": _optional_text(item.get("role")),
+            "label": _optional_text(item.get("label")),
+            "uri": _optional_text(item.get("uri")),
+            "primary_evidence_kind": primary_evidence_kind,
+            "evidence_kinds": evidence_kinds,
+            "context_artifact_paths": [path.as_posix()],
+        }
+        record.update(_context_primary_evidence_details(item, primary_evidence_kind))
+        records[source_ref] = {key: value for key, value in record.items() if value not in (None, "", [])}
+    return records
+
+
+def _source_graph_node_refs(path: Path, payload: dict[str, Any]) -> list[dict[str, Any]]:
+    source_graph = payload.get("source_graph")
+    if not isinstance(source_graph, dict):
+        return []
+    graph_id = str(source_graph.get("source_graph_id") or "").strip()
+    packet_id = str(payload.get("context_packet_id") or "").strip()
+    refs: list[dict[str, Any]] = []
+    for node in source_graph.get("nodes", []):
+        if not isinstance(node, dict):
+            continue
+        node_id = str(node.get("node_id") or "").strip()
+        if not node_id:
+            continue
+        evidence = node.get("evidence") if isinstance(node.get("evidence"), dict) else {}
+        graph_node_key = f"{graph_id}:{node_id}" if graph_id else f"{path.as_posix()}:{node_id}"
+        ref = {
+            "source_graph_id": graph_id or None,
+            "context_packet_id": packet_id or None,
+            "graph_node_key": graph_node_key,
+            "node_id": node_id,
+            "context_item_id": _optional_text(node.get("context_item_id")),
+            "source_ref": _optional_text(node.get("source_ref")),
+            "type": _optional_text(node.get("type")),
+            "role": _optional_text(node.get("role")),
+            "label": _optional_text(node.get("label")),
+            "uri": _optional_text(node.get("uri")),
+            "context_artifact_path": path.as_posix(),
+            "evidence": _json_safe_dict(evidence) if evidence else None,
+        }
+        refs.append(_drop_empty_values(ref))
+    return refs
+
+
+def _source_graph_edge_refs(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    source_graph = payload.get("source_graph")
+    if not isinstance(source_graph, dict):
+        return []
+    graph_id = str(source_graph.get("source_graph_id") or "").strip()
+    packet_id = str(payload.get("context_packet_id") or "").strip()
+    refs: list[dict[str, Any]] = []
+    for edge in source_graph.get("edges", []):
+        if not isinstance(edge, dict):
+            continue
+        from_node_id = _optional_text(edge.get("from_node_id"))
+        to_node_id = _optional_text(edge.get("to_node_id"))
+        relation = _optional_text(edge.get("relation"))
+        if not from_node_id or not to_node_id or not relation:
+            continue
+        ref = {
+            "source_graph_id": graph_id or None,
+            "context_packet_id": packet_id or None,
+            **{key: value for key, value in edge.items() if value not in (None, "", [])},
+        }
+        refs.append(_drop_empty_values(ref))
+    return refs
+
+
+def _source_graph_evidence_records(path: Path, payload: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    records: dict[str, dict[str, Any]] = {}
+    for ref in _source_graph_node_refs(path, payload):
+        source_ref = str(ref.get("source_ref") or "").strip()
+        if not source_ref:
+            continue
+        evidence = ref.get("evidence") if isinstance(ref.get("evidence"), dict) else {}
+        evidence_kind = _source_graph_node_evidence_kind(ref, evidence)
+        record = {
+            "source_ref": source_ref,
+            "context_item_ids": _sorted_strings(ref.get("context_item_id")),
+            "context_packet_ids": _sorted_strings(ref.get("context_packet_id")),
+            "source_graph_ids": _sorted_strings(ref.get("source_graph_id")),
+            "source_graph_node_ids": _sorted_strings(ref.get("node_id")),
+            "context_item_type": _optional_text(ref.get("type")),
+            "role": _optional_text(ref.get("role")),
+            "label": _optional_text(ref.get("label")),
+            "uri": _optional_text(ref.get("uri")),
+            "primary_evidence_kind": evidence_kind,
+            "evidence_kinds": [evidence_kind] if evidence_kind else [],
+            "context_artifact_paths": [path.as_posix()],
+            "sha256": evidence.get("sha256"),
+            "size_bytes": evidence.get("size_bytes"),
+            "transcript_char_count": evidence.get("transcript_char_count"),
+            "transcript_source": evidence.get("transcript_source"),
+        }
+        records[source_ref] = {key: value for key, value in record.items() if value not in (None, "", [])}
+    return records
+
+
+def _source_graph_node_evidence_kind(ref: dict[str, Any], evidence: dict[str, Any]) -> str | None:
+    node_type = str(ref.get("type") or "")
+    role = str(ref.get("role") or "")
+    if node_type == "transcript" or role == "transcript_sidecar":
+        return "transcript_sidecar"
+    for key, value in evidence.items():
+        if str(key).endswith("_evidence") and value not in (None, "", []):
+            return str(key)
+    return None
+
+
+def _context_packet_items(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    items = payload.get("items")
+    if isinstance(items, list):
+        return [item for item in items if isinstance(item, dict)]
+    if payload.get("context_item_id") or payload.get("source_ref"):
+        return [payload]
+    return []
+
+
+def _context_item_evidence_kinds(item: dict[str, Any]) -> list[str]:
+    evidence_kinds: set[str] = set()
+    metadata = item.get("metadata")
+    for container in (item, metadata):
+        if not isinstance(container, dict):
+            continue
+        for key, value in container.items():
+            if str(key).endswith("_evidence") and value not in (None, "", []):
+                evidence_kinds.add(str(key))
+    ordered_kinds = sorted(evidence_kinds)
+    role = str(item.get("role") or "").strip()
+    if role.endswith("_evidence") and role not in evidence_kinds:
+        ordered_kinds.append(role)
+    return ordered_kinds
+
+
+def _context_primary_evidence_details(
+    item: dict[str, Any],
+    primary_evidence_kind: str | None,
+) -> dict[str, Any]:
+    if not primary_evidence_kind:
+        return {}
+    metadata = item.get("metadata")
+    evidence = metadata.get(primary_evidence_kind) if isinstance(metadata, dict) else None
+    if not isinstance(evidence, dict):
+        evidence = item.get(primary_evidence_kind)
+    if not isinstance(evidence, dict):
+        return {}
+    details = {}
+    for key in (
+        "analysis_method",
+        "domain",
+        "fetch_status",
+        "language",
+        "page_count",
+        "row_count",
+        "column_count",
+    ):
+        value = evidence.get(key)
+        if value not in (None, "", []):
+            details[key] = value
+    return details
+
+
+def _merge_context_evidence_index(
+    index: dict[str, dict[str, Any]],
+    records: dict[str, dict[str, Any]],
+) -> None:
+    for source_ref, record in records.items():
+        existing = index.setdefault(source_ref, {"source_ref": source_ref})
+        for field in (
+            "context_item_ids",
+            "context_packet_ids",
+            "source_graph_ids",
+            "source_graph_node_ids",
+            "evidence_kinds",
+            "context_artifact_paths",
+        ):
+            for value in record.get(field, []):
+                values = existing.setdefault(field, [])
+                if isinstance(values, list):
+                    _append_unique(values, value)
+        for field in (
+            "context_item_type",
+            "role",
+            "label",
+            "uri",
+            "primary_evidence_kind",
+            "analysis_method",
+            "domain",
+            "fetch_status",
+            "language",
+            "page_count",
+            "row_count",
+            "column_count",
+            "sha256",
+            "size_bytes",
+            "transcript_char_count",
+            "transcript_source",
+        ):
+            if not existing.get(field) and record.get(field) not in (None, "", []):
+                existing[field] = record[field]
+        for field in (
+            "context_item_ids",
+            "context_packet_ids",
+            "source_graph_ids",
+            "source_graph_node_ids",
+            "evidence_kinds",
+            "context_artifact_paths",
+        ):
+            if isinstance(existing.get(field), list):
+                existing[field].sort()
+
+
+def _manifest_context_evidence_index(manifest: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    value = manifest.get("context_evidence_index")
+    if not isinstance(value, dict):
+        return {}
+    normalized: dict[str, dict[str, Any]] = {}
+    for source_ref, record in value.items():
+        if isinstance(record, dict):
+            normalized[str(source_ref)] = record
+    return normalized
+
+
+def _manifest_source_graph_node_refs(manifest: dict[str, Any]) -> list[dict[str, Any]]:
+    refs = manifest.get("source_graph_node_refs")
+    if not isinstance(refs, list):
+        return []
+    return [ref for ref in refs if isinstance(ref, dict)]
+
+
+def _manifest_source_graph_edge_refs(manifest: dict[str, Any]) -> list[dict[str, Any]]:
+    refs = manifest.get("source_graph_edge_refs")
+    if not isinstance(refs, list):
+        return []
+    return [ref for ref in refs if isinstance(ref, dict)]
+
+
+def _merge_graph_context_record(indexed: dict[str, Any], context_record: dict[str, Any]) -> None:
+    for field in (
+        "context_item_ids",
+        "context_packet_ids",
+        "source_graph_ids",
+        "source_graph_node_ids",
+        "evidence_kinds",
+        "context_artifact_paths",
+    ):
+        for value in context_record.get(field, []):
+            values = indexed.setdefault(field, [])
+            if isinstance(values, list):
+                _append_unique(values, value)
+    for field in (
+        "context_item_type",
+        "role",
+        "label",
+        "uri",
+        "primary_evidence_kind",
+        "analysis_method",
+        "domain",
+        "fetch_status",
+        "language",
+        "page_count",
+        "row_count",
+        "column_count",
+        "sha256",
+        "size_bytes",
+        "transcript_char_count",
+        "transcript_source",
+    ):
+        if not indexed.get(field) and context_record.get(field) not in (None, "", []):
+            indexed[field] = context_record[field]
+    for field in (
+        "context_item_ids",
+        "context_packet_ids",
+        "source_graph_ids",
+        "source_graph_node_ids",
+        "evidence_kinds",
+        "context_artifact_paths",
+    ):
+        if isinstance(indexed.get(field), list):
+            indexed[field].sort()
+
+
+def _source_ref_node_context_fields(indexed: dict[str, Any]) -> dict[str, Any]:
+    fields = {}
+    for field in (
+        "context_item_type",
+        "role",
+        "label",
+        "primary_evidence_kind",
+        "context_packet_ids",
+        "source_graph_ids",
+        "source_graph_node_ids",
+        "evidence_kinds",
+        "sha256",
+        "transcript_source",
+    ):
+        value = indexed.get(field)
+        if value not in (None, "", []):
+            fields[field] = value
+    return fields
+
+
+def _source_graph_node_ref_node_id(graph_node_key: str) -> str:
+    digest = hashlib.sha256(graph_node_key.encode("utf-8")).hexdigest()[:16]
+    return f"source_graph_node:{digest}"
+
+
+def _optional_text(value: Any) -> str | None:
+    text = str(value).strip() if value is not None else ""
+    return text or None
+
+
+def _optional_path_text(value: Any) -> str | None:
+    text = _optional_text(value)
+    if text is None:
+        return None
+    return Path(text).expanduser().resolve().as_posix()
+
+
+def _optional_int(value: Any) -> int | None:
+    if value is None or value == "":
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _optional_bool(value: Any) -> bool | None:
+    return value if isinstance(value, bool) else None
+
+
+def _drop_empty_values(record: dict[str, Any]) -> dict[str, Any]:
+    return {key: value for key, value in record.items() if value not in (None, "", [])}
+
+
+def _load_graph_manifest(
+    artifact_manifest_path: str | Path | None,
+    artifact_paths: list[str | Path],
+) -> tuple[dict[str, Any], Path | None]:
+    if artifact_manifest_path is not None:
+        resolved = Path(artifact_manifest_path).resolve()
+        if not resolved.exists():
+            raise OKofficeException("file_not_found", f"Artifact manifest file not found: {resolved}")
+        if not resolved.is_file():
+            raise OKofficeException("invalid_input", f"Artifact manifest path must be a file: {resolved}")
+        try:
+            payload = json.loads(resolved.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            raise OKofficeException("invalid_input", f"Artifact manifest is not valid JSON: {resolved}") from exc
+        if not isinstance(payload, dict):
+            raise OKofficeException("invalid_input", "Artifact manifest JSON must be an object.")
+        return payload, resolved
+    if artifact_paths:
+        result = create_artifact_manifest(artifact_paths=artifact_paths)
+        manifest = result.usage.get("artifact_manifest")
+        if not isinstance(manifest, dict):
+            raise OKofficeException("invalid_input", "Could not build artifact manifest from artifact_paths.")
+        return manifest, None
+    raise OKofficeException("invalid_input", "Provide artifact_manifest_path or at least one artifact_path.")
+
+
+def _artifact_node_id(entry: dict[str, Any], index: int) -> str:
+    sha256 = str(entry.get("sha256") or "")
+    if sha256:
+        return f"artifact:{sha256[:16]}"
+    path = str(entry.get("path") or entry.get("source_path") or "")
+    digest = hashlib.sha256(path.encode("utf-8")).hexdigest()[:16] if path else f"{index:04d}"
+    return f"artifact:{digest}"
+
+
+def _source_ref_node_id(source_ref: str) -> str:
+    return f"source_ref:{source_ref}"
+
+
+def _html_layer_node_id(layer_id: str) -> str:
+    return f"html_layer:{layer_id}"
+
+
+def _html_render_profile_node_id(profile_id: str) -> str:
+    return f"html_render_profile:{profile_id}"
+
+
+def _renderer_backend_node_id(backend_id: str) -> str:
+    return f"renderer_backend:{backend_id}"
+
+
+def _artifact_label(path: str, index: int) -> str:
+    if path:
+        return Path(path).name
+    return f"artifact-{index:03d}"
+
+
+def _entry_source_refs(entry: dict[str, Any]) -> list[str]:
+    value = entry.get("source_refs")
+    if isinstance(value, str) and value:
+        return [value]
+    if isinstance(value, list):
+        return sorted({str(item) for item in value if item})
+    return []
+
+
+def _manifest_html_layer_refs(manifest: dict[str, Any]) -> list[dict[str, Any]]:
+    value = manifest.get("html_layer_refs")
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, dict)]
+
+
+def _manifest_html_render_profile_refs(manifest: dict[str, Any]) -> list[dict[str, Any]]:
+    value = manifest.get("html_render_profile_refs")
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, dict)]
+
+
+def _manifest_renderer_backend_refs(manifest: dict[str, Any]) -> list[dict[str, Any]]:
+    value = manifest.get("renderer_backend_refs")
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, dict)]
+
+
+def _manifest_html_layer_patch_refs(manifest: dict[str, Any]) -> list[dict[str, Any]]:
+    value = manifest.get("html_layer_patch_refs")
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, dict)]
+
+
+def _add_html_layer_patch_edges(
+    edges: list[dict[str, Any]],
+    *,
+    html_layer_patch_refs: list[dict[str, Any]],
+    artifact_node_ids_by_path: dict[str, str],
+) -> None:
+    for patch_ref in html_layer_patch_refs:
+        patch_node_id = artifact_node_ids_by_path.get(str(patch_ref.get("patch_applied_path") or ""))
+        if not patch_node_id:
+            continue
+        _add_patch_artifact_edge(
+            edges,
+            patch_node_id,
+            artifact_node_ids_by_path,
+            patch_ref,
+            path_key="output_path",
+            relation="patch_rerenders_pdf",
+        )
+        _add_patch_artifact_edge(
+            edges,
+            patch_node_id,
+            artifact_node_ids_by_path,
+            patch_ref,
+            path_key="html_output_path",
+            relation="patch_writes_html_source",
+        )
+        _add_patch_artifact_edge(
+            edges,
+            patch_node_id,
+            artifact_node_ids_by_path,
+            patch_ref,
+            path_key="html_package_manifest_path",
+            relation="patch_writes_html_package",
+        )
+        _add_patch_artifact_edge(
+            edges,
+            patch_node_id,
+            artifact_node_ids_by_path,
+            patch_ref,
+            path_key="source_html_path",
+            relation="patch_reads_html_source",
+        )
+        for layer_id in _sorted_strings(patch_ref.get("rewritten_layer_ids")):
+            _add_edge(
+                edges,
+                patch_node_id,
+                _html_layer_node_id(layer_id),
+                "patch_rewrites_html_layer",
+                evidence="artifact_manifest.html_layer_patch_refs[].rewritten_layer_ids",
+                details={"patch_id": patch_ref.get("patch_id"), "layer_id": layer_id},
+            )
+
+
+def _add_patch_artifact_edge(
+    edges: list[dict[str, Any]],
+    patch_node_id: str,
+    artifact_node_ids_by_path: dict[str, str],
+    patch_ref: dict[str, Any],
+    *,
+    path_key: str,
+    relation: str,
+) -> None:
+    target_node_id = artifact_node_ids_by_path.get(str(patch_ref.get(path_key) or ""))
+    if not target_node_id:
+        return
+    _add_edge(
+        edges,
+        patch_node_id,
+        target_node_id,
+        relation,
+        evidence=f"artifact_manifest.html_layer_patch_refs[].{path_key}",
+        details={"patch_id": patch_ref.get("patch_id"), "path_key": path_key},
+    )
+
+
+def _add_edge(
+    edges: list[dict[str, Any]],
+    from_node: str,
+    to_node: str,
+    relation: str,
+    *,
+    evidence: str,
+    details: dict[str, Any] | None = None,
+    inferred: bool = False,
+) -> None:
+    edges.append(
+        {
+            "id": f"edge_{len(edges) + 1:04d}",
+            "from": from_node,
+            "to": to_node,
+            "relation": relation,
+            "evidence": evidence,
+            "inferred": inferred,
+            "details": details or {},
+        }
+    )
+
+
+def _add_artifact_convention_edges(edges: list[dict[str, Any]], artifact_ids_by_kind: dict[str, list[str]]) -> None:
+    _add_kind_edges(
+        edges,
+        artifact_ids_by_kind,
+        parent_kind="html_package",
+        child_kind="html",
+        relation="describes_html_source",
+    )
+    _add_kind_edges(
+        edges,
+        artifact_ids_by_kind,
+        parent_kind="html_package",
+        child_kind="pdf",
+        relation="renders_to_pdf",
+    )
+    _add_kind_edges(
+        edges,
+        artifact_ids_by_kind,
+        parent_kind="composition",
+        child_kind="coverage",
+        relation="derived_from_composition",
+    )
+    _add_kind_edges(
+        edges,
+        artifact_ids_by_kind,
+        parent_kind="composition",
+        child_kind="source_map",
+        relation="derived_from_composition",
+    )
+    _add_kind_edges(
+        edges,
+        artifact_ids_by_kind,
+        parent_kind="composition",
+        child_kind="patch",
+        relation="derived_from_composition",
+    )
+    _add_kind_edges(
+        edges,
+        artifact_ids_by_kind,
+        parent_kind="source_map",
+        child_kind="citations",
+        relation="derived_from_source_map",
+    )
+    _add_kind_edges(
+        edges,
+        artifact_ids_by_kind,
+        parent_kind="patch",
+        child_kind="pdf",
+        relation="produces_pdf",
+    )
+
+
+def _add_kind_edges(
+    edges: list[dict[str, Any]],
+    artifact_ids_by_kind: dict[str, list[str]],
+    *,
+    parent_kind: str,
+    child_kind: str,
+    relation: str,
+) -> None:
+    for parent_id in artifact_ids_by_kind.get(parent_kind, []):
+        for child_id in artifact_ids_by_kind.get(child_kind, []):
+            _add_edge(
+                edges,
+                parent_id,
+                child_id,
+                relation,
+                evidence=f"artifact_kind_convention:{parent_kind}->{child_kind}",
+                details={"parent_kind": parent_kind, "child_kind": child_kind},
+                inferred=True,
+            )
+
+
+def _evidence_link_index(
+    manifest: dict[str, Any],
+    artifact_node_ids_by_path: dict[str, str],
+) -> dict[str, list[dict[str, str]]]:
+    evidence_links = manifest.get("evidence_links")
+    if not isinstance(evidence_links, dict):
+        return {}
+    index: dict[str, list[dict[str, str]]] = {}
+    for kind, paths in evidence_links.items():
+        if not isinstance(paths, list):
+            continue
+        index[str(kind)] = [
+            {
+                "path": str(path),
+                "artifact_node_id": artifact_node_ids_by_path.get(str(path), ""),
+            }
+            for path in paths
+        ]
+    return index
+
+
+def _input_artifact(path: str | Path):
+    resolved = Path(path).resolve()
+    if not resolved.exists():
+        raise OKofficeException("file_not_found", f"Bundle input file not found: {resolved}")
+    if not resolved.is_file():
+        raise OKofficeException("invalid_input", f"Bundle input must be a file: {resolved}")
+    return build_artifact(resolved, source_tool="pdf.artifacts.bundle_input")
+
+
+def _artifact_kind(path: Path) -> str:
+    name = path.name.lower()
+    suffix = path.suffix.lower()
+    if name.endswith(".html-manifest.json"):
+        return "html_package"
+    if name.endswith(".composition.json"):
+        return "composition"
+    if name.endswith(".coverage.json"):
+        return "coverage"
+    if name.endswith(".source-map.json"):
+        return "source_map"
+    if name.endswith(".citations.json"):
+        return "citations"
+    if name.endswith(".patch-applied.json"):
+        return "patch_applied"
+    if name.endswith(".patch.json"):
+        return "patch"
+    if name.endswith(".layers.json"):
+        return "layers"
+    if name.endswith(".context.packet.json") or name.endswith(".context-item.json"):
+        return "context"
+    if suffix in {".html", ".htm"}:
+        return "html"
+    if suffix == ".pdf":
+        return "pdf"
+    return "file"
+
+
+def _read_json_artifact(path: Path, warnings: list[str]) -> dict[str, Any] | list[Any] | None:
+    if path.suffix.lower() != ".json":
+        return None
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        warnings.append(f"JSON artifact could not be parsed: {path.as_posix()} ({exc})")
+        return None
+    if isinstance(payload, (dict, list)):
+        return payload
+    warnings.append(f"JSON artifact is not an object or array: {path.as_posix()}")
+    return None
+
+
+def _collect_source_refs(value: Any) -> set[str]:
+    refs: set[str] = set()
+    if isinstance(value, dict):
+        source_ref = value.get("source_ref")
+        source_refs = value.get("source_refs")
+        if isinstance(source_ref, str) and source_ref:
+            refs.add(source_ref)
+        if isinstance(source_refs, str) and source_refs:
+            refs.add(source_refs)
+        elif isinstance(source_refs, list):
+            refs.update(str(item) for item in source_refs if item)
+        for nested in value.values():
+            refs.update(_collect_source_refs(nested))
+    elif isinstance(value, list):
+        for item in value:
+            refs.update(_collect_source_refs(item))
+    return refs
+
+
+def _bundle_entries(input_artifacts: list[Any]) -> list[dict[str, Any]]:
+    seen_names: set[str] = set()
+    entries = []
+    for artifact in input_artifacts:
+        safe_name = _safe_bundle_filename(artifact.path.name, seen_names)
+        seen_names.add(safe_name)
+        payload = artifact.model_dump(mode="json")
+        entries.append(
+            {
+                **payload,
+                "source_path": payload["path"],
+                "bundle_path": f"artifacts/{safe_name}",
+            }
+        )
+    return entries
+
+
+def _safe_bundle_filename(name: str, seen_names: set[str]) -> str:
+    candidate = Path(name).name.strip().replace("\\", "_").replace("/", "_")
+    if not candidate or candidate in {".", ".."}:
+        raise OKofficeException("unsafe_input_rejected", f"Unsafe bundle filename: {name!r}")
+    if ".." in Path(candidate).parts:
+        raise OKofficeException("unsafe_input_rejected", f"Unsafe bundle filename: {name!r}")
+    if candidate not in seen_names:
+        return candidate
+    stem = Path(candidate).stem or "artifact"
+    suffix = Path(candidate).suffix
+    index = 2
+    while f"{stem}-{index}{suffix}" in seen_names:
+        index += 1
+    return f"{stem}-{index}{suffix}"
+
+
+def _json_safe_dict(value: dict[str, Any]) -> dict[str, Any]:
+    return json.loads(json.dumps(value, default=str))
+
+
+def _read_checksum_file(text: str) -> dict[str, str]:
+    entries: dict[str, str] = {}
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        parts = stripped.split(maxsplit=1)
+        if len(parts) != 2:
+            continue
+        checksum, bundle_path = parts
+        entries[bundle_path.strip()] = checksum.strip().lower()
+    return entries

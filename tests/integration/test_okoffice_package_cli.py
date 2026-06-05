@@ -5,7 +5,7 @@ from typer.testing import CliRunner
 
 
 def test_okoffice_tools_list_json_exposes_target_and_compatibility_tools() -> None:
-    from okoffice.cli.main import app
+    from okoffice.cli_okoffice.main import app
 
     result = CliRunner().invoke(app, ["tools", "list", "--json"])
 
@@ -22,7 +22,7 @@ def test_okoffice_tools_list_json_exposes_target_and_compatibility_tools() -> No
 
 
 def test_okoffice_version_command_uses_product_name() -> None:
-    from okoffice.cli.main import app
+    from okoffice.cli_okoffice.main import app
 
     result = CliRunner().invoke(app, ["version"])
 
@@ -31,7 +31,7 @@ def test_okoffice_version_command_uses_product_name() -> None:
 
 
 def test_okoffice_claude_code_setup_writes_okoffice_mcp_config(tmp_path) -> None:
-    from okoffice.cli.main import app
+    from okoffice.cli_okoffice.main import app
 
     output_path = tmp_path / ".mcp.json"
 
@@ -69,8 +69,8 @@ def test_okoffice_claude_code_setup_writes_okoffice_mcp_config(tmp_path) -> None
 
 
 def test_okoffice_serve_help_and_mcp_manifest_alias_are_available() -> None:
-    from agentpdf.mcp.server import create_mcp_server, okoffice_tool_manifest
-    from okoffice.cli.main import app
+    from okoffice.mcp.server import create_mcp_server, okoffice_tool_manifest
+    from okoffice.cli_okoffice.main import app
 
     help_result = CliRunner().invoke(app, ["serve", "--help"])
     tool_names = {tool.name for tool in asyncio.run(create_mcp_server().list_tools())}

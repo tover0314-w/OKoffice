@@ -11,12 +11,14 @@ okoffice batch run workflow.yaml --input-dir ./sources --out-dir ./out
 Compatibility commands remain available while the CLI migrates:
 
 ```bash
-okpdf workflow plan --goal "Inspect this PDF and cite answers" --input-path report.pdf --json
+okoffice workflow plan --goal "Inspect this PDF and cite answers" --input-path report.pdf --json
 ```
 
 The implemented `pdf.workflow.plan` tool returns a `ToolResult` with a workflow plan id, agent roles, ordered tool steps, expected JSON outputs, and an explicit cloud boundary.
 
-The target okoffice workflow planner should also describe:
+The implemented local beta `office.workflow.plan` tool is available through `okoffice plan`, `okoffice workflow plan`, REST, MCP, and the workflow runner. It returns a planning-only `ToolResult` with declared inputs/outputs, detected formats, a recommended local pipeline, validation checks, and next recommended tools.
+
+The okoffice workflow planner should continue expanding toward:
 
 - Source Graph inputs.
 - Artifact profiles.

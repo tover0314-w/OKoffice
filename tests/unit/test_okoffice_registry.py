@@ -2,11 +2,11 @@ import json
 import tomllib
 from pathlib import Path
 
-from agentpdf.tools.registry import load_tool_manifest
+from okoffice.tools.registry import load_tool_manifest
 
 
 def test_okoffice_target_manifest_separates_target_and_legacy_tools() -> None:
-    from okoffice.tools.registry import load_okoffice_manifest
+    from okoffice.tools.registry_okoffice import load_okoffice_manifest
 
     manifest = load_okoffice_manifest()
 
@@ -40,5 +40,5 @@ def test_okoffice_machine_manifest_file_is_json_and_declares_first_wave() -> Non
 def test_pyproject_exposes_okoffice_console_script() -> None:
     pyproject = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
 
-    assert pyproject["project"]["scripts"]["okoffice"] == "okoffice.cli.main:app"
-    assert pyproject["project"]["scripts"]["okpdf"] == "agentpdf.cli.main:app"
+    assert pyproject["project"]["scripts"]["okoffice"] == "okoffice.cli_okoffice.main:app"
+    assert pyproject["project"]["scripts"]["okpdf"] == "okoffice.cli.main:app"

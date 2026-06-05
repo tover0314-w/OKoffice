@@ -4,10 +4,10 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 from typer.testing import CliRunner
 
-from agentpdf.api.app import create_app
-from agentpdf.cli.main import app
-from agentpdf.compose.context import list_target_profiles, select_target_profile, validate_target_profile
-from agentpdf.mcp.server import pdf_target_profiles, pdf_target_select_profile, pdf_target_validate_profile
+from okoffice.api.app import create_app
+from okoffice.cli.main import app
+from okoffice.compose.context import list_target_profiles, select_target_profile, validate_target_profile
+from okoffice.mcp.server import pdf_target_profiles, pdf_target_select_profile, pdf_target_validate_profile
 
 
 runner = CliRunner()

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://okpdf.dev/schemas/artifact-bundle-manifest.schema.json",
-  "title": "AgentPDF Artifact Bundle Manifest",
+  "title": "OKoffice Artifact Bundle Manifest",
   "type": "object",
   "required": ["bundle_version", "bundle_id", "title", "created_at", "artifact_count", "artifacts", "safety"],
   "additionalProperties": true,

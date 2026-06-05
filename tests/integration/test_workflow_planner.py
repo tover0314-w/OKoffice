@@ -1,4 +1,4 @@
-from agentpdf.workflows.planner import plan_workflow
+from okoffice.workflows.planner import plan_workflow
 
 
 def test_plan_workflow_for_pdf_chat_returns_agent_tool_chain() -> None:

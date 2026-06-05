@@ -1,7 +1,7 @@
 {
-  "name": "@okpdf/agentpdf-node",
+  "name": "@okoffice/okoffice-node",
   "version": "0.1.0",
-  "description": "TypeScript and Node.js client for local-first okpdf / AgentPDF tools.",
+  "description": "TypeScript and Node.js client for local-first OKoffice tools.",
   "type": "module",
   "main": "./dist/src/index.js",
   "types": "./dist/src/index.d.ts",
@@ -16,7 +16,7 @@
     }
   },
   "bin": {
-    "agentpdf-node": "./dist/src/cli.js"
+    "okoffice-node": "./dist/src/cli.js"
   },
   "files": [
     "dist/src",
@@ -37,13 +37,13 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tover0314-w/okpdf.git",
+    "url": "git+https://github.com/tover0314-w/okoffice.git",
     "directory": "packages/agentpdf-node"
   },
   "bugs": {
-    "url": "https://github.com/tover0314-w/okpdf/issues"
+    "url": "https://github.com/tover0314-w/okoffice/issues"
   },
-  "homepage": "https://github.com/tover0314-w/okpdf#readme",
+  "homepage": "https://github.com/tover0314-w/okoffice#readme",
   "publishConfig": {
     "access": "public"
   },

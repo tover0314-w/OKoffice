@@ -1,6 +1,6 @@
-# @okpdf/agentpdf-node
+# @okoffice/okoffice-node
 
-TypeScript and Node.js client for okpdf / AgentPDF local PDF tools.
+TypeScript and Node.js client for OKoffice local PDF tools.
 
 This package does not reimplement PDF processing in JavaScript. It calls the same local REST API powered by the Python core, so Node agents, web apps, and scripts get the same `ToolResult` contract as CLI and MCP users.
 
@@ -16,15 +16,15 @@ npm run build:node
 Start the local API in another terminal:
 
 ```bash
-okpdf serve --api
+okoffice serve --api
 ```
 
 ## SDK
 
 ```ts
-import { AgentPDFClient } from "@okpdf/agentpdf-node";
+import { OKofficeClient } from "@okoffice/okoffice-node";
 
-const client = new AgentPDFClient({ baseUrl: "http://127.0.0.1:7331" });
+const client = new OKofficeClient({ baseUrl: "http://127.0.0.1:7331" });
 
 const claude = await client.setupClaudeCode({
   outputPath: ".mcp.json",
@@ -126,9 +126,9 @@ const boardAudit = await client.createFromTemplatePack({
         type: "image",
         title: "Architecture Figure",
         target_slot: "evidence",
-        path: "assets/brand/okpdf-logo.png",
+        path: "assets/brand/okoffice-logo.png",
         caption: "Local visual evidence rendered from an agent-supplied image block.",
-        source_refs: ["path://assets/brand/okpdf-logo.png"],
+        source_refs: ["path://assets/brand/okoffice-logo.png"],
       },
       {
         block_id: "blk_agent_citation",
@@ -136,9 +136,9 @@ const boardAudit = await client.createFromTemplatePack({
         title: "Reference Note",
         target_slot: "recommendations",
         quote: "Local outputs need evidence, validation, and portable audit artifacts.",
-        source: "https://okpdf.local/docs/local-agent-integration",
+        source: "https://okoffice.local/docs/local-agent-integration",
         page: "local",
-        source_refs: ["https://okpdf.local/docs/local-agent-integration"],
+        source_refs: ["https://okoffice.local/docs/local-agent-integration"],
       },
     ],
   },
@@ -164,7 +164,7 @@ const dataProfile = await client.dataProfile({
   label: "Runtime Metrics",
 });
 const webCapture = await client.contextWebCapture({
-  url: "okpdf.dev/docs/context",
+  url: "okoffice.dev/docs/context",
   outputPath: ".agentpdf-out/context-docs.web.context-item.json",
   label: "Context Docs",
   maxBytes: 1_000_000,
@@ -190,7 +190,7 @@ const packet = await client.buildContextPacket({
       role: "data_evidence",
       label: "Runtime Metrics",
     },
-    { path: "assets/brand/okpdf-logo.png", role: "image_evidence" },
+    { path: "assets/brand/okoffice-logo.png", role: "image_evidence" },
     {
       path: "examples/media/meeting-audio.mp3",
       role: "audio_context",
@@ -288,7 +288,7 @@ await client.composeAddFigure({
   inputPath: ".agentpdf-out/technical-audit.pdf",
   outputPath: ".agentpdf-out/technical-audit.figure.pdf",
   title: "Architecture Figure",
-  imagePath: "assets/brand/okpdf-logo.png",
+  imagePath: "assets/brand/okoffice-logo.png",
   caption: "Local visual evidence.",
   sourceRefs: ["ctx_004"],
 });
@@ -373,7 +373,7 @@ const patch = await client.patchPlan({
     {
       op: "append_image",
       title: "Architecture Figure",
-      path: "assets/brand/okpdf-logo.png",
+      path: "assets/brand/okoffice-logo.png",
       caption: "Local visual evidence rendered into the patched PDF.",
       source_refs: ["ctx_003"],
     },
@@ -495,7 +495,7 @@ const formValidation = await client.formsValidate({
   requiredFields: ["name"],
 });
 const scan = await client.ocrScanToPdf({
-  imagePaths: ["assets/brand/okpdf-logo.png"],
+  imagePaths: ["assets/brand/okoffice-logo.png"],
   outputPath: ".agentpdf-out/scan.pdf",
 });
 const ocrText = await client.ocr({
@@ -547,117 +547,117 @@ console.log(audit.artifacts[0]?.path, deck.usage.slide_count, codeBlock.usage.co
 ## CLI
 
 ```bash
-agentpdf-node tools
-agentpdf-node agent-setup-claude-code -o .mcp.json --safe-root '${CLAUDE_PROJECT_DIR:-.}'
-agentpdf-node agent-setup-codex -o codex.mcp.json --safe-root .
-agentpdf-node agent-setup-kilo-code -o kilo-code.mcp.json --safe-root .
-agentpdf-node agent-setup-openclaw -o openclaw.mcp.json --safe-root .
-agentpdf-node run pdf.inspect.document --payload '{"path":"report.pdf"}'
-agentpdf-node inspect-pages report.pdf --pages 1 --render-check
-agentpdf-node workflow-plan --goal "Chat with this PDF and cite answers" --input-path report.pdf
-agentpdf-node workflow-run --payload '{"input_path":"report.pdf","steps":[{"step_id":"inspect","tool":"pdf.inspect.document","input":{"path":"<input.pdf>"}}]}' --binding '<question>=What is this report?' --dry-run
-agentpdf-node workflow-report --payload '{"run_id":"wfrun_node","status":"succeeded","planned_steps":1,"executed_steps":1,"failed_steps":0,"step_results":[]}' -o workflow-report.md
-agentpdf-node image-to-pdf cover.png -o cover.pdf
-agentpdf-node reorder-pages cover.pdf --order 1 -o cover-reordered.pdf
-agentpdf-node insert-blank-pages cover-reordered.pdf --after-page 1 --count 1 -o cover-blank.pdf
-agentpdf-node compress cover-blank.pdf -o cover-compressed.pdf
-agentpdf-node repair cover-compressed.pdf -o cover-repaired.pdf
-agentpdf-node watermark cover.pdf --text DRAFT -o cover-draft.pdf
-agentpdf-node page-numbers cover-draft.pdf -o cover-numbered.pdf
-agentpdf-node validate cover-numbered.pdf --expected-pages 1
-agentpdf-node render-check cover-numbered.pdf --pages 1
-agentpdf-node blank-page-check cover-blank.pdf --pages all
-agentpdf-node extract-images cover-numbered.pdf --pages all --out-dir cover-images
-agentpdf-node parse-lite cover-numbered.pdf
-agentpdf-node semantic-diff cover-v1.pdf cover-v2.pdf --pages 1
-agentpdf-node version-report cover-v1.pdf cover-v2.pdf -o cover.version-report.md
-agentpdf-node compare-visual-diff cover-v1.pdf cover-v2.pdf --pages 1
-agentpdf-node visual-diff cover-v1.pdf cover-v2.pdf --max-difference-ratio 0.001
-agentpdf-node security-redact sensitive.pdf -o sensitive-redacted.pdf --region '{"page":1,"bbox":[60,700,280,760],"label":"secret"}'
-agentpdf-node security-verify-redaction sensitive-redacted.pdf --search-term SECRET-CODE-123
-agentpdf-node redaction-check sensitive-redacted.pdf --search-term SECRET-CODE-123
-agentpdf-node parse-figures cover-numbered.pdf
-agentpdf-node parse-formulas cover-numbered.pdf
-agentpdf-node parse-charts cover-numbered.pdf
-agentpdf-node parse-references cover-numbered.pdf
-agentpdf-node forms-create --field '{"name":"name","label":"Name","required":true}' -o contact-form.pdf
-agentpdf-node forms-import-data contact-form.pdf --data '{"name":"Ada"}' -o contact-form-filled.pdf
-agentpdf-node forms-validate contact-form-filled.pdf --required-field name
-agentpdf-node ocr-scan-to-pdf cover.png -o scan.pdf
-agentpdf-node ocr scan.pdf --language eng
-agentpdf-node ocr-searchable-pdf scan.pdf -o scan-searchable.pdf --language eng
-agentpdf-node ocr-despeckle scan.pdf -o scan-despeckled.pdf
-agentpdf-node ocr-remove-existing scan.pdf -o scan-no-ocr.pdf
-agentpdf-node ocr-multilingual scan.pdf --language eng --language chi_sim -o scan-multilingual.pdf
-agentpdf-node pdf-to-json cover-numbered.pdf -o cover.ir.json
-agentpdf-node pdf-to-markdown cover-numbered.pdf -o cover.md
-agentpdf-node rag-ingest cover-numbered.pdf --index cover.index.json
-agentpdf-node rag-chat cover-numbered.pdf --question "What is covered?" --report-output cover-chat-report.pdf --highlight-output cover-chat-highlighted.pdf
-agentpdf-node rag-query cover.index.json --query "What is covered?"
-agentpdf-node rag-search cover.index.json --query "covered"
-agentpdf-node rag-cite-answer cover.index.json --answer "The cover is numbered."
-agentpdf-node rag-highlight-sources cover.index.json --answer "The cover is numbered." -o cover-highlighted.pdf
-agentpdf-node rag-export-report cover.index.json --question "What is covered?" --answer "The cover is numbered." -o cover-rag-report.pdf
-agentpdf-node create-text --text "Hello Node" -o node.pdf
-agentpdf-node create-markdown --markdown-file report.md -o report.pdf
-agentpdf-node create-templates
-agentpdf-node create-template-packs -o template-packs.json
-agentpdf-node create-validate-template-pack examples/template-packs/local-agent-starter.json -o template-pack.validation.json
-agentpdf-node create-agent examples/template-packs/local-agent-starter.json --profile technical_audit --context-packet context.packet.json -o board-audit-agent.pdf --plan-output board-audit-agent.plan.json --coverage-output board-audit-agent.coverage.json --context-classification-output board-audit-agent.context-classification.json --context-report-output board-audit-agent.context-report.pdf --context-report-json-output board-audit-agent.context-report.json --bundle-output board-audit-agent.agentpdf-bundle.zip
-agentpdf-node create-from-template-pack examples/template-packs/local-agent-starter.json --template board_audit --color-scheme executive_blue --data examples/create-data/agent-block-audit.json -o board-audit.pdf
-agentpdf-node create-from-template-pack examples/template-packs/local-agent-starter.json --template board_audit --color-scheme executive_blue --context-packet context.packet.json -o board-audit-from-context.pdf --renderer html --html-output board-audit-from-context.html
-agentpdf-node create-template-preview --template invoice -o invoice-preview.pdf
-agentpdf-node create-from-prompt --prompt "Create a research brief about local PDF agents." -o brief.pdf --template research_brief --style-pack paper_ink --color primary=#4f46e5
-agentpdf-node context-ingest --file src/agentpdf/compose/context.py --role code_evidence --label "Composer Source" -o composer.context-item.json
-agentpdf-node context-ingest --file examples/media/meeting-audio.mp3 --role audio_context --label "Meeting Audio" --transcript-path examples/media/meeting-transcript.txt -o meeting-audio.context-item.json
-agentpdf-node context-ingest --link okpdf.dev/docs/context --role citation --label "Context Docs" -o context-docs.context-item.json
-agentpdf-node context-web-capture okpdf.dev/docs/context --label "Context Docs" -o context-docs.web.context-item.json
-agentpdf-node code-snapshot src/agentpdf/compose/context.py --line-start 1 --line-end 80 --repository-root . -o composer.snapshot.context-item.json
-agentpdf-node data-profile examples/create-data/metrics.csv --label "Runtime Metrics" -o metrics.profile.context-item.json
-agentpdf-node context-image-analyze assets/brand/okpdf-logo.png --skip-ocr
-agentpdf-node context-packet --item-json composer.context-item.json --text "Create a technical audit PDF from pre-ingested code evidence." -o agent.context.packet.json
-agentpdf-node context-build --text "Create a technical audit PDF." --file README.md --item-json context-docs.web.context-item.json --item-json examples/context/media-items.json -o context.packet.json
-agentpdf-node context-classify context.packet.json --profile technical_audit -o context.classification.json
-agentpdf-node target-profiles -o target-profiles.json
-agentpdf-node target-validate --target-profile '{"profile_id":"media_learning_deck","layout_mode":"slides","accepted_block_types":["slide","audio_reference","video_reference"],"accepted_context_types":["text","audio","video"],"validation_required":["render_check","evidence_coverage_report"]}' -o media-learning-deck.validation.json
-agentpdf-node compose-plan context.packet.json --profile technical_audit -o technical-audit.plan.json
-agentpdf-node compose-render-ir technical-audit.plan.json -o technical-audit-from-ir.pdf
-agentpdf-node compose-from-context context.packet.json --profile technical_audit -o technical-audit.pdf --renderer html --html-output technical-audit.html
-agentpdf-node render-html-package technical-audit.html-manifest.json -o technical-audit-rendered.pdf --renderer-backend auto
-agentpdf-node create-html-package --html "<main><h1>HTML First</h1><p>Inspectable source before PDF.</p></main>" --html-output html-first.html --title "HTML First"
-agentpdf-node render-html-package html-first.html-manifest.json -o html-first.pdf --renderer-backend auto
-agentpdf-node qa-visual-report --input html-first.pdf --html-package-manifest html-first.html-manifest.json --pages 1
-agentpdf-node artifact-manifest --file html-first.pdf --file html-first.html --file html-first.html-manifest.json -o html-first.artifacts.json --title "HTML First Artifacts" --metadata workflow=html-first-createpdf
-agentpdf-node artifact-graph --manifest html-first.artifacts.json -o html-first.artifact-graph.json --title "HTML First Artifact Graph"
-agentpdf-node createpdf --html "<main><h1>CreatePDF</h1><p>HTML-first workflow with audit evidence.</p></main>" --html-output createpdf.html --pdf-output createpdf.pdf --artifact-dir createpdf-audit --bundle-output createpdf.agentpdf-bundle.zip --renderer-backend auto --title "CreatePDF"
-agentpdf-node createpdf --context-packet context.packet.json --profile technical_audit --style-pack paper_ink --html-output context-createpdf.html --pdf-output context-createpdf.pdf --artifact-dir context-createpdf-audit --bundle-output context-createpdf.agentpdf-bundle.zip --renderer-backend auto
-agentpdf-node authoring-plan --brief examples/research_deck_brief.json
-agentpdf-node research-plan --brief examples/research_deck_brief.json
-agentpdf-node research-source-cards --brief examples/research_deck_brief.json --sources examples/research_deck_sources.json
-agentpdf-node research-evidence-cards --source-cards examples/research_deck_source_cards.json
-agentpdf-node design-tokens --theme consulting --color primary_color=#123456
-agentpdf-node workflow-research-deck --brief examples/research_deck_brief.json --evidence-cards examples/research_deck_evidence.json --html-output research-deck.html --pdf-output research-deck.pdf --artifact-dir research-deck-artifacts --execute
-agentpdf-node compose-from-context context.packet.json --profile slide_deck -o agent-review-deck.pdf
-agentpdf-node compose-add-code-block technical-audit.pdf --title "Risk Function" --code "def risky_total(items): return sum(items)" --language python --source-ref ctx_002 --target-slot code_review -o technical-audit.code.pdf
-agentpdf-node compose-add-table technical-audit.pdf --title "Runtime Metrics" --columns metric,value --row latency_ms,42 --source-ref ctx_003 -o technical-audit.table.pdf
-agentpdf-node compose-add-figure technical-audit.pdf --title "Architecture Figure" --image assets/brand/okpdf-logo.png --caption "Local visual evidence." --source-ref ctx_004 -o technical-audit.figure.pdf
-agentpdf-node compose-add-appendix technical-audit.pdf --title "Source Appendix" --markdown "## Sources" --source-ref ctx_002 -o technical-audit.appendix.pdf
-agentpdf-node compose-add-citation technical-audit.pdf --title "Source Citation" --source https://example.com/research --quote "Cited claim" --source-ref ctx_web -o technical-audit.citation.pdf
-agentpdf-node compose-add-media-reference technical-audit.pdf --title "Meeting Audio" --media meeting.mp3 --media-kind audio --transcript-excerpt "00:00 Kickoff" --source-ref ctx_audio -o technical-audit.media.pdf
-agentpdf-node compose-add-slide technical-audit.pdf --title "Review Slide" --body "Decision evidence" --source-ref ctx_slide -o technical-audit.slide.pdf
-agentpdf-node evidence-context-packet-report context.packet.json -o context-report.pdf --report-output context-report.json
-agentpdf-node evidence-coverage-report technical-audit.composition.json -o technical-audit.coverage.json
-agentpdf-node evidence-map-sources technical-audit.composition.json --context-packet context.packet.json -o technical-audit.source-map.json
-agentpdf-node artifact-source-map --composition technical-audit.composition.json --context-packet context.packet.json -o technical-audit.artifact-source-map.json --title "Technical Audit Artifact Source Map"
-agentpdf-node evidence-cite-claims --claims claims.json --source-map technical-audit.source-map.json -o technical-audit.citations.json
-agentpdf-node patch-plan technical-audit.pdf --operations '[{"op":"append_table","title":"Runtime Metrics","columns":["metric","value"],"rows":[["latency_ms","42"]],"source_refs":["ctx_002"],"target_slot":"findings"}]' -o technical-audit.patch.json --composition technical-audit.composition.json --layers technical-audit.layers.json --artifact-graph technical-audit.artifact-graph.json
-agentpdf-node patch-preview technical-audit.patch.json -o technical-audit.patch-preview.json
-agentpdf-node patch-apply technical-audit.patch.json -o technical-audit-patched.pdf
-agentpdf-node patch-verify technical-audit.patch.json technical-audit-patched.pdf
-agentpdf-node artifact-manifest --file technical-audit.pdf --file technical-audit.html --file technical-audit.html-manifest.json --file technical-audit-patched.pdf --file context.packet.json --file technical-audit.composition.json --file technical-audit.coverage.json --file technical-audit.source-map.json --file technical-audit.artifact-source-map.json --file technical-audit.citations.json --file technical-audit.patch.json -o technical-audit.artifacts.json --title "Technical Audit Artifacts" --metadata workflow=context-packet-patch
-agentpdf-node artifact-graph --manifest technical-audit.artifacts.json -o technical-audit.artifact-graph.json --title "Technical Audit Artifact Graph"
-agentpdf-node export-bundle --file technical-audit-patched.pdf --file context.packet.json --file technical-audit.composition.json --file technical-audit.coverage.json --file technical-audit.patch.json -o technical-audit.agentpdf-bundle.zip --title "Technical Audit Bundle" --metadata workflow=context-packet-patch
-agentpdf-node verify-bundle technical-audit.agentpdf-bundle.zip
+okoffice-node tools
+okoffice-node agent-setup-claude-code -o .mcp.json --safe-root '${CLAUDE_PROJECT_DIR:-.}'
+okoffice-node agent-setup-codex -o codex.mcp.json --safe-root .
+okoffice-node agent-setup-kilo-code -o kilo-code.mcp.json --safe-root .
+okoffice-node agent-setup-openclaw -o openclaw.mcp.json --safe-root .
+okoffice-node run pdf.inspect.document --payload '{"path":"report.pdf"}'
+okoffice-node inspect-pages report.pdf --pages 1 --render-check
+okoffice-node workflow-plan --goal "Chat with this PDF and cite answers" --input-path report.pdf
+okoffice-node workflow-run --payload '{"input_path":"report.pdf","steps":[{"step_id":"inspect","tool":"pdf.inspect.document","input":{"path":"<input.pdf>"}}]}' --binding '<question>=What is this report?' --dry-run
+okoffice-node workflow-report --payload '{"run_id":"wfrun_node","status":"succeeded","planned_steps":1,"executed_steps":1,"failed_steps":0,"step_results":[]}' -o workflow-report.md
+okoffice-node image-to-pdf cover.png -o cover.pdf
+okoffice-node reorder-pages cover.pdf --order 1 -o cover-reordered.pdf
+okoffice-node insert-blank-pages cover-reordered.pdf --after-page 1 --count 1 -o cover-blank.pdf
+okoffice-node compress cover-blank.pdf -o cover-compressed.pdf
+okoffice-node repair cover-compressed.pdf -o cover-repaired.pdf
+okoffice-node watermark cover.pdf --text DRAFT -o cover-draft.pdf
+okoffice-node page-numbers cover-draft.pdf -o cover-numbered.pdf
+okoffice-node validate cover-numbered.pdf --expected-pages 1
+okoffice-node render-check cover-numbered.pdf --pages 1
+okoffice-node blank-page-check cover-blank.pdf --pages all
+okoffice-node extract-images cover-numbered.pdf --pages all --out-dir cover-images
+okoffice-node parse-lite cover-numbered.pdf
+okoffice-node semantic-diff cover-v1.pdf cover-v2.pdf --pages 1
+okoffice-node version-report cover-v1.pdf cover-v2.pdf -o cover.version-report.md
+okoffice-node compare-visual-diff cover-v1.pdf cover-v2.pdf --pages 1
+okoffice-node visual-diff cover-v1.pdf cover-v2.pdf --max-difference-ratio 0.001
+okoffice-node security-redact sensitive.pdf -o sensitive-redacted.pdf --region '{"page":1,"bbox":[60,700,280,760],"label":"secret"}'
+okoffice-node security-verify-redaction sensitive-redacted.pdf --search-term SECRET-CODE-123
+okoffice-node redaction-check sensitive-redacted.pdf --search-term SECRET-CODE-123
+okoffice-node parse-figures cover-numbered.pdf
+okoffice-node parse-formulas cover-numbered.pdf
+okoffice-node parse-charts cover-numbered.pdf
+okoffice-node parse-references cover-numbered.pdf
+okoffice-node forms-create --field '{"name":"name","label":"Name","required":true}' -o contact-form.pdf
+okoffice-node forms-import-data contact-form.pdf --data '{"name":"Ada"}' -o contact-form-filled.pdf
+okoffice-node forms-validate contact-form-filled.pdf --required-field name
+okoffice-node ocr-scan-to-pdf cover.png -o scan.pdf
+okoffice-node ocr scan.pdf --language eng
+okoffice-node ocr-searchable-pdf scan.pdf -o scan-searchable.pdf --language eng
+okoffice-node ocr-despeckle scan.pdf -o scan-despeckled.pdf
+okoffice-node ocr-remove-existing scan.pdf -o scan-no-ocr.pdf
+okoffice-node ocr-multilingual scan.pdf --language eng --language chi_sim -o scan-multilingual.pdf
+okoffice-node pdf-to-json cover-numbered.pdf -o cover.ir.json
+okoffice-node pdf-to-markdown cover-numbered.pdf -o cover.md
+okoffice-node rag-ingest cover-numbered.pdf --index cover.index.json
+okoffice-node rag-chat cover-numbered.pdf --question "What is covered?" --report-output cover-chat-report.pdf --highlight-output cover-chat-highlighted.pdf
+okoffice-node rag-query cover.index.json --query "What is covered?"
+okoffice-node rag-search cover.index.json --query "covered"
+okoffice-node rag-cite-answer cover.index.json --answer "The cover is numbered."
+okoffice-node rag-highlight-sources cover.index.json --answer "The cover is numbered." -o cover-highlighted.pdf
+okoffice-node rag-export-report cover.index.json --question "What is covered?" --answer "The cover is numbered." -o cover-rag-report.pdf
+okoffice-node create-text --text "Hello Node" -o node.pdf
+okoffice-node create-markdown --markdown-file report.md -o report.pdf
+okoffice-node create-templates
+okoffice-node create-template-packs -o template-packs.json
+okoffice-node create-validate-template-pack examples/template-packs/local-agent-starter.json -o template-pack.validation.json
+okoffice-node create-agent examples/template-packs/local-agent-starter.json --profile technical_audit --context-packet context.packet.json -o board-audit-agent.pdf --plan-output board-audit-agent.plan.json --coverage-output board-audit-agent.coverage.json --context-classification-output board-audit-agent.context-classification.json --context-report-output board-audit-agent.context-report.pdf --context-report-json-output board-audit-agent.context-report.json --bundle-output board-audit-agent.agentpdf-bundle.zip
+okoffice-node create-from-template-pack examples/template-packs/local-agent-starter.json --template board_audit --color-scheme executive_blue --data examples/create-data/agent-block-audit.json -o board-audit.pdf
+okoffice-node create-from-template-pack examples/template-packs/local-agent-starter.json --template board_audit --color-scheme executive_blue --context-packet context.packet.json -o board-audit-from-context.pdf --renderer html --html-output board-audit-from-context.html
+okoffice-node create-template-preview --template invoice -o invoice-preview.pdf
+okoffice-node create-from-prompt --prompt "Create a research brief about local PDF agents." -o brief.pdf --template research_brief --style-pack paper_ink --color primary=#4f46e5
+okoffice-node context-ingest --file src/agentpdf/compose/context.py --role code_evidence --label "Composer Source" -o composer.context-item.json
+okoffice-node context-ingest --file examples/media/meeting-audio.mp3 --role audio_context --label "Meeting Audio" --transcript-path examples/media/meeting-transcript.txt -o meeting-audio.context-item.json
+okoffice-node context-ingest --link okoffice.dev/docs/context --role citation --label "Context Docs" -o context-docs.context-item.json
+okoffice-node context-web-capture okoffice.dev/docs/context --label "Context Docs" -o context-docs.web.context-item.json
+okoffice-node code-snapshot src/agentpdf/compose/context.py --line-start 1 --line-end 80 --repository-root . -o composer.snapshot.context-item.json
+okoffice-node data-profile examples/create-data/metrics.csv --label "Runtime Metrics" -o metrics.profile.context-item.json
+okoffice-node context-image-analyze assets/brand/okoffice-logo.png --skip-ocr
+okoffice-node context-packet --item-json composer.context-item.json --text "Create a technical audit PDF from pre-ingested code evidence." -o agent.context.packet.json
+okoffice-node context-build --text "Create a technical audit PDF." --file README.md --item-json context-docs.web.context-item.json --item-json examples/context/media-items.json -o context.packet.json
+okoffice-node context-classify context.packet.json --profile technical_audit -o context.classification.json
+okoffice-node target-profiles -o target-profiles.json
+okoffice-node target-validate --target-profile '{"profile_id":"media_learning_deck","layout_mode":"slides","accepted_block_types":["slide","audio_reference","video_reference"],"accepted_context_types":["text","audio","video"],"validation_required":["render_check","evidence_coverage_report"]}' -o media-learning-deck.validation.json
+okoffice-node compose-plan context.packet.json --profile technical_audit -o technical-audit.plan.json
+okoffice-node compose-render-ir technical-audit.plan.json -o technical-audit-from-ir.pdf
+okoffice-node compose-from-context context.packet.json --profile technical_audit -o technical-audit.pdf --renderer html --html-output technical-audit.html
+okoffice-node render-html-package technical-audit.html-manifest.json -o technical-audit-rendered.pdf --renderer-backend auto
+okoffice-node create-html-package --html "<main><h1>HTML First</h1><p>Inspectable source before PDF.</p></main>" --html-output html-first.html --title "HTML First"
+okoffice-node render-html-package html-first.html-manifest.json -o html-first.pdf --renderer-backend auto
+okoffice-node qa-visual-report --input html-first.pdf --html-package-manifest html-first.html-manifest.json --pages 1
+okoffice-node artifact-manifest --file html-first.pdf --file html-first.html --file html-first.html-manifest.json -o html-first.artifacts.json --title "HTML First Artifacts" --metadata workflow=html-first-createpdf
+okoffice-node artifact-graph --manifest html-first.artifacts.json -o html-first.artifact-graph.json --title "HTML First Artifact Graph"
+okoffice-node createpdf --html "<main><h1>CreatePDF</h1><p>HTML-first workflow with audit evidence.</p></main>" --html-output createpdf.html --pdf-output createpdf.pdf --artifact-dir createpdf-audit --bundle-output createpdf.agentpdf-bundle.zip --renderer-backend auto --title "CreatePDF"
+okoffice-node createpdf --context-packet context.packet.json --profile technical_audit --style-pack paper_ink --html-output context-createpdf.html --pdf-output context-createpdf.pdf --artifact-dir context-createpdf-audit --bundle-output context-createpdf.agentpdf-bundle.zip --renderer-backend auto
+okoffice-node authoring-plan --brief examples/research_deck_brief.json
+okoffice-node research-plan --brief examples/research_deck_brief.json
+okoffice-node research-source-cards --brief examples/research_deck_brief.json --sources examples/research_deck_sources.json
+okoffice-node research-evidence-cards --source-cards examples/research_deck_source_cards.json
+okoffice-node design-tokens --theme consulting --color primary_color=#123456
+okoffice-node workflow-research-deck --brief examples/research_deck_brief.json --evidence-cards examples/research_deck_evidence.json --html-output research-deck.html --pdf-output research-deck.pdf --artifact-dir research-deck-artifacts --execute
+okoffice-node compose-from-context context.packet.json --profile slide_deck -o agent-review-deck.pdf
+okoffice-node compose-add-code-block technical-audit.pdf --title "Risk Function" --code "def risky_total(items): return sum(items)" --language python --source-ref ctx_002 --target-slot code_review -o technical-audit.code.pdf
+okoffice-node compose-add-table technical-audit.pdf --title "Runtime Metrics" --columns metric,value --row latency_ms,42 --source-ref ctx_003 -o technical-audit.table.pdf
+okoffice-node compose-add-figure technical-audit.pdf --title "Architecture Figure" --image assets/brand/okoffice-logo.png --caption "Local visual evidence." --source-ref ctx_004 -o technical-audit.figure.pdf
+okoffice-node compose-add-appendix technical-audit.pdf --title "Source Appendix" --markdown "## Sources" --source-ref ctx_002 -o technical-audit.appendix.pdf
+okoffice-node compose-add-citation technical-audit.pdf --title "Source Citation" --source https://example.com/research --quote "Cited claim" --source-ref ctx_web -o technical-audit.citation.pdf
+okoffice-node compose-add-media-reference technical-audit.pdf --title "Meeting Audio" --media meeting.mp3 --media-kind audio --transcript-excerpt "00:00 Kickoff" --source-ref ctx_audio -o technical-audit.media.pdf
+okoffice-node compose-add-slide technical-audit.pdf --title "Review Slide" --body "Decision evidence" --source-ref ctx_slide -o technical-audit.slide.pdf
+okoffice-node evidence-context-packet-report context.packet.json -o context-report.pdf --report-output context-report.json
+okoffice-node evidence-coverage-report technical-audit.composition.json -o technical-audit.coverage.json
+okoffice-node evidence-map-sources technical-audit.composition.json --context-packet context.packet.json -o technical-audit.source-map.json
+okoffice-node artifact-source-map --composition technical-audit.composition.json --context-packet context.packet.json -o technical-audit.artifact-source-map.json --title "Technical Audit Artifact Source Map"
+okoffice-node evidence-cite-claims --claims claims.json --source-map technical-audit.source-map.json -o technical-audit.citations.json
+okoffice-node patch-plan technical-audit.pdf --operations '[{"op":"append_table","title":"Runtime Metrics","columns":["metric","value"],"rows":[["latency_ms","42"]],"source_refs":["ctx_002"],"target_slot":"findings"}]' -o technical-audit.patch.json --composition technical-audit.composition.json --layers technical-audit.layers.json --artifact-graph technical-audit.artifact-graph.json
+okoffice-node patch-preview technical-audit.patch.json -o technical-audit.patch-preview.json
+okoffice-node patch-apply technical-audit.patch.json -o technical-audit-patched.pdf
+okoffice-node patch-verify technical-audit.patch.json technical-audit-patched.pdf
+okoffice-node artifact-manifest --file technical-audit.pdf --file technical-audit.html --file technical-audit.html-manifest.json --file technical-audit-patched.pdf --file context.packet.json --file technical-audit.composition.json --file technical-audit.coverage.json --file technical-audit.source-map.json --file technical-audit.artifact-source-map.json --file technical-audit.citations.json --file technical-audit.patch.json -o technical-audit.artifacts.json --title "Technical Audit Artifacts" --metadata workflow=context-packet-patch
+okoffice-node artifact-graph --manifest technical-audit.artifacts.json -o technical-audit.artifact-graph.json --title "Technical Audit Artifact Graph"
+okoffice-node export-bundle --file technical-audit-patched.pdf --file context.packet.json --file technical-audit.composition.json --file technical-audit.coverage.json --file technical-audit.patch.json -o technical-audit.agentpdf-bundle.zip --title "Technical Audit Bundle" --metadata workflow=context-packet-patch
+okoffice-node verify-bundle technical-audit.agentpdf-bundle.zip
 ```
 
 ## Design
@@ -666,4 +666,4 @@ agentpdf-node verify-bundle technical-audit.agentpdf-bundle.zip
 - Typed `ToolResult`, `Artifact`, `ValidationReport`, `ToolManifest`, and tool inputs.
 - Convenience wrappers for Claude Code, Codex, Kilo Code, and OpenClaw setup, document/page inspect, Word document validation, deck presentation validation, workflow planning/execution/reporting, context ingest, local web capture, code snapshots, data profiles, context packet building, context classification, target profile catalog/selection/validation, composition planning, IR rendering, context packet PDF/JSON audit reports, context-to-PDF composition, one-step append-only compose blocks for code/table/figure/appendix evidence, template-pack creation with slot routing evidence and `.layers.json` edit manifests, evidence coverage, artifact source map, manifest, and graph generation, patch plan/preview/apply/verify, artifact bundle export/verify, merge, reorder, insert blank pages, compression, repair/rewrite, image-to-PDF, embedded image extraction, watermark, page numbers, metadata page info, security metadata removal/redaction/verification, text/Markdown/prompt-template creation, validation/page-count checks, render/blank/redaction checks, lite parse, semantic parse hints, local semantic diff/version reports, and local RAG.
 - Failed PDF tools still return structured failed `ToolResult` bodies instead of being hidden behind generic exceptions.
-- HTTP or non-AgentPDF failures throw `AgentPDFHttpError`.
+- HTTP or non-OKoffice failures throw `OKofficeHttpError`.

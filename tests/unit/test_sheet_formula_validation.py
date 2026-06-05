@@ -6,7 +6,7 @@ from typer.testing import CliRunner
 
 
 def test_sheet_formula_validation_reports_structural_formula_risks(tmp_path: Path) -> None:
-    from agentpdf.office.validation import validate_sheet_formulas
+    from okoffice.office.validation import validate_sheet_formulas
 
     path = tmp_path / "risk-model.xlsx"
     _write_formula_risk_workbook(path)
@@ -34,8 +34,8 @@ def test_sheet_formula_validation_reports_structural_formula_risks(tmp_path: Pat
 
 
 def test_sheet_formula_validation_passes_for_generated_evidence_workbook(tmp_path: Path) -> None:
-    from agentpdf.office.validation import validate_sheet_formulas
-    from agentpdf.office.workbook import write_sheet_workbook
+    from okoffice.office.validation import validate_sheet_formulas
+    from okoffice.office.workbook import write_sheet_workbook
 
     evidence_path = tmp_path / "evidence.json"
     output_path = tmp_path / "evidence.xlsx"
@@ -57,7 +57,7 @@ def test_sheet_formula_validation_passes_for_generated_evidence_workbook(tmp_pat
 
 
 def test_okoffice_sheet_validate_formulas_cli_returns_tool_result_json(tmp_path: Path) -> None:
-    from okoffice.cli.main import app
+    from okoffice.cli_okoffice.main import app
 
     path = tmp_path / "risk-model.xlsx"
     _write_formula_risk_workbook(path)
@@ -74,7 +74,7 @@ def test_okoffice_sheet_validate_formulas_cli_returns_tool_result_json(tmp_path:
 def test_sheet_formula_validation_runs_through_rest_api(tmp_path: Path) -> None:
     from fastapi.testclient import TestClient
 
-    from agentpdf.api.app import create_app
+    from okoffice.api.app import create_app
 
     path = tmp_path / "risk-model.xlsx"
     _write_formula_risk_workbook(path)
@@ -91,7 +91,7 @@ def test_sheet_formula_validation_runs_through_rest_api(tmp_path: Path) -> None:
 
 
 def test_sheet_formula_validation_runs_through_mcp_function(tmp_path: Path) -> None:
-    from agentpdf.mcp.server import sheet_validate_formulas
+    from okoffice.mcp.server import sheet_validate_formulas
 
     path = tmp_path / "risk-model.xlsx"
     _write_formula_risk_workbook(path)
@@ -104,7 +104,7 @@ def test_sheet_formula_validation_runs_through_mcp_function(tmp_path: Path) -> N
 
 
 def test_sheet_formula_validation_runs_through_workflow_runner(tmp_path: Path) -> None:
-    from agentpdf.workflows.runner import run_workflow
+    from okoffice.workflows.runner import run_workflow
 
     path = tmp_path / "risk-model.xlsx"
     _write_formula_risk_workbook(path)

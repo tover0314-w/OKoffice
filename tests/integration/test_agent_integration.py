@@ -5,11 +5,11 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 from typer.testing import CliRunner
 
-from agentpdf.api.app import create_app
-from agentpdf.cli.main import app
-from agentpdf.mcp.server import create_mcp_server
-from agentpdf.tools.registry import get_tool
-from okoffice.cli.main import app as okoffice_app
+from okoffice.api.app import create_app
+from okoffice.cli.main import app
+from okoffice.mcp.server import create_mcp_server
+from okoffice.tools.registry import get_tool
+from okoffice.cli_okoffice.main import app as okoffice_app
 
 
 runner = CliRunner()
@@ -35,7 +35,7 @@ def test_claude_code_setup_cli_writes_project_mcp_config(tmp_path: Path) -> None
     assert result.exit_code == 0
     payload = json.loads(result.stdout)
     config = json.loads(output_path.read_text(encoding="utf-8"))
-    server = config["mcpServers"]["agentpdf"]
+    server = config["mcpServers"]["okoffice"]
 
     assert payload["tool"] == "agent.setup.claude_code"
     assert payload["usage"]["agent"] == "claude-code"
@@ -43,7 +43,7 @@ def test_claude_code_setup_cli_writes_project_mcp_config(tmp_path: Path) -> None
     assert payload["usage"]["config_path"] == output_path.as_posix()
     assert payload["usage"]["mcp_config"] == config
     assert server["type"] == "stdio"
-    assert server["command"] == "okpdf"
+    assert server["command"] == "okoffice"
     assert server["args"] == ["serve", "--mcp", "--safe-root", "${CLAUDE_PROJECT_DIR:-.}"]
     assert "pdf_context_build_packet" in payload["usage"]["recommended_mcp_tools"]
     assert "pdf_compose_from_context" in payload["usage"]["recommended_mcp_tools"]
@@ -71,8 +71,8 @@ def test_claude_code_setup_rest_and_mcp_are_exposed(tmp_path: Path) -> None:
     config = json.loads(output_path.read_text(encoding="utf-8"))
 
     assert payload["tool"] == "agent.setup.claude_code"
-    assert config["mcpServers"]["agentpdf"]["command"] == "python"
-    assert config["mcpServers"]["agentpdf"]["args"] == [
+    assert config["mcpServers"]["okoffice"]["command"] == "python"
+    assert config["mcpServers"]["okoffice"]["args"] == [
         "-m",
         "agentpdf.cli",
         "serve",
@@ -106,13 +106,13 @@ def test_codex_setup_cli_writes_local_mcp_config(tmp_path: Path) -> None:
     assert result.exit_code == 0
     payload = json.loads(result.stdout)
     config = json.loads(output_path.read_text(encoding="utf-8"))
-    server = config["mcpServers"]["agentpdf"]
+    server = config["mcpServers"]["okoffice"]
 
     assert payload["tool"] == "agent.setup.codex"
     assert payload["usage"]["agent"] == "codex"
     assert payload["usage"]["config_path"] == output_path.as_posix()
     assert payload["usage"]["mcp_config"] == config
-    assert server["command"] == "okpdf"
+    assert server["command"] == "okoffice"
     assert server["args"] == ["serve", "--mcp", "--safe-root", "."]
     assert "AGENTS.md" in payload["usage"]["recommended_workspace_files"]
     assert "pdf_context_build_packet" in payload["usage"]["recommended_mcp_tools"]
@@ -170,8 +170,8 @@ def test_codex_setup_rest_and_mcp_are_exposed(tmp_path: Path) -> None:
     config = json.loads(output_path.read_text(encoding="utf-8"))
 
     assert payload["tool"] == "agent.setup.codex"
-    assert config["mcpServers"]["agentpdf"]["command"] == "python"
-    assert config["mcpServers"]["agentpdf"]["args"] == [
+    assert config["mcpServers"]["okoffice"]["command"] == "python"
+    assert config["mcpServers"]["okoffice"]["args"] == [
         "-m",
         "agentpdf.cli",
         "serve",
@@ -205,12 +205,12 @@ def test_kilo_code_setup_cli_writes_mcp_config(tmp_path: Path) -> None:
     assert result.exit_code == 0
     payload = json.loads(result.stdout)
     config = json.loads(output_path.read_text(encoding="utf-8"))
-    server = config["mcpServers"]["agentpdf"]
+    server = config["mcpServers"]["okoffice"]
 
     assert payload["tool"] == "agent.setup.kilo_code"
     assert payload["usage"]["agent"] == "kilo-code"
     assert payload["usage"]["mcp_config"] == config
-    assert server["command"] == "okpdf"
+    assert server["command"] == "okoffice"
     assert server["args"] == ["serve", "--mcp", "--safe-root", "."]
     assert "pdf_context_build_packet" in payload["usage"]["recommended_mcp_tools"]
     assert "kilo-code.mcp.json" in payload["usage"]["recommended_config_files"]
@@ -249,8 +249,8 @@ def test_openclaw_setup_cli_rest_and_mcp_are_exposed(tmp_path: Path) -> None:
     payload = response.json()
     config = json.loads((tmp_path / "openclaw.api.json").read_text(encoding="utf-8"))
     assert payload["tool"] == "agent.setup.openclaw"
-    assert config["mcpServers"]["agentpdf"]["command"] == "python"
-    assert config["mcpServers"]["agentpdf"]["args"] == [
+    assert config["mcpServers"]["okoffice"]["command"] == "python"
+    assert config["mcpServers"]["okoffice"]["args"] == [
         "-m",
         "agentpdf.cli",
         "serve",

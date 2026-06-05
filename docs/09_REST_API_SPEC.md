@@ -220,6 +220,24 @@ Input:
 
 Output includes `tool: deck.validation.presentation`, `usage.summary`, title and notes policy checks with Deck locators, media/theme/safety markers, `placeholder_overflow.status: structural_only`, and skipped render-evidence checks when no local renderer is configured.
 
+## Example: Target Workflow Plan
+
+```http
+POST /v1/tools/office.workflow.plan/run
+```
+
+Input:
+
+```json
+{
+  "goal": "Build an evidence workbook and board deck from mixed source files.",
+  "input_paths": ["memo.docx", "filing.pdf"],
+  "output_paths": ["model.xlsx", "board-deck.pptx"]
+}
+```
+
+Output includes `tool: office.workflow.plan`, validation checks for declared goal/inputs/outputs, `usage.plan.input_formats`, `usage.plan.output_formats`, a local planning-only recommended pipeline, and `next_recommended_tools`.
+
 ## Example: Target Sheet-To-Deck Workflow
 
 ```http

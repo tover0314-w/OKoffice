@@ -11,4 +11,4 @@ def test_static_openapi_documents_error_responses() -> None:
     assert "description: Tool not found" in openapi_text
     assert "description: Job not found" in openapi_text
     assert "description: Artifact not found or missing" in openapi_text
-    assert "description: Standard AgentPDF error response" in openapi_text
+    assert "description: Standard OKoffice error response" in openapi_text

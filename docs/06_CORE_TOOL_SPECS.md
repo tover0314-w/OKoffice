@@ -827,7 +827,7 @@ Acceptance criteria:
 
 ## First Migration Milestones
 
-1. Keep `okpdf` and `pdf.*` stable.
+1. Keep `okoffice` and `pdf.*` stable.
 2. Add `okoffice` CLI alias and top-level `office.inspect.file`.
 3. Add deterministic DOCX/XLSX/PPTX inspect tools.
 4. Add Office IR and Source Graph support for all four formats.

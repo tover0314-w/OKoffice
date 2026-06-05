@@ -11,7 +11,7 @@ SHEET_NS = {"main": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
 
 
 def test_extract_to_sheet_builds_evidence_workbook_from_docx_and_xlsx(tmp_path: Path) -> None:
-    from agentpdf.office.workflows import extract_to_sheet
+    from okoffice.office.workflows import extract_to_sheet
 
     docx_path = tmp_path / "memo.docx"
     xlsx_path = tmp_path / "model.xlsx"
@@ -42,8 +42,8 @@ def test_extract_to_sheet_builds_evidence_workbook_from_docx_and_xlsx(tmp_path: 
 
 
 def test_extract_to_sheet_can_start_from_context_packet_source_graph(tmp_path: Path) -> None:
-    from agentpdf.office.context import build_office_context_packet
-    from agentpdf.office.workflows import extract_to_sheet
+    from okoffice.office.context import build_office_context_packet
+    from okoffice.office.workflows import extract_to_sheet
 
     docx_path = tmp_path / "memo.docx"
     xlsx_path = tmp_path / "model.xlsx"
@@ -75,7 +75,7 @@ def test_extract_to_sheet_can_start_from_context_packet_source_graph(tmp_path: P
 
 
 def test_extract_to_sheet_cli_returns_json_and_workbook(tmp_path: Path) -> None:
-    from okoffice.cli.main import app
+    from okoffice.cli_okoffice.main import app
 
     docx_path = tmp_path / "memo.docx"
     xlsx_path = tmp_path / "model.xlsx"
@@ -105,9 +105,9 @@ def test_extract_to_sheet_cli_returns_json_and_workbook(tmp_path: Path) -> None:
 
 
 def test_extract_to_sheet_runs_through_agent_interfaces(tmp_path: Path) -> None:
-    from agentpdf.api.app import create_app
-    from agentpdf.mcp.server import office_workflow_extract_to_sheet
-    from agentpdf.workflows.runner import run_workflow
+    from okoffice.api.app import create_app
+    from okoffice.mcp.server import office_workflow_extract_to_sheet
+    from okoffice.workflows.runner import run_workflow
 
     docx_path = tmp_path / "memo.docx"
     xlsx_path = tmp_path / "model.xlsx"
@@ -149,11 +149,11 @@ def test_extract_to_sheet_runs_through_agent_interfaces(tmp_path: Path) -> None:
 
 
 def test_extract_to_sheet_context_packet_runs_through_agent_interfaces(tmp_path: Path) -> None:
-    from agentpdf.api.app import create_app
-    from agentpdf.mcp.server import office_workflow_extract_to_sheet
-    from agentpdf.office.context import build_office_context_packet
-    from agentpdf.workflows.runner import run_workflow
-    from okoffice.cli.main import app
+    from okoffice.api.app import create_app
+    from okoffice.mcp.server import office_workflow_extract_to_sheet
+    from okoffice.office.context import build_office_context_packet
+    from okoffice.workflows.runner import run_workflow
+    from okoffice.cli_okoffice.main import app
 
     docx_path = tmp_path / "memo.docx"
     xlsx_path = tmp_path / "model.xlsx"
@@ -214,7 +214,7 @@ def test_extract_to_sheet_context_packet_runs_through_agent_interfaces(tmp_path:
 
 
 def test_extract_to_sheet_manifest_and_mcp_catalog_mark_tool_beta() -> None:
-    from okoffice.tools.registry import load_okoffice_manifest
+    from okoffice.tools.registry_okoffice import load_okoffice_manifest
 
     manifest = load_okoffice_manifest()
     target_tools = {tool["name"]: tool for tool in manifest["target_tools"]}

@@ -4,8 +4,8 @@ from pathlib import Path
 
 from PIL import Image
 
-from agentpdf.context.packet import build_context_packet
-from agentpdf.mcp.server import (
+from okoffice.context.packet import build_context_packet
+from okoffice.mcp.server import (
     create_mcp_server,
     pdf_ai_parse_lite,
     pdf_ai_create_from_prompt,
@@ -480,7 +480,7 @@ def test_mcp_ocr_returns_regions(monkeypatch, tmp_path: Path) -> None:
     image_pdf = tmp_path / "scan.pdf"
     Image.new("RGB", (160, 80), color=(255, 255, 255)).save(image)
     _write_image_pdf(image_pdf, image)
-    monkeypatch.setattr("agentpdf.ocr_scan.local._run_tesseract_tsv", _fake_tesseract_tsv)
+    monkeypatch.setattr("okoffice.ocr_scan.local._run_tesseract_tsv", _fake_tesseract_tsv)
 
     ocr_payload = json.loads(pdf_ocr(str(image), languages=["eng"]))
     searchable_payload = json.loads(
@@ -497,7 +497,7 @@ def test_mcp_ocr_returns_regions(monkeypatch, tmp_path: Path) -> None:
 def test_mcp_image_analyze_returns_ocr_evidence(monkeypatch, tmp_path: Path) -> None:
     image = tmp_path / "scan.png"
     Image.new("RGB", (160, 80), color=(255, 255, 255)).save(image)
-    monkeypatch.setattr("agentpdf.ocr_scan.local._run_tesseract_tsv", _fake_tesseract_tsv)
+    monkeypatch.setattr("okoffice.ocr_scan.local._run_tesseract_tsv", _fake_tesseract_tsv)
 
     payload = json.loads(pdf_context_image_analyze(str(image), languages=["eng"]))
 
@@ -564,7 +564,7 @@ def test_mcp_text_and_metadata_tools(text_pdf: Path, metadata_pdf: Path) -> None
     )
 
     assert text["tool"] == "pdf.convert.pdf_to_text"
-    assert "AgentPDF local text layer" in text["usage"]["text"]
+    assert "OKoffice local text layer" in text["usage"]["text"]
     assert fonts["tool"] == "pdf.convert.extract_fonts"
     assert metadata["usage"]["metadata"]["Title"] == "Original Title"
     assert page_info["tool"] == "pdf.metadata.page_info"
@@ -755,7 +755,7 @@ def test_mcp_parse_lite_and_local_rag(tmp_path: Path) -> None:
     index = tmp_path / "rag.index.json"
     ir_json = tmp_path / "rag.ir.json"
     ir_markdown = tmp_path / "rag.md"
-    pdf_create_markdown("# AgentPDF\n\nLocal RAG gives agents cited document evidence.", str(source))
+    pdf_create_markdown("# OKoffice\n\nLocal RAG gives agents cited document evidence.", str(source))
 
     parsed = json.loads(pdf_ai_parse_lite(str(source)))
     exported = json.loads(pdf_pdf_to_json(str(source), str(ir_json)))

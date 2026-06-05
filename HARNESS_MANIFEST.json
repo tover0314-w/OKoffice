@@ -1,7 +1,7 @@
 {
-  "name": "agentpdf-harness",
+  "name": "okoffice-harness",
   "created_at": "2026-06-01",
-  "purpose": "Codex-ready development harness for open-source AgentPDF Infra project",
+  "purpose": "Codex-ready development harness for open-source OKoffice project",
   "contains": [
     "docs",
     "schemas",

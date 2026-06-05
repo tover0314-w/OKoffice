@@ -1,6 +1,6 @@
 import typer
 
-app = typer.Typer(help="AgentPDF Infra CLI")
+app = typer.Typer(help="OKoffice agent-native Office infra CLI")
 
 @app.callback()
 def main() -> None:

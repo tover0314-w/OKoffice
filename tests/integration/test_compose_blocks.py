@@ -9,9 +9,9 @@ from PIL import Image
 from pypdf import PdfReader
 from typer.testing import CliRunner
 
-from agentpdf.api.app import create_app
-from agentpdf.cli.main import app
-from agentpdf.compose.blocks import (
+from okoffice.api.app import create_app
+from okoffice.cli.main import app
+from okoffice.compose.blocks import (
     add_appendix_to_pdf,
     add_citation_to_pdf,
     add_code_block_to_pdf,
@@ -20,14 +20,14 @@ from agentpdf.compose.blocks import (
     add_slide_to_pdf,
     add_table_to_pdf,
 )
-from agentpdf.core.pdf import create_text_pdf
-from agentpdf.mcp.server import (
+from okoffice.core.pdf import create_text_pdf
+from okoffice.mcp.server import (
     pdf_compose_add_citation,
     pdf_compose_add_code_block,
     pdf_compose_add_media_reference,
     pdf_compose_add_slide,
 )
-from agentpdf.tools.registry import get_tool
+from okoffice.tools.registry import get_tool
 
 
 runner = CliRunner()
@@ -112,7 +112,7 @@ def test_compose_add_citation_appends_traceable_citation_page(tmp_path: Path) ->
         base_pdf,
         output_path=tmp_path / "with-citation.pdf",
         title="Source Citation",
-        quote="AgentPDF keeps citation source refs auditable.",
+        quote="OKoffice keeps citation source refs auditable.",
         source="https://example.com/research?ref=agent#evidence",
         page="section 2",
         source_refs=["ctx_web"],
@@ -132,7 +132,7 @@ def test_compose_add_citation_appends_traceable_citation_page(tmp_path: Path) ->
     assert result.usage["compose_block"]["block_type"] == "citation"
     assert result.usage["compose_block"]["source_refs"] == ["ctx_web"]
     assert result.usage["compose_block"]["operation"]["op"] == "append_citation"
-    assert result.usage["compose_block"]["operation"]["quote"].startswith("AgentPDF keeps")
+    assert result.usage["compose_block"]["operation"]["quote"].startswith("OKoffice keeps")
     assert result.usage["compose_block"]["operation"]["source"] == "https://example.com/research?ref=agent#evidence"
     assert result.usage["compose_block"]["operation"]["page"] == "section 2"
     assert result.usage["compose_block"]["operation"]["citation_evidence"]["domain"] == "example.com"
@@ -144,7 +144,7 @@ def test_compose_add_citation_appends_traceable_citation_page(tmp_path: Path) ->
     assert manifest_path.exists()
     assert patch_path.exists()
     assert "Source Citation" in text
-    assert "AgentPDF keeps citation source refs auditable." in text
+    assert "OKoffice keeps citation source refs auditable." in text
     assert "https://example.com/research?ref=agent#evidence" in text
 
 
@@ -152,7 +152,7 @@ def test_compose_add_media_reference_appends_traceable_media_page(tmp_path: Path
     base_pdf = tmp_path / "base.pdf"
     media_path = tmp_path / "meeting.mp3"
     create_text_pdf("Base PDF for media reference composition.", base_pdf, title="Base")
-    media_path.write_bytes(b"ID3\x04\x00\x00\x00\x00\x00\x21agentpdf local media fixture")
+    media_path.write_bytes(b"ID3\x04\x00\x00\x00\x00\x00\x21okoffice local media fixture")
     original_hash = _sha256(base_pdf)
     original_pages = _page_count(base_pdf)
     media_hash = _sha256(media_path)
@@ -261,7 +261,7 @@ def test_compose_block_cli_api_mcp_and_registry_are_exposed(tmp_path: Path) -> N
     base_pdf = tmp_path / "base.pdf"
     media_path = tmp_path / "clip.mp4"
     create_text_pdf("Base PDF for compose block surfaces.", base_pdf, title="Base")
-    media_path.write_bytes(b"\x00\x00\x00\x18ftypmp42agentpdf local media fixture")
+    media_path.write_bytes(b"\x00\x00\x00\x18ftypmp42okoffice local media fixture")
 
     tool = get_tool("pdf.compose.add_code_block")
     assert tool.implemented is True

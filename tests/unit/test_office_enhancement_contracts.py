@@ -6,10 +6,10 @@ from fastapi.testclient import TestClient
 
 
 def test_word_patch_apply_is_non_mutating_and_runs_through_rest_and_mcp(tmp_path: Path) -> None:
-    from agentpdf.api.app import create_app
-    from agentpdf.mcp.server import word_patch_apply
-    from agentpdf.office.word import inspect_word_document
-    from agentpdf.office.word_patch import apply_word_patch, plan_word_patch
+    from okoffice.api.app import create_app
+    from okoffice.mcp.server import word_patch_apply
+    from okoffice.office.word import inspect_word_document
+    from okoffice.office.word_patch import apply_word_patch, plan_word_patch
 
     input_path = tmp_path / "memo.docx"
     output_path = tmp_path / "memo.updated.docx"
@@ -61,9 +61,9 @@ def test_word_patch_apply_is_non_mutating_and_runs_through_rest_and_mcp(tmp_path
 
 
 def test_generated_workbook_has_data_model_chart_plan_and_validation_bindings(tmp_path: Path) -> None:
-    from agentpdf.office.sheet import inspect_sheet_workbook
-    from agentpdf.office.validation import validate_sheet_formulas
-    from agentpdf.office.workbook import write_sheet_workbook
+    from okoffice.office.sheet import inspect_sheet_workbook
+    from okoffice.office.validation import validate_sheet_formulas
+    from okoffice.office.workbook import write_sheet_workbook
 
     evidence_path = tmp_path / "evidence.json"
     output_path = tmp_path / "evidence.xlsx"
@@ -105,9 +105,9 @@ def test_generated_workbook_has_data_model_chart_plan_and_validation_bindings(tm
 
 
 def test_deck_create_accepts_style_overrides_and_deck_patch_edits_theme(tmp_path: Path) -> None:
-    from agentpdf.office.deck_patch import apply_deck_patch
-    from agentpdf.office.deck_writer import create_deck_presentation
-    from agentpdf.office.workbook import write_sheet_workbook
+    from okoffice.office.deck_patch import apply_deck_patch
+    from okoffice.office.deck_writer import create_deck_presentation
+    from okoffice.office.workbook import write_sheet_workbook
 
     evidence_path = tmp_path / "evidence.json"
     workbook_path = tmp_path / "evidence.xlsx"
@@ -155,9 +155,9 @@ def test_deck_create_accepts_style_overrides_and_deck_patch_edits_theme(tmp_path
 
 
 def test_source_graph_includes_tables_formulas_charts_shapes_and_notes(tmp_path: Path) -> None:
-    from agentpdf.office.context import build_office_context_packet
-    from agentpdf.office.deck_writer import create_deck_presentation
-    from agentpdf.office.workbook import write_sheet_workbook
+    from okoffice.office.context import build_office_context_packet
+    from okoffice.office.deck_writer import create_deck_presentation
+    from okoffice.office.workbook import write_sheet_workbook
 
     evidence_path = tmp_path / "evidence.json"
     workbook_path = tmp_path / "evidence.xlsx"
@@ -192,7 +192,7 @@ def test_source_graph_includes_tables_formulas_charts_shapes_and_notes(tmp_path:
 
 
 def test_okoffice_compatibility_manifest_keeps_pdf_layer_slim() -> None:
-    from okoffice.tools.registry import load_okoffice_manifest
+    from okoffice.tools.registry_okoffice import load_okoffice_manifest
 
     manifest = load_okoffice_manifest()
     compatibility_tool = next(tool for tool in manifest["compatibility_tools"] if tool["name"] == "pdf.inspect.document")

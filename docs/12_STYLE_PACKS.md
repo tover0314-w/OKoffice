@@ -163,7 +163,7 @@ The current OSS codebase implements PDF-oriented style packs:
 - `invoice_clean`
 - `paper_ink`
 
-These remain valid for `okpdf` and the PDF domain inside okoffice.
+These remain valid for `okoffice` and the PDF domain inside okoffice.
 
 Target okoffice packs:
 
@@ -219,8 +219,8 @@ Example:
 Current PDF command:
 
 ```bash
-okpdf create markdown examples/sample-documents/business_report.md \
-  -o .agentpdf-out/business-report.pdf \
+okoffice create markdown examples/sample-documents/business_report.md \
+  -o .okoffice-out/business-report.pdf \
   --style-pack business_report_modern \
   --json
 ```

@@ -2,7 +2,7 @@ import json
 import re
 from pathlib import Path
 
-from agentpdf.tools.registry import IMPLEMENTED_TOOLS, get_tool, load_tool_manifest
+from okoffice.tools.registry import IMPLEMENTED_TOOLS, get_tool, load_tool_manifest
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]

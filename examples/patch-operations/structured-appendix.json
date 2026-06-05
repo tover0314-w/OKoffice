@@ -19,7 +19,7 @@
   {
     "op": "append_image",
     "title": "Architecture Figure",
-    "path": "assets/brand/okpdf-logo.png",
+    "path": "assets/brand/okoffice-logo.png",
     "caption": "Local visual evidence rendered into the patched PDF.",
     "source_refs": ["ctx_003"]
   },

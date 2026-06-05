@@ -7,7 +7,7 @@ from typer.testing import CliRunner
 
 
 def test_office_inspect_file_detects_pdf_fixture() -> None:
-    from agentpdf.office.inspect import inspect_office_file
+    from okoffice.office.inspect import inspect_office_file
 
     result = inspect_office_file(Path("tests/fixtures/simple.pdf"))
 
@@ -37,7 +37,7 @@ def test_office_inspect_file_detects_ooxml_packages(
     expected_domain: str,
     expected_tool: str,
 ) -> None:
-    from agentpdf.office.inspect import inspect_office_file
+    from okoffice.office.inspect import inspect_office_file
 
     path = tmp_path / filename
     _write_ooxml(path, member_name)
@@ -69,7 +69,7 @@ def test_office_inspect_file_detects_text_like_sources(
     expected_domain: str,
     expected_mime: str,
 ) -> None:
-    from agentpdf.office.inspect import inspect_office_file
+    from okoffice.office.inspect import inspect_office_file
 
     path = tmp_path / filename
     path.write_text(contents, encoding="utf-8")
@@ -84,7 +84,7 @@ def test_office_inspect_file_detects_text_like_sources(
 
 
 def test_office_inspect_file_rejects_path_traversal() -> None:
-    from agentpdf.office.inspect import inspect_office_file
+    from okoffice.office.inspect import inspect_office_file
 
     result = inspect_office_file(Path("..") / "secret.docx")
 
@@ -95,7 +95,7 @@ def test_office_inspect_file_rejects_path_traversal() -> None:
 
 
 def test_okoffice_inspect_cli_returns_tool_result_json(tmp_path: Path) -> None:
-    from okoffice.cli.main import app
+    from okoffice.cli_okoffice.main import app
 
     path = tmp_path / "memo.docx"
     _write_ooxml(path, "word/document.xml")
@@ -113,7 +113,7 @@ def test_okoffice_inspect_cli_returns_tool_result_json(tmp_path: Path) -> None:
 def test_office_inspect_file_runs_through_rest_api(tmp_path: Path) -> None:
     from fastapi.testclient import TestClient
 
-    from agentpdf.api.app import create_app
+    from okoffice.api.app import create_app
 
     path = tmp_path / "model.xlsx"
     _write_ooxml(path, "xl/workbook.xml")
@@ -131,7 +131,7 @@ def test_office_inspect_file_runs_through_rest_api(tmp_path: Path) -> None:
 
 
 def test_office_inspect_file_runs_through_mcp_function(tmp_path: Path) -> None:
-    from agentpdf.mcp.server import office_inspect_file
+    from okoffice.mcp.server import office_inspect_file
 
     path = tmp_path / "deck.pptx"
     _write_ooxml(path, "ppt/presentation.xml")
@@ -144,7 +144,7 @@ def test_office_inspect_file_runs_through_mcp_function(tmp_path: Path) -> None:
 
 
 def test_office_inspect_file_runs_through_workflow_runner(tmp_path: Path) -> None:
-    from agentpdf.workflows.runner import run_workflow
+    from okoffice.workflows.runner import run_workflow
 
     path = tmp_path / "memo.docx"
     _write_ooxml(path, "word/document.xml")

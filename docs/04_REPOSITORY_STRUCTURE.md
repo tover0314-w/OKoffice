@@ -1,6 +1,6 @@
 # 04 - Repository Structure
 
-This repository currently uses the `agentpdf` Python package and okpdf-facing examples. During the okoffice migration, do not break those compatibility paths unless a deliberate migration task says so.
+This repository currently uses the `okoffice` Python package and okoffice-facing examples. During the okoffice migration, do not break those compatibility paths unless a deliberate migration task says so.
 
 The target repository structure is:
 
@@ -151,8 +151,8 @@ okoffice/
 
 Until migration tasks update code:
 
-- Keep `src/agentpdf/`.
-- Keep `packages/agentpdf-node/`.
+- Keep `src/okoffice/`.
+- Keep `packages/okoffice-node/`.
 - Keep current `pdf.*` tool names.
 - Keep current CLI entrypoints that tests expect.
 - Add okoffice docs, aliases, and wrappers incrementally.
@@ -161,14 +161,14 @@ Until migration tasks update code:
 
 Current files to preserve:
 
-- `src/agentpdf/cli/main.py`
-- `src/agentpdf/tools/registry.py`
-- `src/agentpdf/schemas/models.py`
-- `src/agentpdf/artifacts/store.py`
-- `src/agentpdf/validation/pdf.py`
-- `src/agentpdf/context/packet.py`
-- `src/agentpdf/ir/lite.py`
-- `src/agentpdf/compose/context.py`
+- `src/okoffice/cli/main.py`
+- `src/okoffice/tools/registry.py`
+- `src/okoffice/schemas/models.py`
+- `src/okoffice/artifacts/store.py`
+- `src/okoffice/validation/pdf.py`
+- `src/okoffice/context/packet.py`
+- `src/okoffice/ir/lite.py`
+- `src/okoffice/compose/context.py`
 - `tests/unit/test_registry.py`
 - `tests/integration/test_cli.py`
 
@@ -195,15 +195,15 @@ Target files to add during okoffice migration:
 
 Target package import name: `okoffice`.
 
-Compatibility package import name: `agentpdf`.
+Compatibility package import name: `okoffice`.
 
 Target CLI command: `okoffice`.
 
-Compatibility CLI commands: `okpdf` and `agentpdf` where they already exist.
+Compatibility CLI commands: `okoffice` and `okoffice` where they already exist.
 
 Target TypeScript package name: `@okoffice/node`.
 
-Compatibility TypeScript package name: `@okpdf/agentpdf-node` until migration.
+Compatibility TypeScript package name: `@okoffice/okoffice-node` until migration.
 
 ## Documentation Organization
 

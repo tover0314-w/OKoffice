@@ -110,9 +110,9 @@ Before public launch:
 
 Potential targets:
 
-- PyPI: `okoffice` target, `agentpdf` compatibility package.
+- PyPI: `okoffice` target, `okoffice` compatibility package.
 - Docker Hub/GHCR.
-- npm: `@okoffice/node` target, `@okpdf/agentpdf-node` compatibility package.
+- npm: `@okoffice/node` target, `@okoffice/okoffice-node` compatibility package.
 - GitHub Releases.
 
 ## Maintainer Rules

@@ -11,19 +11,19 @@ Use this workflow when an agent needs to create a deck or report from a brief, e
 ## CLI Example
 
 ```bash
-okpdf authoring plan examples/research_deck_brief.json --json
-okpdf research plan examples/research_deck_brief.json --json
-okpdf research source-cards --brief examples/research_deck_brief.json --sources examples/research_deck_sources.json --json
-okpdf research evidence-cards --source-cards examples/research_deck_source_cards.json --json
-okpdf design tokens --theme consulting --color primary_color=#123456 --json
-okpdf storyboard plan examples/research_deck_brief.json --evidence-cards examples/research_deck_evidence.json --json
-okpdf workflow research-deck examples/research_deck_brief.json --evidence-cards examples/research_deck_evidence.json --html-output output/deck.html --pdf-output output/deck.pdf --artifact-dir output/research-deck-artifacts --execute --json
-okpdf createpdf --html "<main><h1>CreatePDF</h1><p>HTML-first source package.</p></main>" --html-output output/createpdf.html --pdf-output output/createpdf.pdf --artifact-dir output/createpdf-audit --bundle-output output/createpdf.agentpdf-bundle.zip --renderer-backend auto --json
-okpdf createpdf --context-packet output/context.packet.json --profile technical_audit --html-output output/context-createpdf.html --pdf-output output/context-createpdf.pdf --artifact-dir output/context-createpdf-audit --bundle-output output/context-createpdf.agentpdf-bundle.zip --renderer-backend auto --json
+okoffice authoring plan examples/research_deck_brief.json --json
+okoffice research plan examples/research_deck_brief.json --json
+okoffice research source-cards --brief examples/research_deck_brief.json --sources examples/research_deck_sources.json --json
+okoffice research evidence-cards --source-cards examples/research_deck_source_cards.json --json
+okoffice design tokens --theme consulting --color primary_color=#123456 --json
+okoffice storyboard plan examples/research_deck_brief.json --evidence-cards examples/research_deck_evidence.json --json
+okoffice workflow research-deck examples/research_deck_brief.json --evidence-cards examples/research_deck_evidence.json --html-output output/deck.html --pdf-output output/deck.pdf --artifact-dir output/research-deck-artifacts --execute --json
+okoffice createpdf --html "<main><h1>CreatePDF</h1><p>HTML-first source package.</p></main>" --html-output output/createpdf.html --pdf-output output/createpdf.pdf --artifact-dir output/createpdf-audit --bundle-output output/createpdf.okoffice-bundle.zip --renderer-backend auto --json
+okoffice createpdf --context-packet output/context.packet.json --profile technical_audit --html-output output/context-createpdf.html --pdf-output output/context-createpdf.pdf --artifact-dir output/context-createpdf-audit --bundle-output output/context-createpdf.okoffice-bundle.zip --renderer-backend auto --json
 ```
 
 Without `--execute`, `workflow research-deck` returns the workflow plan only. With `--execute`, it runs the planned local steps and returns `usage.workflow_run` plus PDF, HTML manifest, and QA artifacts.
-Use `okpdf createpdf` when the agent already has HTML, page JSON, or a Context Packet and wants a single local workflow that writes the HTML package, renders the PDF, runs visual QA, and emits an artifact manifest plus graph. Adding `--bundle-output` / `bundle_output_path` exports those artifacts into a portable `.agentpdf-bundle.zip`, verifies the bundle checksum manifest immediately, and returns both `bundle_export` and `bundle_verification` in `usage.createpdf`. For Context Packet inputs, `createpdf` uses the target profile to compose the HTML and composition JSON first; those intermediate artifacts are kept in the audit manifest. Inline `context_packet` REST/MCP/SDK payloads are materialized as `PDF_STEM.context.packet.json` inside `artifact_dir` so the exact packet used for rendering is traceable. Composition HTML manifests include block-level `layer_map` entries with `data-layer-id`, source refs, estimated DOM anchors, `render_profile`, `renderer_constraints`, and `renderer_backend`; `pdf.render.html_package` rejects unsafe render profiles that enable JavaScript, remote assets, private hosts, file URLs, or allowed origins before writing a PDF. Render calls accept `renderer_backend=auto|local_html_package_fallback|browser_chromium`; `browser_chromium` uses the optional Playwright Chromium worker when installed and returns structured `dependency_missing` evidence with `render_skipped=true` otherwise. Render results expose `usage.requested_renderer_backend`, `usage.renderer_backend`, `render_skipped`, and `render_skip_reason` so agents can tell whether the current OSS fallback or a browser worker produced the artifact. Artifact manifests lift those entries into `html_render_profile_refs`, `renderer_backend_refs`, and `html_layer_refs`, and artifact graphs expose `html_render_profile`, `renderer_backend`, and `html_layer` nodes linked back to package/source refs. `pdf.patch.plan` can then consume the graph via `artifact_graph_path` / `--artifact-graph`; operations may cite `html_layer_id`, and the patch manifest records `html_layer_evidence` plus `operation_html_layer_map`. When those operations are `regenerate_block`, `pdf.patch.apply` writes a new patched HTML source package and rerenders the PDF in `html_layer_rerender` mode. Adding the patched PDF, patched HTML, patched HTML manifest, and `.patch-applied.json` to an artifact manifest records `html_layer_patch_refs` and graph edges back to the rewritten layer. These anchors are useful for audit and source editing, but they are explicitly not exact PDF glyph bboxes.
+Use `okoffice createpdf` when the agent already has HTML, page JSON, or a Context Packet and wants a single local workflow that writes the HTML package, renders the PDF, runs visual QA, and emits an artifact manifest plus graph. Adding `--bundle-output` / `bundle_output_path` exports those artifacts into a portable `.okoffice-bundle.zip`, verifies the bundle checksum manifest immediately, and returns both `bundle_export` and `bundle_verification` in `usage.createpdf`. For Context Packet inputs, `createpdf` uses the target profile to compose the HTML and composition JSON first; those intermediate artifacts are kept in the audit manifest. Inline `context_packet` REST/MCP/SDK payloads are materialized as `PDF_STEM.context.packet.json` inside `artifact_dir` so the exact packet used for rendering is traceable. Composition HTML manifests include block-level `layer_map` entries with `data-layer-id`, source refs, estimated DOM anchors, `render_profile`, `renderer_constraints`, and `renderer_backend`; `pdf.render.html_package` rejects unsafe render profiles that enable JavaScript, remote assets, private hosts, file URLs, or allowed origins before writing a PDF. Render calls accept `renderer_backend=auto|local_html_package_fallback|browser_chromium`; `browser_chromium` uses the optional Playwright Chromium worker when installed and returns structured `dependency_missing` evidence with `render_skipped=true` otherwise. Render results expose `usage.requested_renderer_backend`, `usage.renderer_backend`, `render_skipped`, and `render_skip_reason` so agents can tell whether the current OSS fallback or a browser worker produced the artifact. Artifact manifests lift those entries into `html_render_profile_refs`, `renderer_backend_refs`, and `html_layer_refs`, and artifact graphs expose `html_render_profile`, `renderer_backend`, and `html_layer` nodes linked back to package/source refs. `pdf.patch.plan` can then consume the graph via `artifact_graph_path` / `--artifact-graph`; operations may cite `html_layer_id`, and the patch manifest records `html_layer_evidence` plus `operation_html_layer_map`. When those operations are `regenerate_block`, `pdf.patch.apply` writes a new patched HTML source package and rerenders the PDF in `html_layer_rerender` mode. Adding the patched PDF, patched HTML, patched HTML manifest, and `.patch-applied.json` to an artifact manifest records `html_layer_patch_refs` and graph edges back to the rewritten layer. These anchors are useful for audit and source editing, but they are explicitly not exact PDF glyph bboxes.
 
 The `pdf.research.*` tools are local normalizers: they do not browse, fetch, summarize remote pages, or create fresh claims from the web. Agents should provide source metadata gathered elsewhere, then let the PDF compatibility layer preserve source ids, confidence, useful page targets, and `fetch_status=not_fetched`.
 
@@ -44,11 +44,11 @@ curl -s http://127.0.0.1:7331/v1/tools/pdf.workflow.research_deck/run \
 
 curl -s http://127.0.0.1:7331/v1/tools/pdf.workflow.createpdf/run \
   -H "content-type: application/json" \
-  -d '{"html":"<main><h1>CreatePDF</h1><p>HTML-first source package.</p></main>","html_output_path":"output/createpdf.html","pdf_output_path":"output/createpdf.pdf","artifact_dir":"output/createpdf-audit","bundle_output_path":"output/createpdf.agentpdf-bundle.zip","renderer_backend":"auto"}'
+  -d '{"html":"<main><h1>CreatePDF</h1><p>HTML-first source package.</p></main>","html_output_path":"output/createpdf.html","pdf_output_path":"output/createpdf.pdf","artifact_dir":"output/createpdf-audit","bundle_output_path":"output/createpdf.okoffice-bundle.zip","renderer_backend":"auto"}'
 
 curl -s http://127.0.0.1:7331/v1/tools/pdf.workflow.createpdf/run \
   -H "content-type: application/json" \
-  -d '{"context_packet_path":"output/context.packet.json","target_profile":"technical_audit","html_output_path":"output/context-createpdf.html","pdf_output_path":"output/context-createpdf.pdf","artifact_dir":"output/context-createpdf-audit","bundle_output_path":"output/context-createpdf.agentpdf-bundle.zip","renderer_backend":"auto"}'
+  -d '{"context_packet_path":"output/context.packet.json","target_profile":"technical_audit","html_output_path":"output/context-createpdf.html","pdf_output_path":"output/context-createpdf.pdf","artifact_dir":"output/context-createpdf-audit","bundle_output_path":"output/context-createpdf.okoffice-bundle.zip","renderer_backend":"auto"}'
 ```
 
 ## MCP Example
@@ -79,7 +79,7 @@ curl -s http://127.0.0.1:7331/v1/tools/pdf.workflow.createpdf/run \
     "html_output_path": "output/createpdf.html",
     "pdf_output_path": "output/createpdf.pdf",
     "artifact_dir": "output/createpdf-audit",
-    "bundle_output_path": "output/createpdf.agentpdf-bundle.zip",
+    "bundle_output_path": "output/createpdf.okoffice-bundle.zip",
     "renderer_backend": "auto"
   }
 }
@@ -94,7 +94,7 @@ curl -s http://127.0.0.1:7331/v1/tools/pdf.workflow.createpdf/run \
     "html_output_path": "output/context-createpdf.html",
     "pdf_output_path": "output/context-createpdf.pdf",
     "artifact_dir": "output/context-createpdf-audit",
-    "bundle_output_path": "output/context-createpdf.agentpdf-bundle.zip",
+    "bundle_output_path": "output/context-createpdf.okoffice-bundle.zip",
     "renderer_backend": "auto"
   }
 }
@@ -165,7 +165,7 @@ For `pdf.workflow.createpdf` with `bundle_output_path`, the success response als
         "html_render_profile_count": 1,
         "html_layer_count": 0
       },
-      "bundle_path": "output/createpdf.agentpdf-bundle.zip",
+      "bundle_path": "output/createpdf.okoffice-bundle.zip",
       "bundle_export": {"tool": "pdf.artifacts.export_bundle"},
       "bundle_verification": {
         "tool": "pdf.artifacts.verify_bundle",
