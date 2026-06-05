@@ -1,6 +1,6 @@
 # 23 — Full Tool Status Matrix
 
-Total tools specified: **264**
+Total tools specified: **270**
 
 This matrix is the current machine-aligned public manifest. It includes the okoffice beta tool wave plus the `pdf.*` compatibility domain.
 
@@ -72,10 +72,16 @@ Implemented okoffice target snapshot lives in `schemas/office-tool-manifest.targ
 | `sheet.write.workbook` | sheet | beta | yes |
 | `sheet.validation.formulas` | sheet | beta | yes |
 | `deck.inspect.presentation` | deck | beta | yes |
+| `deck.compose.plan` | deck | beta | yes |
+| `deck.render.html` | deck | beta | yes |
+| `deck.validation.html_preview` | deck | beta | yes |
 | `deck.create.presentation` | deck | beta | yes |
+| `deck.create.from_outline` | deck | beta | yes |
 | `deck.patch.apply` | deck | beta | yes |
+| `deck.validate.presentation` | deck | beta | yes |
 | `deck.validation.contact_sheet` | deck | beta | yes |
 | `deck.validation.presentation` | deck | beta | yes |
+| `deck.export.pptx` | deck | beta | yes |
 | `office.context.build_packet` | office | beta | yes |
 | `office.extract.schema` | office | beta | yes |
 | `office.validation.package` | office | beta | yes |

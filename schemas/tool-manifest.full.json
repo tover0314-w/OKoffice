@@ -1,6 +1,6 @@
 {
   "manifest_version": "0.1-full",
-  "tool_count": 264,
+  "tool_count": 270,
   "tools": [
     {
       "name": "agent.setup.claude_code",
@@ -211,9 +211,69 @@
       "requires_model": false
     },
     {
+      "name": "deck.compose.plan",
+      "status": "beta",
+      "description": "Compose source-mapped deck Composition IR and outline JSON from an evidence workbook.",
+      "category": "deck",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "deck.render.html",
+      "status": "beta",
+      "description": "Render a deck composition plan into a self-contained offline HTML slide preview package.",
+      "category": "deck",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "deck.validation.html_preview",
+      "status": "beta",
+      "description": "Validate an HTML deck preview package for slide anchors, offline assets, placeholders, density, and taste QA baseline.",
+      "category": "deck",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
       "name": "deck.create.presentation",
       "status": "beta",
       "description": "Create an editable styled PowerPoint presentation from an evidence workbook.",
+      "category": "deck",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "deck.create.from_outline",
+      "status": "beta",
+      "description": "Create a local editable PPTX deck from a structured outline.",
       "category": "deck",
       "interfaces": [
         "cli",
@@ -231,6 +291,21 @@
       "description": "Apply a presentation text or theme patch transaction to a new PPTX output.",
       "category": "deck",
       "interfaces": [
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "deck.validate.presentation",
+      "status": "beta",
+      "description": "Validate a local PPTX package for structural integrity, safety markers, text runs, blank slides, and placeholder leakage.",
+      "category": "deck",
+      "interfaces": [
+        "cli",
         "mcp",
         "rest",
         "sdk"
@@ -258,6 +333,21 @@
       "name": "deck.validation.presentation",
       "status": "beta",
       "description": "Validate PPTX/PPTM structure, titles, notes, media refs, themes, safety markers, and render-evidence availability.",
+      "category": "deck",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "deck.export.pptx",
+      "status": "beta",
+      "description": "Export a validated HTML deck preview package into an editable PPTX with source-map lineage.",
       "category": "deck",
       "interfaces": [
         "cli",

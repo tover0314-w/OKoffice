@@ -90,10 +90,16 @@ Implemented local-first Office tools for the okoffice beta wave.
 | `sheet.write.workbook` | beta | Write a validated evidence workbook with source map, data model, and chart plan sheets. |
 | `sheet.validation.formulas` | beta | Validate workbook formulas and table/chart/model bindings with local structural checks. |
 | `deck.inspect.presentation` | beta | Inspect PPTX slides, text, notes, shapes, placeholders, charts, media references, layouts, and theme metadata. |
+| `deck.compose.plan` | beta | Compose source-mapped deck Composition IR and outline JSON from an evidence workbook. |
+| `deck.render.html` | beta | Render a deck composition plan into a self-contained offline HTML slide preview package. |
+| `deck.validation.html_preview` | beta | Validate an HTML deck preview package for slide anchors, offline assets, placeholders, density, and taste QA baseline. |
 | `deck.create.presentation` | beta | Create an editable styled PowerPoint presentation from an evidence workbook. |
+| `deck.create.from_outline` | beta | Create a local editable PPTX deck from a structured outline. |
 | `deck.patch.apply` | beta | Apply a presentation text or theme patch transaction to a new PPTX output. |
+| `deck.validate.presentation` | beta | Validate a local PPTX package for structural integrity, safety markers, text runs, blank slides, and placeholder leakage. |
 | `deck.validation.contact_sheet` | beta | Validate contact-sheet preview availability for PPTX output. |
 | `deck.validation.presentation` | beta | Validate PPTX/PPTM structure, titles, notes, media refs, themes, safety markers, and render-evidence availability. |
+| `deck.export.pptx` | beta | Export a validated HTML deck preview package into an editable PPTX with source-map lineage. |
 | `office.context.build_packet` | beta | Build a reusable cross-format context packet and source graph from local Office/PDF sources. |
 | `office.extract.schema` | beta | Extract schema-shaped rows from mixed Office/PDF sources with source refs, confidence, and warnings. |
 | `office.validation.package` | beta | Validate Office/PDF package structure, unsafe entries, macros, external relationships, and baseline safety markers. |

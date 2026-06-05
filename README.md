@@ -142,7 +142,7 @@ See [Taste-Driven HTML-First Deck Pipeline](docs/43_TASTE_DRIVEN_DECK_PIPELINE.m
 | `office.workflow.sheet_to_deck` | beta | Current local route profiles an evidence workbook and creates an editable PPTX review deck; target route adds HTML preview/contact-sheet gates. |
 | `office.workflow.board_pack` | beta | Creates a local ZIP board pack with artifacts, manifest, validation report, and delivery metadata. |
 | `office.bundle.verify` | beta | Verifies board pack ZIP manifests, validation reports, artifact members, sizes, and SHA-256 checksums. |
-| `pdf.*` compatibility | stable/beta | The full manifest currently covers 264 local PDF, Office, and agent setup tools available through `okpdf`, MCP, REST, and SDKs. |
+| `pdf.*` compatibility | stable/beta | The full manifest currently covers 270 local PDF, Office, and agent setup tools available through `okpdf`, MCP, REST, and SDKs. |
 
 The codebase still exposes the compatibility Python package as `agentpdf` and the compatibility Node package as `@okpdf/agentpdf-node`. The target package identity is OKoffice; compatibility names are preserved deliberately.
 
