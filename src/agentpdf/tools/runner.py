@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 from uuid import uuid4
 
 from agentpdf.agents.claude_code import setup_claude_code
@@ -61,6 +62,7 @@ from agentpdf.context.packet import (
     ingest_context_item,
     profile_data_source,
 )
+from agentpdf.context.web import capture_web_context
 from agentpdf.creation.agent import (
     create_pdf_from_prompt,
     create_pdf_from_template_pack,
@@ -76,6 +78,23 @@ from agentpdf.evidence.coverage import create_coverage_report
 from agentpdf.evidence.context_packet_report import create_context_packet_report
 from agentpdf.evidence.source_map import map_sources
 from agentpdf.forms.local import create_form_pdf, import_form_data_pdf, validate_form_pdf
+from agentpdf.office.bundle import export_office_bundle, verify_office_bundle
+from agentpdf.office.context import build_office_context_packet
+from agentpdf.office.deck import inspect_deck_presentation
+from agentpdf.office.deck_patch import apply_deck_patch
+from agentpdf.office.deck_validation import validate_deck_contact_sheet, validate_deck_presentation
+from agentpdf.office.deck_writer import create_deck_presentation
+from agentpdf.office.extract import extract_schema_from_context
+from agentpdf.office.inspect import inspect_office_file
+from agentpdf.office.sheet import inspect_sheet_workbook
+from agentpdf.office.validation import validate_office_package, validate_sheet_formulas
+from agentpdf.office.word import inspect_word_document
+from agentpdf.office.word_patch import apply_word_patch, plan_word_patch
+from agentpdf.office.word_validation import validate_word_document
+from agentpdf.office.word_report import create_word_report
+from agentpdf.office.workbook import write_sheet_workbook
+from agentpdf.office.workers import inspect_office_workers
+from agentpdf.office.workflows import board_pack, docset_to_sheet, sheet_to_deck
 from agentpdf.ir.semantic import (
     parse_charts_pdf,
     parse_figures_pdf,
@@ -172,6 +191,258 @@ from agentpdf.workflows.planner import plan_workflow
 from agentpdf.workflows.reporter import create_workflow_report
 from agentpdf.workflows.createpdf import createpdf_html_first
 from agentpdf.workflows.runner import run_workflow
+
+
+def run_office_inspect_file(path: str | Path) -> ToolResult:
+    return inspect_office_file(path)
+
+
+def run_word_inspect_document(path: str | Path) -> ToolResult:
+    return inspect_word_document(path)
+
+
+def run_word_validate_document(path: str | Path) -> ToolResult:
+    return validate_word_document(path)
+
+
+def run_word_create_report(
+    workbook_path: str | Path | None = None,
+    output_path: str | Path | None = None,
+    title: str | None = None,
+    profile: str = "executive_memo",
+) -> ToolResult:
+    if workbook_path is None:
+        return ToolResult(
+            job_id=_job_id(),
+            status="failed",
+            tool="word.create.report",
+            error=AgentPDFError(code="invalid_input", message="workbook_path is required."),
+            warnings=["workbook_path is required."],
+        )
+    if output_path is None:
+        return ToolResult(
+            job_id=_job_id(),
+            status="failed",
+            tool="word.create.report",
+            error=AgentPDFError(code="invalid_input", message="output_path is required."),
+            warnings=["output_path is required."],
+        )
+    return create_word_report(
+        workbook_path=workbook_path,
+        output_path=output_path,
+        title=title,
+        profile=profile,
+    )
+
+
+def run_word_patch_plan(input_path: str | Path, operations: list[dict[str, Any]] | None = None) -> ToolResult:
+    return plan_word_patch(input_path=input_path, operations=operations or [])
+
+
+def run_word_patch_apply(
+    input_path: str | Path,
+    output_path: str | Path,
+    operations: list[dict[str, Any]] | None = None,
+) -> ToolResult:
+    return apply_word_patch(input_path=input_path, output_path=output_path, operations=operations or [])
+
+
+def run_sheet_inspect_workbook(path: str | Path) -> ToolResult:
+    return inspect_sheet_workbook(path)
+
+
+def run_sheet_write_workbook(
+    evidence_path: str | Path | None = None,
+    output_path: str | Path | None = None,
+    evidence: dict[str, object] | None = None,
+) -> ToolResult:
+    if output_path is None:
+        return ToolResult(
+            job_id=_job_id(),
+            status="failed",
+            tool="sheet.write.workbook",
+            error=AgentPDFError(code="invalid_input", message="output_path is required."),
+            warnings=["output_path is required."],
+        )
+    return write_sheet_workbook(
+        evidence_path=evidence_path,
+        evidence=evidence,
+        output_path=output_path,
+    )
+
+
+def run_sheet_validate_formulas(path: str | Path) -> ToolResult:
+    return validate_sheet_formulas(path)
+
+
+def run_office_validation_package(path: str | Path) -> ToolResult:
+    return validate_office_package(path)
+
+
+def run_deck_inspect_presentation(path: str | Path) -> ToolResult:
+    return inspect_deck_presentation(path)
+
+
+def run_deck_create_presentation(
+    workbook_path: str | Path | None = None,
+    output_path: str | Path | None = None,
+    title: str | None = None,
+    profile: str = "board_review",
+    style: dict[str, Any] | None = None,
+) -> ToolResult:
+    if workbook_path is None:
+        return ToolResult(
+            job_id=_job_id(),
+            status="failed",
+            tool="deck.create.presentation",
+            error=AgentPDFError(code="invalid_input", message="workbook_path is required."),
+            warnings=["workbook_path is required."],
+        )
+    if output_path is None:
+        return ToolResult(
+            job_id=_job_id(),
+            status="failed",
+            tool="deck.create.presentation",
+            error=AgentPDFError(code="invalid_input", message="output_path is required."),
+            warnings=["output_path is required."],
+        )
+    return create_deck_presentation(
+        workbook_path=workbook_path,
+        output_path=output_path,
+        title=title,
+        profile=profile,
+        style=style,
+    )
+
+
+def run_deck_patch_apply(
+    input_path: str | Path,
+    output_path: str | Path,
+    operations: list[dict[str, Any]] | None = None,
+) -> ToolResult:
+    return apply_deck_patch(input_path=input_path, output_path=output_path, operations=operations or [])
+
+
+def run_deck_validate_contact_sheet(path: str | Path) -> ToolResult:
+    return validate_deck_contact_sheet(path)
+
+
+def run_deck_validate_presentation(path: str | Path) -> ToolResult:
+    return validate_deck_presentation(path)
+
+
+def run_office_context_build_packet(
+    files: list[str | Path | dict[str, object]],
+    output_path: str | Path | None = None,
+    title: str | None = None,
+    intent: str | None = None,
+    context_items: list[dict[str, object]] | None = None,
+) -> ToolResult:
+    return build_office_context_packet(
+        files=files,
+        context_items=context_items,
+        output_path=output_path,
+        title=title,
+        intent=intent,
+    )
+
+
+def run_office_extract_schema(
+    context_packet_path: str | Path | None = None,
+    schema: dict[str, object] | str | Path | None = None,
+    output_path: str | Path | None = None,
+    context_packet: dict[str, object] | None = None,
+) -> ToolResult:
+    return extract_schema_from_context(
+        context_packet_path=context_packet_path,
+        context_packet=context_packet,
+        schema=schema,
+        output_path=output_path,
+    )
+
+
+def run_office_workflow_docset_to_sheet(
+    files: list[str | Path | dict[str, object]],
+    schema: dict[str, object] | str | Path,
+    output_path: str | Path,
+    title: str | None = None,
+    intent: str | None = None,
+    context_output_path: str | Path | None = None,
+    evidence_output_path: str | Path | None = None,
+) -> ToolResult:
+    return docset_to_sheet(
+        files=files,
+        schema=schema,
+        output_path=output_path,
+        title=title,
+        intent=intent,
+        context_output_path=context_output_path,
+        evidence_output_path=evidence_output_path,
+    )
+
+
+def run_office_workflow_sheet_to_deck(
+    workbook_path: str | Path,
+    output_path: str | Path,
+    title: str | None = None,
+    profile: str = "board_review",
+) -> ToolResult:
+    return sheet_to_deck(
+        workbook_path=workbook_path,
+        output_path=output_path,
+        title=title,
+        profile=profile,
+    )
+
+
+def run_office_workflow_board_pack(
+    files: list[str | Path | dict[str, object]],
+    schema: dict[str, object] | str | Path,
+    out_dir: str | Path,
+    title: str | None = None,
+    profile: str = "board_review",
+    intent: str | None = None,
+    include_pdf_handout: bool = False,
+    pdf_renderer_backend: str = "auto",
+) -> ToolResult:
+    return board_pack(
+        files=files,
+        schema=schema,
+        out_dir=out_dir,
+        title=title,
+        profile=profile,
+        intent=intent,
+        include_pdf_handout=include_pdf_handout,
+        pdf_renderer_backend=pdf_renderer_backend,
+    )
+
+
+def run_office_workers_status(
+    feature_flags: dict[str, bool] | None = None,
+    command_paths: dict[str, str] | None = None,
+) -> ToolResult:
+    return inspect_office_workers(
+        feature_flags=feature_flags,
+        command_paths=command_paths,
+    )
+
+
+def run_office_bundle_export(
+    artifact_paths: list[str | Path],
+    output_path: str | Path,
+    title: str | None = None,
+    metadata: dict[str, Any] | None = None,
+) -> ToolResult:
+    return export_office_bundle(
+        artifact_paths=artifact_paths,
+        output_path=output_path,
+        title=title,
+        metadata=metadata,
+    )
+
+
+def run_office_bundle_verify(bundle_path: str | Path) -> ToolResult:
+    return verify_office_bundle(bundle_path)
 
 
 def run_inspect(path: str | Path) -> ToolResult:
@@ -379,9 +650,13 @@ def run_html_to_pdf(input_path: str | Path, output_path: str | Path) -> ToolResu
         return _failed("pdf.convert.html_to_pdf", exc.to_error())
 
 
-def run_render_html_package(package_path: str | Path, output_path: str | Path) -> ToolResult:
+def run_render_html_package(
+    package_path: str | Path,
+    output_path: str | Path,
+    renderer_backend: str = "auto",
+) -> ToolResult:
     try:
-        return render_html_package(package_path, output_path=output_path)
+        return render_html_package(package_path, output_path=output_path, renderer_backend=renderer_backend)
     except AgentPDFException as exc:
         return _failed("pdf.render.html_package", exc.to_error())
 
@@ -933,6 +1208,31 @@ def run_context_data_profile(
         )
     except AgentPDFException as exc:
         return _failed("pdf.context.data_profile", exc.to_error())
+
+
+def run_context_web_capture(
+    url: str,
+    output_path: str | Path | None = None,
+    label: str | None = None,
+    role: str = "citation",
+    context_item_id: str | None = None,
+    max_bytes: int = 1_000_000,
+    timeout_seconds: float = 10,
+    allow_private_hosts: bool = False,
+) -> ToolResult:
+    try:
+        return capture_web_context(
+            url=url,
+            output_path=output_path,
+            label=label,
+            role=role,
+            context_item_id=context_item_id,
+            max_bytes=max_bytes,
+            timeout_seconds=timeout_seconds,
+            allow_private_hosts=allow_private_hosts,
+        )
+    except AgentPDFException as exc:
+        return _failed("pdf.context.web_capture", exc.to_error())
 
 
 def run_context_image_analyze(
@@ -1516,6 +1816,7 @@ def run_patch_plan(
     output_path: str | Path,
     composition_path: str | Path | None = None,
     layer_manifest_path: str | Path | None = None,
+    artifact_graph_path: str | Path | None = None,
     reason: str | None = None,
 ) -> ToolResult:
     try:
@@ -1525,6 +1826,7 @@ def run_patch_plan(
             output_path=output_path,
             composition_path=composition_path,
             layer_manifest_path=layer_manifest_path,
+            artifact_graph_path=artifact_graph_path,
             reason=reason,
         )
     except AgentPDFException as exc:
@@ -2295,10 +2597,16 @@ def run_workflow_createpdf(
     html: str | None = None,
     html_path: str | Path | None = None,
     page_document: dict[str, object] | None = None,
+    context_packet: dict[str, object] | None = None,
+    context_packet_path: str | Path | None = None,
+    target_profile: dict[str, object] | str = "research_brief",
+    style_pack: str | None = None,
     title: str | None = None,
     artifact_dir: str | Path | None = None,
+    bundle_output_path: str | Path | None = None,
     expected_page_count: int | None = None,
     pages: str = "all",
+    renderer_backend: str = "auto",
 ) -> ToolResult:
     try:
         return createpdf_html_first(
@@ -2307,10 +2615,16 @@ def run_workflow_createpdf(
             html=html,
             html_path=html_path,
             page_document=page_document,
+            context_packet=context_packet,
+            context_packet_path=context_packet_path,
+            target_profile=target_profile,
+            style_pack=style_pack,
             title=title,
             artifact_dir=artifact_dir,
+            bundle_output_path=bundle_output_path,
             expected_page_count=expected_page_count,
             pages=pages,
+            renderer_backend=renderer_backend,
         )
     except AgentPDFException as exc:
         return _failed("pdf.workflow.createpdf", exc.to_error())

@@ -54,9 +54,15 @@ from agentpdf.tools.runner import (
     run_context_classify,
     run_context_code_snapshot,
     run_context_data_profile,
+    run_context_web_capture,
     run_context_image_analyze,
     run_context_ingest,
     run_context_packet,
+    run_deck_create_presentation,
+    run_deck_inspect_presentation,
+    run_deck_patch_apply,
+    run_deck_validate_contact_sheet,
+    run_deck_validate_presentation,
     run_validate_template_pack,
     run_evidence_cite_claims,
     run_evidence_coverage_report,
@@ -83,6 +89,16 @@ from agentpdf.tools.runner import (
     run_metadata_update_outline,
     run_merge,
     run_n_up,
+    run_office_context_build_packet,
+    run_office_extract_schema,
+    run_office_inspect_file,
+    run_office_validation_package,
+    run_office_bundle_export,
+    run_office_bundle_verify,
+    run_office_workflow_docset_to_sheet,
+    run_office_workflow_sheet_to_deck,
+    run_office_workflow_board_pack,
+    run_office_workers_status,
     run_page_numbers,
     run_patch_apply,
     run_patch_plan,
@@ -142,6 +158,9 @@ from agentpdf.tools.runner import (
     run_security_verify_redaction,
     run_security_verify_signature,
     run_select_target_profile,
+    run_sheet_inspect_workbook,
+    run_sheet_validate_formulas,
+    run_sheet_write_workbook,
     run_split,
     run_storyboard_plan,
     run_strikeout,
@@ -161,6 +180,11 @@ from agentpdf.tools.runner import (
     run_workflow_research_deck,
     run_workflow_report,
     run_workflow_run,
+    run_word_inspect_document,
+    run_word_patch_apply,
+    run_word_patch_plan,
+    run_word_validate_document,
+    run_word_create_report,
     run_xlsx_to_pdf,
 )
 
@@ -241,6 +265,14 @@ def _record_result(app: FastAPI, result: ToolResult) -> None:
         app.state.artifacts[artifact.artifact_id] = artifact
 
 
+def _truthy(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on"}
+    return bool(value)
+
+
 def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
     if tool_name == "agent.setup.claude_code":
         args_prefix = payload.get("args_prefix")
@@ -279,6 +311,133 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
             args_prefix=[str(arg) for arg in args_prefix] if isinstance(args_prefix, list) else None,
             server_name=str(payload.get("server_name", "agentpdf")),
         )
+    if tool_name == "office.inspect.file":
+        return run_office_inspect_file(payload.get("path", payload.get("input_path", "")))
+    if tool_name == "word.inspect.document":
+        return run_word_inspect_document(payload.get("path", payload.get("input_path", "")))
+    if tool_name == "word.validation.document":
+        return run_word_validate_document(payload.get("path", payload.get("input_path", "")))
+    if tool_name == "word.create.report":
+        return run_word_create_report(
+            workbook_path=payload.get("workbook_path") or payload.get("from_workbook") or payload.get("input_path"),
+            output_path=payload.get("output_path") or payload.get("output"),
+            title=payload.get("title"),
+            profile=str(payload.get("profile", "executive_memo")),
+        )
+    if tool_name == "word.patch.plan":
+        operations = payload.get("operations")
+        return run_word_patch_plan(
+            input_path=payload.get("input_path") or payload.get("path", ""),
+            operations=operations if isinstance(operations, list) else [],
+        )
+    if tool_name == "word.patch.apply":
+        operations = payload.get("operations")
+        return run_word_patch_apply(
+            input_path=payload.get("input_path") or payload.get("path", ""),
+            output_path=payload.get("output_path") or payload.get("output", ""),
+            operations=operations if isinstance(operations, list) else [],
+        )
+    if tool_name == "sheet.inspect.workbook":
+        return run_sheet_inspect_workbook(payload.get("path", payload.get("input_path", "")))
+    if tool_name == "sheet.write.workbook":
+        evidence = payload.get("evidence")
+        return run_sheet_write_workbook(
+            evidence_path=payload.get("evidence_path") or payload.get("input_path"),
+            evidence=evidence if isinstance(evidence, dict) else None,
+            output_path=payload.get("output_path") or payload.get("output"),
+        )
+    if tool_name == "sheet.validation.formulas":
+        return run_sheet_validate_formulas(payload.get("path", payload.get("input_path", "")))
+    if tool_name == "deck.inspect.presentation":
+        return run_deck_inspect_presentation(payload.get("path", payload.get("input_path", "")))
+    if tool_name == "deck.create.presentation":
+        style = payload.get("style")
+        return run_deck_create_presentation(
+            workbook_path=payload.get("workbook_path") or payload.get("from_workbook") or payload.get("input_path"),
+            output_path=payload.get("output_path") or payload.get("output"),
+            title=payload.get("title"),
+            profile=str(payload.get("profile", "board_review")),
+            style=style if isinstance(style, dict) else None,
+        )
+    if tool_name == "deck.patch.apply":
+        operations = payload.get("operations")
+        return run_deck_patch_apply(
+            input_path=payload.get("input_path") or payload.get("path", ""),
+            output_path=payload.get("output_path") or payload.get("output", ""),
+            operations=operations if isinstance(operations, list) else [],
+        )
+    if tool_name == "deck.validation.contact_sheet":
+        return run_deck_validate_contact_sheet(payload.get("path", payload.get("input_path", "")))
+    if tool_name == "deck.validation.presentation":
+        return run_deck_validate_presentation(payload.get("path", payload.get("input_path", "")))
+    if tool_name == "office.context.build_packet":
+        files = payload.get("files", payload.get("input_paths", []))
+        context_items = payload.get("context_items")
+        return run_office_context_build_packet(
+            files=files if isinstance(files, list) else [],
+            context_items=context_items if isinstance(context_items, list) else None,
+            output_path=payload.get("output_path") or payload.get("output"),
+            title=payload.get("title"),
+            intent=payload.get("intent"),
+        )
+    if tool_name == "office.extract.schema":
+        context_packet = payload.get("context_packet")
+        return run_office_extract_schema(
+            context_packet_path=payload.get("context_packet_path") or payload.get("input_path"),
+            context_packet=context_packet if isinstance(context_packet, dict) else None,
+            schema=payload.get("schema") or payload.get("schema_path"),
+            output_path=payload.get("output_path") or payload.get("output"),
+        )
+    if tool_name == "office.workflow.docset_to_sheet":
+        files = payload.get("files", payload.get("input_paths", []))
+        return run_office_workflow_docset_to_sheet(
+            files=files if isinstance(files, list) else [],
+            schema=payload.get("schema") or payload.get("schema_path"),
+            output_path=payload.get("output_path") or payload.get("output"),
+            title=payload.get("title"),
+            intent=payload.get("intent"),
+            context_output_path=payload.get("context_output_path"),
+            evidence_output_path=payload.get("evidence_output_path"),
+        )
+    if tool_name == "office.validation.package":
+        return run_office_validation_package(payload.get("path", payload.get("input_path", "")))
+    if tool_name == "office.workflow.sheet_to_deck":
+        return run_office_workflow_sheet_to_deck(
+            workbook_path=payload.get("workbook_path") or payload.get("workbook") or payload.get("input_path"),
+            output_path=payload.get("output_path") or payload.get("output"),
+            title=payload.get("title"),
+            profile=str(payload.get("profile", "board_review")),
+        )
+    if tool_name == "office.workflow.board_pack":
+        files = payload.get("files", payload.get("input_paths", []))
+        return run_office_workflow_board_pack(
+            files=files if isinstance(files, list) else [],
+            schema=payload.get("schema") or payload.get("schema_path"),
+            out_dir=payload.get("out_dir") or payload.get("output_dir") or payload.get("output_path") or payload.get("output"),
+            title=payload.get("title"),
+            profile=str(payload.get("profile", "board_review")),
+            intent=payload.get("intent"),
+            include_pdf_handout=_truthy(payload.get("include_pdf_handout")),
+            pdf_renderer_backend=str(payload.get("pdf_renderer_backend", payload.get("renderer_backend", "auto"))),
+        )
+    if tool_name == "office.workers.status":
+        feature_flags = payload.get("feature_flags")
+        command_paths = payload.get("command_paths")
+        return run_office_workers_status(
+            feature_flags=feature_flags if isinstance(feature_flags, dict) else None,
+            command_paths=command_paths if isinstance(command_paths, dict) else None,
+        )
+    if tool_name == "office.bundle.export":
+        artifact_paths = payload.get("artifact_paths", payload.get("files", []))
+        metadata = payload.get("metadata")
+        return run_office_bundle_export(
+            artifact_paths=artifact_paths if isinstance(artifact_paths, list) else [],
+            output_path=payload.get("output_path") or payload.get("output"),
+            title=payload.get("title"),
+            metadata=metadata if isinstance(metadata, dict) else None,
+        )
+    if tool_name == "office.bundle.verify":
+        return run_office_bundle_verify(payload.get("bundle_path") or payload.get("input_path", ""))
     if tool_name == "pdf.inspect.document":
         return run_inspect(payload.get("path", ""))
     if tool_name == "pdf.inspect.pages":
@@ -308,6 +467,8 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
         )
     if tool_name == "pdf.workflow.createpdf":
         page_document = payload.get("page_document")
+        context_packet = payload.get("context_packet")
+        target_profile = payload.get("target_profile") or payload.get("profile") or "research_brief"
         expected_page_count = payload.get("expected_page_count")
         return run_workflow_createpdf(
             pdf_output_path=str(payload.get("pdf_output_path", "createpdf.pdf")),
@@ -315,10 +476,16 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
             html=str(payload["html"]) if payload.get("html") is not None else None,
             html_path=payload.get("html_path") or payload.get("html_input_path"),
             page_document=page_document if isinstance(page_document, dict) else None,
+            context_packet=context_packet if isinstance(context_packet, dict) else None,
+            context_packet_path=payload.get("context_packet_path"),
+            target_profile=target_profile if isinstance(target_profile, (dict, str)) else "research_brief",
+            style_pack=str(payload["style_pack"]) if payload.get("style_pack") is not None else None,
             title=str(payload["title"]) if payload.get("title") is not None else None,
             artifact_dir=payload.get("artifact_dir"),
+            bundle_output_path=payload.get("bundle_output_path"),
             expected_page_count=expected_page_count if isinstance(expected_page_count, int) else None,
             pages=str(payload.get("pages", "all")),
+            renderer_backend=str(payload.get("renderer_backend") or payload.get("backend") or "auto"),
         )
     if tool_name == "pdf.workflow.research_deck":
         evidence_cards = payload.get("evidence_cards")
@@ -492,6 +659,7 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
         return run_render_html_package(
             payload.get("package_path") or payload.get("input_path", ""),
             output_path=payload.get("output_path", ""),
+            renderer_backend=str(payload.get("renderer_backend") or payload.get("backend") or "auto"),
         )
     if tool_name == "pdf.convert.url_to_pdf":
         return run_url_to_pdf(
@@ -499,6 +667,17 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
             output_path=payload.get("output_path", ""),
             allow_private_hosts=bool(payload.get("allow_private_hosts", False)),
             allow_file_urls=bool(payload.get("allow_file_urls", False)),
+        )
+    if tool_name == "pdf.context.web_capture":
+        return run_context_web_capture(
+            url=str(payload.get("url") or payload.get("uri") or ""),
+            output_path=payload.get("output_path"),
+            label=str(payload["label"]) if payload.get("label") is not None else None,
+            role=str(payload.get("role", "citation")),
+            context_item_id=str(payload["context_item_id"]) if payload.get("context_item_id") is not None else None,
+            max_bytes=int(payload.get("max_bytes", 1_000_000)),
+            timeout_seconds=float(payload.get("timeout_seconds", payload.get("timeout", 10))),
+            allow_private_hosts=bool(payload.get("allow_private_hosts", False)),
         )
     if tool_name == "pdf.convert.docx_to_pdf":
         return run_docx_to_pdf(
@@ -1007,6 +1186,11 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
             output_path=payload.get("output_path", ""),
             composition_path=payload.get("composition_path"),
             layer_manifest_path=payload.get("layer_manifest_path"),
+            artifact_graph_path=(
+                payload.get("artifact_graph_path")
+                or payload.get("artifact_graph")
+                or payload.get("graph_path")
+            ),
             reason=payload.get("reason"),
         )
     if tool_name == "pdf.patch.preview":

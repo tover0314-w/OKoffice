@@ -2,7 +2,7 @@
 
 okoffice's first implementation priority is local agent-callable Office tooling. Cloud workers can be added later, but CLI, MCP, REST, schemas, and SDKs must remain useful without paid services, hosted URLs, or proprietary keys.
 
-Compatibility note: the runnable implementation currently exposes PDF tools through `okpdf`, `agentpdf`, and `pdf.*`. Those names belong in compatibility docs. New agent integration docs should use okoffice target names first.
+Compatibility note: the okoffice beta CLI now exposes local setup and server commands. `okpdf`, `agentpdf`, and `pdf.*` remain compatibility names and belong in compatibility docs unless a user explicitly asks for legacy setup.
 
 ## Fast Setup
 
@@ -41,16 +41,21 @@ Agents should be able to use:
 - source maps.
 - bundles.
 
-## Target Setup Commands
+## Beta Setup Commands
 
 ```bash
 okoffice agent setup codex -o codex.mcp.json --safe-root . --json
 okoffice agent setup claude-code -o .mcp.json --safe-root . --json
-okoffice agent setup cursor -o cursor.mcp.json --safe-root . --json
 okoffice agent setup kilo-code -o kilo-code.mcp.json --safe-root . --json
 okoffice agent setup openclaw -o openclaw.mcp.json --safe-root . --json
-okoffice agent setup openai-agents -o openai-agents.tools.json --safe-root . --json
 ```
+
+The generated MCP server key defaults to `okoffice` and the command defaults to `okoffice serve --mcp`. To generate legacy configs, pass `--server-name agentpdf --command okpdf`.
+
+Planned setup generators:
+
+- Cursor.
+- OpenAI Agents.
 
 Generated MCP config shape:
 
@@ -76,12 +81,14 @@ MCP wrapper groups:
 - `deck_inspect_presentation`
 - `office_context_build_packet`
 - `office_extract_schema`
-- `sheet_create_evidence_workbook`
+- `sheet_write_workbook`
 - `word_create_report`
 - `deck_create_presentation`
 - `office_workflow_docset_to_sheet`
+- `office_validation_package`
 - `office_workflow_sheet_to_deck`
 - `office_workflow_board_pack`
+- `office_workers_status`
 - `office_patch_plan`
 - `office_patch_preview`
 - `office_patch_apply`
@@ -110,14 +117,36 @@ curl -X POST http://127.0.0.1:7331/v1/tools/office.workflow.board_pack/run \
   -H 'Content-Type: application/json' \
   -d '{
     "files": ["memo.docx", "diligence.pdf", "metrics.xlsx"],
+    "schema": {
+      "fields": [
+        {"name": "vendor", "type": "string", "aliases": ["Vendor"]},
+        {"name": "renewal_date", "type": "date", "aliases": ["Renewal date"]}
+      ]
+    },
     "out_dir": ".okoffice-out/board-pack",
-    "profile": "board_review"
+    "title": "Vendor Renewal Review",
+    "profile": "board_review",
+    "include_pdf_handout": true
   }'
 ```
 
 ## Optional Workers
 
 Agents must not assume optional workers are installed.
+
+Before using render, conversion, OCR, formula, or AI workers, agents should query the local worker contract:
+
+```bash
+okoffice workers status --json
+```
+
+The REST equivalent is:
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/office.workers.status/run \
+  -H 'Content-Type: application/json' \
+  -d '{"feature_flags": {"libreoffice": true}, "command_paths": {"libreoffice": "soffice"}}'
+```
 
 Worker adapters may include:
 

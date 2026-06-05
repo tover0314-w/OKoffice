@@ -7,9 +7,8 @@ from typing import Any
 from uuid import uuid4
 
 from agentpdf.artifacts.store import build_artifact
-from agentpdf.conversion.local import html_to_pdf
 from agentpdf.core.pdf import create_markdown_pdf, create_slide_deck_pdf
-from agentpdf.renderers.html_package import write_composition_html_package
+from agentpdf.renderers.html_package import render_html_package, write_composition_html_package
 from agentpdf.schemas.errors import AgentPDFException
 from agentpdf.schemas.models import ToolResult, ValidationReport
 from agentpdf.validation.pdf import validate_pdf
@@ -249,6 +248,7 @@ def compose_from_context(
     title: str | None = None,
     renderer: str = "markdown",
     html_output_path: str | Path | None = None,
+    renderer_backend: str = "auto",
 ) -> ToolResult:
     tool = "pdf.compose.from_context"
     packet = _load_context_packet(context_packet)
@@ -284,7 +284,41 @@ def compose_from_context(
             html_output_path=resolved_html_output,
             source_tool=tool,
         )
-        rendered = html_to_pdf(html_package["html_output_path"], output_path)
+        rendered = render_html_package(
+            html_package["html_package_manifest_path"],
+            output_path=output_path,
+            renderer_backend=renderer_backend,
+        )
+        if rendered.status == "failed":
+            return ToolResult(
+                job_id=f"job_{uuid4().hex[:16]}",
+                status="failed",
+                tool=tool,
+                artifacts=[*html_package["artifacts"], *rendered.artifacts],
+                validation=rendered.validation,
+                warnings=[*rendered.warnings, *_composition_warnings(packet)],
+                usage={
+                    "context_packet_id": packet["context_packet_id"],
+                    "target_profile": profile,
+                    "renderer": "html_package",
+                    "composition_ir": composition_ir,
+                    "source_map": source_map,
+                    "evidence_coverage": coverage,
+                    "render_plan": render_plan,
+                    "generated_markdown": markdown,
+                    "html_output_path": html_package["html_output_path"],
+                    "html_package_manifest_path": html_package["html_package_manifest_path"],
+                    "html_package_manifest": html_package["html_package_manifest"],
+                    "html_package_validation": html_package["html_package_validation"].model_dump(mode="json"),
+                    "requested_renderer_backend": rendered.usage.get("requested_renderer_backend"),
+                    "renderer_backend": rendered.usage.get("renderer_backend", {}),
+                    "render_skipped": bool(rendered.usage.get("render_skipped", False)),
+                    "render_skip_reason": rendered.usage.get("render_skip_reason"),
+                    **({"slides": slides, "slide_count": len(slides)} if slides else {}),
+                },
+                next_recommended_tools=["pdf.render.html_package"],
+                error=rendered.error,
+            )
     elif profile.get("layout_mode") == "slides":
         rendered = create_slide_deck_pdf(
             slides,
@@ -353,6 +387,10 @@ def compose_from_context(
                     "html_package_manifest_path": html_package["html_package_manifest_path"],
                     "html_package_manifest": html_package["html_package_manifest"],
                     "html_package_validation": html_package["html_package_validation"].model_dump(mode="json"),
+                    "requested_renderer_backend": rendered.usage.get("requested_renderer_backend"),
+                    "renderer_backend": rendered.usage.get("renderer_backend", {}),
+                    "render_skipped": bool(rendered.usage.get("render_skipped", False)),
+                    "render_skip_reason": rendered.usage.get("render_skip_reason"),
                 }
                 if html_package is not None
                 else {}
@@ -1415,6 +1453,8 @@ def _media_body_lines(item: dict[str, Any]) -> list[str]:
         lines.append(f"Duration: {metadata['duration_seconds']} second(s)")
     if metadata.get("transcript_char_count") is not None:
         lines.append(f"Transcript characters: {metadata['transcript_char_count']}")
+    if metadata.get("transcript_source"):
+        lines.append(f"Transcript source: `{metadata['transcript_source']}`")
     if metadata.get("chapter_count") is not None:
         lines.append(f"Chapters: {metadata['chapter_count']}")
     if metadata.get("keyframe_count") is not None:
@@ -1449,6 +1489,9 @@ def _media_render_hints(item: dict[str, Any]) -> dict[str, Any]:
         "media_kind": metadata.get("media_kind", item.get("type")),
         "duration_seconds": metadata.get("duration_seconds"),
         "transcript_char_count": metadata.get("transcript_char_count"),
+        "transcript_source": metadata.get("transcript_source"),
+        "transcript_source_path": metadata.get("transcript_source_path"),
+        "transcript_sha256": metadata.get("transcript_sha256"),
         "chapter_count": metadata.get("chapter_count"),
         "keyframe_count": metadata.get("keyframe_count"),
     }

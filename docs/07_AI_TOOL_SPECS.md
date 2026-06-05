@@ -185,7 +185,7 @@ Turn multiple Word/PDF sources into a cited Excel workbook.
 ```text
 office.context.build_packet
 -> office.ai.extract.schema
--> sheet.create.workbook
+-> sheet.write.workbook
 -> sheet.validation.formulas
 -> office.evidence.coverage
 ```
@@ -196,22 +196,22 @@ Turn a workbook into an executive PowerPoint deck.
 
 ```text
 sheet.inspect.workbook
--> sheet.extract.tables
--> deck.compose.plan
+-> sheet.validation.formulas
 -> deck.create.presentation
--> deck.validation.render_check
+-> deck.inspect.presentation
+-> deck.validation.contact_sheet (skipped when no local renderer is configured)
 ```
 
-### `office.workflow.docset_to_board_pack`
+### `office.workflow.board_pack`
 
-Turn mixed source docs into a workbook, PPT deck, Word memo, and final PDF bundle.
+Turn mixed source docs into an evidence workbook, Word memo, PowerPoint deck, and verified okoffice bundle.
 
 ```text
 office.context.build_packet
--> office.ai.extract.schema
--> sheet.create.workbook
--> deck.create.presentation
+-> office.extract.schema
+-> sheet.write.workbook
 -> word.create.report
+-> office.workflow.sheet_to_deck
 -> office.bundle.export
 -> office.bundle.verify
 ```

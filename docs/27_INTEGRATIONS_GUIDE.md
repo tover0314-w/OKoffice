@@ -17,7 +17,7 @@ Current compatibility command:
 okpdf agent setup claude-code -o .mcp.json --json
 ```
 
-Target command:
+Beta okoffice command:
 
 ```bash
 okoffice agent setup claude-code -o .mcp.json --safe-root . --json
@@ -58,13 +58,13 @@ Current:
 okpdf agent setup codex -o codex.mcp.json --safe-root . --json
 ```
 
-Target:
+Beta okoffice command:
 
 ```bash
 okoffice agent setup codex -o codex.mcp.json --safe-root . --json
 ```
 
-The same setup should be available as REST tool `agent.setup.codex`, MCP tool `agent_setup_codex`, and Node command.
+The same setup is available as REST tool `agent.setup.codex`, MCP tool `agent_setup_codex`, and Node command. The okoffice CLI defaults to MCP server key `okoffice` and command `okoffice serve --mcp`; pass `--server-name agentpdf --command okpdf` for legacy configs.
 
 ## Kilo Code / OpenClaw
 
@@ -75,7 +75,7 @@ okpdf agent setup kilo-code -o kilo-code.mcp.json --safe-root . --json
 okpdf agent setup openclaw -o openclaw.mcp.json --safe-root . --json
 ```
 
-Target:
+Beta okoffice commands:
 
 ```bash
 okoffice agent setup kilo-code -o kilo-code.mcp.json --safe-root . --json

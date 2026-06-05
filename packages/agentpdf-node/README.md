@@ -47,6 +47,20 @@ const report = await client.createMarkdownPdf({
   outputPath: ".agentpdf-out/node-report.pdf",
   stylePack: "business_report_modern",
 });
+const contextCreatePdf = await client.workflowCreatePdf({
+  contextPacketPath: ".agentpdf-out/context.packet.json",
+  targetProfile: "technical_audit",
+  stylePack: "paper_ink",
+  htmlOutputPath: ".agentpdf-out/context-createpdf.html",
+  pdfOutputPath: ".agentpdf-out/context-createpdf.pdf",
+  artifactDir: ".agentpdf-out/context-createpdf-audit",
+  bundleOutputPath: ".agentpdf-out/context-createpdf.agentpdf-bundle.zip",
+  rendererBackend: "auto",
+});
+const renderProfile = contextCreatePdf.usage.createpdf.html_render_profile_refs[0]?.render_profile_id;
+const createPdfBackend = contextCreatePdf.usage.createpdf.renderer_backend.backend_id;
+const backendRefs = contextCreatePdf.usage.createpdf.renderer_backend_refs.length;
+const graphEdges = contextCreatePdf.usage.createpdf.artifact_graph_summary.edge_count;
 const brief = await client.createFromPrompt({
   prompt: "Create a proposal about local PDF template agents.",
   outputPath: ".agentpdf-out/node-proposal.pdf",
@@ -149,9 +163,16 @@ const dataProfile = await client.dataProfile({
   outputPath: ".agentpdf-out/metrics.profile.context-item.json",
   label: "Runtime Metrics",
 });
+const webCapture = await client.contextWebCapture({
+  url: "okpdf.dev/docs/context",
+  outputPath: ".agentpdf-out/context-docs.web.context-item.json",
+  label: "Context Docs",
+  maxBytes: 1_000_000,
+});
 const agentPacket = await client.contextPacket({
   contextItems: [
     composerItem.usage.context_item,
+    webCapture.usage.context_item,
     { text: "Create a technical audit PDF from pre-ingested code evidence.", role: "brief" },
   ],
   outputPath: ".agentpdf-out/agent.context.packet.json",
@@ -174,7 +195,7 @@ const packet = await client.buildContextPacket({
       path: "examples/media/meeting-audio.mp3",
       role: "audio_context",
       label: "Meeting Audio",
-      transcript: "00:00 Kickoff\n00:12 Decision: keep the local worker boundary explicit.",
+      transcript_path: "examples/media/meeting-transcript.txt",
       duration_seconds: 42.5,
       chapters: [
         { start_seconds: 0, title: "Kickoff" },
@@ -236,7 +257,10 @@ const audit = await client.composeFromContext({
 const rerenderedAudit = await client.renderHtmlPackage({
   packagePath: ".agentpdf-out/technical-audit.html-manifest.json",
   outputPath: ".agentpdf-out/technical-audit-rendered.pdf",
+  rendererBackend: "auto",
 });
+const rendererBackend = rerenderedAudit.usage.renderer_backend.backend_id;
+const renderedWithFallback = rerenderedAudit.usage.renderer_backend.fallback;
 const deck = await client.composeFromContext({
   contextPacketPath: ".agentpdf-out/context.packet.json",
   profile: "slide_deck",
@@ -362,6 +386,7 @@ const patch = await client.patchPlan({
   ],
   outputPath: ".agentpdf-out/technical-audit.patch.json",
   compositionPath: ".agentpdf-out/technical-audit.composition.json",
+  artifactGraphPath: ".agentpdf-out/technical-audit.artifact-graph.json",
   reason: "Append structured evidence appendix.",
 });
 await client.patchPreview({
@@ -584,25 +609,28 @@ agentpdf-node create-from-template-pack examples/template-packs/local-agent-star
 agentpdf-node create-template-preview --template invoice -o invoice-preview.pdf
 agentpdf-node create-from-prompt --prompt "Create a research brief about local PDF agents." -o brief.pdf --template research_brief --style-pack paper_ink --color primary=#4f46e5
 agentpdf-node context-ingest --file src/agentpdf/compose/context.py --role code_evidence --label "Composer Source" -o composer.context-item.json
+agentpdf-node context-ingest --file examples/media/meeting-audio.mp3 --role audio_context --label "Meeting Audio" --transcript-path examples/media/meeting-transcript.txt -o meeting-audio.context-item.json
 agentpdf-node context-ingest --link okpdf.dev/docs/context --role citation --label "Context Docs" -o context-docs.context-item.json
+agentpdf-node context-web-capture okpdf.dev/docs/context --label "Context Docs" -o context-docs.web.context-item.json
 agentpdf-node code-snapshot src/agentpdf/compose/context.py --line-start 1 --line-end 80 --repository-root . -o composer.snapshot.context-item.json
 agentpdf-node data-profile examples/create-data/metrics.csv --label "Runtime Metrics" -o metrics.profile.context-item.json
 agentpdf-node context-image-analyze assets/brand/okpdf-logo.png --skip-ocr
 agentpdf-node context-packet --item-json composer.context-item.json --text "Create a technical audit PDF from pre-ingested code evidence." -o agent.context.packet.json
-agentpdf-node context-build --text "Create a technical audit PDF." --file README.md --link okpdf.dev/docs/context --item-json examples/context/media-items.json -o context.packet.json
+agentpdf-node context-build --text "Create a technical audit PDF." --file README.md --item-json context-docs.web.context-item.json --item-json examples/context/media-items.json -o context.packet.json
 agentpdf-node context-classify context.packet.json --profile technical_audit -o context.classification.json
 agentpdf-node target-profiles -o target-profiles.json
 agentpdf-node target-validate --target-profile '{"profile_id":"media_learning_deck","layout_mode":"slides","accepted_block_types":["slide","audio_reference","video_reference"],"accepted_context_types":["text","audio","video"],"validation_required":["render_check","evidence_coverage_report"]}' -o media-learning-deck.validation.json
 agentpdf-node compose-plan context.packet.json --profile technical_audit -o technical-audit.plan.json
 agentpdf-node compose-render-ir technical-audit.plan.json -o technical-audit-from-ir.pdf
 agentpdf-node compose-from-context context.packet.json --profile technical_audit -o technical-audit.pdf --renderer html --html-output technical-audit.html
-agentpdf-node render-html-package technical-audit.html-manifest.json -o technical-audit-rendered.pdf
+agentpdf-node render-html-package technical-audit.html-manifest.json -o technical-audit-rendered.pdf --renderer-backend auto
 agentpdf-node create-html-package --html "<main><h1>HTML First</h1><p>Inspectable source before PDF.</p></main>" --html-output html-first.html --title "HTML First"
-agentpdf-node render-html-package html-first.html-manifest.json -o html-first.pdf
+agentpdf-node render-html-package html-first.html-manifest.json -o html-first.pdf --renderer-backend auto
 agentpdf-node qa-visual-report --input html-first.pdf --html-package-manifest html-first.html-manifest.json --pages 1
 agentpdf-node artifact-manifest --file html-first.pdf --file html-first.html --file html-first.html-manifest.json -o html-first.artifacts.json --title "HTML First Artifacts" --metadata workflow=html-first-createpdf
 agentpdf-node artifact-graph --manifest html-first.artifacts.json -o html-first.artifact-graph.json --title "HTML First Artifact Graph"
-agentpdf-node createpdf --html "<main><h1>CreatePDF</h1><p>HTML-first workflow with audit evidence.</p></main>" --html-output createpdf.html --pdf-output createpdf.pdf --artifact-dir createpdf-audit --title "CreatePDF"
+agentpdf-node createpdf --html "<main><h1>CreatePDF</h1><p>HTML-first workflow with audit evidence.</p></main>" --html-output createpdf.html --pdf-output createpdf.pdf --artifact-dir createpdf-audit --bundle-output createpdf.agentpdf-bundle.zip --renderer-backend auto --title "CreatePDF"
+agentpdf-node createpdf --context-packet context.packet.json --profile technical_audit --style-pack paper_ink --html-output context-createpdf.html --pdf-output context-createpdf.pdf --artifact-dir context-createpdf-audit --bundle-output context-createpdf.agentpdf-bundle.zip --renderer-backend auto
 agentpdf-node authoring-plan --brief examples/research_deck_brief.json
 agentpdf-node research-plan --brief examples/research_deck_brief.json
 agentpdf-node research-source-cards --brief examples/research_deck_brief.json --sources examples/research_deck_sources.json
@@ -622,11 +650,11 @@ agentpdf-node evidence-coverage-report technical-audit.composition.json -o techn
 agentpdf-node evidence-map-sources technical-audit.composition.json --context-packet context.packet.json -o technical-audit.source-map.json
 agentpdf-node artifact-source-map --composition technical-audit.composition.json --context-packet context.packet.json -o technical-audit.artifact-source-map.json --title "Technical Audit Artifact Source Map"
 agentpdf-node evidence-cite-claims --claims claims.json --source-map technical-audit.source-map.json -o technical-audit.citations.json
-agentpdf-node patch-plan technical-audit.pdf --operations '[{"op":"append_table","title":"Runtime Metrics","columns":["metric","value"],"rows":[["latency_ms","42"]],"source_refs":["ctx_002"],"target_slot":"findings"}]' -o technical-audit.patch.json --composition technical-audit.composition.json --layers technical-audit.layers.json
+agentpdf-node patch-plan technical-audit.pdf --operations '[{"op":"append_table","title":"Runtime Metrics","columns":["metric","value"],"rows":[["latency_ms","42"]],"source_refs":["ctx_002"],"target_slot":"findings"}]' -o technical-audit.patch.json --composition technical-audit.composition.json --layers technical-audit.layers.json --artifact-graph technical-audit.artifact-graph.json
 agentpdf-node patch-preview technical-audit.patch.json -o technical-audit.patch-preview.json
 agentpdf-node patch-apply technical-audit.patch.json -o technical-audit-patched.pdf
 agentpdf-node patch-verify technical-audit.patch.json technical-audit-patched.pdf
-agentpdf-node artifact-manifest --file technical-audit-patched.pdf --file context.packet.json --file technical-audit.composition.json --file technical-audit.coverage.json --file technical-audit.source-map.json --file technical-audit.artifact-source-map.json --file technical-audit.citations.json --file technical-audit.patch.json -o technical-audit.artifacts.json --title "Technical Audit Artifacts" --metadata workflow=context-packet-patch
+agentpdf-node artifact-manifest --file technical-audit.pdf --file technical-audit.html --file technical-audit.html-manifest.json --file technical-audit-patched.pdf --file context.packet.json --file technical-audit.composition.json --file technical-audit.coverage.json --file technical-audit.source-map.json --file technical-audit.artifact-source-map.json --file technical-audit.citations.json --file technical-audit.patch.json -o technical-audit.artifacts.json --title "Technical Audit Artifacts" --metadata workflow=context-packet-patch
 agentpdf-node artifact-graph --manifest technical-audit.artifacts.json -o technical-audit.artifact-graph.json --title "Technical Audit Artifact Graph"
 agentpdf-node export-bundle --file technical-audit-patched.pdf --file context.packet.json --file technical-audit.composition.json --file technical-audit.coverage.json --file technical-audit.patch.json -o technical-audit.agentpdf-bundle.zip --title "Technical Audit Bundle" --metadata workflow=context-packet-patch
 agentpdf-node verify-bundle technical-audit.agentpdf-bundle.zip
@@ -636,6 +664,6 @@ agentpdf-node verify-bundle technical-audit.agentpdf-bundle.zip
 
 - REST-first client for local and future hosted API compatibility.
 - Typed `ToolResult`, `Artifact`, `ValidationReport`, `ToolManifest`, and tool inputs.
-- Convenience wrappers for Claude Code, Codex, Kilo Code, and OpenClaw setup, document/page inspect, workflow planning/execution/reporting, context ingest, code snapshots, data profiles, context packet building, context classification, target profile catalog/selection/validation, composition planning, IR rendering, context packet PDF/JSON audit reports, context-to-PDF composition, one-step append-only compose blocks for code/table/figure/appendix evidence, template-pack creation with slot routing evidence and `.layers.json` edit manifests, evidence coverage, artifact source map, manifest, and graph generation, patch plan/preview/apply/verify, artifact bundle export/verify, merge, reorder, insert blank pages, compression, repair/rewrite, image-to-PDF, embedded image extraction, watermark, page numbers, metadata page info, security metadata removal/redaction/verification, text/Markdown/prompt-template creation, validation/page-count checks, render/blank/redaction checks, lite parse, semantic parse hints, local semantic diff/version reports, and local RAG.
+- Convenience wrappers for Claude Code, Codex, Kilo Code, and OpenClaw setup, document/page inspect, Word document validation, deck presentation validation, workflow planning/execution/reporting, context ingest, local web capture, code snapshots, data profiles, context packet building, context classification, target profile catalog/selection/validation, composition planning, IR rendering, context packet PDF/JSON audit reports, context-to-PDF composition, one-step append-only compose blocks for code/table/figure/appendix evidence, template-pack creation with slot routing evidence and `.layers.json` edit manifests, evidence coverage, artifact source map, manifest, and graph generation, patch plan/preview/apply/verify, artifact bundle export/verify, merge, reorder, insert blank pages, compression, repair/rewrite, image-to-PDF, embedded image extraction, watermark, page numbers, metadata page info, security metadata removal/redaction/verification, text/Markdown/prompt-template creation, validation/page-count checks, render/blank/redaction checks, lite parse, semantic parse hints, local semantic diff/version reports, and local RAG.
 - Failed PDF tools still return structured failed `ToolResult` bodies instead of being hidden behind generic exceptions.
 - HTTP or non-AgentPDF failures throw `AgentPDFHttpError`.

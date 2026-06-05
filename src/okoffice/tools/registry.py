@@ -20,6 +20,7 @@ def load_okoffice_manifest() -> dict[str, Any]:
             "product": "agentpdf",
             "namespace": "pdf",
             "role": "legacy_compat",
+            "surface": "slim_summary",
         },
         "compatibility_tools": compatibility_tools,
         "summary": {
@@ -64,6 +65,7 @@ def _legacy_tool(tool: dict[str, Any]) -> dict[str, Any]:
         "implemented": bool(tool.get("implemented")),
         "compatibility_source": "agentpdf",
         "compatibility_status": str(tool.get("status") or ""),
+        "compatibility_boundary": "pdf.*",
     }
 
 

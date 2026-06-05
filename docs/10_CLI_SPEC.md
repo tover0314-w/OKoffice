@@ -38,6 +38,15 @@ okoffice inspect deck.pptx --json
 okoffice inspect packet.pdf --json
 ```
 
+Agent setup:
+
+```bash
+okoffice agent setup codex -o codex.mcp.json --safe-root . --json
+okoffice agent setup claude-code -o .mcp.json --safe-root . --json
+okoffice agent setup kilo-code -o kilo-code.mcp.json --safe-root . --json
+okoffice agent setup openclaw -o openclaw.mcp.json --safe-root . --json
+```
+
 Context and extraction:
 
 ```bash
@@ -48,8 +57,8 @@ okoffice extract schema .okoffice-out/context.json --schema examples/schemas/kpi
 Workbook:
 
 ```bash
-okoffice sheet create-workbook .okoffice-out/evidence.json -o .okoffice-out/evidence.xlsx --json
-okoffice sheet validate .okoffice-out/evidence.xlsx --json
+okoffice sheet write-workbook .okoffice-out/evidence.json -o .okoffice-out/evidence.xlsx --json
+okoffice sheet validate-formulas .okoffice-out/evidence.xlsx --json
 ```
 
 Document and deck:
@@ -57,6 +66,17 @@ Document and deck:
 ```bash
 okoffice word create-report --from-workbook .okoffice-out/evidence.xlsx -o .okoffice-out/memo.docx --json
 okoffice deck create --from-workbook .okoffice-out/evidence.xlsx --profile board_review -o .okoffice-out/board-review.pptx --json
+okoffice deck validate-contact-sheet .okoffice-out/board-review.pptx --json
+```
+
+Validation:
+
+```bash
+okoffice validation package report.docx --json
+okoffice validation package board-review.pptx --json
+okoffice word validate-document report.docx --json
+okoffice deck validate-presentation board-review.pptx --json
+okoffice deck validate-contact-sheet board-review.pptx --json
 ```
 
 Workflows:
@@ -64,7 +84,7 @@ Workflows:
 ```bash
 okoffice workflow docset-to-sheet --file memo.docx --file diligence.pdf --schema examples/schemas/kpi-review.json -o .okoffice-out/evidence.xlsx --json
 okoffice workflow sheet-to-deck --workbook .okoffice-out/evidence.xlsx --profile board_review -o .okoffice-out/board-review.pptx --json
-okoffice workflow board-pack --file memo.docx --file diligence.pdf --file metrics.xlsx --out-dir .okoffice-out/board-pack --json
+okoffice workflow board-pack --file memo.docx --file diligence.pdf --file metrics.xlsx --schema examples/schemas/kpi-review.json --out-dir .okoffice-out/board-pack --title "Board Review" --include-pdf-handout --json
 ```
 
 Patch:
@@ -88,6 +108,13 @@ Serve:
 ```bash
 okoffice serve --api --safe-root .
 okoffice serve --mcp --safe-root .
+```
+
+Workers:
+
+```bash
+okoffice workers status --json
+okoffice workers status --enable libreoffice --command libreoffice=soffice --json
 ```
 
 ## CLI Design Rules

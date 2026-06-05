@@ -4,15 +4,19 @@ from zipfile import ZIP_DEFLATED, ZipFile
 
 from fastapi.testclient import TestClient
 from jsonschema import Draft202012Validator
+from pypdf import PdfReader
 from typer.testing import CliRunner
 
 from agentpdf.artifacts import bundle as artifact_bundle
 from agentpdf.api.app import create_app
 from agentpdf.artifacts.bundle import export_artifact_bundle
 from agentpdf.cli.main import app
+from agentpdf.compose.context import compose_from_context
+from agentpdf.context.packet import build_context_packet
 from agentpdf.core.pdf import create_text_pdf
 from agentpdf.mcp import server as mcp_server
 from agentpdf.mcp.server import pdf_artifacts_export_bundle
+from agentpdf.patch.transaction import apply_patch_transaction, plan_patch_transaction
 from agentpdf.renderers.html_package import render_html_package
 from agentpdf.tools.runner import run_create_html_package
 
@@ -193,6 +197,76 @@ def test_artifact_manifest_indexes_context_packet_evidence_for_audit_graph(tmp_p
     assert graph["source_ref_index"]["ctx_code"]["context_item_type"] == "code"
 
 
+def test_artifact_manifest_and_graph_preserve_context_source_graph_sidecars(tmp_path: Path) -> None:
+    audio_path = tmp_path / "meeting.mp3"
+    audio_path.write_bytes(b"ID3 local audio fixture")
+    transcript_path = tmp_path / "meeting.transcript.txt"
+    transcript_path.write_text("00:00 Kickoff\n00:22 Decision evidence.", encoding="utf-8")
+    packet_path = tmp_path / "media.context.packet.json"
+    pdf_path = tmp_path / "media-audit.pdf"
+    manifest_path = tmp_path / "media-audit.artifacts.json"
+    graph_path = tmp_path / "media-audit.artifact-graph.json"
+
+    packet = build_context_packet(
+        [
+            {
+                "context_item_id": "ctx_audio",
+                "path": str(audio_path),
+                "role": "audio_context",
+                "label": "Meeting Audio",
+                "transcript_path": str(transcript_path),
+            }
+        ],
+        output_path=packet_path,
+        title="Media Sidecar Context",
+    ).usage["context_packet"]
+
+    compose_from_context(packet, target_profile="technical_audit", output_path=pdf_path)
+    composition_path = pdf_path.with_suffix(".composition.json")
+
+    manifest_result = artifact_bundle.create_artifact_manifest(
+        artifact_paths=[pdf_path, composition_path, packet_path],
+        output_path=manifest_path,
+        title="Media Sidecar Manifest",
+    )
+
+    manifest = manifest_result.usage["artifact_manifest"]
+    transcript_ref = next(ref for ref in manifest["source_graph_node_refs"] if ref["type"] == "transcript")
+    assert manifest["source_graph_node_count"] == 2
+    assert manifest["source_graph_edge_count"] == 1
+    assert transcript_ref["source_graph_id"] == packet["source_graph"]["source_graph_id"]
+    assert transcript_ref["source_ref"] == "ctx_audio#transcript"
+    assert transcript_ref["uri"] == transcript_path.resolve().as_posix()
+    assert transcript_ref["evidence"]["sha256"] == packet["items"][0]["metadata"]["transcript_sha256"]
+    assert manifest["source_graph_edge_refs"] == [
+        {
+            "source_graph_id": packet["source_graph"]["source_graph_id"],
+            "context_packet_id": packet["context_packet_id"],
+            "from_node_id": transcript_ref["node_id"],
+            "to_node_id": "src_001",
+            "relation": "provides_transcript_for",
+            "context_item_id": "ctx_audio",
+            "source_ref": "ctx_audio",
+            "sidecar_source_ref": "ctx_audio#transcript",
+        }
+    ]
+    assert manifest["context_evidence_index"]["ctx_audio#transcript"]["context_item_type"] == "transcript"
+    assert manifest["context_evidence_index"]["ctx_audio#transcript"]["primary_evidence_kind"] == "transcript_sidecar"
+
+    graph = artifact_bundle.build_artifact_graph(
+        artifact_manifest_path=manifest_path,
+        output_path=graph_path,
+        title="Media Sidecar Graph",
+    ).usage["artifact_graph"]
+
+    assert graph["source_graph_node_count"] == 2
+    assert graph["source_graph_edge_count"] == 1
+    assert graph["source_graph_node_index"][transcript_ref["graph_node_key"]]["source_ref"] == "ctx_audio#transcript"
+    assert graph["source_ref_index"]["ctx_audio#transcript"]["context_item_type"] == "transcript"
+    assert graph["source_ref_index"]["ctx_audio#transcript"]["primary_evidence_kind"] == "transcript_sidecar"
+    assert any(edge["relation"] == "provides_transcript_for" for edge in graph["edges"])
+
+
 def test_artifact_manifest_tracks_html_first_package_lineage(tmp_path: Path) -> None:
     html_path = tmp_path / "html-first.html"
     pdf_path = tmp_path / "html-first.pdf"
@@ -231,10 +305,49 @@ def test_artifact_manifest_tracks_html_first_package_lineage(tmp_path: Path) -> 
             "validation_status": "passed",
         }
     ]
+    assert manifest["html_render_profile_count"] == 1
+    assert manifest["html_render_profile_refs"] == [
+        {
+            "html_package_id": html_package.usage["html_package_manifest"]["html_package_id"],
+            "path": html_package_manifest_path.resolve().as_posix(),
+            "html_path": html_path.resolve().as_posix(),
+            "renderer_contract": "html-package-v0",
+            "render_profile_id": "browser_print_a4_v0",
+            "render_profile": html_package.usage["html_package_manifest"]["render_profile"],
+            "renderer_constraints": html_package.usage["html_package_manifest"]["renderer_constraints"],
+            "page_size": "A4",
+            "prefer_css_page_size": True,
+            "print_background": True,
+            "javascript_enabled": False,
+            "remote_assets_enabled": False,
+        }
+    ]
+    assert manifest["renderer_backend_count"] == 1
+    assert manifest["renderer_backend_refs"] == [
+        {
+            "html_package_id": html_package.usage["html_package_manifest"]["html_package_id"],
+            "path": html_package_manifest_path.resolve().as_posix(),
+            "html_path": html_path.resolve().as_posix(),
+            "renderer_contract": "html-package-v0",
+            "backend_id": "local_html_package_fallback",
+            "renderer_backend": rendered.usage["renderer_backend"],
+            "engine": "reportlab_text_fallback",
+            "source": "agentpdf.conversion.local.html_to_pdf",
+            "is_browser_renderer": False,
+            "fallback": True,
+            "fallback_reason": "browser_renderer_worker_unavailable",
+            "layout_fidelity": "text_layout_approximation",
+            "network": "blocked",
+            "javascript": "blocked",
+            "file_urls": "blocked",
+        }
+    ]
     html_package_entry = next(entry for entry in manifest["artifacts"] if entry["artifact_kind"] == "html_package")
     assert html_package_entry["renderer_contract"] == "html-package-v0"
     assert html_package_entry["source_format"] == "raw_html"
     assert html_package_entry["validation_status"] == "passed"
+    assert html_package_entry["render_profile_id"] == "browser_print_a4_v0"
+    assert html_package_entry["renderer_backend_id"] == "local_html_package_fallback"
 
     graph_result = artifact_bundle.build_artifact_graph(
         artifact_manifest_path=manifest_path,
@@ -244,8 +357,336 @@ def test_artifact_manifest_tracks_html_first_package_lineage(tmp_path: Path) -> 
 
     graph = graph_result.usage["artifact_graph"]
     assert graph["html_package_refs"] == manifest["html_package_refs"]
+    assert graph["html_render_profile_refs"] == manifest["html_render_profile_refs"]
+    assert graph["renderer_backend_refs"] == manifest["renderer_backend_refs"]
+    assert graph["html_render_profile_count"] == 1
+    assert graph["renderer_backend_count"] == 1
+    assert graph["html_render_profile_index"]["browser_print_a4_v0"]["page_size"] == "A4"
+    assert graph["html_render_profile_index"]["browser_print_a4_v0"]["html_package_ids"] == [
+        html_package.usage["html_package_manifest"]["html_package_id"]
+    ]
+    assert graph["renderer_backend_index"]["local_html_package_fallback"]["fallback"] is True
+    assert graph["renderer_backend_index"]["local_html_package_fallback"]["html_package_ids"] == [
+        html_package.usage["html_package_manifest"]["html_package_id"]
+    ]
+    assert any(
+        node["type"] == "renderer_backend" and node["backend_id"] == "local_html_package_fallback"
+        for node in graph["nodes"]
+    )
     relations = {edge["relation"] for edge in graph["edges"]}
-    assert {"describes_html_source", "renders_to_pdf"} <= relations
+    assert {
+        "describes_html_source",
+        "renders_to_pdf",
+        "html_package_uses_render_profile",
+        "html_package_uses_renderer_backend",
+    } <= relations
+
+
+def test_artifact_manifest_and_graph_index_html_layer_map(tmp_path: Path) -> None:
+    csv_path = tmp_path / "metrics.csv"
+    csv_path.write_text("metric,value\nlatency_ms,42\n", encoding="utf-8")
+    packet = build_context_packet(
+        [
+            {"text": "Create a technical audit PDF with traceable HTML layers.", "role": "brief"},
+            {"path": str(csv_path), "role": "data_evidence", "label": "Runtime Metrics"},
+        ],
+        output_path=tmp_path / "context.packet.json",
+        title="Layer Audit Context",
+    ).usage["context_packet"]
+    pdf_path = tmp_path / "layer-audit.pdf"
+    html_path = tmp_path / "layer-audit.html"
+    manifest_path = tmp_path / "layer-audit.artifacts.json"
+    graph_path = tmp_path / "layer-audit.artifact-graph.json"
+
+    composed = compose_from_context(
+        packet,
+        target_profile="technical_audit",
+        output_path=pdf_path,
+        renderer="html",
+        html_output_path=html_path,
+        title="Layer Audit",
+    )
+    html_manifest_path = Path(composed.usage["html_package_manifest_path"])
+    composition_path = pdf_path.with_suffix(".composition.json")
+
+    manifest_result = artifact_bundle.create_artifact_manifest(
+        artifact_paths=[html_path, html_manifest_path, pdf_path, composition_path],
+        output_path=manifest_path,
+        title="Layer Audit Manifest",
+    )
+
+    manifest = manifest_result.usage["artifact_manifest"]
+    table_layer = next(layer for layer in manifest["html_layer_refs"] if layer["block_id"] == "item_ctx_002")
+    assert manifest["html_layer_count"] == composed.usage["html_package_manifest"]["layer_map_count"]
+    assert table_layer["layer_id"] == "html_layer_item_ctx_002"
+    assert table_layer["html_package_id"] == composed.usage["html_package_manifest"]["html_package_id"]
+    assert table_layer["block_type"] == "table"
+    assert table_layer["source_refs"] == ["ctx_002"]
+    assert table_layer["anchor"]["bbox_precision"] == "estimated_dom_not_pdf_glyph_bbox"
+    html_package_entry = next(entry for entry in manifest["artifacts"] if entry["artifact_kind"] == "html_package")
+    assert html_package_entry["html_layer_count"] == manifest["html_layer_count"]
+
+    graph_result = artifact_bundle.build_artifact_graph(
+        artifact_manifest_path=manifest_path,
+        output_path=graph_path,
+        title="Layer Audit Graph",
+    )
+
+    graph = graph_result.usage["artifact_graph"]
+    assert graph["html_layer_count"] == manifest["html_layer_count"]
+    assert graph["html_layer_index"][table_layer["layer_id"]]["block_id"] == "item_ctx_002"
+    assert graph["html_layer_index"][table_layer["layer_id"]]["source_refs"] == ["ctx_002"]
+    layer_node = next(
+        node for node in graph["nodes"] if node["type"] == "html_layer" and node["layer_id"] == table_layer["layer_id"]
+    )
+    assert layer_node["anchor"]["dom_selector"] == f'[data-layer-id="{table_layer["layer_id"]}"]'
+    relations = {edge["relation"] for edge in graph["edges"]}
+    assert {"defines_html_layer", "layer_uses_source_ref"} <= relations
+
+
+def test_patch_plan_uses_artifact_graph_html_layer_evidence(tmp_path: Path) -> None:
+    csv_path = tmp_path / "metrics.csv"
+    csv_path.write_text("metric,value\nlatency_ms,42\n", encoding="utf-8")
+    packet = build_context_packet(
+        [
+            {"text": "Create a technical audit PDF with patchable HTML layers.", "role": "brief"},
+            {"path": str(csv_path), "role": "data_evidence", "label": "Runtime Metrics"},
+        ],
+        output_path=tmp_path / "context.packet.json",
+        title="Patchable Layer Context",
+    ).usage["context_packet"]
+    pdf_path = tmp_path / "patchable-layer.pdf"
+    html_path = tmp_path / "patchable-layer.html"
+    manifest_path = tmp_path / "patchable-layer.artifacts.json"
+    graph_path = tmp_path / "patchable-layer.artifact-graph.json"
+    patch_path = tmp_path / "patchable-layer.patch.json"
+
+    composed = compose_from_context(
+        packet,
+        target_profile="technical_audit",
+        output_path=pdf_path,
+        renderer="html",
+        html_output_path=html_path,
+        title="Patchable Layer",
+    )
+    html_manifest_path = Path(composed.usage["html_package_manifest_path"])
+    composition_path = pdf_path.with_suffix(".composition.json")
+    artifact_manifest = artifact_bundle.create_artifact_manifest(
+        artifact_paths=[html_path, html_manifest_path, pdf_path, composition_path],
+        output_path=manifest_path,
+        title="Patchable Layer Manifest",
+    ).usage["artifact_manifest"]
+    table_layer = next(layer for layer in artifact_manifest["html_layer_refs"] if layer["block_id"] == "item_ctx_002")
+    artifact_bundle.build_artifact_graph(
+        artifact_manifest_path=manifest_path,
+        output_path=graph_path,
+        title="Patchable Layer Graph",
+    )
+
+    result = plan_patch_transaction(
+        input_path=pdf_path,
+        operations=[
+            {
+                "op": "regenerate_block",
+                "title": "Refresh Runtime Metrics",
+                "replacement_markdown": "## Runtime Metrics\n\nLatency evidence was refreshed from the source table.",
+                "source_refs": ["ctx_002"],
+                "html_layer_id": table_layer["layer_id"],
+            }
+        ],
+        output_path=patch_path,
+        composition_path=composition_path,
+        artifact_graph_path=graph_path,
+    )
+
+    manifest = result.usage["patch_manifest"]
+    operation = manifest["operations"][0]
+    html_layer_evidence = operation["html_layer_evidence"][0]
+    html_layer_map = manifest["operation_html_layer_map"][0]
+    assert result.status == "succeeded"
+    assert manifest["artifact_graph_path"] == graph_path.resolve().as_posix()
+    assert manifest["html_layer_ref_validation"]["status"] == "passed"
+    assert manifest["html_layer_ref_validation"]["requested_html_layer_ids"] == [table_layer["layer_id"]]
+    assert operation["target_html_layer_refs"] == {"html_layer_ids": [table_layer["layer_id"]]}
+    assert html_layer_evidence["layer_id"] == table_layer["layer_id"]
+    assert html_layer_evidence["block_id"] == "item_ctx_002"
+    assert html_layer_evidence["source_refs"] == ["ctx_002"]
+    assert html_layer_evidence["anchor"]["bbox_precision"] == "estimated_dom_not_pdf_glyph_bbox"
+    assert html_layer_map["matched_html_layer_count"] == 1
+    assert html_layer_map["matched_html_layers"][0]["layer_id"] == table_layer["layer_id"]
+
+
+def test_patch_apply_rerenders_html_source_for_html_layer_regeneration(tmp_path: Path) -> None:
+    csv_path = tmp_path / "metrics.csv"
+    csv_path.write_text("metric,value\nlatency_ms,42\n", encoding="utf-8")
+    packet = build_context_packet(
+        [
+            {"text": "Create a technical audit PDF with HTML source patching.", "role": "brief"},
+            {"path": str(csv_path), "role": "data_evidence", "label": "Runtime Metrics"},
+        ],
+        output_path=tmp_path / "context.packet.json",
+        title="HTML Apply Context",
+    ).usage["context_packet"]
+    pdf_path = tmp_path / "html-apply.pdf"
+    html_path = tmp_path / "html-apply.html"
+    manifest_path = tmp_path / "html-apply.artifacts.json"
+    graph_path = tmp_path / "html-apply.artifact-graph.json"
+    patch_path = tmp_path / "html-apply.patch.json"
+    patched_pdf_path = tmp_path / "html-apply-patched.pdf"
+    replacement = "HTML layer replacement rendered from ctx_002."
+
+    composed = compose_from_context(
+        packet,
+        target_profile="technical_audit",
+        output_path=pdf_path,
+        renderer="html",
+        html_output_path=html_path,
+        title="HTML Apply",
+    )
+    html_manifest_path = Path(composed.usage["html_package_manifest_path"])
+    composition_path = pdf_path.with_suffix(".composition.json")
+    artifact_manifest = artifact_bundle.create_artifact_manifest(
+        artifact_paths=[html_path, html_manifest_path, pdf_path, composition_path],
+        output_path=manifest_path,
+        title="HTML Apply Manifest",
+    ).usage["artifact_manifest"]
+    table_layer = next(layer for layer in artifact_manifest["html_layer_refs"] if layer["block_id"] == "item_ctx_002")
+    artifact_bundle.build_artifact_graph(
+        artifact_manifest_path=manifest_path,
+        output_path=graph_path,
+        title="HTML Apply Graph",
+    )
+    plan_patch_transaction(
+        input_path=pdf_path,
+        operations=[
+            {
+                "op": "regenerate_block",
+                "title": "Refresh Runtime Metrics",
+                "replacement_markdown": f"## Runtime Metrics\n\n{replacement}",
+                "source_refs": ["ctx_002"],
+                "html_layer_id": table_layer["layer_id"],
+            }
+        ],
+        output_path=patch_path,
+        composition_path=composition_path,
+        artifact_graph_path=graph_path,
+    )
+
+    result = apply_patch_transaction(patch_path, output_path=patched_pdf_path)
+
+    html_layer_patch = result.usage["html_layer_patch"]
+    patched_html_path = Path(html_layer_patch["html_output_path"])
+    patched_manifest_path = Path(html_layer_patch["html_package_manifest_path"])
+    patched_text = "\n".join(page.extract_text() or "" for page in PdfReader(patched_pdf_path).pages)
+    assert result.status == "succeeded"
+    assert result.usage["patch_manifest"]["apply_mode"] == "html_layer_rerender"
+    assert result.usage["patch_manifest"]["operations"][0]["regeneration_policy"]["actual_effect"] == "html_layer_rerender"
+    assert html_layer_patch["rewritten_layer_ids"] == [table_layer["layer_id"]]
+    assert patched_html_path.exists()
+    assert patched_manifest_path.exists()
+    assert replacement in patched_html_path.read_text(encoding="utf-8")
+    assert replacement not in html_path.read_text(encoding="utf-8")
+    assert replacement in patched_text
+    assert result.usage["input_unchanged"] is True
+
+
+def test_artifact_graph_links_html_layer_rerender_patch_outputs(tmp_path: Path) -> None:
+    csv_path = tmp_path / "metrics.csv"
+    csv_path.write_text("metric,value\nlatency_ms,42\n", encoding="utf-8")
+    packet = build_context_packet(
+        [
+            {"text": "Create a technical audit PDF with HTML rerender lineage.", "role": "brief"},
+            {"path": str(csv_path), "role": "data_evidence", "label": "Runtime Metrics"},
+        ],
+        output_path=tmp_path / "context.packet.json",
+        title="HTML Lineage Context",
+    ).usage["context_packet"]
+    pdf_path = tmp_path / "html-lineage.pdf"
+    html_path = tmp_path / "html-lineage.html"
+    source_manifest_path = tmp_path / "html-lineage.artifacts.json"
+    source_graph_path = tmp_path / "html-lineage.artifact-graph.json"
+    patch_path = tmp_path / "html-lineage.patch.json"
+    patched_pdf_path = tmp_path / "html-lineage-patched.pdf"
+    output_manifest_path = tmp_path / "html-lineage-patched.artifacts.json"
+    output_graph_path = tmp_path / "html-lineage-patched.artifact-graph.json"
+
+    composed = compose_from_context(
+        packet,
+        target_profile="technical_audit",
+        output_path=pdf_path,
+        renderer="html",
+        html_output_path=html_path,
+        title="HTML Lineage",
+    )
+    html_manifest_path = Path(composed.usage["html_package_manifest_path"])
+    composition_path = pdf_path.with_suffix(".composition.json")
+    source_manifest = artifact_bundle.create_artifact_manifest(
+        artifact_paths=[html_path, html_manifest_path, pdf_path, composition_path],
+        output_path=source_manifest_path,
+        title="HTML Lineage Source Manifest",
+    ).usage["artifact_manifest"]
+    table_layer = next(layer for layer in source_manifest["html_layer_refs"] if layer["block_id"] == "item_ctx_002")
+    artifact_bundle.build_artifact_graph(
+        artifact_manifest_path=source_manifest_path,
+        output_path=source_graph_path,
+        title="HTML Lineage Source Graph",
+    )
+    plan_patch_transaction(
+        input_path=pdf_path,
+        operations=[
+            {
+                "op": "regenerate_block",
+                "title": "Refresh Runtime Metrics",
+                "replacement_markdown": "## Runtime Metrics\n\nLineage evidence for patched HTML.",
+                "source_refs": ["ctx_002"],
+                "html_layer_id": table_layer["layer_id"],
+            }
+        ],
+        output_path=patch_path,
+        composition_path=composition_path,
+        artifact_graph_path=source_graph_path,
+    )
+    apply_patch_transaction(patch_path, output_path=patched_pdf_path)
+    patch_applied_path = patched_pdf_path.with_suffix(".patch-applied.json")
+    patched_html_path = patched_pdf_path.with_suffix(".html")
+    patched_html_manifest_path = patched_html_path.with_suffix(".html-manifest.json")
+
+    manifest = artifact_bundle.create_artifact_manifest(
+        artifact_paths=[
+            pdf_path,
+            html_path,
+            html_manifest_path,
+            patch_path,
+            patched_pdf_path,
+            patched_html_path,
+            patched_html_manifest_path,
+            patch_applied_path,
+        ],
+        output_path=output_manifest_path,
+        title="HTML Lineage Patched Manifest",
+    ).usage["artifact_manifest"]
+    graph = artifact_bundle.build_artifact_graph(
+        artifact_manifest_path=output_manifest_path,
+        output_path=output_graph_path,
+        title="HTML Lineage Patched Graph",
+    ).usage["artifact_graph"]
+
+    patch_ref = manifest["html_layer_patch_refs"][0]
+    assert manifest["html_layer_patch_count"] == 1
+    assert patch_ref["patch_applied_path"] == patch_applied_path.resolve().as_posix()
+    assert patch_ref["output_path"] == patched_pdf_path.resolve().as_posix()
+    assert patch_ref["html_output_path"] == patched_html_path.resolve().as_posix()
+    assert patch_ref["html_package_manifest_path"] == patched_html_manifest_path.resolve().as_posix()
+    assert patch_ref["rewritten_layer_ids"] == [table_layer["layer_id"]]
+    assert graph["html_layer_patch_count"] == 1
+    relations = {edge["relation"] for edge in graph["edges"]}
+    assert {
+        "patch_rerenders_pdf",
+        "patch_writes_html_source",
+        "patch_writes_html_package",
+        "patch_rewrites_html_layer",
+    } <= relations
+    assert graph["html_layer_patch_refs"][0]["patch_id"].startswith("patch_")
 
 
 def test_artifact_manifest_cli_api_and_mcp_are_exposed(tmp_path: Path) -> None:

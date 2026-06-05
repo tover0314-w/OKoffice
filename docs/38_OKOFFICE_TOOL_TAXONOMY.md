@@ -138,8 +138,7 @@ Inspect/extract:
 
 Create/edit:
 
-- `sheet.create.workbook`
-- `sheet.create.evidence_workbook`
+- `sheet.write.workbook`
 - `sheet.create.financial_model`
 - `sheet.patch.cells`
 - `sheet.patch.table`
@@ -181,6 +180,7 @@ Create/edit:
 Validate/review:
 
 - `deck.validation.package`
+- `deck.validation.presentation`
 - `deck.validation.contact_sheet`
 - `deck.validation.placeholders`
 - `deck.validation.notes`
@@ -210,16 +210,18 @@ Build in this order:
 
 1. `office.inspect.file`
 2. `word.inspect.document`
-3. `sheet.inspect.workbook`
-4. `deck.inspect.presentation`
-5. `office.context.build_packet`
-6. `office.extract.schema`
-7. `sheet.create.evidence_workbook`
-8. `sheet.validation.formulas`
-9. `deck.create.presentation`
-10. `deck.validation.contact_sheet`
-11. `word.create.report`
-12. `office.bundle.export`
-13. `office.bundle.verify`
+3. `word.validation.document`
+4. `sheet.inspect.workbook`
+5. `deck.inspect.presentation`
+6. `office.context.build_packet`
+7. `office.extract.schema`
+8. `sheet.write.workbook`
+9. `sheet.validation.formulas`
+10. `deck.create.presentation`
+11. `deck.validation.presentation`
+12. `deck.validation.contact_sheet`
+13. `word.create.report`
+14. `office.bundle.export`
+15. `office.bundle.verify`
 
 This wave favors reliable inspect/extract/validate workflows before ambitious editing.

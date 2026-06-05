@@ -5,6 +5,7 @@ from PIL import Image
 from typer.testing import CliRunner
 
 from agentpdf.cli.main import app
+from agentpdf.context.packet import build_context_packet
 from agentpdf.tools.registry import load_tool_manifest
 
 
@@ -207,6 +208,7 @@ def test_cli_workflow_research_deck(tmp_path: Path) -> None:
 def test_cli_createpdf_html_first_workflow(tmp_path: Path) -> None:
     html_output = tmp_path / "createpdf.html"
     pdf_output = tmp_path / "createpdf.pdf"
+    bundle_output = tmp_path / "createpdf.agentpdf-bundle.zip"
 
     result = runner.invoke(
         app,
@@ -220,6 +222,10 @@ def test_cli_createpdf_html_first_workflow(tmp_path: Path) -> None:
             str(pdf_output),
             "--artifact-dir",
             str(tmp_path / "audit"),
+            "--bundle-output",
+            str(bundle_output),
+            "--renderer-backend",
+            "local_html_package_fallback",
             "--json",
         ],
     )
@@ -228,7 +234,53 @@ def test_cli_createpdf_html_first_workflow(tmp_path: Path) -> None:
     payload = json.loads(result.stdout)
     assert payload["tool"] == "pdf.workflow.createpdf"
     assert pdf_output.exists()
+    assert bundle_output.exists()
     assert Path(payload["usage"]["createpdf"]["qa_report_path"]).exists()
+    assert payload["usage"]["createpdf"]["bundle_verification"]["validation"]["status"] == "passed"
+
+
+def test_cli_createpdf_accepts_context_packet_and_profile(tmp_path: Path) -> None:
+    packet_path = tmp_path / "cli.context.packet.json"
+    build_context_packet(
+        [{"text": "Create a CLI technical audit PDF.", "role": "brief"}],
+        output_path=packet_path,
+        title="CLI CreatePDF Context",
+    )
+    html_output = tmp_path / "cli-context.html"
+    pdf_output = tmp_path / "cli-context.pdf"
+    bundle_output = tmp_path / "cli-context.agentpdf-bundle.zip"
+
+    result = runner.invoke(
+        app,
+        [
+            "createpdf",
+            "--context-packet",
+            str(packet_path),
+            "--profile",
+            "technical_audit",
+            "--html-output",
+            str(html_output),
+            "--pdf-output",
+            str(pdf_output),
+            "--artifact-dir",
+            str(tmp_path / "audit"),
+            "--bundle-output",
+            str(bundle_output),
+            "--renderer-backend",
+            "local_html_package_fallback",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["tool"] == "pdf.workflow.createpdf"
+    assert payload["usage"]["createpdf"]["source_format"] == "context_packet"
+    assert payload["usage"]["createpdf"]["target_profile"]["profile_id"] == "technical_audit"
+    assert payload["usage"]["createpdf"]["requested_renderer_backend"] == "local_html_package_fallback"
+    assert payload["usage"]["createpdf"]["bundle_verification"]["validation"]["status"] == "passed"
+    assert pdf_output.exists()
+    assert bundle_output.exists()
 
 
 def test_cli_create_html_package_accepts_raw_html(tmp_path: Path) -> None:

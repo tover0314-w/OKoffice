@@ -121,7 +121,7 @@ okoffice/
         report.py
         docset_to_sheet.py
         sheet_to_deck.py
-        docset_to_board_pack.py
+        board_pack.py
       workers/
         __init__.py
         base.py
@@ -179,7 +179,7 @@ Target files to add during okoffice migration:
 - `src/okoffice/validation/deck.py`
 - `src/okoffice/workflows/docset_to_sheet.py`
 - `src/okoffice/workflows/sheet_to_deck.py`
-- `src/okoffice/workflows/docset_to_board_pack.py`
+- `src/okoffice/workflows/board_pack.py`
 - `src/okoffice/workers/officecli.py`
 - `schemas/office-tool-manifest.target.json`
 - `schemas/office-ir.schema.json`

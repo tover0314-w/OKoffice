@@ -1,15 +1,15 @@
 # 23 — Full Tool Status Matrix
 
-Total tools specified: **241**
+Total tools specified: **264**
 
-This matrix is the current machine-aligned `pdf.*` compatibility manifest. It should remain complete and unchanged until the okoffice tool manifest is added.
+This matrix is the current machine-aligned public manifest. It includes the okoffice beta tool wave plus the `pdf.*` compatibility domain.
 
-This is not the okoffice public product map. The okoffice product map lives in `docs/38_OKOFFICE_TOOL_TAXONOMY.md` and is organized around Word, Excel, PowerPoint, PDF, bundles, source graphs, validation, and workflows.
+This is the implementation status matrix, not the full okoffice product map. The okoffice product map lives in `docs/38_OKOFFICE_TOOL_TAXONOMY.md` and is organized around Word, Excel, PowerPoint, PDF, bundles, source graphs, validation, and workflows.
 
 okoffice migration notes:
 
-- `pdf.*` remains the first implemented domain and current CLI/MCP/REST compatibility surface.
-- Future `office.*` tools should be added to a new okoffice manifest before they appear in this table.
+- `pdf.*` remains the compatibility domain and current broad CLI/MCP/REST surface.
+- Implemented okoffice beta tools appear in this table and in the target okoffice manifest.
 - Target domains include `office.inspect.*`, `word.*`, `sheet.*`, `deck.*`, `office.context.*`, `office.evidence.*`, `office.workflow.*`, `office.validation.*`, and `office.bundle.*`.
 - The intended product is multi-format Office infrastructure; this table records the currently implemented PDF-domain foundation.
 
@@ -19,6 +19,29 @@ okoffice migration notes:
 | `agent.setup.codex` | agent | beta | yes |
 | `agent.setup.kilo_code` | agent | beta | yes |
 | `agent.setup.openclaw` | agent | beta | yes |
+| `office.inspect.file` | office | beta | yes |
+| `word.inspect.document` | word | beta | yes |
+| `word.validation.document` | word | beta | yes |
+| `word.create.report` | word | beta | yes |
+| `word.patch.plan` | word | beta | yes |
+| `word.patch.apply` | word | beta | yes |
+| `sheet.inspect.workbook` | sheet | beta | yes |
+| `sheet.write.workbook` | sheet | beta | yes |
+| `sheet.validation.formulas` | sheet | beta | yes |
+| `deck.inspect.presentation` | deck | beta | yes |
+| `deck.create.presentation` | deck | beta | yes |
+| `deck.patch.apply` | deck | beta | yes |
+| `deck.validation.contact_sheet` | deck | beta | yes |
+| `deck.validation.presentation` | deck | beta | yes |
+| `office.context.build_packet` | office | beta | yes |
+| `office.extract.schema` | office | beta | yes |
+| `office.validation.package` | office | beta | yes |
+| `office.workflow.docset_to_sheet` | office | beta | yes |
+| `office.workflow.sheet_to_deck` | office | beta | yes |
+| `office.workflow.board_pack` | office | beta | yes |
+| `office.workers.status` | office | beta | yes |
+| `office.bundle.export` | office | beta | yes |
+| `office.bundle.verify` | office | beta | yes |
 | `pdf.context.ingest` | context | beta | yes |
 | `pdf.context.packet` | context | beta | yes |
 | `pdf.context.build_packet` | context | beta | yes |

@@ -84,7 +84,7 @@ Borrow from the Spreadsheets skill:
 
 Target tools:
 
-- `sheet.create.workbook`
+- `sheet.write.workbook`
 - `sheet.extract.tables`
 - `sheet.validation.formulas`
 - `sheet.review.model`
@@ -102,6 +102,7 @@ Target tools:
 
 - `deck.create.presentation`
 - `deck.compose.plan`
+- `deck.validation.presentation`
 - `deck.validation.contact_sheet`
 - `deck.review.story`
 

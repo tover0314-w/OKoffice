@@ -64,13 +64,13 @@ multiple Word/PDF sources -> cited Excel workbook -> polished PowerPoint deck ->
 | Extract | `word.extract.tables`, `sheet.extract.formulas`, `deck.extract.notes`, `office.extract.schema` |
 | Create | `word.create.report`, `sheet.create.evidence_workbook`, `deck.create.presentation`, `pdf.create.handout` |
 | Patch | `office.patch.plan`, `word.patch.apply`, `sheet.patch.apply`, `deck.patch.apply` |
-| Validate | `word.validation.document`, `sheet.validation.formulas`, `deck.validation.contact_sheet`, `pdf.validation.render_check` |
+| Validate | `word.validation.document`, `sheet.validation.formulas`, `deck.validation.presentation`, `deck.validation.contact_sheet`, `pdf.validation.render_check` |
 | Evidence | `office.context.build_packet`, `office.evidence.coverage`, `office.source_map.create` |
 | Workflow | `office.workflow.docset_to_sheet`, `office.workflow.sheet_to_deck`, `office.workflow.board_pack` |
 | Bundle | `office.bundle.export`, `office.bundle.verify` |
 | Agents | `office.agent.setup.codex`, `office.agent.setup.claude_code`, `office.agent.setup.cursor` |
 
-The current machine manifest still contains **241** public `pdf.*` and agent setup tools. That manifest is preserved for compatibility while the okoffice namespace is introduced deliberately.
+The current machine manifest contains **264** public tools: the okoffice beta wave plus the preserved `pdf.*` and agent setup compatibility surface.
 
 ## What Works Today
 
@@ -121,12 +121,13 @@ okoffice tools list --json
 okoffice inspect report.docx --json
 okoffice inspect model.xlsx --json
 okoffice inspect deck.pptx --json
-okoffice workflow docset-to-sheet sources/*.docx sources/*.pdf -o .okoffice-out/evidence.xlsx --json
-okoffice workflow sheet-to-deck .okoffice-out/evidence.xlsx -o .okoffice-out/board-deck.pptx --json
+okoffice workflow docset-to-sheet --file sources/report.docx --file sources/context.pdf --schema examples/schemas/vendor-renewal.json -o .okoffice-out/evidence.xlsx --json
+okoffice workflow sheet-to-deck --workbook .okoffice-out/evidence.xlsx -o .okoffice-out/board-deck.pptx --json
+okoffice workflow board-pack --file sources/report.docx --file sources/context.pdf --schema examples/schemas/vendor-renewal.json --out-dir .okoffice-out/board-pack --include-pdf-handout --json
 okoffice bundle verify .okoffice-out/board-pack.okoffice.zip --json
 ```
 
-The target commands document product direction; current runnable commands are the compatibility `okpdf` commands until the okoffice CLI is implemented.
+The okoffice commands above are beta surfaces. Compatibility `okpdf` commands remain supported while the package keeps the `agentpdf` import path for migration safety.
 
 ## Agent Infrastructure
 

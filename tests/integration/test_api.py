@@ -4,6 +4,7 @@ from PIL import Image
 from fastapi.testclient import TestClient
 
 from agentpdf.api.app import create_app
+from agentpdf.context.packet import build_context_packet
 from agentpdf.tools.registry import load_tool_manifest
 
 
@@ -215,6 +216,7 @@ def test_api_runs_workflow_research_deck_tool(tmp_path: Path) -> None:
 def test_api_runs_workflow_createpdf_tool(tmp_path: Path) -> None:
     client = TestClient(create_app())
     pdf_output = tmp_path / "api-createpdf.pdf"
+    bundle_output = tmp_path / "api-createpdf.agentpdf-bundle.zip"
 
     response = client.post(
         "/v1/tools/pdf.workflow.createpdf/run",
@@ -223,14 +225,48 @@ def test_api_runs_workflow_createpdf_tool(tmp_path: Path) -> None:
             "html_output_path": str(tmp_path / "api-createpdf.html"),
             "pdf_output_path": str(pdf_output),
             "artifact_dir": str(tmp_path / "audit"),
+            "bundle_output_path": str(bundle_output),
+            "renderer_backend": "local_html_package_fallback",
         },
     )
 
     assert response.status_code == 200
     payload = response.json()
     assert payload["tool"] == "pdf.workflow.createpdf"
+    assert payload["usage"]["createpdf"]["requested_renderer_backend"] == "local_html_package_fallback"
     assert pdf_output.exists()
+    assert bundle_output.exists()
     assert Path(payload["usage"]["createpdf"]["artifact_graph_path"]).exists()
+    assert payload["usage"]["createpdf"]["bundle_verification"]["validation"]["status"] == "passed"
+
+
+def test_api_workflow_createpdf_accepts_context_packet_and_profile(tmp_path: Path) -> None:
+    client = TestClient(create_app())
+    packet_path = tmp_path / "api.context.packet.json"
+    build_context_packet(
+        [{"text": "Create a REST technical audit PDF.", "role": "brief"}],
+        output_path=packet_path,
+        title="API CreatePDF Context",
+    )
+    pdf_output = tmp_path / "api-context.pdf"
+
+    response = client.post(
+        "/v1/tools/pdf.workflow.createpdf/run",
+        json={
+            "context_packet_path": str(packet_path),
+            "profile": "technical_audit",
+            "html_output_path": str(tmp_path / "api-context.html"),
+            "pdf_output_path": str(pdf_output),
+            "artifact_dir": str(tmp_path / "audit"),
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "succeeded"
+    assert payload["usage"]["createpdf"]["source_format"] == "context_packet"
+    assert payload["usage"]["createpdf"]["target_profile"]["profile_id"] == "technical_audit"
+    assert pdf_output.exists()
 
 
 def test_api_runs_workflow_research_deck_execute_mode(tmp_path: Path) -> None:

@@ -9,6 +9,29 @@ from agentpdf.schemas.models import AgentPDFError, Artifact, ToolResult
 
 
 SUPPORTED_LOCAL_WORKFLOW_TOOLS = {
+    "office.inspect.file",
+    "word.inspect.document",
+    "word.validation.document",
+    "word.create.report",
+    "word.patch.plan",
+    "word.patch.apply",
+    "sheet.inspect.workbook",
+    "sheet.write.workbook",
+    "sheet.validation.formulas",
+    "deck.inspect.presentation",
+    "deck.create.presentation",
+    "deck.patch.apply",
+    "deck.validation.contact_sheet",
+    "deck.validation.presentation",
+    "office.context.build_packet",
+    "office.extract.schema",
+    "office.validation.package",
+    "office.workflow.docset_to_sheet",
+    "office.workflow.sheet_to_deck",
+    "office.workflow.board_pack",
+    "office.workers.status",
+    "office.bundle.export",
+    "office.bundle.verify",
     "pdf.inspect.document",
     "pdf.inspect.pages",
     "pdf.organize.merge",
@@ -319,6 +342,7 @@ def _run_local_step(tool: str, payload: dict[str, Any]) -> ToolResult:
         return runner.run_render_html_package(
             package_path=payload.get("package_path", payload.get("input_path", "")),
             output_path=payload.get("output_path", "deck.pdf"),
+            renderer_backend=str(payload.get("renderer_backend") or payload.get("backend") or "auto"),
         )
     if tool == "pdf.qa.visual_report":
         expected_page_count, error = _coerce_optional_int(
@@ -351,9 +375,138 @@ def _run_local_step(tool: str, payload: dict[str, Any]) -> ToolResult:
             page_document=page_document if isinstance(page_document, dict) else None,
             title=str(payload["title"]) if payload.get("title") is not None else None,
             artifact_dir=payload.get("artifact_dir"),
+            bundle_output_path=payload.get("bundle_output_path"),
             expected_page_count=expected_page_count,
             pages=str(payload.get("pages", "all")),
+            renderer_backend=str(payload.get("renderer_backend") or payload.get("backend") or "auto"),
         )
+    if tool == "office.inspect.file":
+        return runner.run_office_inspect_file(payload.get("path", payload.get("input_path", "")))
+    if tool == "word.inspect.document":
+        return runner.run_word_inspect_document(payload.get("path", payload.get("input_path", "")))
+    if tool == "word.validation.document":
+        return runner.run_word_validate_document(payload.get("path", payload.get("input_path", "")))
+    if tool == "word.create.report":
+        return runner.run_word_create_report(
+            workbook_path=payload.get("workbook_path") or payload.get("from_workbook") or payload.get("input_path"),
+            output_path=payload.get("output_path") or payload.get("output"),
+            title=payload.get("title"),
+            profile=str(payload.get("profile", "executive_memo")),
+        )
+    if tool == "word.patch.plan":
+        operations = payload.get("operations")
+        return runner.run_word_patch_plan(
+            input_path=payload.get("input_path") or payload.get("path", ""),
+            operations=operations if isinstance(operations, list) else [],
+        )
+    if tool == "word.patch.apply":
+        operations = payload.get("operations")
+        return runner.run_word_patch_apply(
+            input_path=payload.get("input_path") or payload.get("path", ""),
+            output_path=payload.get("output_path") or payload.get("output", ""),
+            operations=operations if isinstance(operations, list) else [],
+        )
+    if tool == "sheet.inspect.workbook":
+        return runner.run_sheet_inspect_workbook(payload.get("path", payload.get("input_path", "")))
+    if tool == "sheet.write.workbook":
+        evidence = payload.get("evidence")
+        return runner.run_sheet_write_workbook(
+            evidence_path=payload.get("evidence_path") or payload.get("input_path"),
+            evidence=evidence if isinstance(evidence, dict) else None,
+            output_path=payload.get("output_path") or payload.get("output"),
+        )
+    if tool == "sheet.validation.formulas":
+        return runner.run_sheet_validate_formulas(payload.get("path", payload.get("input_path", "")))
+    if tool == "deck.inspect.presentation":
+        return runner.run_deck_inspect_presentation(payload.get("path", payload.get("input_path", "")))
+    if tool == "deck.create.presentation":
+        style = payload.get("style")
+        return runner.run_deck_create_presentation(
+            workbook_path=payload.get("workbook_path") or payload.get("from_workbook") or payload.get("input_path"),
+            output_path=payload.get("output_path") or payload.get("output"),
+            title=payload.get("title"),
+            profile=str(payload.get("profile", "board_review")),
+            style=style if isinstance(style, dict) else None,
+        )
+    if tool == "deck.patch.apply":
+        operations = payload.get("operations")
+        return runner.run_deck_patch_apply(
+            input_path=payload.get("input_path") or payload.get("path", ""),
+            output_path=payload.get("output_path") or payload.get("output", ""),
+            operations=operations if isinstance(operations, list) else [],
+        )
+    if tool == "deck.validation.contact_sheet":
+        return runner.run_deck_validate_contact_sheet(payload.get("path", payload.get("input_path", "")))
+    if tool == "deck.validation.presentation":
+        return runner.run_deck_validate_presentation(payload.get("path", payload.get("input_path", "")))
+    if tool == "office.context.build_packet":
+        files = payload.get("files", payload.get("input_paths", []))
+        context_items = payload.get("context_items")
+        return runner.run_office_context_build_packet(
+            files=files if isinstance(files, list) else [],
+            context_items=context_items if isinstance(context_items, list) else None,
+            output_path=payload.get("output_path") or payload.get("output"),
+            title=payload.get("title"),
+            intent=payload.get("intent"),
+        )
+    if tool == "office.extract.schema":
+        context_packet = payload.get("context_packet")
+        return runner.run_office_extract_schema(
+            context_packet_path=payload.get("context_packet_path") or payload.get("input_path"),
+            context_packet=context_packet if isinstance(context_packet, dict) else None,
+            schema=payload.get("schema") or payload.get("schema_path"),
+            output_path=payload.get("output_path") or payload.get("output"),
+        )
+    if tool == "office.workflow.docset_to_sheet":
+        files = payload.get("files", payload.get("input_paths", []))
+        return runner.run_office_workflow_docset_to_sheet(
+            files=files if isinstance(files, list) else [],
+            schema=payload.get("schema") or payload.get("schema_path"),
+            output_path=payload.get("output_path") or payload.get("output"),
+            title=payload.get("title"),
+            intent=payload.get("intent"),
+            context_output_path=payload.get("context_output_path"),
+            evidence_output_path=payload.get("evidence_output_path"),
+        )
+    if tool == "office.validation.package":
+        return runner.run_office_validation_package(payload.get("path", payload.get("input_path", "")))
+    if tool == "office.workflow.sheet_to_deck":
+        return runner.run_office_workflow_sheet_to_deck(
+            workbook_path=payload.get("workbook_path") or payload.get("workbook") or payload.get("input_path"),
+            output_path=payload.get("output_path") or payload.get("output"),
+            title=payload.get("title"),
+            profile=str(payload.get("profile", "board_review")),
+        )
+    if tool == "office.workflow.board_pack":
+        files = payload.get("files", payload.get("input_paths", []))
+        return runner.run_office_workflow_board_pack(
+            files=files if isinstance(files, list) else [],
+            schema=payload.get("schema") or payload.get("schema_path"),
+            out_dir=payload.get("out_dir") or payload.get("output_dir") or payload.get("output_path") or payload.get("output"),
+            title=payload.get("title"),
+            profile=str(payload.get("profile", "board_review")),
+            intent=payload.get("intent"),
+            include_pdf_handout=_truthy(payload.get("include_pdf_handout")),
+            pdf_renderer_backend=str(payload.get("pdf_renderer_backend", payload.get("renderer_backend", "auto"))),
+        )
+    if tool == "office.workers.status":
+        feature_flags = payload.get("feature_flags")
+        command_paths = payload.get("command_paths")
+        return runner.run_office_workers_status(
+            feature_flags=feature_flags if isinstance(feature_flags, dict) else None,
+            command_paths=command_paths if isinstance(command_paths, dict) else None,
+        )
+    if tool == "office.bundle.export":
+        artifact_paths = payload.get("artifact_paths", payload.get("files", []))
+        metadata = payload.get("metadata")
+        return runner.run_office_bundle_export(
+            artifact_paths=artifact_paths if isinstance(artifact_paths, list) else [],
+            output_path=payload.get("output_path") or payload.get("output"),
+            title=payload.get("title"),
+            metadata=metadata if isinstance(metadata, dict) else None,
+        )
+    if tool == "office.bundle.verify":
+        return runner.run_office_bundle_verify(payload.get("bundle_path", payload.get("input_path", "")))
     if tool == "pdf.inspect.document":
         return runner.run_inspect(payload.get("path", payload.get("input_path", "")))
     if tool == "pdf.inspect.pages":
@@ -591,6 +744,8 @@ def _summarize_result(result: ToolResult) -> dict[str, Any]:
             "code": result.error.code,
             "message": result.error.message,
         }
+    if result.validation is not None:
+        summary["validation"] = result.validation.model_dump(mode="json")
     return summary
 
 
@@ -751,6 +906,14 @@ def _coerce_optional_int(value: Any, field_name: str, tool: str) -> tuple[int | 
             error=AgentPDFError(code="unsafe_input_rejected", message=message),
             warnings=[message],
         )
+
+
+def _truthy(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on"}
+    return bool(value)
 
 
 def _failed_result(

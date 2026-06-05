@@ -89,7 +89,7 @@ Deliverables:
 
 - `office.context.build_packet` for DOCX/PDF/XLSX/PPTX sources.
 - `office.extract.schema`.
-- `sheet.create.evidence_workbook`.
+- `sheet.write.workbook`.
 - `office.evidence.coverage`.
 
 Acceptance:
@@ -104,6 +104,7 @@ Deliverables:
 
 - `deck.compose.plan`.
 - `deck.create.presentation`.
+- `deck.validation.presentation`.
 - `deck.validation.contact_sheet`.
 - workbook-to-deck example.
 
@@ -111,6 +112,7 @@ Acceptance:
 
 - Workbook tables/charts become editable deck slides.
 - Slides include source refs and speaker notes where configured.
+- Presentation validation reports title, notes, theme, media, safety, and render-evidence status.
 - Contact-sheet worker absence returns structured skip.
 
 ## Phase 8 - Board Pack Bundle

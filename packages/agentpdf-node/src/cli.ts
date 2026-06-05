@@ -208,15 +208,30 @@ export async function runCli(
       );
     }
     if (command === "createpdf" || command === "workflow-createpdf") {
+      const pageDocumentPath = takeOption(args, ["--page-document"]);
+      const html = takeOption(args, ["--html"]);
+      const htmlPath = takeOption(args, ["--html-file", "--html-path"]);
+      const contextPacketPath = takeOption(args, ["--context-packet"]);
+      const targetProfileJson = await parseOptionalObject(takeOption(args, ["--profile-json", "--target-profile-json"]));
+      const targetProfileName = takeOption(args, ["--profile", "--target-profile"]);
+      const rendererBackend = takeOption(args, ["--renderer-backend", "--backend"]);
+      if (!pageDocumentPath && html === undefined && !htmlPath && !contextPacketPath) {
+        throw new UsageError("Missing --page-document, --html, --html-file, or --context-packet for createpdf.");
+      }
       return emitResult(
         await client.workflowCreatePdf({
           pdfOutputPath: takeRequiredOption(args, ["--pdf-output", "--output", "-o"]),
           htmlOutputPath: takeOption(args, ["--html-output"]),
-          html: takeOption(args, ["--html"]),
-          htmlPath: takeOption(args, ["--html-file", "--html-path"]),
-          pageDocument: await parseOptionalObject(takeOption(args, ["--page-document"])),
+          html,
+          htmlPath,
+          pageDocument: await parseOptionalObject(pageDocumentPath),
+          contextPacketPath,
+          targetProfile: targetProfileJson ?? targetProfileName,
+          stylePack: takeOption(args, ["--style-pack"]),
           title: takeOption(args, ["--title"]),
           artifactDir: takeOption(args, ["--artifact-dir"]),
+          bundleOutputPath: takeOption(args, ["--bundle-output"]),
+          ...(rendererBackend ? { rendererBackend } : {}),
           expectedPageCount: takeIntegerOption(args, ["--expected-page-count"]),
           pages: takeOption(args, ["--pages"]),
         }),
@@ -370,12 +385,32 @@ export async function runCli(
         label: takeOption(args, ["--label"]),
         itemType: takeOption(args, ["--type"]),
         transcript: takeOption(args, ["--transcript"]),
+        transcriptPath: takeOption(args, ["--transcript-path"]),
         durationSeconds: takeNumberOption(args, ["--duration-seconds"]),
       });
       return emitResult(
         await client.ingestContext({
           contextItem,
           outputPath: takeOption(args, ["--output", "-o"]),
+        }),
+        stdout,
+      );
+    }
+    if (command === "context-web-capture") {
+      const url = args.shift();
+      if (!url) {
+        throw new UsageError("Missing URL for context-web-capture.");
+      }
+      return emitResult(
+        await client.contextWebCapture({
+          url,
+          outputPath: takeOption(args, ["--output", "-o"]),
+          label: takeOption(args, ["--label"]),
+          role: takeOption(args, ["--role"]),
+          contextItemId: takeOption(args, ["--context-item-id"]),
+          maxBytes: takeIntegerOption(args, ["--max-bytes"]),
+          timeoutSeconds: takeNumberOption(args, ["--timeout-seconds"]),
+          allowPrivateHosts: takeFlag(args, ["--allow-private-hosts"]),
         }),
         stdout,
       );
@@ -846,6 +881,7 @@ export async function runCli(
           outputPath: takeRequiredOption(args, ["--output", "-o"]),
           compositionPath: takeOption(args, ["--composition"]),
           layerManifestPath: takeOption(args, ["--layers"]),
+          artifactGraphPath: takeOption(args, ["--artifact-graph", "--artifact-graph-path"]),
           reason: takeOption(args, ["--reason"]),
         }),
         stdout,
@@ -1013,10 +1049,12 @@ export async function runCli(
       if (!packagePath) {
         throw new UsageError("Missing HTML package path for render-html-package.");
       }
+      const rendererBackend = takeOption(args, ["--renderer-backend", "--backend"]);
       return emitResult(
         await client.renderHtmlPackage({
           packagePath,
           outputPath: takeRequiredOption(args, ["--output", "-o"]),
+          ...(rendererBackend ? { rendererBackend } : {}),
         }),
         stdout,
       );
@@ -2283,6 +2321,7 @@ async function contextItemFromCli(input: {
   label?: string;
   itemType?: string;
   transcript?: string;
+  transcriptPath?: string;
   durationSeconds?: number;
 }): Promise<JsonObject> {
   const items = await contextItemsFromCli(
@@ -2306,6 +2345,9 @@ async function contextItemFromCli(input: {
   }
   if (input.transcript !== undefined) {
     item.transcript = input.transcript;
+  }
+  if (input.transcriptPath !== undefined) {
+    item.transcript_path = input.transcriptPath;
   }
   if (input.durationSeconds !== undefined) {
     item.duration_seconds = input.durationSeconds;
@@ -2401,8 +2443,9 @@ function helpText(): string {
     "  agentpdf-node workflow-plan --goal GOAL [--input-path FILE]",
     "  agentpdf-node workflow-run --payload '{...}' [--binding KEY=VALUE] [--dry-run]",
     "  agentpdf-node workflow-report --payload '{...}' [-o report.md]",
-    "  agentpdf-node createpdf --html '<main>...</main>' --pdf-output out.pdf [--html-output out.html --artifact-dir audit]",
-    "  agentpdf-node workflow-createpdf --html '<main>...</main>' --pdf-output out.pdf [--html-output out.html --artifact-dir audit]",
+    "  agentpdf-node createpdf --html '<main>...</main>' --pdf-output out.pdf [--html-output out.html --artifact-dir audit --bundle-output bundle.zip --renderer-backend auto]",
+    "  agentpdf-node createpdf --context-packet context.packet.json --profile technical_audit --pdf-output out.pdf [--html-output out.html --artifact-dir audit --bundle-output bundle.zip --renderer-backend auto]",
+    "  agentpdf-node workflow-createpdf --html '<main>...</main>' --pdf-output out.pdf [--html-output out.html --artifact-dir audit --bundle-output bundle.zip --renderer-backend auto]",
     "  agentpdf-node workflow-research-deck --brief brief.json [--evidence evidence.json] [--html-output deck.html --pdf-output deck.pdf] [--execute --artifact-dir workflow-artifacts]",
     "  agentpdf-node authoring-plan --brief brief.json",
     "  agentpdf-node research-plan --brief brief.json",
@@ -2415,7 +2458,8 @@ function helpText(): string {
     "  agentpdf-node create-html-package --page-document pages.json|--html '<main>...</main>'|--html-file page.html --html-output deck.html [--title TITLE]",
     "  agentpdf-node qa-visual-report --input deck.pdf [--expected-page-count 8] [--html-package-manifest deck.html-manifest.json]",
     "  agentpdf-node context-build --text TEXT --file FILE --link LINK --item-json '{...}' -o context.packet.json",
-    "  agentpdf-node context-ingest --file FILE|--text TEXT|--link LINK [-o context-item.json] [--role ROLE] [--label LABEL]",
+    "  agentpdf-node context-ingest --file FILE|--text TEXT|--link LINK [-o context-item.json] [--role ROLE] [--label LABEL] [--transcript-path PATH]",
+    "  agentpdf-node context-web-capture URL [-o context-item.json] [--label LABEL] [--max-bytes BYTES]",
     "  agentpdf-node context-packet --item-json context-item.json --file FILE --link LINK -o context.packet.json",
     "  agentpdf-node context-classify context.packet.json [--profile technical_audit] [-o context.classification.json]",
     "  agentpdf-node code-snapshot src/service.ts [--line-start 1 --line-end 20] [-o code.context-item.json]",
@@ -2442,7 +2486,7 @@ function helpText(): string {
     "  agentpdf-node artifact-source-map --composition OUT.composition.json [--context-packet context.packet.json] [-o artifact-source-map.json]",
     "  agentpdf-node export-bundle --file OUT.pdf --file OUT.composition.json -o audit-bundle.zip",
     "  agentpdf-node verify-bundle audit-bundle.zip",
-    "  agentpdf-node patch-plan report.pdf --operations '{...}' -o patch.json",
+    "  agentpdf-node patch-plan report.pdf --operations '{...}' -o patch.json [--artifact-graph artifact-graph.json]",
     "  agentpdf-node patch-preview patch.json [-o preview.json]",
     "  agentpdf-node patch-apply patch.json -o patched.pdf",
     "  agentpdf-node patch-verify patch.json patched.pdf",
@@ -2456,7 +2500,7 @@ function helpText(): string {
     "  agentpdf-node subset-fonts FILE -o OUT.pdf",
     "  agentpdf-node to-pdfa FILE -o OUT.pdf [--profile PDF/A-2b]",
     "  agentpdf-node html-to-pdf input.html -o OUT.pdf",
-    "  agentpdf-node render-html-package report.html-manifest.json -o OUT.pdf",
+    "  agentpdf-node render-html-package report.html-manifest.json -o OUT.pdf [--renderer-backend auto|local_html_package_fallback|browser_chromium]",
     "  agentpdf-node url-to-pdf https://example.com -o OUT.pdf",
     "  agentpdf-node docx-to-pdf report.docx -o OUT.pdf",
     "  agentpdf-node pptx-to-pdf deck.pptx -o OUT.pdf",

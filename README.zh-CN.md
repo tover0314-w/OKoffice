@@ -43,11 +43,11 @@ okoffice 的目标不是继续做一个 PDF 工具箱，而是做一层 agent-na
 | Extract | `word.extract.tables`, `sheet.extract.formulas`, `deck.extract.notes`, `office.extract.schema` |
 | Create | `word.create.report`, `sheet.create.evidence_workbook`, `deck.create.presentation`, `pdf.create.handout` |
 | Patch | `office.patch.plan`, `word.patch.apply`, `sheet.patch.apply`, `deck.patch.apply` |
-| Validate | `word.validation.document`, `sheet.validation.formulas`, `deck.validation.contact_sheet`, `pdf.validation.render_check` |
+| Validate | `word.validation.document`, `sheet.validation.formulas`, `deck.validation.presentation`, `deck.validation.contact_sheet`, `pdf.validation.render_check` |
 | Workflow | `office.workflow.docset_to_sheet`, `office.workflow.sheet_to_deck`, `office.workflow.board_pack` |
 | Bundle | `office.bundle.export`, `office.bundle.verify` |
 
-当前 machine manifest 仍有 **241** 个公开 `pdf.*` 和 agent setup 工具名，这是兼容层，不是 okoffice 的最终产品地图。
+当前 machine manifest 有 **264** 个公开工具名：包括 okoffice beta 工具波次，以及保留的 `pdf.*` 和 agent setup 兼容层。
 
 ## 当前能跑什么
 
@@ -81,6 +81,7 @@ okoffice inspect model.xlsx --json
 okoffice inspect deck.pptx --json
 okoffice workflow docset-to-sheet sources/*.docx sources/*.pdf -o .okoffice-out/evidence.xlsx --json
 okoffice workflow sheet-to-deck .okoffice-out/evidence.xlsx -o .okoffice-out/board-deck.pptx --json
+okoffice workflow board-pack --file sources/report.docx --file sources/context.pdf --schema examples/schemas/vendor-renewal.json --out-dir .okoffice-out/board-pack --include-pdf-handout --json
 okoffice bundle verify .okoffice-out/board-pack.okoffice.zip --json
 ```
 

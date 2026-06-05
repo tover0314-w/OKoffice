@@ -201,8 +201,9 @@ Example:
     "pdf": {"template": "board_handout"}
   },
   "validation": [
-    "word.validation.render_check",
+    "word.validation.document",
     "sheet.validation.formulas",
+    "deck.validation.presentation",
     "deck.validation.contact_sheet",
     "pdf.validation.render_check",
     "office.bundle.verify"
@@ -226,16 +227,17 @@ Target okoffice commands:
 ```bash
 okoffice styles list --json
 
-okoffice workflow docset-to-sheet sources/*.docx sources/*.pdf \
+okoffice workflow docset-to-sheet \
+  --file sources/vendor-a.docx \
+  --file sources/vendor-b.pdf \
+  --schema examples/schemas/vendor-renewal.json \
   -o .okoffice-out/evidence.xlsx \
-  --profile evidence_workbook \
-  --style-pack evidence_workbook_clean \
   --json
 
-okoffice workflow sheet-to-deck .okoffice-out/evidence.xlsx \
+okoffice workflow sheet-to-deck \
+  --workbook .okoffice-out/evidence.xlsx \
   -o .okoffice-out/board-deck.pptx \
   --profile board_deck \
-  --style-pack board_deck_modern \
   --json
 
 okoffice bundle export \

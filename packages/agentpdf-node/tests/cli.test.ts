@@ -97,7 +97,12 @@ test("runCli exposes context ingest and packet commands", async () => {
         return jsonResponse({
           job_id: "job_context_cli",
           status: "succeeded",
-          tool: calls.length === 1 ? "pdf.context.ingest" : "pdf.context.packet",
+          tool:
+            calls.length === 1
+              ? "pdf.context.ingest"
+              : calls.length === 2
+                ? "pdf.context.packet"
+                : "pdf.context.web_capture",
           artifacts: [],
           validation: null,
           warnings: [],
@@ -119,6 +124,8 @@ test("runCli exposes context ingest and packet commands", async () => {
       "code_evidence",
       "--label",
       "Service Code",
+      "--transcript-path",
+      "meeting.transcript.txt",
       "-o",
       "service.context-item.json",
     ]),
@@ -138,16 +145,33 @@ test("runCli exposes context ingest and packet commands", async () => {
     ]),
     0,
   );
+  assert.equal(
+    await invoke([
+      "context-web-capture",
+      "OKPDF.dev/docs/context",
+      "--label",
+      "Context Docs",
+      "--context-item-id",
+      "ctx_web",
+      "--max-bytes",
+      "4096",
+      "-o",
+      "context-web.json",
+    ]),
+    0,
+  );
 
   assert.deepEqual(calls.map((call) => call.url), [
     "http://127.0.0.1:7331/v1/tools/pdf.context.ingest/run",
     "http://127.0.0.1:7331/v1/tools/pdf.context.packet/run",
+    "http://127.0.0.1:7331/v1/tools/pdf.context.web_capture/run",
   ]);
   assert.deepEqual(calls[0]?.body, {
     context_item: {
       path: "src/service.ts",
       role: "code_evidence",
       label: "Service Code",
+      transcript_path: "meeting.transcript.txt",
     },
     output_path: "service.context-item.json",
   });
@@ -164,8 +188,17 @@ test("runCli exposes context ingest and packet commands", async () => {
     title: "Agent Context",
     intent: "Compose a target PDF.",
   });
+  assert.deepEqual(calls[2]?.body, {
+    url: "OKPDF.dev/docs/context",
+    output_path: "context-web.json",
+    label: "Context Docs",
+    context_item_id: "ctx_web",
+    max_bytes: 4096,
+    allow_private_hosts: false,
+  });
   assert.equal(JSON.parse(output[0] ?? "{}").tool, "pdf.context.ingest");
   assert.equal(JSON.parse(output[1] ?? "{}").tool, "pdf.context.packet");
+  assert.equal(JSON.parse(output[2] ?? "{}").tool, "pdf.context.web_capture");
 });
 
 test("runCli help documents web link context options", async () => {
@@ -180,6 +213,8 @@ test("runCli help documents web link context options", async () => {
   assert.equal(code, 0);
   assert.match(help, /context-build .*--link LINK/);
   assert.match(help, /context-ingest .*--link LINK/);
+  assert.match(help, /context-web-capture URL/);
+  assert.match(help, /context-ingest .*--transcript-path PATH/);
   assert.match(help, /context-packet .*--link LINK/);
 });
 
@@ -1094,7 +1129,7 @@ test("runCli exposes authoring workflow commands", async () => {
 test("runCli exposes createpdf workflow command", async () => {
   const calls: Array<{ url: string; body: unknown }> = [];
 
-  const code = await runCli(
+  const htmlCode = await runCli(
     [
       "createpdf",
       "--html",
@@ -1105,6 +1140,10 @@ test("runCli exposes createpdf workflow command", async () => {
       "createpdf.pdf",
       "--artifact-dir",
       "audit",
+      "--bundle-output",
+      "createpdf.agentpdf-bundle.zip",
+      "--renderer-backend",
+      "local_html_package_fallback",
       "--expected-page-count",
       "1",
       "--pages",
@@ -1129,8 +1168,46 @@ test("runCli exposes createpdf workflow command", async () => {
       stderr: () => undefined,
     },
   );
+  const contextCode = await runCli(
+    [
+      "createpdf",
+      "--context-packet",
+      "context.packet.json",
+      "--profile",
+      "technical_audit",
+      "--style-pack",
+      "paper_ink",
+      "--html-output",
+      "context-createpdf.html",
+      "--pdf-output",
+      "context-createpdf.pdf",
+      "--artifact-dir",
+      "context-audit",
+      "--renderer-backend",
+      "local_html_package_fallback",
+    ],
+    {
+      fetch: async (input, init) => {
+        calls.push({ url: String(input), body: JSON.parse(String(init?.body)) });
+        return jsonResponse({
+          job_id: "job_cli_createpdf",
+          status: "succeeded",
+          tool: "pdf.workflow.createpdf",
+          artifacts: [],
+          validation: null,
+          warnings: [],
+          usage: {},
+          next_recommended_tools: [],
+          error: null,
+        });
+      },
+      stdout: () => undefined,
+      stderr: () => undefined,
+    },
+  );
 
-  assert.equal(code, 0);
+  assert.equal(htmlCode, 0);
+  assert.equal(contextCode, 0);
   assert.deepEqual(calls, [
     {
       url: "http://127.0.0.1:7331/v1/tools/pdf.workflow.createpdf/run",
@@ -1139,8 +1216,22 @@ test("runCli exposes createpdf workflow command", async () => {
         html_output_path: "createpdf.html",
         pdf_output_path: "createpdf.pdf",
         artifact_dir: "audit",
+        bundle_output_path: "createpdf.agentpdf-bundle.zip",
+        renderer_backend: "local_html_package_fallback",
         expected_page_count: 1,
         pages: "1",
+      },
+    },
+    {
+      url: "http://127.0.0.1:7331/v1/tools/pdf.workflow.createpdf/run",
+      body: {
+        context_packet_path: "context.packet.json",
+        target_profile: "technical_audit",
+        style_pack: "paper_ink",
+        html_output_path: "context-createpdf.html",
+        pdf_output_path: "context-createpdf.pdf",
+        artifact_dir: "context-audit",
+        renderer_backend: "local_html_package_fallback",
       },
     },
   ]);
@@ -1748,6 +1839,8 @@ test("runCli exposes high-frequency PDF utility commands", async () => {
       "technical-audit.composition.json",
       "--layers",
       "technical-audit.layers.json",
+      "--artifact-graph",
+      "technical-audit.artifact-graph.json",
       "--reason",
       "Append structured evidence.",
     ]),
@@ -1950,6 +2043,7 @@ test("runCli exposes high-frequency PDF utility commands", async () => {
     output_path: "technical-audit.patch.json",
     composition_path: "technical-audit.composition.json",
     layer_manifest_path: "technical-audit.layers.json",
+    artifact_graph_path: "technical-audit.artifact-graph.json",
     reason: "Append structured evidence.",
   });
   assert.deepEqual(calls[24]?.body, {
@@ -2299,7 +2393,17 @@ test("runCli exposes conversion, PDF/A, and security commands", async () => {
   assert.equal(await invoke(["subset-fonts", "report.pdf", "-o", "report.subset.pdf"]), 0);
   assert.equal(await invoke(["to-pdfa", "report.pdf", "-o", "report.pdfa.pdf", "--profile", "PDF/A-2b"]), 0);
   assert.equal(await invoke(["html-to-pdf", "page.html", "-o", "page.pdf"]), 0);
-  assert.equal(await invoke(["render-html-package", "page.html-manifest.json", "-o", "page.pdf"]), 0);
+  assert.equal(
+    await invoke([
+      "render-html-package",
+      "page.html-manifest.json",
+      "-o",
+      "page.pdf",
+      "--renderer-backend",
+      "browser_chromium",
+    ]),
+    0,
+  );
   assert.equal(
     await invoke([
       "url-to-pdf",
@@ -2410,6 +2514,7 @@ test("runCli exposes conversion, PDF/A, and security commands", async () => {
   assert.deepEqual(calls[3]?.body, {
     package_path: "page.html-manifest.json",
     output_path: "page.pdf",
+    renderer_backend: "browser_chromium",
   });
   assert.deepEqual(calls[4]?.body, {
     url: "https://example.com",

@@ -302,10 +302,38 @@ def test_evidence_and_patch_cli_api_mcp_are_exposed(tmp_path: Path) -> None:
             "title": "CLI Patch Note",
             "markdown": "## CLI Patch Note\n\nPatch applied through exposed agent interfaces.",
             "source_refs": ["ctx_001"],
+            "html_layer_id": "html_layer_ctx_001",
         }
     ]
     operations_path.write_text(json.dumps(operations), encoding="utf-8")
     single_operation_path.write_text(json.dumps(operations[0]), encoding="utf-8")
+    artifact_graph_path = tmp_path / "artifact-graph.json"
+    artifact_graph_path.write_text(
+        json.dumps(
+            {
+                "artifact_graph_version": "0.1",
+                "artifact_graph_id": "artifact_graph_test",
+                "html_layer_index": {
+                    "html_layer_ctx_001": {
+                        "node_id": "html_layer:html_layer_ctx_001",
+                        "layer_id": "html_layer_ctx_001",
+                        "html_package_id": "html_package_test",
+                        "block_id": "item_ctx_001",
+                        "block_type": "section",
+                        "target_slot": "findings",
+                        "source_refs": ["ctx_001"],
+                        "anchor": {
+                            "anchor_kind": "estimated_dom_anchor",
+                            "dom_selector": "[data-layer-id=\"html_layer_ctx_001\"]",
+                            "bbox_precision": "estimated_dom_not_pdf_glyph_bbox",
+                        },
+                        "bbox_precision": "estimated_dom_not_pdf_glyph_bbox",
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
     claims_path.write_text(
         json.dumps(
             [
@@ -368,6 +396,8 @@ def test_evidence_and_patch_cli_api_mcp_are_exposed(tmp_path: Path) -> None:
             str(patch_path),
             "--composition",
             str(composition_path),
+            "--artifact-graph",
+            str(artifact_graph_path),
             "--json",
         ],
     )
@@ -383,6 +413,8 @@ def test_evidence_and_patch_cli_api_mcp_are_exposed(tmp_path: Path) -> None:
             str(single_patch_path),
             "--composition",
             str(composition_path),
+            "--artifact-graph",
+            str(artifact_graph_path),
             "--json",
         ],
     )
@@ -397,7 +429,10 @@ def test_evidence_and_patch_cli_api_mcp_are_exposed(tmp_path: Path) -> None:
     assert cite_claims_cli.exit_code == 0
     assert json.loads(cite_claims_cli.stdout)["tool"] == "pdf.evidence.cite_claims"
     assert plan_cli.exit_code == 0
-    assert json.loads(plan_cli.stdout)["tool"] == "pdf.patch.plan"
+    plan_cli_payload = json.loads(plan_cli.stdout)
+    assert plan_cli_payload["tool"] == "pdf.patch.plan"
+    assert plan_cli_payload["usage"]["patch_manifest"]["html_layer_ref_validation"]["status"] == "passed"
+    assert plan_cli_payload["usage"]["patch_manifest"]["operation_html_layer_map"][0]["matched_html_layer_count"] == 1
     assert single_plan_cli.exit_code == 0
     assert json.loads(single_plan_cli.stdout)["usage"]["patch_manifest"]["operation_count"] == 1
     assert preview_cli.exit_code == 0
@@ -435,6 +470,7 @@ def test_evidence_and_patch_cli_api_mcp_are_exposed(tmp_path: Path) -> None:
             "operations": operations,
             "output_path": str(tmp_path / "api-patch.json"),
             "composition_path": str(composition_path),
+            "artifact_graph_path": str(artifact_graph_path),
         },
     )
 
@@ -446,6 +482,7 @@ def test_evidence_and_patch_cli_api_mcp_are_exposed(tmp_path: Path) -> None:
     assert api_cite_claims.json()["tool"] == "pdf.evidence.cite_claims"
     assert api_plan.status_code == 200
     assert api_plan.json()["tool"] == "pdf.patch.plan"
+    assert api_plan.json()["usage"]["patch_manifest"]["html_layer_ref_validation"]["status"] == "passed"
 
     mcp_coverage = json.loads(pdf_evidence_coverage_report(str(composition_path), str(tmp_path / "mcp-coverage.json")))
     mcp_map_sources = json.loads(
@@ -462,7 +499,14 @@ def test_evidence_and_patch_cli_api_mcp_are_exposed(tmp_path: Path) -> None:
             output_path=str(tmp_path / "mcp-citations.json"),
         )
     )
-    mcp_plan = json.loads(pdf_patch_plan(str(source_pdf), operations, str(tmp_path / "mcp-patch.json")))
+    mcp_plan = json.loads(
+        pdf_patch_plan(
+            str(source_pdf),
+            operations,
+            str(tmp_path / "mcp-patch.json"),
+            artifact_graph=str(artifact_graph_path),
+        )
+    )
     mcp_preview = json.loads(pdf_patch_preview(str(tmp_path / "mcp-patch.json")))
     mcp_apply = json.loads(pdf_patch_apply(str(tmp_path / "mcp-patch.json"), str(tmp_path / "mcp-patched.pdf")))
     mcp_verify = json.loads(pdf_patch_verify(str(tmp_path / "mcp-patch.json"), str(tmp_path / "mcp-patched.pdf")))
@@ -471,6 +515,7 @@ def test_evidence_and_patch_cli_api_mcp_are_exposed(tmp_path: Path) -> None:
     assert mcp_map_sources["tool"] == "pdf.evidence.map_sources"
     assert mcp_cite_claims["tool"] == "pdf.evidence.cite_claims"
     assert mcp_plan["tool"] == "pdf.patch.plan"
+    assert mcp_plan["usage"]["patch_manifest"]["html_layer_ref_validation"]["status"] == "passed"
     assert mcp_preview["tool"] == "pdf.patch.preview"
     assert mcp_apply["validation"]["status"] == "passed"
     assert mcp_verify["tool"] == "pdf.patch.verify"

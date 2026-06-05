@@ -12,11 +12,10 @@ def test_okoffice_target_manifest_separates_target_and_legacy_tools() -> None:
 
     assert manifest["product"] == "okoffice"
     assert manifest["manifest_version"] == "0.1"
-    assert manifest["compatibility_manifest"] == {
-        "product": "agentpdf",
-        "namespace": "pdf",
-        "role": "legacy_compat",
-    }
+    assert manifest["compatibility_manifest"]["product"] == "agentpdf"
+    assert manifest["compatibility_manifest"]["namespace"] == "pdf"
+    assert manifest["compatibility_manifest"]["role"] == "legacy_compat"
+    assert manifest["compatibility_manifest"]["surface"] == "slim_summary"
     target_names = {tool["name"] for tool in manifest["target_tools"]}
     compat_by_name = {tool["name"]: tool for tool in manifest["compatibility_tools"]}
 
@@ -24,6 +23,7 @@ def test_okoffice_target_manifest_separates_target_and_legacy_tools() -> None:
     assert compat_by_name["pdf.inspect.document"]["status"] == "legacy_compat"
     assert compat_by_name["pdf.inspect.document"]["implemented"] is True
     assert compat_by_name["pdf.inspect.document"]["compatibility_source"] == "agentpdf"
+    assert compat_by_name["pdf.inspect.document"]["compatibility_boundary"] == "pdf.*"
     assert len(manifest["compatibility_tools"]) == len(load_tool_manifest().tools)
 
 

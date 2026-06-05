@@ -102,6 +102,233 @@ Output highlights:
 }
 ```
 
+## Example: Target Formula Validation Tool
+
+```http
+POST /v1/tools/sheet.validation.formulas/run
+```
+
+Input:
+
+```json
+{
+  "path": ".okoffice-out/vendor-evidence.xlsx"
+}
+```
+
+Output includes `validation.status`, `usage.summary`, `usage.issues`, `usage.formula_evaluation`, warnings for structural risks, and next recommended tools.
+
+## Example: Target Package Validation Tool
+
+```http
+POST /v1/tools/office.validation.package/run
+```
+
+Input:
+
+```json
+{
+  "path": "report.docx"
+}
+```
+
+Output includes package type, member counts, unsafe ZIP entry checks, `[Content_Types].xml` status, macro/external-relationship warnings, and next recommended tools. The validator does not execute macros, fetch external relationships, or mutate the input file.
+
+## Example: Target Word Report Creation Tool
+
+```http
+POST /v1/tools/word.create.report/run
+```
+
+Input:
+
+```json
+{
+  "workbook_path": ".okoffice-out/vendor-evidence.xlsx",
+  "output_path": ".okoffice-out/vendor-memo.docx",
+  "title": "Vendor Renewal Memo",
+  "profile": "executive_memo"
+}
+```
+
+Output includes a DOCX artifact, row/source-ref summaries, a report manifest, and structural validation from `word.inspect.document`.
+
+## Example: Target Word Document Validation Tool
+
+```http
+POST /v1/tools/word.validation.document/run
+```
+
+Input:
+
+```json
+{
+  "path": ".okoffice-out/vendor-memo.docx"
+}
+```
+
+Output includes `tool: word.validation.document`, package validation evidence, comments/tracked-change policy checks, metadata checks, accessibility hints, and skipped render-preview evidence when no local DOCX renderer is configured.
+
+## Example: Target Deck Creation Tool
+
+```http
+POST /v1/tools/deck.create.presentation/run
+```
+
+Input:
+
+```json
+{
+  "workbook_path": ".okoffice-out/vendor-evidence.xlsx",
+  "output_path": ".okoffice-out/vendor-board-deck.pptx",
+  "title": "Vendor Renewal Review",
+  "profile": "board_review"
+}
+```
+
+Output includes a PPTX artifact, slide ids, row-level source refs, speaker notes with citations, structural validation from `deck.inspect.presentation`, and a skipped `contact_sheet_preview` check when no local render worker is configured.
+
+## Example: Target Contact-Sheet Validation Tool
+
+```http
+POST /v1/tools/deck.validation.contact_sheet/run
+```
+
+Input:
+
+```json
+{
+  "path": ".okoffice-out/vendor-board-deck.pptx"
+}
+```
+
+Output includes `validation.status: skipped`, the deck inspection summary, and explicit worker-unavailable evidence when no local PPTX contact-sheet renderer is configured.
+
+## Example: Target Presentation Validation Tool
+
+```http
+POST /v1/tools/deck.validation.presentation/run
+```
+
+Input:
+
+```json
+{
+  "path": ".okoffice-out/vendor-board-deck.pptx"
+}
+```
+
+Output includes `tool: deck.validation.presentation`, `usage.summary`, title and notes policy checks with Deck locators, media/theme/safety markers, `placeholder_overflow.status: structural_only`, and skipped render-evidence checks when no local renderer is configured.
+
+## Example: Target Sheet-To-Deck Workflow
+
+```http
+POST /v1/tools/office.workflow.sheet_to_deck/run
+```
+
+Input:
+
+```json
+{
+  "workbook_path": ".okoffice-out/vendor-evidence.xlsx",
+  "output_path": ".okoffice-out/vendor-board-deck.pptx",
+  "title": "Vendor Renewal Review",
+  "profile": "board_review"
+}
+```
+
+Output includes step summaries for `sheet.inspect.workbook`, `sheet.validation.formulas`, `deck.create.presentation`, `deck.inspect.presentation`, `deck.validation.presentation`, and `deck.validation.contact_sheet`, plus the generated PPTX artifact and validation report.
+
+## Example: Target Board-Pack Workflow
+
+```http
+POST /v1/tools/office.workflow.board_pack/run
+```
+
+Input:
+
+```json
+{
+  "files": [
+    "contracts/vendor-a.docx",
+    "invoices/vendor-a.pdf"
+  ],
+  "schema": {
+    "fields": [
+      {"name": "vendor", "type": "string", "aliases": ["Vendor"]},
+      {"name": "renewal_date", "type": "date", "aliases": ["Renewal date"]},
+      {"name": "annual_amount", "type": "number", "aliases": ["Annual amount"]}
+    ]
+  },
+  "out_dir": ".okoffice-out/vendor-board-pack",
+  "title": "Vendor Renewal Review",
+  "profile": "board_review",
+  "include_pdf_handout": true,
+  "pdf_renderer_backend": "auto"
+}
+```
+
+Output includes generated `evidence.xlsx`, `evidence.context.json`, `evidence.evidence.json`, `memo.docx`, `board-deck.pptx`, optional `handout.html`, optional `handout.pdf`, handout QA/manifest evidence, and `board-pack.okoffice.zip` artifacts, plus validation from each step and final bundle verification status.
+
+## Example: Target Bundle Export Tool
+
+```http
+POST /v1/tools/office.bundle.export/run
+```
+
+Input:
+
+```json
+{
+  "artifact_paths": [
+    ".okoffice-out/vendor-evidence.xlsx",
+    ".okoffice-out/vendor-board-deck.pptx"
+  ],
+  "output_path": ".okoffice-out/vendor-board-pack.okoffice.zip",
+  "title": "Vendor Board Pack"
+}
+```
+
+Output includes the bundle artifact, manifest metadata, included artifact paths, and checksum lines.
+
+## Example: Target Bundle Verify Tool
+
+```http
+POST /v1/tools/office.bundle.verify/run
+```
+
+Input:
+
+```json
+{
+  "bundle_path": ".okoffice-out/vendor-board-pack.okoffice.zip"
+}
+```
+
+Output includes checksum verification status, missing artifacts, duplicate bundle paths, and validation checks.
+
+## Example: Optional Worker Status Tool
+
+```http
+POST /v1/tools/office.workers.status/run
+```
+
+Input:
+
+```json
+{
+  "feature_flags": {
+    "libreoffice": true,
+    "ocr": false
+  },
+  "command_paths": {
+    "libreoffice": "soffice"
+  }
+}
+```
+
+Output includes `usage.summary`, `usage.workers`, `usage.office.worker_contracts`, validation checks for each optional worker, license notes, cloud-boundary flags, and warnings for enabled workers whose dependencies are unavailable.
+
 ## Example: Target Cross-Format Workflow
 
 ```http
@@ -112,9 +339,9 @@ Input:
 
 ```json
 {
-  "sources": [
-    {"kind": "local_path", "path": "sources/vendor-a.docx"},
-    {"kind": "local_path", "path": "sources/vendor-b.pdf"}
+  "files": [
+    "sources/vendor-a.docx",
+    "sources/vendor-b.pdf"
   ],
   "schema": {
     "fields": [
@@ -131,8 +358,11 @@ Input:
 Output should include:
 
 - Workbook artifact.
-- Source map artifact.
+- Context packet sidecar artifact.
+- Evidence JSON sidecar artifact.
+- Source map sheet in the workbook.
 - Extraction validation report.
+- Workbook formula validation report.
 - Warnings for missing/low-confidence fields.
 - Next recommended tools such as `sheet.validation.formulas` or `office.workflow.sheet_to_deck`.
 

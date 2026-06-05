@@ -50,9 +50,15 @@ from agentpdf.tools.runner import (
     run_context_classify,
     run_context_code_snapshot,
     run_context_data_profile,
+    run_context_web_capture,
     run_context_image_analyze,
     run_context_ingest,
     run_context_packet,
+    run_deck_create_presentation,
+    run_deck_inspect_presentation,
+    run_deck_patch_apply,
+    run_deck_validate_contact_sheet,
+    run_deck_validate_presentation,
     run_validate_template_pack,
     run_evidence_cite_claims,
     run_evidence_coverage_report,
@@ -79,6 +85,16 @@ from agentpdf.tools.runner import (
     run_metadata_update_outline,
     run_merge,
     run_n_up,
+    run_office_context_build_packet,
+    run_office_extract_schema,
+    run_office_inspect_file,
+    run_office_validation_package,
+    run_office_bundle_export,
+    run_office_bundle_verify,
+    run_office_workflow_docset_to_sheet,
+    run_office_workflow_sheet_to_deck,
+    run_office_workflow_board_pack,
+    run_office_workers_status,
     run_page_numbers,
     run_patch_apply,
     run_patch_plan,
@@ -138,6 +154,9 @@ from agentpdf.tools.runner import (
     run_security_verify_redaction,
     run_security_verify_signature,
     run_select_target_profile,
+    run_sheet_inspect_workbook,
+    run_sheet_validate_formulas,
+    run_sheet_write_workbook,
     run_split,
     run_strikeout,
     run_storyboard_plan,
@@ -157,6 +176,11 @@ from agentpdf.tools.runner import (
     run_workflow_research_deck,
     run_workflow_report,
     run_workflow_run,
+    run_word_inspect_document,
+    run_word_patch_apply,
+    run_word_patch_plan,
+    run_word_validate_document,
+    run_word_create_report,
     run_xlsx_to_pdf,
 )
 
@@ -174,6 +198,29 @@ def create_mcp_server() -> FastMCP:
     server.tool(name="agent_setup_codex")(agent_setup_codex)
     server.tool(name="agent_setup_kilo_code")(agent_setup_kilo_code)
     server.tool(name="agent_setup_openclaw")(agent_setup_openclaw)
+    server.tool(name="office_inspect_file")(office_inspect_file)
+    server.tool(name="word_inspect_document")(word_inspect_document)
+    server.tool(name="word_validate_document")(word_validate_document)
+    server.tool(name="word_create_report")(word_create_report)
+    server.tool(name="word_patch_plan")(word_patch_plan)
+    server.tool(name="word_patch_apply")(word_patch_apply)
+    server.tool(name="sheet_inspect_workbook")(sheet_inspect_workbook)
+    server.tool(name="sheet_write_workbook")(sheet_write_workbook)
+    server.tool(name="sheet_validate_formulas")(sheet_validate_formulas)
+    server.tool(name="deck_inspect_presentation")(deck_inspect_presentation)
+    server.tool(name="deck_create_presentation")(deck_create_presentation)
+    server.tool(name="deck_patch_apply")(deck_patch_apply)
+    server.tool(name="deck_validate_contact_sheet")(deck_validate_contact_sheet)
+    server.tool(name="deck_validate_presentation")(deck_validate_presentation)
+    server.tool(name="office_context_build_packet")(office_context_build_packet)
+    server.tool(name="office_extract_schema")(office_extract_schema)
+    server.tool(name="office_validation_package")(office_validation_package)
+    server.tool(name="office_workflow_docset_to_sheet")(office_workflow_docset_to_sheet)
+    server.tool(name="office_workflow_sheet_to_deck")(office_workflow_sheet_to_deck)
+    server.tool(name="office_workflow_board_pack")(office_workflow_board_pack)
+    server.tool(name="office_workers_status")(office_workers_status)
+    server.tool(name="office_bundle_export")(office_bundle_export)
+    server.tool(name="office_bundle_verify")(office_bundle_verify)
     server.tool(name="pdf_inspect_document")(pdf_inspect_document)
     server.tool(name="pdf_inspect_pages")(pdf_inspect_pages)
     server.tool(name="pdf_inspect_health")(pdf_inspect_health)
@@ -239,6 +286,7 @@ def create_mcp_server() -> FastMCP:
     server.tool(name="pdf_context_classify")(pdf_context_classify)
     server.tool(name="pdf_context_code_snapshot")(pdf_context_code_snapshot)
     server.tool(name="pdf_context_data_profile")(pdf_context_data_profile)
+    server.tool(name="pdf_context_web_capture")(pdf_context_web_capture)
     server.tool(name="pdf_context_image_analyze")(pdf_context_image_analyze)
     server.tool(name="pdf_compose_plan")(pdf_compose_plan)
     server.tool(name="pdf_compose_render_ir")(pdf_compose_render_ir)
@@ -400,6 +448,225 @@ def agent_setup_openclaw(
     ).model_dump_json()
 
 
+def office_inspect_file(path: str) -> str:
+    """Inspect a local Office artifact without mutating it."""
+    return run_office_inspect_file(path).model_dump_json()
+
+
+def word_inspect_document(path: str) -> str:
+    """Inspect a local Word DOCX/DOCM document without mutating it."""
+    return run_word_inspect_document(path).model_dump_json()
+
+
+def word_validate_document(path: str) -> str:
+    """Validate a local Word DOCX/DOCM document with structural QA checks."""
+    return run_word_validate_document(path).model_dump_json()
+
+
+def word_create_report(
+    workbook_path: str,
+    output_path: str,
+    title: str | None = None,
+    profile: str = "executive_memo",
+) -> str:
+    """Create an editable Word report from an evidence workbook."""
+    return run_word_create_report(
+        workbook_path=workbook_path,
+        output_path=output_path,
+        title=title,
+        profile=profile,
+    ).model_dump_json()
+
+
+def word_patch_plan(input_path: str, operations: list[dict[str, object]]) -> str:
+    """Preview a non-mutating Word patch transaction."""
+    return run_word_patch_plan(input_path=input_path, operations=operations).model_dump_json()
+
+
+def word_patch_apply(input_path: str, output_path: str, operations: list[dict[str, object]]) -> str:
+    """Apply a Word patch transaction to a new DOCX output."""
+    return run_word_patch_apply(
+        input_path=input_path,
+        output_path=output_path,
+        operations=operations,
+    ).model_dump_json()
+
+
+def sheet_inspect_workbook(path: str) -> str:
+    """Inspect a local Excel XLSX/XLSM workbook without mutating it."""
+    return run_sheet_inspect_workbook(path).model_dump_json()
+
+
+def sheet_write_workbook(evidence_path: str, output_path: str) -> str:
+    """Write an XLSX evidence workbook from office.extract.schema JSON."""
+    return run_sheet_write_workbook(evidence_path=evidence_path, output_path=output_path).model_dump_json()
+
+
+def sheet_validate_formulas(path: str) -> str:
+    """Validate workbook formulas with local structural checks."""
+    return run_sheet_validate_formulas(path).model_dump_json()
+
+
+def deck_inspect_presentation(path: str) -> str:
+    """Inspect a local PowerPoint PPTX/PPTM presentation without mutating it."""
+    return run_deck_inspect_presentation(path).model_dump_json()
+
+
+def deck_create_presentation(
+    workbook_path: str,
+    output_path: str,
+    title: str | None = None,
+    profile: str = "board_review",
+    style: dict[str, object] | None = None,
+) -> str:
+    """Create an editable PPTX presentation from an evidence workbook."""
+    return run_deck_create_presentation(
+        workbook_path=workbook_path,
+        output_path=output_path,
+        title=title,
+        profile=profile,
+        style=style,
+    ).model_dump_json()
+
+
+def deck_patch_apply(input_path: str, output_path: str, operations: list[dict[str, object]]) -> str:
+    """Apply a presentation patch transaction to a new PPTX output."""
+    return run_deck_patch_apply(
+        input_path=input_path,
+        output_path=output_path,
+        operations=operations,
+    ).model_dump_json()
+
+
+def deck_validate_contact_sheet(path: str) -> str:
+    """Validate contact-sheet preview availability for a local PPTX/PPTM presentation."""
+    return run_deck_validate_contact_sheet(path).model_dump_json()
+
+
+def deck_validate_presentation(path: str) -> str:
+    """Validate a local PPTX/PPTM presentation with structural deck QA checks."""
+    return run_deck_validate_presentation(path).model_dump_json()
+
+
+def office_context_build_packet(
+    files: list[str],
+    output_path: str | None = None,
+    title: str | None = None,
+    intent: str | None = None,
+) -> str:
+    """Build an OKoffice context packet from local Office/PDF sources."""
+    return run_office_context_build_packet(
+        files=files,
+        output_path=output_path,
+        title=title,
+        intent=intent,
+    ).model_dump_json()
+
+
+def office_extract_schema(
+    context_packet_path: str,
+    schema: dict[str, object],
+    output_path: str | None = None,
+) -> str:
+    """Extract schema-shaped rows from an OKoffice context packet."""
+    return run_office_extract_schema(
+        context_packet_path=context_packet_path,
+        schema=schema,
+        output_path=output_path,
+    ).model_dump_json()
+
+
+def office_validation_package(path: str) -> str:
+    """Validate an Office artifact package for structural and safety risks."""
+    return run_office_validation_package(path).model_dump_json()
+
+
+def office_workflow_docset_to_sheet(
+    files: list[str],
+    schema: dict[str, object],
+    output_path: str,
+    title: str | None = None,
+    intent: str | None = None,
+) -> str:
+    """Build a validated evidence workbook from local source documents."""
+    return run_office_workflow_docset_to_sheet(
+        files=files,
+        schema=schema,
+        output_path=output_path,
+        title=title,
+        intent=intent,
+    ).model_dump_json()
+
+
+def office_workflow_sheet_to_deck(
+    workbook_path: str,
+    output_path: str,
+    title: str | None = None,
+    profile: str = "board_review",
+) -> str:
+    """Create a validated presentation from an evidence workbook."""
+    return run_office_workflow_sheet_to_deck(
+        workbook_path=workbook_path,
+        output_path=output_path,
+        title=title,
+        profile=profile,
+    ).model_dump_json()
+
+
+def office_workflow_board_pack(
+    files: list[str],
+    schema: dict[str, object],
+    out_dir: str,
+    title: str | None = None,
+    profile: str = "board_review",
+    intent: str | None = None,
+    include_pdf_handout: bool = False,
+    pdf_renderer_backend: str = "auto",
+) -> str:
+    """Create a workbook, memo, deck, and verified bundle from source documents."""
+    return run_office_workflow_board_pack(
+        files=files,
+        schema=schema,
+        out_dir=out_dir,
+        title=title,
+        profile=profile,
+        intent=intent,
+        include_pdf_handout=include_pdf_handout,
+        pdf_renderer_backend=pdf_renderer_backend,
+    ).model_dump_json()
+
+
+def office_workers_status(
+    feature_flags: dict[str, bool] | None = None,
+    command_paths: dict[str, str] | None = None,
+) -> str:
+    """Report optional okoffice worker contracts and availability."""
+    return run_office_workers_status(
+        feature_flags=feature_flags,
+        command_paths=command_paths,
+    ).model_dump_json()
+
+
+def office_bundle_export(
+    artifact_paths: list[str],
+    output_path: str,
+    title: str | None = None,
+    metadata: dict[str, object] | None = None,
+) -> str:
+    """Export local Office artifacts into a portable okoffice audit bundle."""
+    return run_office_bundle_export(
+        artifact_paths=artifact_paths,
+        output_path=output_path,
+        title=title,
+        metadata=dict(metadata or {}),
+    ).model_dump_json()
+
+
+def office_bundle_verify(bundle_path: str) -> str:
+    """Verify an okoffice audit bundle manifest and checksums."""
+    return run_office_bundle_verify(bundle_path).model_dump_json()
+
+
 def pdf_inspect_document(path: str) -> str:
     """Inspect a local PDF document."""
     return run_inspect(path).model_dump_json()
@@ -440,10 +707,16 @@ def pdf_workflow_createpdf(
     html: str | None = None,
     html_path: str | None = None,
     page_document: dict[str, object] | None = None,
+    context_packet: dict[str, object] | None = None,
+    context_packet_path: str | None = None,
+    target_profile: dict[str, object] | str = "research_brief",
+    style_pack: str | None = None,
     title: str | None = None,
     artifact_dir: str | None = None,
+    bundle_output_path: str | None = None,
     expected_page_count: int | None = None,
     pages: str = "all",
+    renderer_backend: str = "auto",
 ) -> str:
     """Create a validated PDF through the local HTML-first workflow."""
     return run_workflow_createpdf(
@@ -452,10 +725,16 @@ def pdf_workflow_createpdf(
         html=html,
         html_path=html_path,
         page_document=page_document,
+        context_packet=context_packet,
+        context_packet_path=context_packet_path,
+        target_profile=target_profile,
+        style_pack=style_pack,
         title=title,
         artifact_dir=artifact_dir,
+        bundle_output_path=bundle_output_path,
         expected_page_count=expected_page_count,
         pages=pages,
+        renderer_backend=renderer_backend,
     ).model_dump_json()
 
 
@@ -691,9 +970,13 @@ def pdf_html_to_pdf(input_path: str, output_path: str) -> str:
     return run_html_to_pdf(input_path, output_path=output_path).model_dump_json()
 
 
-def pdf_render_html_package(package_path: str, output_path: str) -> str:
+def pdf_render_html_package(package_path: str, output_path: str, renderer_backend: str = "auto") -> str:
     """Validate and render an AgentPDF HTML package to PDF."""
-    return run_render_html_package(package_path, output_path=output_path).model_dump_json()
+    return run_render_html_package(
+        package_path,
+        output_path=output_path,
+        renderer_backend=renderer_backend,
+    ).model_dump_json()
 
 
 def pdf_url_to_pdf(
@@ -1193,6 +1476,29 @@ def pdf_context_data_profile(
     ).model_dump_json()
 
 
+def pdf_context_web_capture(
+    url: str,
+    output_path: str | None = None,
+    label: str | None = None,
+    role: str = "citation",
+    context_item_id: str | None = None,
+    max_bytes: int = 1_000_000,
+    timeout_seconds: float = 10,
+    allow_private_hosts: bool = False,
+) -> str:
+    """Fetch a web page into a context item with SSRF-safe local evidence."""
+    return run_context_web_capture(
+        url=url,
+        output_path=output_path,
+        label=label,
+        role=role,
+        context_item_id=context_item_id,
+        max_bytes=max_bytes,
+        timeout_seconds=timeout_seconds,
+        allow_private_hosts=allow_private_hosts,
+    ).model_dump_json()
+
+
 def pdf_context_image_analyze(
     input_path: str,
     languages: list[str] | None = None,
@@ -1644,6 +1950,8 @@ def pdf_patch_plan(
     output_path: str,
     composition_path: str | None = None,
     layer_manifest_path: str | None = None,
+    artifact_graph_path: str | None = None,
+    artifact_graph: str | None = None,
     reason: str | None = None,
 ) -> str:
     """Create a structured patch manifest without mutating the input PDF."""
@@ -1653,6 +1961,7 @@ def pdf_patch_plan(
         output_path=output_path,
         composition_path=composition_path,
         layer_manifest_path=layer_manifest_path,
+        artifact_graph_path=artifact_graph_path or artifact_graph,
         reason=reason,
     ).model_dump_json()
 

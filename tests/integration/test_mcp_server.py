@@ -4,6 +4,7 @@ from pathlib import Path
 
 from PIL import Image
 
+from agentpdf.context.packet import build_context_packet
 from agentpdf.mcp.server import (
     create_mcp_server,
     pdf_ai_parse_lite,
@@ -263,18 +264,49 @@ def test_mcp_workflow_research_deck_returns_steps() -> None:
 
 def test_mcp_workflow_createpdf_generates_audited_pdf(tmp_path: Path) -> None:
     pdf_output = tmp_path / "mcp-createpdf.pdf"
+    bundle_output = tmp_path / "mcp-createpdf.agentpdf-bundle.zip"
     payload = json.loads(
         pdf_workflow_createpdf(
             pdf_output_path=str(pdf_output),
             html_output_path=str(tmp_path / "mcp-createpdf.html"),
             html="<main><h1>CreatePDF</h1><p>MCP workflow creates audit artifacts.</p></main>",
             artifact_dir=str(tmp_path / "audit"),
+            bundle_output_path=str(bundle_output),
+            renderer_backend="local_html_package_fallback",
         )
     )
 
     assert payload["tool"] == "pdf.workflow.createpdf"
+    assert payload["usage"]["createpdf"]["requested_renderer_backend"] == "local_html_package_fallback"
     assert pdf_output.exists()
+    assert bundle_output.exists()
     assert Path(payload["usage"]["createpdf"]["qa_report_path"]).exists()
+    assert payload["usage"]["createpdf"]["bundle_verification"]["validation"]["status"] == "passed"
+
+
+def test_mcp_workflow_createpdf_accepts_context_packet_and_profile(tmp_path: Path) -> None:
+    packet_path = tmp_path / "mcp.context.packet.json"
+    build_context_packet(
+        [{"text": "Create an MCP technical audit PDF.", "role": "brief"}],
+        output_path=packet_path,
+        title="MCP CreatePDF Context",
+    )
+    pdf_output = tmp_path / "mcp-context.pdf"
+
+    payload = json.loads(
+        pdf_workflow_createpdf(
+            pdf_output_path=str(pdf_output),
+            html_output_path=str(tmp_path / "mcp-context.html"),
+            context_packet_path=str(packet_path),
+            target_profile="technical_audit",
+            artifact_dir=str(tmp_path / "audit"),
+        )
+    )
+
+    assert payload["status"] == "succeeded"
+    assert payload["usage"]["createpdf"]["source_format"] == "context_packet"
+    assert payload["usage"]["createpdf"]["target_profile"]["profile_id"] == "technical_audit"
+    assert pdf_output.exists()
 
 
 def test_mcp_create_html_package_accepts_raw_html(tmp_path: Path) -> None:

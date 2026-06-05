@@ -139,6 +139,10 @@ Target artifact types should include:
 
 The source graph is derived from the context packet and records all inputs and derived source nodes.
 
+Current runtime schema: `src/agentpdf/office/ir.py`.
+
+Machine-validating example: `examples/ir/okoffice-source-graph.json`.
+
 ```json
 {
   "source_graph_id": "sg_...",
@@ -234,6 +238,10 @@ Code:
 ## Office IR Model
 
 Office IR describes an existing parsed context item or generated artifact.
+
+Current runtime schema: `src/agentpdf/office/ir.py`.
+
+Machine-validating example: `examples/ir/workbook-office-ir.json`.
 
 ```json
 {
@@ -403,5 +411,7 @@ Migration should add Office-aware schemas while preserving current tests:
 - `target-artifact-profile.schema.json`
 - `office-source-locator.schema.json`
 - `office-workflow.schema.json`
+
+The first OSS slice uses Pydantic models as the authoritative runtime schema. JSON Schema export can be generated from those models once DOCX/XLSX/PPTX inspect stabilizes the locator set.
 
 Do not rename or remove current schemas until aliases and tests are in place.

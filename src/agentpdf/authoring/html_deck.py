@@ -12,6 +12,12 @@ from pydantic import ValidationError
 
 from agentpdf.artifacts.store import build_artifact
 from agentpdf.authoring.models import PageDocument
+from agentpdf.renderers.html_contract import (
+    deck_render_profile,
+    document_render_profile,
+    local_html_package_fallback_backend,
+    renderer_constraints,
+)
 from agentpdf.schemas.errors import AgentPDFException
 from agentpdf.schemas.models import ToolResult, ValidationCheck, ValidationReport
 from agentpdf.security.paths import resolve_input_path, resolve_output_path
@@ -228,6 +234,7 @@ def _manifest(
     manifest_path: Path,
     validation: ValidationReport,
 ) -> dict[str, Any]:
+    constraints = renderer_constraints()
     return {
         "html_package_version": "0.1",
         "html_package_id": f"htmlpkg_{uuid4().hex[:16]}",
@@ -240,6 +247,9 @@ def _manifest(
         "page_count": document.page_count,
         "javascript_enabled": False,
         "remote_assets_enabled": False,
+        "render_profile": deck_render_profile(),
+        "renderer_constraints": constraints,
+        "renderer_backend": local_html_package_fallback_backend(constraints),
         "asset_count": 0,
         "assets": [],
         "validation": validation.model_dump(mode="json"),
@@ -348,6 +358,7 @@ def _raw_html_manifest(
     title: str | None,
     source_path: str | None,
 ) -> dict[str, Any]:
+    constraints = renderer_constraints()
     manifest: dict[str, Any] = {
         "html_package_version": "0.1",
         "html_package_id": f"htmlpkg_{uuid4().hex[:16]}",
@@ -360,6 +371,9 @@ def _raw_html_manifest(
         "title": title,
         "javascript_enabled": False,
         "remote_assets_enabled": False,
+        "render_profile": document_render_profile(),
+        "renderer_constraints": constraints,
+        "renderer_backend": local_html_package_fallback_backend(constraints),
         "asset_count": 0,
         "assets": [],
         "validation": validation.model_dump(mode="json"),

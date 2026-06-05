@@ -3,7 +3,7 @@
     "path": "examples/media/meeting-audio.mp3",
     "role": "audio_context",
     "label": "Meeting Audio",
-    "transcript": "00:00 Kickoff\n00:12 Decision: keep the local worker boundary explicit.",
+    "transcript_path": "examples/media/meeting-transcript.txt",
     "duration_seconds": 42.5,
     "chapters": [
       {"start_seconds": 0, "title": "Kickoff"},

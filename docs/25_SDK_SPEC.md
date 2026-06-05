@@ -127,8 +127,10 @@ client.runTool("office.inspect.file", {
 
 client.inspect({ path: "report.docx" });
 client.word.inspectDocument({ path: "report.docx" });
+client.wordValidateDocument({ path: "report.docx" });
 client.sheet.inspectWorkbook({ path: "model.xlsx" });
 client.deck.inspectPresentation({ path: "deck.pptx" });
+client.deckValidatePresentation({ path: "deck.pptx" });
 
 client.workflow.docsetToSheet({
   sources: ["sources/a.docx", "sources/b.pdf"],

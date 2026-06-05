@@ -423,6 +423,21 @@ def test_compose_from_context_html_renderer_writes_html_package_pdf_and_manifest
     assert result.usage["html_package_manifest"]["source_ref_count"] == 3
     assert result.usage["html_package_manifest"]["asset_count"] == 1
     assert result.usage["html_package_manifest"]["assets"][0]["source_path"] == str(image.resolve())
+    layer_map = result.usage["html_package_manifest"]["layer_map"]
+    assert result.usage["html_package_manifest"]["layer_map_count"] == len(result.usage["composition_ir"]["blocks"])
+    assert result.usage["html_package_manifest"]["contract"]["layer_id_attribute"] == "data-layer-id"
+    assert result.usage["html_package_manifest"]["contract"]["bbox_precision"] == "estimated_dom_not_pdf_glyph_bbox"
+    assert {layer["block_id"] for layer in layer_map} == {
+        block["block_id"] for block in result.usage["composition_ir"]["blocks"]
+    }
+    table_layer = next(layer for layer in layer_map if layer["block_type"] == "table")
+    assert table_layer["layer_id"].startswith("html_layer_item_ctx_002")
+    assert table_layer["source_refs"] == ["ctx_002"]
+    assert table_layer["anchor"]["anchor_kind"] == "estimated_dom_anchor"
+    assert table_layer["anchor"]["dom_selector"] == f'[data-layer-id="{table_layer["layer_id"]}"]'
+    assert table_layer["anchor"]["bbox_precision"] == "estimated_dom_not_pdf_glyph_bbox"
+    assert table_layer["anchor"]["dom_bbox_px"]["width"] > 0
+    assert len(table_layer["anchor"]["normalized_bbox"]) == 4
     assert result.usage["html_package_validation"]["status"] == "passed"
     assert any(check.name == "html_package_manifest_valid" for check in result.validation.checks)
     assert any(check.name == "all_assets_resolved" for check in result.validation.checks)
@@ -433,6 +448,7 @@ def test_compose_from_context_html_renderer_writes_html_package_pdf_and_manifest
     assert "<body data-agentpdf-document" in html_text
     assert 'data-agentpdf-renderer="html-package-v0"' in html_text
     assert 'data-block-id="summary"' in html_text
+    assert 'data-layer-id="html_layer_summary"' in html_text
     assert 'data-source-refs="ctx_001 ctx_002 ctx_003"' in html_text
     assert '<img src="./html-audit.assets/' in html_text
     assert "latency_ms" in html_text
@@ -675,26 +691,63 @@ def test_render_html_package_is_exposed_to_cli_rest_mcp(tmp_path: Path) -> None:
 
     cli_result = runner.invoke(
         app,
-        ["render-html-package", manifest_path, "-o", str(cli_pdf), "--json"],
+        [
+            "render-html-package",
+            manifest_path,
+            "-o",
+            str(cli_pdf),
+            "--renderer-backend",
+            "local_html_package_fallback",
+            "--json",
+        ],
     )
     client = TestClient(create_app())
     api_response = client.post(
         "/v1/tools/pdf.render.html_package/run",
-        json={"package_path": manifest_path, "output_path": str(api_pdf)},
+        json={
+            "package_path": manifest_path,
+            "output_path": str(api_pdf),
+            "renderer_backend": "local_html_package_fallback",
+        },
     )
-    mcp_payload = json.loads(mcp_server.pdf_render_html_package(manifest_path, str(mcp_pdf)))
+    browser_pdf = tmp_path / "browser-rendered.pdf"
+    browser_response = client.post(
+        "/v1/tools/pdf.render.html_package/run",
+        json={
+            "package_path": manifest_path,
+            "output_path": str(browser_pdf),
+            "renderer_backend": "browser_chromium",
+        },
+    )
+    mcp_payload = json.loads(
+        mcp_server.pdf_render_html_package(
+            manifest_path,
+            str(mcp_pdf),
+            renderer_backend="local_html_package_fallback",
+        )
+    )
 
     assert cli_result.exit_code == 0
     cli_payload = json.loads(cli_result.stdout)
     assert cli_payload["tool"] == "pdf.render.html_package"
     assert cli_payload["usage"]["renderer"] == "local_html_package_fallback"
+    assert cli_payload["usage"]["requested_renderer_backend"] == "local_html_package_fallback"
     assert cli_pdf.exists()
     assert api_response.status_code == 200
     assert api_response.json()["tool"] == "pdf.render.html_package"
+    assert api_response.json()["usage"]["requested_renderer_backend"] == "local_html_package_fallback"
     assert api_response.json()["usage"]["html_package_manifest"]["asset_count"] == 1
     assert api_pdf.exists()
+    assert browser_response.status_code == 400
+    browser_payload = browser_response.json()
+    assert browser_payload["status"] == "failed"
+    assert browser_payload["error"]["code"] == "dependency_missing"
+    assert browser_payload["usage"]["renderer"] == "browser_chromium"
+    assert browser_payload["usage"]["render_skip_reason"] == "renderer_backend_unavailable"
+    assert not browser_pdf.exists()
     assert mcp_payload["tool"] == "pdf.render.html_package"
     assert mcp_payload["validation"]["status"] == "passed"
+    assert mcp_payload["usage"]["requested_renderer_backend"] == "local_html_package_fallback"
     assert mcp_pdf.exists()
 
 
@@ -950,6 +1003,72 @@ def test_audio_video_context_composes_traceable_media_blocks(tmp_path: Path) -> 
     assert "Dashboard tour" in text
     assert "Media context uses provided transcript" in result.warnings
     assert "Training Video" in deck_text
+
+
+def test_build_context_packet_records_media_transcript_sidecar_provenance(tmp_path: Path) -> None:
+    audio = tmp_path / "meeting.mp3"
+    audio.write_bytes(b"ID3 local audio fixture")
+    transcript = tmp_path / "meeting.transcript.txt"
+    transcript_text = "00:00 Kickoff\n00:18 Decision: cite the transcript sidecar."
+    transcript.write_text(transcript_text, encoding="utf-8")
+    output_pdf = tmp_path / "sidecar-media.pdf"
+
+    packet = build_context_packet(
+        [
+            {
+                "context_item_id": "ctx_audio",
+                "path": str(audio),
+                "role": "audio_context",
+                "label": "Meeting Audio",
+                "transcript_path": str(transcript),
+                "duration_seconds": 31,
+            }
+        ],
+        output_path=tmp_path / "sidecar-media.packet.json",
+        title="Sidecar Media Context",
+    ).usage["context_packet"]
+
+    item = packet["items"][0]
+    metadata = item["metadata"]
+    content = item["content"]
+    expected_hash = hashlib.sha256(transcript.read_bytes()).hexdigest()
+
+    assert content["transcript"]["text"] == transcript_text
+    assert content["transcript"]["source"] == "sidecar_file"
+    assert content["transcript"]["path"] == transcript.resolve().as_posix()
+    assert metadata["transcript_source"] == "sidecar_file"
+    assert metadata["transcript_source_path"] == transcript.resolve().as_posix()
+    assert metadata["transcript_sha256"] == expected_hash
+    assert metadata["transcript_size_bytes"] == len(transcript.read_bytes())
+
+    graph = packet["source_graph"]
+    transcript_node = next(node for node in graph["nodes"] if node["type"] == "transcript")
+    assert transcript_node["context_item_id"] == "ctx_audio"
+    assert transcript_node["source_ref"] == "ctx_audio#transcript"
+    assert transcript_node["uri"] == transcript.resolve().as_posix()
+    assert transcript_node["evidence"]["sha256"] == expected_hash
+    assert transcript_node["evidence"]["transcript_char_count"] == len(transcript_text)
+    assert graph["edges"] == [
+        {
+            "from_node_id": transcript_node["node_id"],
+            "to_node_id": "src_001",
+            "relation": "provides_transcript_for",
+            "context_item_id": "ctx_audio",
+            "source_ref": "ctx_audio",
+            "sidecar_source_ref": "ctx_audio#transcript",
+        }
+    ]
+
+    schema = json.loads(Path("schemas/context-packet.schema.json").read_text(encoding="utf-8"))
+    assert list(Draft202012Validator(schema).iter_errors(packet)) == []
+
+    result = compose_from_context(packet, target_profile="technical_audit", output_path=output_pdf)
+
+    media_block = next(block for block in result.usage["composition_ir"]["blocks"] if block["type"] == "audio_reference")
+    assert media_block["render_hints"]["transcript_source"] == "sidecar_file"
+    assert media_block["render_hints"]["transcript_source_path"] == transcript.resolve().as_posix()
+    assert media_block["render_hints"]["transcript_sha256"] == expected_hash
+    assert "Transcript source: `sidecar_file`" in result.usage["generated_markdown"]
 
 
 def test_context_build_cli_accepts_structured_item_json(tmp_path: Path) -> None:

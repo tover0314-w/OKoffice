@@ -146,14 +146,14 @@ office.sheet.inspect
 office.deck.inspect
 office.pdf.inspect
 office.extract.schema
-office.sheet.create_workbook
+sheet.write.workbook
 office.deck.create
 office.document.create_report
 office.convert.to_pdf
 office.validation.validate_artifact
 office.workflow.docset_to_sheet
 office.workflow.sheet_to_deck
-office.workflow.docset_to_board_pack
+office.workflow.board_pack
 office.bundle.export
 ```
 
@@ -162,7 +162,7 @@ office.bundle.export
 REST mirrors the same tool names and returns the same `ToolResult` envelope:
 
 ```http
-POST /v1/tools/office.workflow.docset_to_board_pack/run
+POST /v1/tools/office.workflow.board_pack/run
 ```
 
 ## 6. Target Namespaces
@@ -296,7 +296,7 @@ Output:
 - Chart and source map.
 - Visual validation report.
 
-### `office.workflow.docset_to_board_pack`
+### `office.workflow.board_pack`
 
 Input:
 
@@ -426,7 +426,7 @@ Phase 4:
 The first okoffice release succeeds if a developer can run a local workflow like:
 
 ```bash
-okoffice workflow docset-to-board-pack \
+okoffice workflow board-pack \
   --file diligence.pdf \
   --file memo.docx \
   --file metrics.xlsx \
