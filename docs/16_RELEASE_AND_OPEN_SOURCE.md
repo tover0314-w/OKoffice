@@ -61,7 +61,10 @@ Add:
 - `office.workflow.sheet_to_deck`.
 - `word.create.document` baseline.
 - `sheet.create.workbook` baseline.
-- `deck.create.presentation` baseline.
+- `deck.compose.plan` baseline.
+- `deck.render.html` HTML preview package baseline.
+- `deck.export.pptx` baseline or explicit optional-worker contract.
+- `deck.create.presentation` convenience command with direct-PPTX fallback evidence.
 - `office.bundle.export`.
 - `office.bundle.verify`.
 

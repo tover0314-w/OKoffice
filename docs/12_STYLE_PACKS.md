@@ -76,7 +76,9 @@ A style pack defines shared visual tokens plus format-specific behavior.
   "powerpoint": {
     "slide_size": "wide",
     "layouts": ["title", "section", "claim_chart", "table", "evidence_appendix"],
-    "requires_speaker_notes": true
+    "requires_speaker_notes": true,
+    "html_preview": {"enabled": true, "offline_assets": true},
+    "taste_rules": ["one_claim_per_slide", "evidence_on_content_slides", "contact_sheet_required"]
   },
   "pdf": {
     "page_size": "A4",
@@ -117,10 +119,11 @@ Deck outputs should follow a claim spine:
 
 - One main claim per slide unless the profile says otherwise.
 - Slide layouts chosen from the style pack.
+- HTML slide preview package before PPTX export when the renderer/export route is available.
 - Speaker notes with evidence refs where needed.
 - Chart/table slides linked to workbook ranges or source nodes.
 - Appendix slides for citations and assumptions.
-- Rendered contact-sheet validation.
+- HTML preview validation plus rendered contact-sheet validation.
 
 ### PDF
 
@@ -203,6 +206,7 @@ Example:
   "validation": [
     "word.validation.render_check",
     "sheet.validation.formulas",
+    "deck.validation.html_preview",
     "deck.validation.contact_sheet",
     "pdf.validation.render_check",
     "office.bundle.verify"
@@ -232,10 +236,19 @@ okoffice workflow docset-to-sheet sources/*.docx sources/*.pdf \
   --style-pack evidence_workbook_clean \
   --json
 
-okoffice workflow sheet-to-deck .okoffice-out/evidence.xlsx \
-  -o .okoffice-out/board-deck.pptx \
+okoffice deck compose-plan .okoffice-out/evidence.xlsx \
+  -o .okoffice-out/board-deck.plan.json \
   --profile board_deck \
   --style-pack board_deck_modern \
+  --json
+
+okoffice deck render-html .okoffice-out/board-deck.plan.json \
+  -o .okoffice-out/board-deck.html \
+  --style-pack board_deck_modern \
+  --json
+
+okoffice deck export-pptx .okoffice-out/board-deck.html \
+  -o .okoffice-out/board-deck.pptx \
   --json
 
 okoffice bundle export \
@@ -252,7 +265,7 @@ A style or template pack is complete only when it declares validation expectatio
 
 - Word: package integrity, styles, comments/tracked changes, metadata, render preview, accessibility.
 - Excel: package integrity, formula references, formula errors, chart/table refs, named ranges, hidden sheets, macros.
-- PowerPoint: package integrity, slide count, placeholder fit, notes, media refs, contact sheet, theme consistency.
+- PowerPoint: package integrity, HTML preview package, slide count, placeholder fit, notes, media refs, contact sheet, theme consistency, PPTX export lineage.
 - PDF: page count, renderability, blank-page detection, metadata, redaction, optional visual diff.
 - Bundle: manifest hashes, source-map coverage, artifact graph, warnings, dependency/license notes.
 

@@ -14,6 +14,7 @@ OKoffice 是给 coding agent、自动化系统和开发者使用的开源 Office
 - **原生定位信息**：保留 Word 段落/表格/批注、Excel 单元格/公式/图表、PPT 幻灯片/shape/notes、PDF 页码/bbox 等 source refs。
 - **本地优先**：CLI、MCP、REST、SDK 默认本地可跑，不依赖云账号。
 - **验证是基础能力**：生成和编辑后的 artifact 应该带有渲染、安全、质量和 source-map 证据。
+- **Taste-driven deck**：PPT 生成目标路线应先进入可检查的 HTML slide preview，再经过审美/布局验证后导出 PPTX。
 - **云端边界清晰**：OSS 做确定性本地工具；云端未来做托管 worker、连接器、批处理、持久化和企业治理。
 
 ## 快速开始
@@ -61,6 +62,15 @@ okpdf serve --mcp --safe-root .
 okpdf serve --api
 ```
 
+Deck 说明：当前 OSS beta 可以从 deck plan 直接创建确定性的可编辑 PPTX。OKoffice 目标路线是 taste-driven、HTML-first：
+
+```text
+deck.compose.plan -> deck.render.html -> deck.validation.html_preview
+-> deck.validation.contact_sheet -> deck.export.pptx -> deck.validate.presentation
+```
+
+详见 [Taste-Driven HTML-First Deck Pipeline](docs/43_TASTE_DRIVEN_DECK_PIPELINE.md)。
+
 ## 当前状态
 
 | 模块 | 状态 | 说明 |
@@ -79,11 +89,12 @@ okpdf serve --api
 | `sheet.write.workbook` | beta | 把 source-mapped records 写成本地 XLSX，并保留 provenance sheet。 |
 | `sheet.validate.workbook` | beta | 校验 XLSX 结构、非空 sheet、外链、安全标记和 SourceRefs 就绪状态。 |
 | `deck.inspect.presentation` | beta | 读取 PPTX 幻灯片、notes、layout、theme、media 和 chart 信息。 |
-| `deck.compose.plan` | beta | 从 evidence workbook 生成带 source refs 的 deck-specific Composition IR 和 outline JSON，不直接写 PPTX。 |
-| `deck.create.from_outline` | beta | 从结构化 outline 创建可编辑的本地 PPTX。 |
+| `deck.compose.plan` | beta | 从 evidence workbook 生成带 source refs 的 Composition IR 和 outline JSON，不直接写 HTML 或 PPTX。 |
+| `deck.create.presentation` | beta | 当前本地 writer 从 outline/plan 创建 PPTX；目标路线会编排 HTML preview 验证后再导出 PPTX。 |
+| `deck.create.from_outline` | beta | 低层 outline-to-PPTX writer，用于兼容和 fallback。 |
 | `deck.validate.presentation` | beta | 校验 PPTX 结构、空白页、placeholder 泄漏、安全标记和 source-map 就绪状态。 |
 | `office.workflow.extract_to_sheet` | beta | 从 DOCX/XLSX 表格或 OKoffice context packet source graph 生成带 source refs 的 XLSX evidence workbook。 |
-| `office.workflow.sheet_to_deck` | beta | 分析 evidence workbook，并创建可编辑的 PPTX review deck。 |
+| `office.workflow.sheet_to_deck` | beta | 当前本地路线分析 evidence workbook 并创建 PPTX；目标路线会加入 HTML preview/contact-sheet gates。 |
 | `office.workflow.board_pack` | beta | 创建本地 ZIP board pack，包含 artifacts、manifest、validation report 和交付元数据。 |
 | `office.bundle.verify` | beta | 校验 board pack ZIP 的 manifest、validation report、artifact 成员、大小和 SHA-256。 |
 | `pdf.*` 兼容层 | stable/beta | 241 个本地 PDF 和 agent setup 工具继续通过 `okpdf`、MCP、REST、SDK 可用。 |
@@ -112,7 +123,7 @@ okpdf serve --api
 |---|---|
 | Inspect | `office.inspect.file`, `word.inspect.document`, `sheet.inspect.workbook`, `deck.inspect.presentation`, `pdf.inspect.document` |
 | Extract | `word.extract.tables`, `sheet.read.workbook`, `sheet.profile.data`, `sheet.extract.tables`, `deck.extract.notes`, `pdf.convert.pdf_to_text` |
-| Create | `word.write.document`, `sheet.create.evidence_workbook`, `sheet.write.workbook`, `deck.compose.plan`, `deck.create.presentation`, `deck.create.from_outline`, `pdf.convert.markdown_to_pdf` |
+| Create | `word.write.document`, `sheet.create.evidence_workbook`, `sheet.write.workbook`, `deck.compose.plan`, `deck.render.html`, `deck.export.pptx`, `deck.create.presentation`, `pdf.convert.markdown_to_pdf` |
 | Patch | `office.patch.plan`, `word.edit.patch`, `sheet.edit.patch`, `deck.edit.patch`, `pdf.patch.apply` |
 | Validate | `office.validation.run`, `word.validation.document`, `sheet.validate.workbook`, `sheet.validation.formulas`, `deck.validate.presentation`, `pdf.validation.render_check` |
 | Evidence | `office.context.build_packet`, `office.evidence.coverage`, `office.source_map.create` |
@@ -125,6 +136,7 @@ okpdf serve --api
 - [产品策略](docs/37_OKOFFICE_PRODUCT_STRATEGY.md)
 - [Agent-native Office PRD](docs/36_OKOFFICE_AGENT_NATIVE_OFFICE_INFRA_PRD.md)
 - [工具分类](docs/38_OKOFFICE_TOOL_TAXONOMY.md)
+- [Taste-driven HTML-first deck pipeline](docs/43_TASTE_DRIVEN_DECK_PIPELINE.md)
 - [Agent 基础设施](docs/40_OKOFFICE_AGENT_INFRA.md)
 - [实施计划](docs/41_OKOFFICE_IMPLEMENTATION_PLAN.md)
 - [PDF 兼容层](docs/42_LEGACY_PDF_COMPATIBILITY.md)

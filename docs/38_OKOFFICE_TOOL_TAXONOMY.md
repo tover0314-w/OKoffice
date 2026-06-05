@@ -157,6 +157,19 @@ Validate/review:
 
 ## PowerPoint Tools
 
+Deck creation follows a taste-driven HTML-first target route:
+
+```text
+deck.compose.plan
+-> deck.render.html
+-> deck.validation.html_preview
+-> deck.validation.contact_sheet
+-> deck.export.pptx
+-> deck.validate.presentation
+```
+
+`deck.create.presentation` is the public convenience command. The current beta implementation writes PPTX directly from an outline or composition plan. The target implementation should orchestrate the HTML preview/export route and report explicit fallback evidence when optional workers are unavailable.
+
 Inspect/extract:
 
 - `deck.inspect.presentation`
@@ -171,6 +184,8 @@ Inspect/extract:
 Create/edit:
 
 - `deck.compose.plan`
+- `deck.render.html`
+- `deck.export.pptx`
 - `deck.create.presentation`
 - `deck.create.board_deck`
 - `deck.patch.slide`
@@ -181,9 +196,11 @@ Create/edit:
 Validate/review:
 
 - `deck.validation.package`
+- `deck.validation.html_preview`
 - `deck.validation.contact_sheet`
 - `deck.validation.placeholders`
 - `deck.validation.notes`
+- `deck.review.taste`
 - `deck.review.story`
 - `deck.review.claims`
 
@@ -216,10 +233,14 @@ Build in this order:
 6. `office.extract.schema`
 7. `sheet.create.evidence_workbook` (beta local writer with SourceRefs sheet)
 8. `sheet.validation.formulas` (beta structural formula QA)
-9. `deck.create.presentation` (beta outline/composition-plan PPTX writer)
-10. `deck.validation.contact_sheet`
-11. `word.create.report`
-12. `office.bundle.export`
-13. `office.bundle.verify`
+9. `deck.compose.plan` (beta source-mapped deck plan)
+10. `deck.render.html` (planned HTML slide preview package)
+11. `deck.validation.html_preview` (planned taste/layout/source validation)
+12. `deck.validation.contact_sheet`
+13. `deck.export.pptx` (planned editable PowerPoint export)
+14. `deck.create.presentation` (beta direct PPTX writer now, target orchestrator)
+15. `word.create.report`
+16. `office.bundle.export`
+17. `office.bundle.verify`
 
 This wave favors reliable inspect/extract/validate workflows before ambitious editing.

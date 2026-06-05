@@ -7,6 +7,7 @@ This document turns the "learn from the best Office/PDF projects" requirement in
 | Reference | What To Borrow | Dependency Stance |
 |---|---|---|
 | [OfficeCLI](https://github.com/iOfficeAI/OfficeCLI) | Single-binary Office operations, DOCX/XLSX/PPTX read/create/modify, JSON output, schema-driven help, MCP server, resident mode, and L1/L2/L3 abstraction. | Study deeply; do not vendor blindly. |
+| [Microsoft Office Agent](https://techcommunity.microsoft.com/blog/microsoft365copilotblog/office-agent-%E2%80%93-%E2%80%9Ctaste-driven%E2%80%9D-multi-agent-system-for-microsoft-365-copilot/4457397) | Taste-driven multi-agent deck creation, HTML5 slide intermediate artifacts, iterative visual review, and editable PowerPoint export. | Product/architecture signal only; do not depend on Microsoft-hosted agents. |
 | Codex Documents skill | DOCX render-and-inspect workflow, design presets, comments/redlines, metadata/privacy checks, and accessibility expectations. | Internal workflow reference. |
 | Codex Spreadsheets skill | Workbook creation discipline, formula correctness, dashboard quality, visual inspection, and zero formula-error bar. | Internal workflow reference. |
 | Codex Presentations skill | Claim spine, deck profiles, proof objects, contact-sheet QA, rendered previews, and template-following discipline. | Internal workflow reference. |
@@ -91,17 +92,22 @@ Target tools:
 
 ### 4. PowerPoint Quality
 
-Borrow from the Presentations skill:
+Borrow from the Presentations skill and Microsoft Office Agent's taste-driven deck pattern:
 
 - Decks need a claim spine.
 - Slides should be proof objects, not decorative summaries.
+- HTML slide packages should be the inspectable visual source layer before editable PPTX export when the worker path is available.
 - Contact-sheet QA is a first-class validation step.
 - Speaker notes and source refs matter for agent-built decks.
+- Direct outline-to-PPTX writing is a useful local fallback, not the long-term quality ceiling.
 
 Target tools:
 
 - `deck.create.presentation`
 - `deck.compose.plan`
+- `deck.render.html`
+- `deck.export.pptx`
+- `deck.validation.html_preview`
 - `deck.validation.contact_sheet`
 - `deck.review.story`
 

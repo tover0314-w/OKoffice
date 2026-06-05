@@ -60,6 +60,8 @@ okoffice/
         word/
         sheet/
         deck/
+          html_preview.py
+          export_pptx.py
       conversion/
         __init__.py
         local.py
@@ -128,6 +130,8 @@ okoffice/
         officecli.py
         libreoffice.py
         browser.py
+        html_to_pptx.py
+        browser.py
   tests/
     fixtures/
       pdf/
@@ -174,6 +178,8 @@ Target files to add during okoffice migration:
 - `src/okoffice/core/word/inspect.py`
 - `src/okoffice/core/sheet/inspect.py`
 - `src/okoffice/core/deck/inspect.py`
+- `src/okoffice/core/deck/html_preview.py`
+- `src/okoffice/core/deck/export_pptx.py`
 - `src/okoffice/validation/word.py`
 - `src/okoffice/validation/sheet.py`
 - `src/okoffice/validation/deck.py`

@@ -457,7 +457,16 @@ Acceptance criteria:
 
 Current OSS implementation.
 
-Purpose: create a local editable PPTX deck from a structured outline or deck composition plan.
+Purpose: create a local editable presentation from a structured outline or deck composition plan.
+
+Current beta behavior: writes an editable PPTX directly with the deterministic local writer.
+
+Target behavior: orchestrates the taste-driven HTML-first route when the required workers are available:
+
+```text
+deck.compose.plan -> deck.render.html -> deck.validation.html_preview
+-> deck.validation.contact_sheet -> deck.export.pptx -> deck.validate.presentation
+```
 
 CLI:
 
@@ -487,7 +496,8 @@ Expected output highlights:
   "usage": {
     "summary": {"slide_count": 3, "total_bullet_count": 5},
     "input": {"source": "composition_plan"},
-    "presentation": {"format": "pptx"}
+    "presentation": {"format": "pptx"},
+    "creation_route": {"route": "direct_pptx_fallback", "html_preview_used": false}
   },
   "next_recommended_tools": ["deck.inspect.presentation", "deck.validate.presentation", "office.workflow.board_pack"]
 }
@@ -497,7 +507,73 @@ Limitations:
 
 - Uses the deterministic local PPTX writer and does not require hosted AI, Office, LibreOffice, or rendering workers.
 - Accepts a direct `outline` or a `deck.compose.plan` JSON payload containing `outline`.
-- Produces an editable PPTX with text slides; advanced style packs, charts, theme tokens, speaker notes, contact sheets, and visual render QA remain future enhancements.
+- Produces an editable PPTX with text slides; advanced style packs, charts, theme tokens, speaker notes, contact sheets, HTML preview packages, and visual render QA remain future enhancements.
+
+### `deck.render.html`
+
+Planned target tool.
+
+Purpose: turn deck Composition IR, outline JSON, or a `deck.compose.plan` artifact into a self-contained HTML slide preview package that agents and humans can inspect before PPTX export.
+
+Expected output highlights:
+
+```json
+{
+  "status": "succeeded",
+  "tool": "deck.render.html",
+  "artifacts": [{"kind": "html", "path": ".okoffice-out/board-review.html"}],
+  "validation": {"status": "passed"},
+  "usage": {
+    "summary": {"slide_count": 4},
+    "html_package": {
+      "manifest_path": ".okoffice-out/board-review.html-manifest.json",
+      "offline_assets": true,
+      "slide_dom_anchor_count": 4
+    }
+  },
+  "next_recommended_tools": ["deck.validation.html_preview", "deck.validation.contact_sheet", "deck.export.pptx"]
+}
+```
+
+Acceptance criteria:
+
+- Writes a new HTML artifact and package manifest.
+- Preserves slide ids, source refs, style tokens, and DOM anchors.
+- Rejects unsafe remote assets, scripts, file URLs, and path traversal.
+- Emits placeholder, overflow-risk, contrast, and missing-alt-text warnings.
+- Does not write PPTX directly.
+
+### `deck.export.pptx`
+
+Planned target tool.
+
+Purpose: convert a validated HTML slide package or component tree into an editable PPTX while preserving lineage back to the deck plan and HTML preview.
+
+Expected output highlights:
+
+```json
+{
+  "status": "succeeded",
+  "tool": "deck.export.pptx",
+  "validation": {"status": "passed"},
+  "usage": {
+    "summary": {"slide_count": 4},
+    "export": {
+      "source_format": "html_slide_package",
+      "output_format": "pptx",
+      "source_map_path": ".okoffice-out/board-review.deck-source-map.json"
+    }
+  },
+  "next_recommended_tools": ["deck.validate.presentation", "office.workflow.board_pack"]
+}
+```
+
+Acceptance criteria:
+
+- Writes a new PPTX and never mutates the HTML package or source workbook.
+- Preserves slide order, speaker notes, theme metadata, images, alt text, and source-map links where feasible.
+- Emits explicit warnings for non-editable visual fallbacks.
+- Reports worker unavailability as structured skip/failure evidence instead of pretending the export completed.
 
 ### `deck.compose.plan`
 
@@ -540,7 +616,7 @@ Acceptance criteria:
 - Produces slide plans, claims, workbook ranges, and source refs for agent review.
 - Optionally writes JSON plan output; never writes or mutates PPTX.
 - Does not call hosted AI providers or infer unsupported chart/design layout.
-- Recommends `deck.create.presentation`, compatibility `deck.create.from_outline`, validation, and board-pack tools.
+- Recommends target `deck.render.html`, `deck.validation.html_preview`, `deck.export.pptx`, convenience `deck.create.presentation`, compatibility `deck.create.from_outline`, validation, and board-pack tools.
 
 ## Core Edit and Patch Tools
 

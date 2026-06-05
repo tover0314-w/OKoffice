@@ -171,7 +171,38 @@ curl -X POST http://127.0.0.1:7331/v1/tools/deck.compose.plan/run \
   }'
 ```
 
-Expected output includes `usage.composition_ir.slides`, slide claims, workbook ranges, source refs, and an `outline` that can be reviewed before creating a PPTX.
+Expected output includes `usage.composition_ir.slides`, slide claims, workbook ranges, source refs, and an `outline` that can be reviewed before rendering an HTML preview or creating a PPTX fallback.
+
+## Render Deck HTML Preview
+
+Target route once implemented:
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/deck.render.html/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "plan_path": ".okoffice-out/vendor-deck.plan.json",
+    "output_path": ".okoffice-out/vendor-board-deck.html",
+    "artifact_dir": ".okoffice-out/vendor-board-deck-assets"
+  }'
+```
+
+Expected output includes an HTML artifact, package manifest, slide DOM anchors, source refs, style token usage, and next tools such as `deck.validation.html_preview`, `deck.validation.contact_sheet`, and `deck.export.pptx`.
+
+## Export Deck PPTX
+
+Target route once implemented:
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/deck.export.pptx/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "html_path": ".okoffice-out/vendor-board-deck.html",
+    "output_path": ".okoffice-out/vendor-board-deck.pptx"
+  }'
+```
+
+Expected output includes an editable PPTX artifact, export lineage back to the HTML package, and validation/worker evidence.
 
 ## Create Deck
 
@@ -191,7 +222,7 @@ curl -X POST http://127.0.0.1:7331/v1/tools/deck.create.presentation/run \
   }'
 ```
 
-The endpoint accepts either a direct `outline` payload or a `plan` payload containing `outline`, such as the JSON emitted by `deck.compose.plan`.
+The endpoint accepts either a direct `outline` payload or a `plan` payload containing `outline`, such as the JSON emitted by `deck.compose.plan`. Current beta behavior writes PPTX directly; target behavior should orchestrate HTML preview validation before PPTX export and report direct creation as a fallback route when used.
 
 ```bash
 curl -X POST http://127.0.0.1:7331/v1/tools/office.workflow.sheet_to_deck/run \

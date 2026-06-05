@@ -118,9 +118,13 @@ steps:
   - tool: sheet.inspect.workbook
   - tool: sheet.extract.tables
   - tool: deck.compose.plan
-  - tool: deck.create.presentation
+  - tool: deck.render.html
+  - tool: deck.validation.html_preview
   - tool: deck.validation.contact_sheet
+  - tool: deck.export.pptx
+  - tool: deck.validate.presentation
 outputs:
+  html_preview: ./out/vendor-board-deck.html
   deck: ./out/vendor-board-deck.pptx
   contact_sheet: ./out/vendor-board-deck.contact-sheet.png
 ```

@@ -45,7 +45,7 @@ The target examples should include:
 
 - Inspect a workbook.
 - Extract evidence from Word/PDF into Excel.
-- Generate a PowerPoint deck from workbook data.
+- Generate an HTML-reviewed PowerPoint deck from workbook data.
 - Verify an okoffice bundle.
 
 ## Codex

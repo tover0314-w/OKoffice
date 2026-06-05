@@ -11,7 +11,7 @@ For okoffice, validation is format-aware:
 - PDF validation checks renderability, page count, blank pages, text layer, redaction, and visual diff.
 - Word validation checks schema, outline, fields, tables, metadata, placeholder leakage, and preview evidence.
 - Excel validation checks formulas, cached values, charts, pivots, named ranges, truncation, source notes, and placeholder leakage.
-- PowerPoint validation checks slide order, shape bounds, text overflow, contrast, speaker notes, screenshot/contact-sheet evidence, and placeholder leakage.
+- PowerPoint validation checks slide order, shape bounds, text overflow, contrast, speaker notes, HTML preview package evidence, screenshot/contact-sheet evidence, and placeholder leakage.
 - Bundle validation checks manifest completeness, checksums, artifact existence, source maps, and validation report links.
 
 ## Always-on Checks
@@ -75,6 +75,8 @@ Generated artifacts:
 ## PowerPoint Checks
 
 - Deck opens or parser can inspect the package.
+- HTML slide preview package exists for generated decks when the target route is used.
+- HTML preview package is offline-renderable and rejects unsafe remote assets/scripts.
 - Slide count and order match plan.
 - Shape bounds stay within slide dimensions.
 - Text does not overflow shapes.
@@ -82,6 +84,7 @@ Generated artifacts:
 - Speaker notes exist on content slides when the profile requires them.
 - Contrast warnings are emitted for dark backgrounds with dark text.
 - Charts/tables/images have expected source refs when generated from evidence.
+- Taste rules are checked: one claim per slide, evidence on content slides, readable visual density, and non-duplicated section rhythm where configured.
 - Per-slide screenshot or contact-sheet preview exists when a local renderer is available.
 
 ## Bundle Checks
@@ -157,12 +160,12 @@ Return structured evidence:
 
 ```json
 {
-  "name": "deck_render_check",
+  "name": "deck_html_preview_or_render_check",
   "status": "skipped",
   "details": {
     "reason": "worker_unavailable",
-    "worker": "office_renderer",
-    "retry_hint": "Install an optional Office preview worker or run the check in hosted mode."
+    "worker": "deck_html_preview_or_office_renderer",
+    "retry_hint": "Install an optional browser/Office preview worker or run the check in hosted mode."
   }
 }
 ```

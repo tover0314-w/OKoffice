@@ -105,12 +105,17 @@ First target wrappers:
 - `sheet_write_workbook`
 - `sheet_validate_formulas`
 - `deck_create_presentation`
+- `deck_render_html`
+- `deck_validation_html_preview`
+- `deck_export_pptx`
 - `word_create_document`
 - `office_workflow_docset_to_sheet`
 - `office_workflow_sheet_to_deck`
 - `office_workflow_board_pack`
 - `office_bundle_export`
 - `office_bundle_verify`
+
+Wrappers for `deck_render_html`, `deck_validation_html_preview`, and `deck_export_pptx` are target names for the HTML-first deck route. They should appear in the manifest as planned until an implementation or optional worker adapter exists; MCP must not expose them as runnable tools prematurely.
 
 Wrappers should map to canonical tool names in `structuredContent.tool`, for example:
 
@@ -143,6 +148,9 @@ sheet_create_evidence_workbook(
 sheet_validate_formulas(".okoffice-out/evidence.xlsx")
 office_workflow_extract_to_sheet([], ".okoffice-out/evidence.xlsx", context_packet_path=".okoffice-out/context.packet.json")
 deck_compose_plan(".okoffice-out/evidence.xlsx", ".okoffice-out/deck.plan.json", title="Board Review")
+deck_render_html(".okoffice-out/deck.plan.json", ".okoffice-out/board-review.html")
+deck_validation_html_preview(".okoffice-out/board-review.html")
+deck_export_pptx(".okoffice-out/board-review.html", ".okoffice-out/vendor-board-deck.pptx")
 deck_validate_presentation(".okoffice-out/vendor-board-deck.pptx")
 office_workflow_board_pack(
     [".okoffice-out/vendor-evidence.xlsx", ".okoffice-out/vendor-board-deck.pptx"],

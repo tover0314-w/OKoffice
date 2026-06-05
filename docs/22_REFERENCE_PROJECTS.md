@@ -9,7 +9,7 @@ Do not blindly copy code. Study product surface, UX, docs, architecture, verific
 - OfficeCLI: single-binary agent surface for `.docx`, `.xlsx`, and `.pptx`; JSON output; MCP server; schema-driven help; DOM operations; raw XML fallback; HTML/screenshot/watch preview loop; specialized skills for Word, Excel, PowerPoint, dashboards, financial models, pitch decks, academic papers, and animated decks. Source: [iOfficeAI/OfficeCLI](https://github.com/iOfficeAI/OfficeCLI).
 - Codex Documents skill: DOCX creation/editing discipline, render-to-PNG QA, style presets, table geometry, comments, redlines, metadata/privacy, accessibility, and Google Docs import workflow.
 - Codex Spreadsheets skill: workbook/dashboard creation, formulas, charts, tables, data validation, rendering, formula-error scans, and analyst-grade layout conventions.
-- Codex Presentations skill: claim spine, deck profiles, proof objects, contact-sheet QA, template-following mode, rendered slide checks, source notes, and final PPTX export discipline.
+- Codex Presentations skill: claim spine, deck profiles, proof objects, HTML/contact-sheet QA, template-following mode, rendered slide checks, source notes, and final PPTX export discipline.
 
 ## Core PDF Engines And Utilities
 

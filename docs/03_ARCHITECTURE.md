@@ -93,7 +93,8 @@ sequenceDiagram
   participant Context as Context Normalizer
   participant Evidence as Evidence Extractor
   participant Sheet as Workbook Builder
-  participant Deck as Deck Builder
+  participant Deck as Deck Planner
+  participant Preview as HTML Preview/Export
   participant PDF as PDF Export/Validate
   participant Bundle as Bundle Export
 
@@ -101,8 +102,9 @@ sequenceDiagram
   API->>Context: ingest PDF/DOCX/XLSX/PPTX/text/link inputs
   Context->>Evidence: build source graph and extraction tasks
   Evidence->>Sheet: create evidence workbook with row/cell source refs
-  Sheet->>Deck: create editable deck with charts and notes
-  Deck->>PDF: export or render final PDF packet
+  Sheet->>Deck: compose source-mapped deck plan
+  Deck->>Preview: render HTML slides and run preview/contact-sheet QA
+  Preview->>PDF: export editable PPTX and optional PDF packet
   PDF->>Bundle: validate artifacts and package manifests
   Bundle-->>API: ToolResult with artifacts, source map, validation, warnings
 ```
@@ -155,7 +157,7 @@ Recommended worker categories:
 - `pdf`: deterministic PDF operations.
 - `word`: DOCX inspect/create/edit/validate.
 - `sheet`: XLSX inspect/create/edit/validate.
-- `deck`: PPTX inspect/create/edit/validate.
+- `deck`: PPTX inspect/create/edit/validate plus HTML slide preview and export contracts.
 - `convert`: conversions across PDF, Office, HTML, Markdown, images, and text.
 - `render`: page/slide/sheet/document previews.
 - `context`: heterogeneous context normalization.
@@ -170,7 +172,7 @@ Recommended worker categories:
 - `security`: sanitize, redact, metadata removal, embedded-object and macro risk detection.
 - `workflow`: planning, running, reporting, batch, retries, and audit trails.
 
-Optional worker adapters may include OfficeCLI, LibreOffice, browser renderers, OCR engines, and model workers. Each adapter must expose capability evidence and structured unavailable-worker errors.
+Optional worker adapters may include OfficeCLI, LibreOffice, browser renderers, HTML-to-PPTX export workers, OCR engines, and model workers. Each adapter must expose capability evidence and structured unavailable-worker errors.
 
 ## Artifact Store
 
@@ -255,7 +257,7 @@ Composition IR describes the target artifact that should be rendered. It should 
 
 - Word sections, paragraphs, tables, callouts, citations, comments, and fields.
 - Excel sheets, tables, formulas, assumptions, checks, pivots, charts, and dashboards.
-- PowerPoint slides, shapes, charts, diagrams, notes, and sections.
+- PowerPoint slides, shapes, charts, diagrams, notes, sections, HTML slide packages, and PPTX export lineage.
 - PDF pages, appendices, evidence packets, and validation reports.
 - Bundles containing multiple artifacts and manifests.
 
@@ -278,7 +280,7 @@ Format-specific checks:
 - PDF: page count, renderability, blank pages, text layer, redaction verification, visual diff.
 - Word: schema, outline, field presence, table overflow, comments/revisions, preview.
 - Excel: formula errors, cached values, `###`, chart anchors, named ranges, pivots, source notes.
-- PowerPoint: slide order, shape bounds, text overflow, contrast, notes, screenshot/contact-sheet preview.
+- PowerPoint: slide order, shape bounds, text overflow, contrast, notes, HTML preview package, screenshot/contact-sheet preview, and PPTX export lineage.
 
 ## Failure Model
 

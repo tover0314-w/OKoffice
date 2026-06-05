@@ -116,6 +116,22 @@ okoffice deck compose-plan \
   --title "Vendor Board Review" \
   --json
 
+# Target taste-driven route once the HTML preview/export tools are available:
+okoffice deck render-html \
+  .okoffice-out/vendor-deck.plan.json \
+  -o .okoffice-out/vendor-board-deck.html \
+  --json
+
+okoffice deck validate-html \
+  .okoffice-out/vendor-board-deck.html \
+  --json
+
+okoffice deck export-pptx \
+  .okoffice-out/vendor-board-deck.html \
+  -o .okoffice-out/vendor-board-deck.pptx \
+  --json
+
+# Current OSS beta direct PPTX writer:
 okoffice deck create-presentation \
   .okoffice-out/vendor-deck.plan.json \
   -o .okoffice-out/vendor-board-deck.pptx \
@@ -148,6 +164,7 @@ okoffice bundle verify .okoffice-out/vendor-board-pack.zip --json
 Expected artifacts:
 
 - `artifacts/vendor-evidence.xlsx`.
+- target route: `artifacts/vendor-board-deck.html` plus HTML manifest/contact-sheet evidence when workers are available.
 - `artifacts/vendor-board-deck.pptx`.
 - `okoffice-manifest.json`.
 - `okoffice-validation.json`.

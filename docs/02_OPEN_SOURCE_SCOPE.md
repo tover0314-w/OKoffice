@@ -70,8 +70,10 @@ PowerPoint:
 
 - Inspect slide inventory, shapes, charts, tables, notes, media, comments, and safety markers.
 - Extract slide text and source locators.
-- Create simple editable decks from storyboard/composition IR.
-- Validate slide order, bounds, text overflow, notes coverage, placeholder leakage, and preview evidence when available.
+- Compose deck plans from storyboard/composition IR.
+- Render self-contained HTML slide preview packages before PPTX export where the local route is available.
+- Create simple editable decks from storyboard/composition IR as deterministic fallback.
+- Validate HTML preview packages, slide order, bounds, text overflow, notes coverage, placeholder leakage, and preview evidence when available.
 
 Bundles:
 
@@ -105,6 +107,7 @@ These should work locally without paid models:
 - Evidence search returning citations.
 - RAG demo returning source citations.
 - Template-based document, workbook, deck, and PDF creation where deterministic.
+- HTML-first deck preview packages with direct PPTX fallback where deterministic.
 - Rule-based sensitive-data detection baseline.
 - Local context packet examples for document/image/text/Markdown/code/data/link inputs.
 
@@ -116,7 +119,8 @@ Optional workers may power richer Office operations, but they must be explicit:
 
 - OfficeCLI or another OOXML worker for `.docx`, `.xlsx`, and `.pptx` DOM operations.
 - LibreOffice or document renderers for PDF export/preview.
-- Browser renderers for HTML/source-package output.
+- Browser renderers for HTML/source-package output and deck contact sheets.
+- HTML-to-PPTX export workers.
 - OCR engines.
 - VLM/model workers.
 

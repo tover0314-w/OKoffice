@@ -174,8 +174,14 @@ office.inspect.file
 -> office.extract.schema
 -> sheet.create.evidence_workbook
 -> sheet.validation.formulas
--> deck.create.presentation
+-> deck.compose.plan
+-> deck.render.html
+-> deck.validation.html_preview
 -> deck.validation.contact_sheet
+-> deck.export.pptx
+-> deck.validate.presentation
 -> office.bundle.export
 -> office.bundle.verify
 ```
+
+Current beta note: `deck.create.presentation` can write PPTX directly from a plan. Target agent behavior should prefer HTML preview validation and PPTX export when `deck.render.html` / `deck.export.pptx` are available, with direct PPTX creation reported as an explicit fallback route.

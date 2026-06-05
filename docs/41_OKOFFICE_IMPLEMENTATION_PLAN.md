@@ -103,13 +103,18 @@ Acceptance:
 Deliverables:
 
 - `deck.compose.plan`.
-- `deck.create.presentation` as the okoffice-first outline/composition-plan PPTX writer.
+- `deck.render.html` as the taste-driven HTML slide preview package writer.
+- `deck.validation.html_preview`.
 - `deck.validation.contact_sheet`.
+- `deck.export.pptx`.
+- `deck.create.presentation` as the okoffice-first convenience command; current beta direct PPTX writer, target HTML-first orchestrator.
 - workbook-to-deck example.
 
 Acceptance:
 
-- Workbook tables/charts become editable deck slides.
+- Workbook tables/charts become a source-mapped deck plan and HTML preview package.
+- The HTML preview package records slide ids, DOM anchors, style tokens, source refs, and render profile evidence.
+- Editable PPTX export preserves slide order, speaker notes, and source-map links back to the plan/HTML package where feasible.
 - Slides include source refs and speaker notes where configured.
 - Contact-sheet worker absence returns structured skip.
 

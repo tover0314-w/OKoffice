@@ -8,13 +8,14 @@ Read these files first, in order:
 2. `AGENTS.md`
 3. `docs/37_OKOFFICE_PRODUCT_STRATEGY.md`
 4. `docs/38_OKOFFICE_TOOL_TAXONOMY.md`
-5. `docs/40_OKOFFICE_AGENT_INFRA.md`
-6. `docs/41_OKOFFICE_IMPLEMENTATION_PLAN.md`
-7. `docs/42_LEGACY_PDF_COMPATIBILITY.md`
-8. `docs/36_OKOFFICE_AGENT_NATIVE_OFFICE_INFRA_PRD.md`
-9. `docs/03_ARCHITECTURE.md`
-10. `docs/11_DOCUMENT_IR_SPEC.md`
-11. `codex/backlog/V0_IMPLEMENTATION_ORDER.md`
+5. `docs/43_TASTE_DRIVEN_DECK_PIPELINE.md`
+6. `docs/40_OKOFFICE_AGENT_INFRA.md`
+7. `docs/41_OKOFFICE_IMPLEMENTATION_PLAN.md`
+8. `docs/42_LEGACY_PDF_COMPATIBILITY.md`
+9. `docs/36_OKOFFICE_AGENT_NATIVE_OFFICE_INFRA_PRD.md`
+10. `docs/03_ARCHITECTURE.md`
+11. `docs/11_DOCUMENT_IR_SPEC.md`
+12. `codex/backlog/V0_IMPLEMENTATION_ORDER.md`
 
 ## Primary Objective
 
@@ -31,6 +32,7 @@ Prioritize:
 - native locators for Word, Excel, PowerPoint, and PDF.
 - deterministic `.docx`, `.xlsx`, and `.pptx` inspect tools.
 - format-specific validation tools.
+- taste-driven HTML-first deck generation: plan, HTML preview, contact sheet, PPTX export, and validation.
 - `docset_to_sheet`, `sheet_to_deck`, and `board_pack` workflows.
 - agent setup and manifest surfaces for multiple coding agents.
 

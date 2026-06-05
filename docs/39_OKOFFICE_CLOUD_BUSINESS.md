@@ -45,6 +45,7 @@ Possible hosted free tier:
 ### Managed Workers
 
 - Office render/convert.
+- HTML deck preview rendering and HTML-to-PPTX export.
 - OCR.
 - Agentic parse.
 - Formula recalculation.
@@ -57,7 +58,7 @@ Possible hosted free tier:
 - schema extraction from large document sets;
 - cited report generation;
 - evidence workbook generation;
-- deck generation;
+- taste-driven deck generation with HTML preview, contact-sheet QA, and editable PPTX export;
 - claim/citation verification;
 - model review;
 - contract risk review;
@@ -100,6 +101,8 @@ Suggested events:
 
 ```text
 worker.office_render.completed
+worker.deck_html_preview.completed
+worker.deck_pptx_export.completed
 worker.ocr.page_processed
 worker.agentic_parse.page_processed
 worker.formula_recalc.workbook_processed
