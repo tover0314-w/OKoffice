@@ -558,7 +558,108 @@ Output highlights:
     "composition_ir": {"schema": "okoffice.deck.composition", "kind": "deck.composition"},
     "outline": {"slides": []}
   },
-  "next_recommended_tools": ["deck.create.from_outline", "deck.validate.presentation"]
+  "next_recommended_tools": ["deck.render.html", "deck.validation.html_preview", "deck.export.pptx", "deck.create.presentation", "deck.validate.presentation"]
+}
+```
+
+## Example: Target HTML Deck Preview Tool
+
+```http
+POST /v1/tools/deck.render.html/run
+```
+
+Input:
+
+```json
+{
+  "plan_path": ".okoffice-out/vendor-deck.plan.json",
+  "output_path": ".okoffice-out/vendor-board-deck.html",
+  "artifact_dir": ".okoffice-out/vendor-board-deck-assets"
+}
+```
+
+Output highlights:
+
+```json
+{
+  "status": "succeeded",
+  "tool": "deck.render.html",
+  "artifacts": [{"kind": "html", "path": ".okoffice-out/vendor-board-deck.html"}],
+  "usage": {
+    "summary": {"slide_count": 4},
+    "html_package": {"offline_assets": true, "slide_dom_anchor_count": 4}
+  },
+  "next_recommended_tools": ["deck.validation.html_preview", "deck.validation.contact_sheet", "deck.export.pptx"]
+}
+```
+
+This target tool is the taste-driven preview layer. It should remain `planned` until implemented locally or through an explicit optional worker.
+
+## Example: Target PPTX Export Tool
+
+```http
+POST /v1/tools/deck.export.pptx/run
+```
+
+Input:
+
+```json
+{
+  "html_path": ".okoffice-out/vendor-board-deck.html",
+  "html_manifest_path": ".okoffice-out/vendor-board-deck.html-manifest.json",
+  "output_path": ".okoffice-out/board-review.pptx"
+}
+```
+
+Output highlights:
+
+```json
+{
+  "status": "succeeded",
+  "tool": "deck.export.pptx",
+  "validation": {"status": "passed"},
+  "usage": {
+    "summary": {"slide_count": 4},
+    "export": {"source_format": "html_slide_package", "output_format": "pptx"}
+  }
+}
+```
+
+## Example: Implemented Deck Creation Tool
+
+```http
+POST /v1/tools/deck.create.presentation/run
+```
+
+Input:
+
+```json
+{
+  "plan": {
+    "outline": {
+      "slides": [
+        {"title": "Board Review", "bullets": ["Evidence-backed view"]}
+      ]
+    }
+  },
+  "output_path": ".okoffice-out/board-review.pptx"
+}
+```
+
+Current beta note: this tool writes PPTX directly from an outline or plan. Target note: this tool should become the convenience wrapper over `deck.render.html`, preview validation, and `deck.export.pptx`, with explicit fallback evidence when the HTML/PPTX worker route is unavailable.
+
+Output highlights:
+
+```json
+{
+  "status": "succeeded",
+  "tool": "deck.create.presentation",
+  "validation": {"status": "passed"},
+  "usage": {
+    "summary": {"slide_count": 1},
+    "input": {"source": "composition_plan"},
+    "presentation": {"format": "pptx"}
+  }
 }
 ```
 

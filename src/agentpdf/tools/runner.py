@@ -82,6 +82,7 @@ from agentpdf.office.bundle import export_office_bundle, verify_office_bundle
 from agentpdf.office.context import build_office_context_packet
 from agentpdf.office.deck import (
     create_deck_from_outline,
+    create_deck_presentation as create_deck_presentation_from_outline,
     inspect_deck_presentation,
     validate_deck_presentation as validate_deck_outline_presentation,
 )
@@ -91,7 +92,7 @@ from agentpdf.office.deck_validation import (
     validate_deck_contact_sheet,
     validate_deck_presentation as validate_deck_quality_presentation,
 )
-from agentpdf.office.deck_writer import create_deck_presentation
+from agentpdf.office.deck_writer import create_deck_presentation as create_deck_presentation_from_workbook
 from agentpdf.office.extract import extract_schema
 from agentpdf.office.inspect import inspect_office_file
 from agentpdf.office.sheet import (
@@ -450,15 +451,8 @@ def run_deck_create_presentation(
     title: str | None = None,
     profile: str = "board_review",
     style: dict[str, Any] | None = None,
+    outline_or_plan: dict[str, Any] | None = None,
 ) -> ToolResult:
-    if workbook_path is None:
-        return ToolResult(
-            job_id=_job_id(),
-            status="failed",
-            tool="deck.create.presentation",
-            error=AgentPDFError(code="invalid_input", message="workbook_path is required."),
-            warnings=["workbook_path is required."],
-        )
     if output_path is None:
         return ToolResult(
             job_id=_job_id(),
@@ -467,7 +461,17 @@ def run_deck_create_presentation(
             error=AgentPDFError(code="invalid_input", message="output_path is required."),
             warnings=["output_path is required."],
         )
-    return create_deck_presentation(
+    if workbook_path is None and outline_or_plan is None:
+        return ToolResult(
+            job_id=_job_id(),
+            status="failed",
+            tool="deck.create.presentation",
+            error=AgentPDFError(code="invalid_input", message="workbook_path or outline_or_plan is required."),
+            warnings=["workbook_path or outline_or_plan is required."],
+        )
+    if workbook_path is None:
+        return create_deck_presentation_from_outline(outline_or_plan or {}, output_path)
+    return create_deck_presentation_from_workbook(
         workbook_path=workbook_path,
         output_path=output_path,
         title=title,

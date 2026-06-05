@@ -41,8 +41,8 @@ from agentpdf.tools.runner import (
     run_compare_visual_diff,
     run_compare_version_report,
     run_deck_compose_plan,
-    run_deck_create_presentation,
     run_deck_create_from_outline,
+    run_deck_create_presentation,
     run_deck_inspect_presentation,
     run_deck_patch_apply,
     run_deck_validate_contact_sheet,
@@ -453,12 +453,14 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
         return run_deck_validate_contact_sheet(payload.get("path", payload.get("input_path", "")))
     if tool_name == "deck.create.presentation":
         style = payload.get("style")
+        outline_or_plan = payload.get("outline_or_plan") or payload.get("outline") or payload.get("plan")
         return run_deck_create_presentation(
             workbook_path=payload.get("workbook_path") or payload.get("from_workbook") or payload.get("input_path"),
-            output_path=payload.get("output_path") or payload.get("output"),
+            output_path=payload.get("output_path") or payload.get("output", ".okoffice-out/deck.pptx"),
             title=str(payload["title"]) if payload.get("title") is not None else None,
             profile=str(payload.get("profile", "board_review")),
             style=style if isinstance(style, dict) else None,
+            outline_or_plan=outline_or_plan if isinstance(outline_or_plan, dict) else None,
         )
     if tool_name == "deck.patch.apply":
         operations = payload.get("operations")

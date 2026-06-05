@@ -43,7 +43,7 @@ This is not part of the OSS implementation, but the architecture should support 
 - Hosted artifact graphs.
 - Source-backed Word report generation.
 - Evidence-backed Excel workbook generation.
-- High-quality PowerPoint deck generation.
+- High-quality PowerPoint deck generation with HTML preview, contact-sheet QA, and editable PPTX export.
 - Board-pack bundle workflows.
 - Patch preview and verification.
 - Batch processing.
@@ -99,6 +99,8 @@ Agent-native Office workflows:
 - `excel_workbook_created`
 - `excel_formula_validation_completed`
 - `powerpoint_deck_created`
+- `deck_html_preview_rendered`
+- `deck_pptx_exported`
 - `deck_contact_sheet_rendered`
 - `board_pack_created`
 - `bundle_exported`

@@ -2,7 +2,7 @@
 
 The current PDF domain treats PDF creation as an authoring workflow before rendering. The local OSS path can plan an authoring route, plan source gathering, normalize agent-supplied source cards, extract evidence cards, build a storyboard, write or revise page JSON, create a self-contained HTML package, render it to PDF, and run visual QA. The HTML package is the inspectable source layer for the final PDF.
 
-In okoffice, this pattern becomes the broader creation model for Word reports, Excel workbooks, PowerPoint decks, PDFs, and audit bundles: plan first, create explicit source artifacts, validate the output, and preserve source refs.
+In okoffice, this pattern becomes the broader creation model for Word reports, Excel workbooks, PowerPoint decks, PDFs, and audit bundles: plan first, create explicit source artifacts, validate the output, and preserve source refs. Deck generation should reuse the HTML source-package idea as a taste-driven preview layer before editable PPTX export.
 
 ## When to Use It
 
@@ -196,7 +196,7 @@ For `pdf.workflow.createpdf` with `bundle_output_path`, the success response als
 - The OSS MVP does not browse the web.
 - The OSS MVP does not call an LLM to synthesize insights.
 - HTML/CSS rendering defaults to the local fallback unless `browser_chromium` and the optional Playwright worker are installed.
-- DOCX and PPTX routes are recommended by `pdf.authoring.plan`, but this MVP implements the HTML source-package path. Target okoffice routes should use `word.create.document` and `deck.create.presentation` once implemented.
+- DOCX and PPTX routes are recommended by `pdf.authoring.plan`, but this MVP implements the HTML source-package path. Target okoffice deck routes should use `deck.compose.plan`, `deck.render.html`, `deck.validation.html_preview`, `deck.export.pptx`, and `deck.create.presentation` as the convenience wrapper once implemented.
 
 ## License and Dependency Notes
 

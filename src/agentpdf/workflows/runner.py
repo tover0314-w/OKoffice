@@ -522,12 +522,14 @@ def _run_local_step(tool: str, payload: dict[str, Any]) -> ToolResult:
             output_path=payload.get("output_path", payload.get("output", ".okoffice-out/deck.pptx")),
         )
     if tool == "deck.create.presentation":
+        outline_or_plan = payload.get("outline_or_plan") or payload.get("outline") or payload.get("plan")
         return runner.run_deck_create_presentation(
             workbook_path=payload.get("workbook_path", payload.get("from_workbook", payload.get("input_path"))),
-            output_path=payload.get("output_path", payload.get("output")),
+            output_path=payload.get("output_path", payload.get("output", ".okoffice-out/deck.pptx")),
             title=str(payload["title"]) if payload.get("title") is not None else None,
             profile=str(payload.get("profile", "board_review")),
             style=payload.get("style") if isinstance(payload.get("style"), dict) else None,
+            outline_or_plan=outline_or_plan if isinstance(outline_or_plan, dict) else None,
         )
     if tool == "deck.patch.apply":
         operations = payload.get("operations")

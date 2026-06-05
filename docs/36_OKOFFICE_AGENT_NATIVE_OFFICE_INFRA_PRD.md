@@ -61,6 +61,17 @@ Source: [OfficeCLI GitHub](https://github.com/iOfficeAI/OfficeCLI)
 
 okoffice should not simply clone this low-level surface. It should support optional Office workers like OfficeCLI while owning the higher-level workflow contract: source graph, evidence coverage, composition IR, validation, and artifact bundles.
 
+### Microsoft Office Agent
+
+Microsoft's Office Agent material is a strong taste and architecture signal for presentation generation:
+
+- It frames deck creation as taste-driven development rather than simple file generation.
+- It describes specialized agents that create HTML5 slides before converting the result into editable PowerPoint output.
+- It treats visual review and refinement as part of the product loop.
+- It reinforces an OKoffice requirement: PPTX should be the editable delivery artifact, while HTML preview packages, contact sheets, validation reports, and source maps are the agent-observable creation layer.
+
+Sources: [Microsoft Tech Community Office Agent post](https://techcommunity.microsoft.com/blog/microsoft365copilotblog/office-agent-%E2%80%93-%E2%80%9Ctaste-driven%E2%80%9D-multi-agent-system-for-microsoft-365-copilot/4457397), [Microsoft Source Asia Office Agent article](https://news.microsoft.com/source/asia/2025/09/30/office-agent-%E6%89%93%E9%80%A0%E5%93%81%E5%91%B3%E9%A9%B1%E5%8A%A8%E7%9A%84%E5%A4%9A%E6%99%BA%E8%83%BD%E4%BD%93%E7%B3%BB%E7%BB%9F%EF%BC%8C%E5%85%A8%E9%9D%A2/?lang=zh-hans)
+
 ### Word/DOCX Skill Lessons
 
 Good Word output is not just text in a `.docx` file. The document layer needs:
@@ -91,6 +102,7 @@ Good decks need narrative and visual QA:
 - Proof objects, charts, screenshots, diagrams, or visuals on content slides.
 - Speaker notes.
 - Explicit typography, grid, palette, contrast, and layout rules.
+- HTML-first slide preview as the taste-driven creation surface before PPTX export when available.
 - Contact-sheet or per-slide screenshot QA.
 - Template-following mode for existing decks.
 
@@ -129,7 +141,9 @@ okoffice inspect source.docx --json
 okoffice inspect workbook.xlsx --json
 okoffice context build --file brief.docx --file diligence.pdf --file metrics.xlsx -o context.json --json
 okoffice extract schema context.json --schema examples/schemas/kpi-review.json -o evidence.xlsx --json
-okoffice deck create --from-workbook evidence.xlsx --profile board_review -o board-review.pptx --json
+okoffice deck compose-plan evidence.xlsx -o board-review.plan.json --profile board_review --json
+okoffice deck render-html board-review.plan.json -o board-review.html --json
+okoffice deck export-pptx board-review.html -o board-review.pptx --json
 okoffice export pdf board-review.pptx -o board-review.pdf --json
 okoffice bundle export --file evidence.xlsx --file board-review.pptx --file board-review.pdf -o board-pack.zip --json
 ```
@@ -290,6 +304,7 @@ Input:
 
 Output:
 
+- HTML slide preview package.
 - Editable `.pptx`.
 - Optional PDF export.
 - Speaker notes.
@@ -356,6 +371,7 @@ PowerPoint:
 - Placeholder leakage.
 - Contrast checks.
 - Speaker notes coverage.
+- HTML preview package safety, offline renderability, and source refs.
 - Per-slide screenshot/contact-sheet QA when available.
 
 PDF:
@@ -412,7 +428,8 @@ Phase 2:
 Phase 3:
 
 - Implement DOCX/XLSX/PPTX inspect and validation.
-- Implement `docset_to_sheet` and `sheet_to_deck`.
+- Implement `docset_to_sheet` and the source-mapped `sheet_to_deck` planning path.
+- Add the deck HTML preview/export worker contract: `deck.render.html`, `deck.validation.html_preview`, `deck.export.pptx`.
 - Add worker abstraction.
 
 Phase 4:

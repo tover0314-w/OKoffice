@@ -82,10 +82,13 @@ MCP wrapper groups:
 - `sheet_write_workbook`
 - `sheet_validate_formulas`
 - `deck_compose_plan`
+- `deck_render_html`
+- `deck_validation_html_preview`
+- `deck_export_pptx`
+- `deck_create_presentation`
 - `deck_create_from_outline`
 - `deck_validate_presentation`
 - `word_create_report`
-- `deck_create_presentation`
 - `office_workflow_docset_to_sheet`
 - `office_workflow_sheet_to_deck`
 - `office_workflow_board_pack`
@@ -130,7 +133,8 @@ Worker adapters may include:
 
 - OfficeCLI for `.docx`, `.xlsx`, and `.pptx` DOM operations and previews.
 - LibreOffice for optional export/preview.
-- browser renderers for HTML/source-package output.
+- browser renderers for HTML/source-package output and deck contact sheets.
+- HTML-to-PPTX or Office-compatible export workers for taste-driven deck delivery.
 - OCR engines.
 - formula engines.
 - model/VLM workers.

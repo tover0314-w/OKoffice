@@ -43,15 +43,17 @@ Most document automation stops at file conversion or text extraction. OKoffice i
 - **Native locators**: source refs use real document coordinates such as table cells, workbook cells, slides, pages, bboxes, comments, and formulas.
 - **Local-first by default**: CLI, MCP, REST, and SDK workflows run locally without a hosted account.
 - **Validation as a primitive**: generated and transformed artifacts should carry renderability, safety, source-map, and quality evidence.
+- **Taste-driven decks**: presentation creation should pass through an inspectable HTML slide preview layer before PPTX export when the renderer/export worker is available.
 - **Explicit cloud boundary**: hosted OKoffice can add managed workers, connectors, batch orchestration, and governance without becoming a hidden OSS dependency.
 
 ```mermaid
 flowchart LR
   A["Sources<br/>DOCX, XLSX, PPTX, PDF"] --> B["Inspect + Extract<br/>native locators"]
   B --> C["Source Graph<br/>evidence + citations"]
-  C --> D["Create + Patch<br/>Word, Excel, Deck, PDF"]
-  D --> E["Validate<br/>render, safety, quality"]
-  E --> F["Bundle<br/>portable audit packet"]
+  C --> D["Create + Preview<br/>Word, Excel, HTML deck, PDF"]
+  D --> E["Validate<br/>render, safety, taste, source map"]
+  E --> G["Export<br/>DOCX, XLSX, PPTX, PDF"]
+  G --> F["Bundle<br/>portable audit packet"]
 ```
 
 ## Quickstart
@@ -82,6 +84,7 @@ okoffice sheet validate .okoffice-out/model.xlsx --json
 okoffice sheet validate-formulas .okoffice-out/model.xlsx --json
 okoffice deck inspect path/to/deck.pptx --json
 okoffice deck compose-plan .okoffice-out/evidence.xlsx -o .okoffice-out/deck.plan.json --title "Board Review" --json
+okoffice deck create-presentation .okoffice-out/deck.plan.json -o .okoffice-out/board-review.pptx --json
 okoffice deck create-from-outline outline.json -o .okoffice-out/board-review.pptx --json
 okoffice deck validate .okoffice-out/board-review.pptx --json
 okoffice context build --file path/to/report.docx --file path/to/model.xlsx -o .okoffice-out/context.packet.json --json
@@ -97,6 +100,15 @@ okpdf inspect tests/fixtures/simple.pdf --json
 okpdf serve --mcp --safe-root .
 okpdf serve --api
 ```
+
+Deck note: the current OSS beta creates deterministic editable PPTX files directly from a deck plan. The target OKoffice deck pipeline is taste-driven and HTML-first:
+
+```text
+deck.compose.plan -> deck.render.html -> deck.validation.html_preview
+-> deck.validation.contact_sheet -> deck.export.pptx -> deck.validate.presentation
+```
+
+See [Taste-Driven HTML-First Deck Pipeline](docs/43_TASTE_DRIVEN_DECK_PIPELINE.md).
 
 ## What Works Today
 
@@ -118,11 +130,12 @@ okpdf serve --api
 | `sheet.validate.workbook` | beta | Validates XLSX structure, non-empty sheets, external links, safety markers, and SourceRefs readiness. |
 | `sheet.validation.formulas` | beta | Scans formulas for cached errors, broken refs, external workbook refs, and volatile functions without recalculation. |
 | `deck.inspect.presentation` | beta | Reads PPTX slide, notes, layout, theme, media, and chart facts. |
-| `deck.compose.plan` | beta | Composes source-mapped, deck-specific Composition IR and outline JSON from an evidence workbook without writing a PPTX. |
-| `deck.create.from_outline` | beta | Creates editable local PPTX decks from structured outlines. |
+| `deck.compose.plan` | beta | Composes source-mapped Composition IR and outline JSON from an evidence workbook without writing HTML or PPTX. |
+| `deck.create.presentation` | beta | Current local writer creates editable PPTX from outlines/plans; target route orchestrates HTML preview validation before PPTX export. |
+| `deck.create.from_outline` | beta | Lower-level direct outline-to-PPTX writer for compatibility and fallback paths. |
 | `deck.validate.presentation` | beta | Validates PPTX structure, blank slides, placeholder leakage, safety markers, and source-map readiness. |
 | `office.workflow.extract_to_sheet` | beta | Builds a source-mapped XLSX evidence workbook from DOCX/XLSX tables or an OKoffice context packet source graph. |
-| `office.workflow.sheet_to_deck` | beta | Profiles an evidence workbook and creates an editable PPTX review deck. |
+| `office.workflow.sheet_to_deck` | beta | Current local route profiles an evidence workbook and creates an editable PPTX review deck; target route adds HTML preview/contact-sheet gates. |
 | `office.workflow.board_pack` | beta | Creates a local ZIP board pack with artifacts, manifest, validation report, and delivery metadata. |
 | `office.bundle.verify` | beta | Verifies board pack ZIP manifests, validation reports, artifact members, sizes, and SHA-256 checksums. |
 | `pdf.*` compatibility | stable/beta | The full manifest currently covers 264 local PDF, Office, and agent setup tools available through `okpdf`, MCP, REST, and SDKs. |
@@ -135,7 +148,7 @@ The codebase still exposes the compatibility Python package as `agentpdf` and th
 |---|---|
 | Inspect | `office.inspect.file`, `word.inspect.document`, `sheet.inspect.workbook`, `deck.inspect.presentation`, `pdf.inspect.document` |
 | Extract | `word.extract.tables`, `sheet.read.workbook`, `sheet.profile.data`, `sheet.extract.tables`, `deck.extract.notes`, `pdf.convert.pdf_to_text` |
-| Create | `word.write.document`, `sheet.create.evidence_workbook`, `sheet.write.workbook`, `deck.compose.plan`, `deck.create.from_outline`, `pdf.convert.markdown_to_pdf` |
+| Create | `word.write.document`, `sheet.create.evidence_workbook`, `sheet.write.workbook`, `deck.compose.plan`, `deck.render.html`, `deck.export.pptx`, `deck.create.presentation`, `pdf.convert.markdown_to_pdf` |
 | Patch | `office.patch.plan`, `word.edit.patch`, `sheet.edit.patch`, `deck.edit.patch`, `pdf.patch.apply` |
 | Validate | `office.validation.run`, `word.validation.document`, `sheet.validate.workbook`, `sheet.validation.formulas`, `deck.validate.presentation`, `pdf.validation.render_check` |
 | Evidence | `office.context.build_packet`, `office.evidence.coverage`, `office.source_map.create` |
@@ -186,6 +199,7 @@ Hosted features must not be required for deterministic local OSS tools.
 - [Product strategy](docs/37_OKOFFICE_PRODUCT_STRATEGY.md)
 - [Agent-native Office PRD](docs/36_OKOFFICE_AGENT_NATIVE_OFFICE_INFRA_PRD.md)
 - [Tool taxonomy](docs/38_OKOFFICE_TOOL_TAXONOMY.md)
+- [Taste-driven HTML-first deck pipeline](docs/43_TASTE_DRIVEN_DECK_PIPELINE.md)
 - [Agent infrastructure](docs/40_OKOFFICE_AGENT_INFRA.md)
 - [Implementation plan](docs/41_OKOFFICE_IMPLEMENTATION_PLAN.md)
 - [Legacy PDF compatibility](docs/42_LEGACY_PDF_COMPATIBILITY.md)

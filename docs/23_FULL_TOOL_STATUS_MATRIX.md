@@ -22,6 +22,10 @@ Implemented okoffice target snapshot lives in `schemas/office-tool-manifest.targ
 | office.extract.schema | beta | yes |
 | office.validation.package | beta | yes |
 | word.inspect.document | beta | yes |
+| word.validation.document | beta | yes |
+| word.create.report | beta | yes |
+| word.patch.plan | beta | yes |
+| word.patch.apply | beta | yes |
 | word.extract.tables | beta | yes |
 | sheet.inspect.workbook | beta | yes |
 | sheet.read.workbook | beta | yes |
@@ -33,12 +37,23 @@ Implemented okoffice target snapshot lives in `schemas/office-tool-manifest.targ
 | sheet.validation.formulas | beta | yes |
 | deck.inspect.presentation | beta | yes |
 | deck.compose.plan | beta | yes |
+| deck.create.presentation | beta | yes |
 | deck.create.from_outline | beta | yes |
+| deck.patch.apply | beta | yes |
 | deck.validate.presentation | beta | yes |
+| deck.validation.presentation | beta | yes |
+| deck.validation.contact_sheet | beta | yes |
+| deck.render.html | planned | yes |
+| deck.validation.html_preview | planned | yes |
+| deck.export.pptx | planned | yes |
+| deck.review.taste | planned | yes |
+| office.workflow.docset_to_sheet | beta | yes |
 | office.workflow.extract_to_sheet | beta | yes |
 | office.workflow.sheet_to_deck | beta | yes |
 | office.workflow.board_pack | beta | yes |
+| office.bundle.export | beta | yes |
 | office.bundle.verify | beta | yes |
+| office.workers.status | beta | yes |
 
 | Tool | Category | Status | OSS default |
 |---|---|---:|---:|

@@ -46,10 +46,12 @@ sheet.inspect.workbook
 -> deck.create.presentation
 -> deck.validation.presentation
 -> deck.validation.contact_sheet
+-> deck.validate.presentation
 ```
 
 Outputs:
 
+- HTML slide preview package;
 - editable `.pptx`;
 - chart/range source refs;
 - speaker notes;
@@ -118,7 +120,9 @@ sheet.inspect.workbook
 -> sheet.extract.formulas
 -> sheet.validation.formulas
 -> sheet.review.model
--> deck.create.presentation
+-> deck.compose.plan
+-> deck.render.html
+-> deck.export.pptx
 -> office.bundle.export
 ```
 
@@ -138,7 +142,9 @@ office.context.build_packet
 -> office.extract.claims
 -> office.evidence.verify_citations
 -> word.create.report
--> deck.create.presentation
+-> deck.compose.plan
+-> deck.render.html
+-> deck.export.pptx
 -> office.bundle.export
 ```
 

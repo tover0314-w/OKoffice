@@ -74,17 +74,20 @@ Deliverables:
 - source refs per row/cell.
 - coverage reports.
 
-## Phase 6 - Workbook To Deck
+## Phase 6 - Workbook To HTML-Reviewed Deck
 
-Goal: turn evidence workbooks into editable presentations.
+Goal: turn evidence workbooks into taste-reviewed presentations.
 
 Deliverables:
 
 - deck composition plan.
-- PowerPoint creation.
+- HTML slide preview package.
+- HTML preview validation.
+- PowerPoint export.
 - workbook range/chart source refs.
 - speaker notes.
 - contact-sheet validation or structured worker skip.
+- direct PPTX fallback route with explicit evidence.
 
 ## Phase 7 - Board Pack
 

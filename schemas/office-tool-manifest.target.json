@@ -2,7 +2,7 @@
     "manifest_version":  "0.1",
     "product":  "okoffice",
     "compatibility_package":  "agentpdf",
-    "tool_count":  50,
+    "tool_count":  55,
     "domains":  [
                     "office",
                     "word",
@@ -141,7 +141,7 @@
                          {
                              "name":  "office.workflow.sheet_to_deck",
                              "status":  "beta",
-                             "description":  "Profile an evidence workbook and create an editable PowerPoint deck outline with source refs.",
+                             "description":  "Profile an evidence workbook and create a source-mapped deck plan, HTML-reviewed presentation route, and editable PowerPoint output when the writer/export path is available.",
                              "domain":  "office",
                              "interfaces":  [
                                                 "cli",
@@ -261,7 +261,7 @@
                          {
                              "name":  "office.workflow.source_to_deck",
                              "status":  "planned",
-                             "description":  "Create a presentation from gathered document evidence, tables, outlines, and style packs.",
+                             "description":  "Create a taste-reviewed presentation from gathered document evidence, tables, outlines, style packs, HTML preview packages, and editable PPTX export.",
                              "domain":  "office",
                              "interfaces":  [
                                                 "cli",
@@ -666,7 +666,7 @@
                          {
                              "name":  "deck.compose.plan",
                              "status":  "beta",
-                             "description":  "Compose source-mapped deck Composition IR and outline JSON from an evidence workbook without writing a PPTX.",
+                             "description":  "Compose source-mapped deck Composition IR and outline JSON from an evidence workbook without writing HTML or PPTX.",
                              "domain":  "deck",
                              "interfaces":  [
                                                 "cli",
@@ -675,6 +675,36 @@
                                                 "sdk"
                                             ],
                              "implemented":  true,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "deck.render.html",
+                             "status":  "planned",
+                             "description":  "Render deck Composition IR or a deck plan into a self-contained HTML slide preview package with source refs, style tokens, and package evidence.",
+                             "domain":  "deck",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  false,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "deck.validation.html_preview",
+                             "status":  "planned",
+                             "description":  "Validate HTML slide preview packages for offline assets, placeholder leakage, contrast, visual density, overflow risk, and source-ref coverage.",
+                             "domain":  "deck",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  false,
                              "oss_default":  true,
                              "requires_model":  false
                          },
@@ -754,6 +784,21 @@
                              "requires_model":  false
                          },
                          {
+                             "name":  "deck.export.pptx",
+                             "status":  "planned",
+                             "description":  "Export a validated HTML slide package or component tree to editable PPTX while preserving lineage back to the deck plan and source map.",
+                             "domain":  "deck",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  false,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
                              "name":  "deck.export.pdf",
                              "status":  "planned",
                              "description":  "Export PPTX decks to validated PDFs with slide render checks.",
@@ -767,6 +812,21 @@
                              "implemented":  false,
                              "oss_default":  true,
                              "requires_model":  false
+                         },
+                         {
+                             "name":  "deck.review.taste",
+                             "status":  "planned",
+                             "description":  "Review story rhythm, one-claim-per-slide discipline, evidence placement, visual density, and brand fit for generated decks.",
+                             "domain":  "deck",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  false,
+                             "oss_default":  true,
+                             "requires_model":  true
                          },
                          {
                              "name":  "deck.validate.presentation",

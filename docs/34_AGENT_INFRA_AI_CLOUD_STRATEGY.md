@@ -30,7 +30,7 @@ RAG is useful, but it is not the product center. RAG is one evidence service ins
 - Excel workbook inspect, sheet/table/formula/chart/named-range extraction.
 - PowerPoint inspect, slide/shape/notes/media/theme extraction.
 - Convert image/text/Markdown/HTML/JSON to PDF where supported.
-- Render pages/slides/previews when optional workers are available.
+- Render pages/slides/HTML deck previews when optional workers are available.
 - Read/update/remove metadata.
 - Validate package health, page count, renderability, formulas, and blank pages.
 
@@ -39,7 +39,7 @@ RAG is useful, but it is not the product center. RAG is one evidence service ins
 - PDF compress, repair, crop/resize, n-up/booklet, attachments, forms, annotations, security, redaction verification, visual diff.
 - Word create/report, patch paragraph/table/comment, style normalization, metadata removal.
 - Excel create evidence workbook, patch tables/formulas, formula validation, chart binding checks.
-- PowerPoint create deck, patch slide text/chart/notes, contact-sheet validation.
+- PowerPoint compose deck plan, render HTML preview, export editable PPTX, patch slide text/chart/notes, and run contact-sheet validation.
 - Keep this deterministic layer license-safe and local-first.
 
 ### 3. Intelligence and Evidence Tools
@@ -54,6 +54,7 @@ RAG is useful, but it is not the product center. RAG is one evidence service ins
 ### 4. Cross-Format Composition and Operation Tools
 
 - Create Word reports, Excel workbooks, PowerPoint decks, PDFs, and bundles from context packets, artifact profiles, templates, style packs, colors, themes, brand constraints, and structured data.
+- Treat deck creation as taste-driven: source-mapped plan, HTML slide preview, HTML/contact-sheet validation, then editable PPTX export.
 - Turn Word/PDF source sets into evidence workbooks.
 - Turn workbooks into board decks.
 - Turn reports, workbooks, and decks into PDF handouts and okoffice bundles.
@@ -78,7 +79,7 @@ Finish local development before cloud expansion:
 4. Add deterministic DOCX/XLSX/PPTX inspect and validation.
 5. Add Source Graph and Office IR across all formats.
 6. Add `docset-to-sheet`, `sheet-to-deck`, and board-pack bundle examples.
-7. Add optional worker contracts for OCR, Office render/conversion, formula engines, video/audio processors, and vision tools.
+7. Add optional worker contracts for OCR, Office render/conversion, HTML-to-PPTX deck export, formula engines, video/audio processors, and vision tools.
 8. Add cloud APIs only after the local contract is stable.
 
 ## First Agent Ecosystem Targets
@@ -105,6 +106,7 @@ These projects should guide architecture and product taste, not be copied blindl
 
 - OfficeCLI: schema-driven DOCX/XLSX/PPTX operations, MCP, resident mode, and layered API design.
 - Codex Documents/Spreadsheets/Presentations skills: render-and-inspect quality bar for Word, Excel, and PowerPoint.
+- Microsoft Office Agent: taste-driven deck creation and HTML5 slide intermediate before PowerPoint export.
 - Firecrawl: OSS plus hosted API positioning for agents.
 - Docling and Marker: Document IR, Markdown/JSON/chunk export, and parsing pipelines.
 - OCRmyPDF: pipeline discipline, skipped-page warnings, sidecar text, and validation.
@@ -126,12 +128,14 @@ Near-term local okoffice:
 - Add deterministic package inspect and validation.
 - Add source graph and artifact graph across formats.
 - Add workbook and deck quality reports.
-- Add deterministic docset-to-sheet and sheet-to-deck examples.
+- Add deterministic docset-to-sheet and source-mapped sheet-to-deck planning examples.
+- Add HTML-first deck preview/export tool contracts.
 
 Optional worker layer:
 
 - OCR worker contract.
 - Office render/conversion worker contract.
+- HTML-to-PPTX deck export worker contract.
 - Formula engine worker contract.
 - Table/chart/formula parser contract.
 - Vision parser contract for scanned/image-heavy sources.
@@ -164,7 +168,7 @@ flowchart LR
   C --> J["Office IR"]
   D --> K["Source Graph + Citations"]
   E --> L["XLSX Workbook"]
-  F --> M["PPTX Deck"]
+  F --> M["HTML Preview -> PPTX Deck"]
   G --> N["DOCX/PDF Report"]
   H --> O["Validation Reports"]
   I --> P["Review Packet + Warnings"]

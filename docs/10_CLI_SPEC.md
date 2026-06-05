@@ -68,8 +68,14 @@ Document and deck:
 ```bash
 okoffice word create-report --from-workbook .okoffice-out/evidence.xlsx -o .okoffice-out/memo.docx --json
 okoffice deck compose-plan .okoffice-out/evidence.xlsx -o .okoffice-out/deck.plan.json --title "Board Review" --json
+okoffice deck render-html .okoffice-out/deck.plan.json -o .okoffice-out/board-review.html --json
+okoffice deck validate-html .okoffice-out/board-review.html --json
+okoffice deck export-pptx .okoffice-out/board-review.html -o .okoffice-out/board-review.pptx --json
+okoffice deck create-presentation .okoffice-out/deck.plan.json -o .okoffice-out/board-review.pptx --json
 okoffice deck create --from-workbook .okoffice-out/evidence.xlsx --profile board_review -o .okoffice-out/board-review.pptx --json
 ```
+
+The target deck route is taste-driven and HTML-first: `compose-plan -> render-html -> validate-html/contact-sheet -> export-pptx -> validate`. `deck.create-presentation` is the convenience command; the current beta uses the deterministic direct PPTX writer and should report that route in `usage.creation_route`.
 
 Workflows:
 

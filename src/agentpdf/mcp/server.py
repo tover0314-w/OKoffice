@@ -37,8 +37,8 @@ from agentpdf.tools.runner import (
     run_compare_visual_diff,
     run_compare_version_report,
     run_deck_compose_plan,
-    run_deck_create_presentation,
     run_deck_create_from_outline,
+    run_deck_create_presentation,
     run_deck_inspect_presentation,
     run_deck_patch_apply,
     run_deck_validate_contact_sheet,
@@ -678,19 +678,21 @@ def deck_create_from_outline(outline: dict[str, object], output_path: str) -> st
 
 
 def deck_create_presentation(
-    workbook_path: str,
+    workbook_path: str | dict[str, object],
     output_path: str,
     title: str | None = None,
     profile: str = "board_review",
     style: dict[str, object] | None = None,
 ) -> str:
-    """Create a styled, editable PowerPoint deck from an evidence workbook."""
+    """Create a styled, editable PowerPoint deck from a workbook, outline, or composition plan."""
+    outline_or_plan = workbook_path if isinstance(workbook_path, dict) else None
     return run_deck_create_presentation(
-        workbook_path=workbook_path,
+        workbook_path=None if outline_or_plan is not None else workbook_path,
         output_path=output_path,
         title=title,
         profile=profile,
         style=style,
+        outline_or_plan=outline_or_plan,
     ).model_dump_json()
 
 

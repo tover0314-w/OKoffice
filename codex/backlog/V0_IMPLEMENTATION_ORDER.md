@@ -137,13 +137,19 @@ Acceptance:
 Implement:
 
 - `deck.compose.plan`
-- `deck.create.presentation`
+- `deck.render.html`
+- `deck.validation.html_preview`
 - `deck.validation.contact_sheet`
+- `deck.export.pptx`
+- `deck.create.presentation` as the convenience command over the available route
 - `office.workflow.sheet_to_deck`
 
 Acceptance:
 
-- workbook data can produce editable PPTX slides.
+- workbook data can produce a source-mapped deck plan and HTML slide preview package.
+- HTML preview validation checks placeholder leakage, source refs, offline assets, visual density, contrast, and overflow warnings where renderer evidence exists.
+- PPTX export preserves slide order, notes, and source-map links back to the deck plan/HTML package where feasible.
+- direct PPTX creation remains available as a deterministic fallback with explicit fallback evidence.
 - slide claims cite workbook ranges or source graph nodes.
 - contact-sheet validation runs or returns structured worker-unavailable evidence.
 

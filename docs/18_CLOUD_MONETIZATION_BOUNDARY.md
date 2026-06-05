@@ -57,7 +57,7 @@ Agent-native Office processing:
 
 - Word/PDF source extraction at scale.
 - Excel model generation and validation.
-- PowerPoint deck generation and contact-sheet QA.
+- Taste-driven PowerPoint deck generation with HTML preview, contact-sheet QA, and editable PPTX export.
 - Board-pack and audit-bundle workflows.
 - Managed source maps and artifact graphs.
 - Citation/source coverage verification.
@@ -92,6 +92,7 @@ basic deterministic operation: 0-1 credit/document
 OCR: 1-3 credits/page
 agentic parse: 3-10 credits/page
 Office high-fidelity render/convert: pages/slides/sheets + complexity
+Deck HTML preview/export: slides + visual QA complexity
 formula recalculation/QA: workbook size + formula count
 image understanding: 1-5 credits/image or detected region
 video transcription: credits/minute
@@ -99,7 +100,7 @@ video keyframes: credits/minute or frame batch
 audio transcription: credits/minute
 AI generation/edit/translation: model tokens + platform margin
 composition planning: source count + model tokens + platform margin
-deck/report generation: slides/pages + model/render/validation checks
+deck/report generation: slides/pages + model/render/HTML preview/export/validation checks
 patch verification: changed objects + validation checks
 RAG/evidence ingest: source nodes + embedding tokens
 RAG/evidence query: retrieval + model tokens

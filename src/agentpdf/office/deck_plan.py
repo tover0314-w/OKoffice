@@ -165,6 +165,7 @@ def compose_deck_plan(
             **plan,
         },
         next_recommended_tools=[
+            "deck.create.presentation",
             "deck.create.from_outline",
             "deck.validate.presentation",
             "office.workflow.sheet_to_deck",

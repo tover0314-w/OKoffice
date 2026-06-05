@@ -9,14 +9,19 @@ import typer
 from agentpdf.tools.runner import run_agent_setup_codex
 from agentpdf.office.bundle import export_office_bundle, verify_office_bundle
 from agentpdf.office.context import build_office_context_packet
-from agentpdf.office.deck import create_deck_from_outline, inspect_deck_presentation, validate_deck_presentation
+from agentpdf.office.deck import (
+    create_deck_from_outline,
+    create_deck_presentation as create_deck_presentation_from_outline,
+    inspect_deck_presentation,
+    validate_deck_presentation,
+)
 from agentpdf.office.deck_plan import compose_deck_plan
 from agentpdf.office.deck_patch import apply_deck_patch
 from agentpdf.office.deck_validation import (
     validate_deck_contact_sheet,
     validate_deck_presentation as validate_deck_quality_presentation,
 )
-from agentpdf.office.deck_writer import create_deck_presentation
+from agentpdf.office.deck_writer import create_deck_presentation as create_deck_presentation_from_workbook
 from agentpdf.office.extract import extract_schema
 from agentpdf.office.inspect import inspect_office_file
 from agentpdf.office.planner import plan_office_workflow
@@ -373,7 +378,7 @@ def deck_create_command(
     """Create an editable PowerPoint deck from an evidence workbook."""
     style = json.loads(style_path.read_text(encoding="utf-8")) if style_path else None
     _emit_result(
-        create_deck_presentation(
+        create_deck_presentation_from_workbook(
             workbook_path=workbook_path,
             output_path=output_path,
             title=title,
@@ -409,6 +414,20 @@ def deck_create_from_outline(
     outline = json.loads(outline_path.read_text(encoding="utf-8"))
     _emit_result(
         create_deck_from_outline(outline if isinstance(outline, dict) else {}, output_path),
+        json_output=json_output,
+    )
+
+
+@deck_app.command("create-presentation")
+def deck_create_presentation(
+    outline_path: Annotated[Path, typer.Argument(help="JSON deck outline or composition plan path.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output PPTX deck path.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Create a local editable PPTX deck from an outline or composition plan."""
+    outline_or_plan = json.loads(outline_path.read_text(encoding="utf-8"))
+    _emit_result(
+        create_deck_presentation_from_outline(outline_or_plan if isinstance(outline_or_plan, dict) else {}, output_path),
         json_output=json_output,
     )
 

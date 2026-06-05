@@ -33,6 +33,7 @@ def test_compose_deck_plan_returns_source_mapped_composition_ir(tmp_path: Path) 
     assert result.usage["composition_ir"]["style"] == "executive"
     assert result.usage["composition_ir"]["source"]["workbook_path"] == workbook_path.as_posix()
     assert result.usage["outline"]["slides"][0]["title"] == "Renewal Board Review"
+    assert "deck.create.presentation" in result.next_recommended_tools
     assert "deck.create.from_outline" in result.next_recommended_tools
 
     sheet_slide = result.usage["composition_ir"]["slides"][2]
@@ -206,10 +207,13 @@ def test_deck_compose_plan_is_listed_in_manifests() -> None:
     target = {tool["name"]: tool for tool in manifest["target_tools"]}
     assert target["deck.compose.plan"]["status"] == "beta"
     assert target["deck.compose.plan"]["implemented"] is True
+    assert target["deck.create.presentation"]["status"] == "beta"
+    assert target["deck.create.presentation"]["implemented"] is True
 
     catalog = json.loads(Path("schemas/mcp-tools.catalog.json").read_text(encoding="utf-8"))
     entries = {tool["name"]: tool for tool in catalog["tools"]}
     assert entries["deck_compose_plan"]["maps_to"] == "deck.compose.plan"
+    assert entries["deck_create_presentation"]["maps_to"] == "deck.create.presentation"
 
 
 def _write_evidence_workbook(path: Path) -> None:

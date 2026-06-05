@@ -159,7 +159,7 @@ Target tools:
 
 - `office.ai.create.document`: create a Word report from source graph and style profile.
 - `office.ai.create.workbook`: create an Excel workbook from extracted evidence, formulas, tables, and charts.
-- `office.ai.create.deck`: create a PowerPoint deck from claims, evidence, chart plans, and a deck profile.
+- `office.ai.create.deck`: create a taste-reviewed deck plan and HTML slide preview from claims, evidence, chart plans, and a deck profile before editable PPTX export.
 - `office.ai.create.pdf`: create a PDF deliverable through the current PDF domain.
 - `office.ai.create.bundle`: create a multi-artifact package with manifest, source map, and validation reports.
 
@@ -196,10 +196,14 @@ Turn a workbook into an executive PowerPoint deck.
 
 ```text
 sheet.inspect.workbook
+-> sheet.extract.tables
 -> sheet.validation.formulas
+-> deck.compose.plan
 -> deck.create.presentation
 -> deck.inspect.presentation
+-> deck.validation.presentation
 -> deck.validation.contact_sheet (skipped when no local renderer is configured)
+-> deck.validate.presentation
 ```
 
 ### `office.workflow.board_pack`
@@ -210,6 +214,7 @@ Turn mixed source docs into an evidence workbook, Word memo, PowerPoint deck, an
 office.context.build_packet
 -> office.extract.schema
 -> sheet.write.workbook
+-> sheet.validation.formulas
 -> word.create.report
 -> office.workflow.sheet_to_deck
 -> office.bundle.export

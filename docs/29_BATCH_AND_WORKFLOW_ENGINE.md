@@ -121,7 +121,9 @@ steps:
   - tool: deck.create.presentation
   - tool: deck.validation.presentation
   - tool: deck.validation.contact_sheet
+  - tool: deck.validate.presentation
 outputs:
+  html_preview: ./out/vendor-board-deck.html
   deck: ./out/vendor-board-deck.pptx
   contact_sheet: ./out/vendor-board-deck.contact-sheet.png
 ```

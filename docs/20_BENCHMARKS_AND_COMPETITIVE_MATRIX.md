@@ -174,7 +174,7 @@ office.workflow.board_pack beta       yes  yes  yes  yes  yes    yes
 okoffice should be judged against:
 
 - PDF utilities for breadth and self-hosted ergonomics.
-- Office automation tools for DOCX/XLSX/PPTX structure control.
+- Office automation tools for DOCX/XLSX/PPTX structure control, plus HTML-first preview routes for visual deck quality.
 - Document AI systems for extraction and evidence quality.
 - Agent toolkits for MCP/REST/SDK friendliness.
 - OfficeCLI-style projects for schema-driven, single-binary Office operations.

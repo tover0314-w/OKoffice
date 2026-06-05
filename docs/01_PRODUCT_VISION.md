@@ -10,7 +10,7 @@ Agents can read files and produce text, but they still struggle to reliably oper
 
 - Word documents with sections, tables, comments, revisions, headers, footers, fields, and style systems.
 - Excel workbooks with formulas, pivots, charts, assumptions, named ranges, and dashboards.
-- PowerPoint decks with slide rhythm, speaker notes, charts, diagrams, media, brand systems, and visual QA.
+- PowerPoint decks with slide rhythm, speaker notes, charts, diagrams, media, brand systems, HTML preview packages, and visual QA.
 - PDFs with page geometry, extraction ambiguity, redaction risk, render validation, and immutable delivery expectations.
 - Multi-source workflows where evidence must move from PDFs and Word docs into a workbook, then into a deck and final PDF bundle.
 
@@ -60,7 +60,7 @@ Every serious action returns structured JSON, artifacts, source references, warn
 ## North-star User Stories
 
 1. As a business agent, I can read multiple Word and PDF files, extract structured fields with source refs, and produce an Excel workbook that can be audited row by row.
-2. As an analyst agent, I can turn an evidence workbook into a polished editable PowerPoint deck with charts, speaker notes, and PDF export.
+2. As an analyst agent, I can turn an evidence workbook into a polished HTML-reviewed PowerPoint deck with charts, speaker notes, source refs, and PDF export.
 3. As a consulting agent, I can produce a complete board pack: Word memo, Excel analysis, PowerPoint deck, PDF summary, source map, validation report, and portable bundle.
 4. As a legal agent, I can inspect contracts, extract obligations, flag risks, redact sensitive material, verify redaction, and produce a review packet.
 5. As a research agent, I can parse papers and reports, cite page/bbox sources, and create a literature review document or cited presentation.
@@ -100,7 +100,7 @@ Core Office breadth:
 
 - Inspect documents, sheets, decks, and PDFs.
 - Extract text, tables, formulas, charts, images, forms, annotations, comments, metadata, and source locators.
-- Create Word reports, Excel workbooks, PowerPoint decks, PDFs, and bundles.
+- Create Word reports, Excel workbooks, HTML-reviewed PowerPoint decks, PDFs, and bundles.
 - Edit and annotate without silently mutating inputs.
 - Convert across Office/PDF/HTML/Markdown/image formats.
 - Validate structure, renderability, formula integrity, placeholder leakage, visual fit, redaction, and source coverage.

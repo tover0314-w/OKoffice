@@ -28,6 +28,7 @@ The public README should show:
 - Open-source vs cloud boundary.
 - A clear "bigger than RAG" explanation.
 - Links to Office IR, Source Graph, validation, workflow, and PRD docs.
+- Link to the taste-driven HTML-first deck pipeline.
 - Roadmap status.
 
 ## Docs Style
@@ -97,9 +98,10 @@ Excel:
 PowerPoint:
 
 - Clear claim spine.
+- HTML preview package before PPTX export when available.
 - Consistent layouts.
 - Speaker notes when required.
-- Contact-sheet validation.
+- HTML preview and contact-sheet validation.
 - Charts/tables with source refs.
 
 PDF:

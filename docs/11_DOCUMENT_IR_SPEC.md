@@ -22,7 +22,7 @@ okoffice needs these related representations:
 - Include confidence and source method.
 - Support text, tables, images, figures, forms, annotations, comments, revisions, formulas, charts, fields, links, metadata, code blocks, slides, speaker notes, cells, ranges, and pages.
 - Enable page/bbox/paragraph/run/sheet/range/cell/slide/shape/timestamp/file/row citations.
-- Enable regeneration into Word, Excel, PowerPoint, PDF, HTML, Markdown, JSON, and bundles.
+- Enable regeneration into Word, Excel, HTML slide previews, PowerPoint, PDF, Markdown, JSON, and bundles.
 - Enable visual, semantic, citation, source coverage, formula, and layout diff.
 - Make generated artifacts traceable back to source material.
 - Keep context input separate from target output, so PDFs, Word docs, workbooks, decks, images, videos, data, code, and links are not treated as subtypes of one another.
@@ -106,12 +106,13 @@ A target artifact profile defines the intended output type, structure, style, an
   "profile_id": "board_review_pack",
   "title": "Board Review Pack",
   "audience": "board and executive team",
-  "outputs": ["evidence_workbook", "powerpoint_deck", "pdf_packet"],
+  "outputs": ["evidence_workbook", "html_deck_preview", "powerpoint_deck", "pdf_packet"],
   "style_pack": "executive_clear",
   "sections": ["Executive Summary", "KPI Review", "Risks", "Decisions", "Appendix"],
   "validation_required": [
     "office.validation.source_coverage",
     "office.validation.workbook_formula_check",
+    "deck.validation.html_preview",
     "office.validation.deck_render_check",
     "office.validation.bundle_manifest_check"
   ]
@@ -124,6 +125,7 @@ Target artifact types should include:
 - `word_memo`
 - `evidence_workbook`
 - `excel_model`
+- `html_deck_preview`
 - `powerpoint_deck`
 - `board_deck`
 - `pdf_packet`
@@ -178,7 +180,7 @@ Source types should include:
 - `pdf`, `pdf_page`, `pdf_block`
 - `word_document`, `word_section`, `word_paragraph`, `word_run`, `word_table`, `word_cell`, `word_comment`, `word_revision`, `word_field`
 - `workbook`, `sheet`, `cell`, `sheet_range`, `formula`, `table`, `pivot_table`, `chart`, `named_range`
-- `deck`, `slide`, `shape`, `slide_table`, `slide_chart`, `speaker_note`, `media`
+- `deck`, `slide`, `shape`, `slide_table`, `slide_chart`, `speaker_note`, `media`, `html_slide_package`, `html_slide_anchor`
 - `image`, `image_region`
 - `scan`
 - `video`, `video_frame`, `transcript_segment`
@@ -281,7 +283,7 @@ Format-specific top-level sections:
 - PDF IR: `pages`, `blocks`, `annotations`, `forms`, `attachments`, `metadata`.
 - Word IR: `sections`, `paragraphs`, `tables`, `comments`, `revisions`, `fields`, `headers`, `footers`.
 - Excel IR: `sheets`, `cells`, `ranges`, `tables`, `formulas`, `pivots`, `charts`, `named_ranges`.
-- PowerPoint IR: `slides`, `shapes`, `tables`, `charts`, `notes`, `comments`, `media`, `theme`.
+- PowerPoint IR: `slides`, `shapes`, `tables`, `charts`, `notes`, `comments`, `media`, `theme`, `html_preview_refs`, `pptx_export_lineage`.
 
 ## Composition IR Model
 
@@ -302,12 +304,13 @@ Composition IR describes new artifacts to create for a target profile.
       ]
     },
     {
-      "artifact_kind": "pptx",
+      "artifact_kind": "html_deck_preview",
       "target_profile_id": "board_deck",
       "deck_plan": [
         {"slide_id": "s1", "title": "Renewal risk is concentrated", "proof_object": "chart"},
         {"slide_id": "s2", "title": "Three actions reduce exposure", "proof_object": "decision_table"}
-      ]
+      ],
+      "export_targets": ["pptx", "pdf"]
     }
   ],
   "blocks": [
@@ -332,6 +335,7 @@ Composition IR describes new artifacts to create for a target profile.
   "validation_required": [
     "office.validation.source_coverage",
     "office.validation.workbook_formula_check",
+    "deck.validation.html_preview",
     "office.validation.deck_render_check"
   ]
 }
@@ -391,6 +395,7 @@ Examples:
 - `sheet_formula_error_check`
 - `sheet_cached_value_check`
 - `deck_shape_bounds_check`
+- `deck_html_preview_check`
 - `deck_notes_coverage_check`
 - `source_coverage_report`
 - `bundle_manifest_check`

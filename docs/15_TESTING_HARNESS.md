@@ -120,7 +120,7 @@ Checks:
 Target workflows:
 
 - Multiple DOCX/PDF sources to cited XLSX workbook.
-- XLSX workbook to PowerPoint deck.
+- XLSX workbook to HTML-reviewed PowerPoint deck.
 - Word report plus workbook plus deck to PDF handout and bundle.
 - Patch plan/apply/verify across Word, Excel, PowerPoint, and PDF.
 - Bundle export/verify with source map and validation reports.
@@ -164,7 +164,7 @@ okoffice inspect tests/fixtures/simple_report.docx --json
 okoffice inspect tests/fixtures/simple_table.xlsx --json
 okoffice inspect tests/fixtures/simple_deck.pptx --json
 okoffice workflow docset-to-sheet --file tests/fixtures/simple_report.docx --file tests/fixtures/simple_text.pdf --schema examples/schemas/kpi-review.json -o .okoffice-out/evidence.xlsx --json
-okoffice workflow sheet-to-deck --workbook .okoffice-out/evidence.xlsx -o .okoffice-out/deck.pptx --json
+okoffice workflow sheet-to-deck .okoffice-out/evidence.xlsx -o .okoffice-out/deck.pptx --json
 okoffice bundle verify .okoffice-out/board-pack.okoffice.zip --json
 ```
 

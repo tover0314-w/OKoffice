@@ -28,7 +28,7 @@ okoffice should make this reliable:
 read many messy source files
 -> extract cited evidence
 -> build a workbook/model
--> create a report and deck
+-> create a report and HTML-reviewed deck
 -> export a PDF packet
 -> validate everything
 -> ship an audit bundle
@@ -75,11 +75,15 @@ Every output needs validation appropriate to its format:
 
 - Word: styles, comments, revisions, metadata, accessibility hints, render preview.
 - Excel: formulas, ranges, charts, hidden sheets, external links, checks.
-- PowerPoint: slide count, notes, placeholders, media, contact sheet.
+- PowerPoint: slide count, notes, placeholders, media, HTML preview package, contact sheet, and editable PPTX export evidence.
 - PDF: page count, renderability, blank pages, metadata, redaction.
 - Bundle: hashes, manifest, artifact graph, source coverage.
 
-### 5. Explicit cloud boundary
+### 5. Taste-driven deck creation
+
+Decks are judged by story and visual quality, not only by valid OOXML. The target OKoffice route is `deck.compose.plan -> deck.render.html -> deck.validation.html_preview -> deck.validation.contact_sheet -> deck.export.pptx -> deck.validate.presentation`. Direct PPTX writing remains useful as a local fallback and compatibility path, but the product direction is HTML-first preview, then editable PowerPoint delivery.
+
+### 6. Explicit cloud boundary
 
 Cloud is for heavy workers, scale, persistence, connectors, and governance. Cloud must not be a hidden dependency of local deterministic tools.
 
