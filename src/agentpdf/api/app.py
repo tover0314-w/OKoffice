@@ -42,6 +42,7 @@ from agentpdf.tools.runner import (
     run_compare_version_report,
     run_deck_compose_plan,
     run_deck_create_from_outline,
+    run_deck_create_presentation,
     run_deck_inspect_presentation,
     run_deck_validate_presentation,
     run_create_markdown,
@@ -387,6 +388,12 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
         outline = payload.get("outline", payload)
         return run_deck_create_from_outline(
             outline=outline if isinstance(outline, dict) else {},
+            output_path=payload.get("output_path", payload.get("output", ".okoffice-out/deck.pptx")),
+        )
+    if tool_name == "deck.create.presentation":
+        outline_or_plan = payload.get("outline", payload.get("plan", payload))
+        return run_deck_create_presentation(
+            outline_or_plan=outline_or_plan if isinstance(outline_or_plan, dict) else {},
             output_path=payload.get("output_path", payload.get("output", ".okoffice-out/deck.pptx")),
         )
     if tool_name == "deck.compose.plan":

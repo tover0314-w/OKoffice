@@ -328,7 +328,43 @@ Output highlights:
     "composition_ir": {"schema": "okoffice.deck.composition", "kind": "deck.composition"},
     "outline": {"slides": []}
   },
-  "next_recommended_tools": ["deck.create.from_outline", "deck.validate.presentation"]
+  "next_recommended_tools": ["deck.create.presentation", "deck.create.from_outline", "deck.validate.presentation"]
+}
+```
+
+## Example: Implemented Deck Creation Tool
+
+```http
+POST /v1/tools/deck.create.presentation/run
+```
+
+Input:
+
+```json
+{
+  "plan": {
+    "outline": {
+      "slides": [
+        {"title": "Board Review", "bullets": ["Evidence-backed view"]}
+      ]
+    }
+  },
+  "output_path": ".okoffice-out/board-review.pptx"
+}
+```
+
+Output highlights:
+
+```json
+{
+  "status": "succeeded",
+  "tool": "deck.create.presentation",
+  "validation": {"status": "passed"},
+  "usage": {
+    "summary": {"slide_count": 1},
+    "input": {"source": "composition_plan"},
+    "presentation": {"format": "pptx"}
+  }
 }
 ```
 

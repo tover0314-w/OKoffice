@@ -1,7 +1,12 @@
 """OKoffice target tool surface built on the current compatibility package."""
 
 from agentpdf.office.context import build_office_context_packet
-from agentpdf.office.deck import create_deck_from_outline, inspect_deck_presentation, validate_deck_presentation
+from agentpdf.office.deck import (
+    create_deck_from_outline,
+    create_deck_presentation,
+    inspect_deck_presentation,
+    validate_deck_presentation,
+)
 from agentpdf.office.deck_plan import compose_deck_plan
 from agentpdf.office.extract import extract_schema
 from agentpdf.office.manifest import load_office_tool_manifest
@@ -33,6 +38,7 @@ __all__ = [
     "extract_word_tables",
     "compose_deck_plan",
     "create_deck_from_outline",
+    "create_deck_presentation",
     "inspect_deck_presentation",
     "validate_deck_presentation",
     "inspect_office_file",

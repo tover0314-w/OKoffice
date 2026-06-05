@@ -216,7 +216,7 @@ Build in this order:
 6. `office.extract.schema`
 7. `sheet.create.evidence_workbook` (beta local writer with SourceRefs sheet)
 8. `sheet.validation.formulas` (beta structural formula QA)
-9. `deck.create.presentation`
+9. `deck.create.presentation` (beta outline/composition-plan PPTX writer)
 10. `deck.validation.contact_sheet`
 11. `word.create.report`
 12. `office.bundle.export`

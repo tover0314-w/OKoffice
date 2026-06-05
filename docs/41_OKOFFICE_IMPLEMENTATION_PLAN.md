@@ -103,7 +103,7 @@ Acceptance:
 Deliverables:
 
 - `deck.compose.plan`.
-- `deck.create.presentation`.
+- `deck.create.presentation` as the okoffice-first outline/composition-plan PPTX writer.
 - `deck.validation.contact_sheet`.
 - workbook-to-deck example.
 

@@ -16,6 +16,7 @@ from agentpdf.security.paths import resolve_output_path
 
 INSPECT_TOOL_NAME = "deck.inspect.presentation"
 CREATE_FROM_OUTLINE_TOOL_NAME = "deck.create.from_outline"
+CREATE_PRESENTATION_TOOL_NAME = "deck.create.presentation"
 VALIDATE_TOOL_NAME = "deck.validate.presentation"
 PPTX_MIME_TYPE = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
 REL_NS = {"rel": "http://schemas.openxmlformats.org/package/2006/relationships"}
@@ -217,30 +218,50 @@ def validate_deck_presentation(path: str | Path) -> ToolResult:
 
 
 def create_deck_from_outline(outline: dict[str, Any], output_path: str | Path) -> ToolResult:
+    return _create_deck_from_outline(outline, output_path, tool_name=CREATE_FROM_OUTLINE_TOOL_NAME)
+
+
+def create_deck_presentation(outline_or_plan: dict[str, Any], output_path: str | Path) -> ToolResult:
+    outline = _presentation_outline(outline_or_plan)
+    return _create_deck_from_outline(
+        outline,
+        output_path,
+        tool_name=CREATE_PRESENTATION_TOOL_NAME,
+        input_source=_presentation_input_source(outline_or_plan),
+    )
+
+
+def _create_deck_from_outline(
+    outline: dict[str, Any],
+    output_path: str | Path,
+    *,
+    tool_name: str,
+    input_source: str = "outline",
+) -> ToolResult:
     try:
         output = resolve_output_path(output_path)
     except AgentPDFException as exc:
-        return _failed(CREATE_FROM_OUTLINE_TOOL_NAME, exc.to_error())
+        return _failed(tool_name, exc.to_error())
 
     slides = _outline_slides(outline)
     if not slides:
         return _failed(
-            CREATE_FROM_OUTLINE_TOOL_NAME,
+            tool_name,
             AgentPDFError(
                 code="unsafe_input_rejected",
-                message="deck.create.from_outline requires at least one slide.",
+                message=f"{tool_name} requires at least one slide.",
             ),
         )
 
     output.parent.mkdir(parents=True, exist_ok=True)
     _write_outline_pptx(output, slides)
-    artifact = build_artifact(output, CREATE_FROM_OUTLINE_TOOL_NAME)
+    artifact = build_artifact(output, tool_name)
     inspect_result = inspect_deck_presentation(output)
     inspect_status = inspect_result.validation.status if inspect_result.validation is not None else "failed"
     return ToolResult(
         job_id=_job_id(),
         status="succeeded" if inspect_result.status == "succeeded" else "failed",
-        tool=CREATE_FROM_OUTLINE_TOOL_NAME,
+        tool=tool_name,
         artifacts=[artifact],
         validation=ValidationReport(
             status=inspect_status,
@@ -267,6 +288,7 @@ def create_deck_from_outline(outline: dict[str, Any], output_path: str | Path) -
                 "total_bullet_count": sum(len(slide["bullets"]) for slide in slides),
                 "text_run_count": inspect_result.usage.get("presentation", {}).get("text_run_count", 0),
             },
+            "input": {"source": input_source},
             "presentation": {
                 "path": output.as_posix(),
                 "format": "pptx",
@@ -277,9 +299,21 @@ def create_deck_from_outline(outline: dict[str, Any], output_path: str | Path) -
         next_recommended_tools=[
             "deck.inspect.presentation",
             "deck.validate.presentation",
+            "office.workflow.sheet_to_deck",
             "office.workflow.board_pack",
         ],
     )
+
+
+def _presentation_outline(outline_or_plan: dict[str, Any]) -> dict[str, Any]:
+    outline = outline_or_plan.get("outline") if isinstance(outline_or_plan, dict) else None
+    return outline if isinstance(outline, dict) else outline_or_plan
+
+
+def _presentation_input_source(outline_or_plan: dict[str, Any]) -> str:
+    if isinstance(outline_or_plan.get("outline"), dict):
+        return "composition_plan"
+    return "outline"
 
 
 def _outline_slides(outline: dict[str, Any]) -> list[dict[str, Any]]:

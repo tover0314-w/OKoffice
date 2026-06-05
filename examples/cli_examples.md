@@ -116,6 +116,11 @@ okoffice deck compose-plan \
   --title "Vendor Board Review" \
   --json
 
+okoffice deck create-presentation \
+  .okoffice-out/vendor-deck.plan.json \
+  -o .okoffice-out/vendor-board-deck.pptx \
+  --json
+
 okoffice workflow sheet-to-deck \
   .okoffice-out/vendor-evidence.xlsx \
   -o .okoffice-out/vendor-board-deck.pptx \

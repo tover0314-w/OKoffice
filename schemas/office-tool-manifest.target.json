@@ -2,7 +2,7 @@
     "manifest_version":  "0.1",
     "product":  "okoffice",
     "compatibility_package":  "agentpdf",
-    "tool_count":  50,
+    "tool_count":  51,
     "domains":  [
                     "office",
                     "word",
@@ -622,6 +622,21 @@
                              "name":  "deck.create.from_outline",
                              "status":  "beta",
                              "description":  "Create PPTX decks from outlines, evidence cards, tables, charts, and style packs.",
+                             "domain":  "deck",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  true,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "deck.create.presentation",
+                             "status":  "beta",
+                             "description":  "Create an editable PPTX deck from a structured outline or deck composition plan.",
                              "domain":  "deck",
                              "interfaces":  [
                                                 "cli",

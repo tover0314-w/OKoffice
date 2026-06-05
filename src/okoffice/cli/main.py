@@ -7,7 +7,12 @@ from typing import Annotated, Any
 import typer
 
 from agentpdf.office.context import build_office_context_packet
-from agentpdf.office.deck import create_deck_from_outline, inspect_deck_presentation, validate_deck_presentation
+from agentpdf.office.deck import (
+    create_deck_from_outline,
+    create_deck_presentation,
+    inspect_deck_presentation,
+    validate_deck_presentation,
+)
 from agentpdf.office.deck_plan import compose_deck_plan
 from agentpdf.office.extract import extract_schema
 from agentpdf.office.inspect import inspect_office_file
@@ -239,6 +244,20 @@ def deck_create_from_outline(
     outline = json.loads(outline_path.read_text(encoding="utf-8"))
     _emit_result(
         create_deck_from_outline(outline if isinstance(outline, dict) else {}, output_path),
+        json_output=json_output,
+    )
+
+
+@deck_app.command("create-presentation")
+def deck_create_presentation(
+    outline_path: Annotated[Path, typer.Argument(help="JSON deck outline or composition plan path.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output PPTX deck path.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Create a local editable PPTX deck from an outline or composition plan."""
+    outline_or_plan = json.loads(outline_path.read_text(encoding="utf-8"))
+    _emit_result(
+        create_deck_presentation(outline_or_plan if isinstance(outline_or_plan, dict) else {}, output_path),
         json_output=json_output,
     )
 

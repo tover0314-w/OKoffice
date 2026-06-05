@@ -38,6 +38,7 @@ from agentpdf.tools.runner import (
     run_compare_version_report,
     run_deck_compose_plan,
     run_deck_create_from_outline,
+    run_deck_create_presentation,
     run_deck_inspect_presentation,
     run_deck_validate_presentation,
     run_create_markdown,
@@ -217,6 +218,7 @@ def create_mcp_server() -> FastMCP:
     server.tool(name="deck_inspect_presentation")(deck_inspect_presentation)
     server.tool(name="deck_compose_plan")(deck_compose_plan)
     server.tool(name="deck_create_from_outline")(deck_create_from_outline)
+    server.tool(name="deck_create_presentation")(deck_create_presentation)
     server.tool(name="deck_validate_presentation")(deck_validate_presentation)
     server.tool(name="pdf_inspect_document")(pdf_inspect_document)
     server.tool(name="pdf_inspect_pages")(pdf_inspect_pages)
@@ -574,6 +576,11 @@ def deck_inspect_presentation(path: str) -> str:
 def deck_create_from_outline(outline: dict[str, object], output_path: str) -> str:
     """Create a local editable PPTX deck from a structured outline."""
     return run_deck_create_from_outline(outline, output_path).model_dump_json()
+
+
+def deck_create_presentation(outline_or_plan: dict[str, object], output_path: str) -> str:
+    """Create a local editable PPTX deck from a structured outline or composition plan."""
+    return run_deck_create_presentation(outline_or_plan, output_path).model_dump_json()
 
 
 def deck_compose_plan(

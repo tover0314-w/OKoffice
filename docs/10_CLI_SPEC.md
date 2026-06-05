@@ -68,6 +68,7 @@ Document and deck:
 ```bash
 okoffice word create-report --from-workbook .okoffice-out/evidence.xlsx -o .okoffice-out/memo.docx --json
 okoffice deck compose-plan .okoffice-out/evidence.xlsx -o .okoffice-out/deck.plan.json --title "Board Review" --json
+okoffice deck create-presentation .okoffice-out/deck.plan.json -o .okoffice-out/board-review.pptx --json
 okoffice deck create --from-workbook .okoffice-out/evidence.xlsx --profile board_review -o .okoffice-out/board-review.pptx --json
 ```
 

@@ -176,6 +176,24 @@ Expected output includes `usage.composition_ir.slides`, slide claims, workbook r
 ## Create Deck
 
 ```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/deck.create.presentation/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "plan": {
+      "outline": {
+        "slides": [
+          {"title": "Vendor Board Review", "bullets": ["Evidence-backed renewal view"]},
+          {"title": "Decision Points", "bullets": ["Validate source coverage", "Create board pack"]}
+        ]
+      }
+    },
+    "output_path": ".okoffice-out/vendor-board-deck.pptx"
+  }'
+```
+
+The endpoint accepts either a direct `outline` payload or a `plan` payload containing `outline`, such as the JSON emitted by `deck.compose.plan`.
+
+```bash
 curl -X POST http://127.0.0.1:7331/v1/tools/office.workflow.sheet_to_deck/run \
   -H 'Content-Type: application/json' \
   -d '{

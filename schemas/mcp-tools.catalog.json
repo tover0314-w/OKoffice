@@ -133,6 +133,11 @@
       "status": "beta"
     },
     {
+      "name": "deck_create_presentation",
+      "maps_to": "deck.create.presentation",
+      "status": "beta"
+    },
+    {
       "name": "deck_validate_presentation",
       "maps_to": "deck.validate.presentation",
       "status": "beta"

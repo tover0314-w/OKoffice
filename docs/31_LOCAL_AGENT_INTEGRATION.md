@@ -82,10 +82,10 @@ MCP wrapper groups:
 - `sheet_write_workbook`
 - `sheet_validate_formulas`
 - `deck_compose_plan`
+- `deck_create_presentation`
 - `deck_create_from_outline`
 - `deck_validate_presentation`
 - `word_create_report`
-- `deck_create_presentation`
 - `office_workflow_docset_to_sheet`
 - `office_workflow_sheet_to_deck`
 - `office_workflow_board_pack`

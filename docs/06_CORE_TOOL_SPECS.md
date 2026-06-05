@@ -455,17 +455,49 @@ Acceptance criteria:
 
 ### `deck.create.presentation`
 
-Target PPTX creation tool.
+Current OSS implementation.
 
-Purpose: create a PowerPoint deck from claim spine, slide layouts, charts, tables, notes, and source refs.
+Purpose: create a local editable PPTX deck from a structured outline or deck composition plan.
 
-Acceptance criteria:
+CLI:
 
-- Uses a style pack layout and theme tokens.
-- Produces slide ids, shape ids, and source refs.
-- Includes speaker notes when required by profile.
-- Validates contact sheet/render preview when available.
-- Returns slide-level warnings for fit, missing evidence, or weak hierarchy.
+```bash
+okoffice deck create-presentation .okoffice-out/deck.plan.json -o .okoffice-out/board-review.pptx --json
+```
+
+MCP:
+
+```python
+deck_create_presentation({"outline": {"slides": []}}, ".okoffice-out/board-review.pptx")
+```
+
+REST:
+
+```http
+POST /v1/tools/deck.create.presentation/run
+```
+
+Expected output highlights:
+
+```json
+{
+  "status": "succeeded",
+  "tool": "deck.create.presentation",
+  "validation": {"status": "passed"},
+  "usage": {
+    "summary": {"slide_count": 3, "total_bullet_count": 5},
+    "input": {"source": "composition_plan"},
+    "presentation": {"format": "pptx"}
+  },
+  "next_recommended_tools": ["deck.inspect.presentation", "deck.validate.presentation", "office.workflow.board_pack"]
+}
+```
+
+Limitations:
+
+- Uses the deterministic local PPTX writer and does not require hosted AI, Office, LibreOffice, or rendering workers.
+- Accepts a direct `outline` or a `deck.compose.plan` JSON payload containing `outline`.
+- Produces an editable PPTX with text slides; advanced style packs, charts, theme tokens, speaker notes, contact sheets, and visual render QA remain future enhancements.
 
 ### `deck.compose.plan`
 
@@ -508,7 +540,7 @@ Acceptance criteria:
 - Produces slide plans, claims, workbook ranges, and source refs for agent review.
 - Optionally writes JSON plan output; never writes or mutates PPTX.
 - Does not call hosted AI providers or infer unsupported chart/design layout.
-- Recommends `deck.create.from_outline`, validation, and board-pack tools.
+- Recommends `deck.create.presentation`, compatibility `deck.create.from_outline`, validation, and board-pack tools.
 
 ## Core Edit and Patch Tools
 
