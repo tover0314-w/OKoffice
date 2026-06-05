@@ -113,6 +113,11 @@
       "status": "beta"
     },
     {
+      "name": "sheet_validate_formulas",
+      "maps_to": "sheet.validation.formulas",
+      "status": "beta"
+    },
+    {
       "name": "deck_inspect_presentation",
       "maps_to": "deck.inspect.presentation",
       "status": "beta"

@@ -103,6 +103,7 @@ First target wrappers:
 - `office_extract_schema`
 - `sheet_create_evidence_workbook`
 - `sheet_write_workbook`
+- `sheet_validate_formulas`
 - `deck_create_presentation`
 - `word_create_document`
 - `office_workflow_docset_to_sheet`
@@ -139,6 +140,7 @@ sheet_create_evidence_workbook(
     },
     ".okoffice-out/evidence.xlsx",
 )
+sheet_validate_formulas(".okoffice-out/evidence.xlsx")
 office_workflow_extract_to_sheet([], ".okoffice-out/evidence.xlsx", context_packet_path=".okoffice-out/context.packet.json")
 deck_compose_plan(".okoffice-out/evidence.xlsx", ".okoffice-out/deck.plan.json", title="Board Review")
 deck_validate_presentation(".okoffice-out/vendor-board-deck.pptx")

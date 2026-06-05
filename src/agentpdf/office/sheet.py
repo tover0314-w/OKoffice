@@ -21,9 +21,14 @@ EXTRACT_TABLES_TOOL_NAME = "sheet.extract.tables"
 WRITE_WORKBOOK_TOOL_NAME = "sheet.write.workbook"
 CREATE_EVIDENCE_WORKBOOK_TOOL_NAME = "sheet.create.evidence_workbook"
 VALIDATE_WORKBOOK_TOOL_NAME = "sheet.validate.workbook"
+VALIDATE_FORMULAS_TOOL_NAME = "sheet.validation.formulas"
 READ_WORKBOOK_TOOL_NAME = "sheet.read.workbook"
 PROFILE_DATA_TOOL_NAME = "sheet.profile.data"
 CELL_REF_RE = re.compile(r"^([A-Z]+)([0-9]+)$", re.IGNORECASE)
+FORMULA_CELL_REF_RE = re.compile(r"(?<![A-Z0-9_])\$?[A-Z]{1,3}\$?[0-9]+(?::\$?[A-Z]{1,3}\$?[0-9]+)?", re.IGNORECASE)
+EXTERNAL_FORMULA_REF_RE = re.compile(r"\[([^\]]+)\]([^'!]+)")
+VOLATILE_FORMULA_RE = re.compile(r"\b(NOW|TODAY|RAND|RANDBETWEEN|OFFSET|INDIRECT)\s*\(", re.IGNORECASE)
+FORMULA_ERROR_VALUES = {"#REF!", "#DIV/0!", "#VALUE!", "#NAME?", "#N/A", "#NUM!", "#NULL!"}
 XLSX_MIME_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 
@@ -77,7 +82,12 @@ def inspect_sheet_workbook(path: str | Path) -> ToolResult:
             "links": {"external_link_count": count_members(names, prefix="xl/externalLinks/")},
             "safety": preflight.usage["safety"],
         },
-        next_recommended_tools=["sheet.extract.tables", "sheet.profile.data", "office.context.build_packet"],
+        next_recommended_tools=[
+            "sheet.extract.tables",
+            "sheet.profile.data",
+            "sheet.validation.formulas",
+            "office.context.build_packet",
+        ],
     )
 
 
@@ -600,8 +610,133 @@ def validate_sheet_workbook(path: str | Path) -> ToolResult:
             "safety": preflight.usage["safety"],
         },
         next_recommended_tools=[
+            "sheet.validation.formulas",
             "sheet.extract.tables",
             "office.context.build_packet",
+            "office.workflow.sheet_to_deck",
+        ],
+    )
+
+
+def validate_sheet_formulas(path: str | Path) -> ToolResult:
+    preflight = inspect_office_file(path)
+    if preflight.status == "failed":
+        return _failed(
+            VALIDATE_FORMULAS_TOOL_NAME,
+            preflight.error or AgentPDFError(code="unsupported_file_type", message="Sheet formula validation failed."),
+        )
+    if preflight.usage["format"]["detected_format"] != "xlsx":
+        return _failed(
+            VALIDATE_FORMULAS_TOOL_NAME,
+            AgentPDFError(
+                code="unsupported_file_type",
+                message="sheet.validation.formulas requires an XLSX-compatible OOXML package.",
+                details={"detected_format": preflight.usage["format"]["detected_format"]},
+            ),
+        )
+
+    source_path = Path(preflight.usage["file"]["path"])
+    names = zip_names(source_path)
+    workbook_root = read_xml(source_path, "xl/workbook.xml")
+    if workbook_root is None:
+        return _failed(
+            VALIDATE_FORMULAS_TOOL_NAME,
+            AgentPDFError(
+                code="unsupported_file_type",
+                message="sheet.validation.formulas requires xl/workbook.xml in the XLSX package.",
+                details={"path": source_path.as_posix()},
+            ),
+        )
+
+    sheet_names = _sheet_names(workbook_root)
+    worksheet_members = sorted_members(names, prefix="xl/worksheets/sheet")
+    shared_strings = _shared_strings(read_xml(source_path, "xl/sharedStrings.xml"))
+    formulas = _formula_payloads(source_path, worksheet_members, sheet_names, shared_strings)
+    summary = {
+        "sheet_count": len(worksheet_members),
+        "formula_count": len(formulas),
+        "formula_error_count": _formula_issue_count(formulas, "formula_error"),
+        "broken_ref_count": _formula_issue_count(formulas, "broken_ref"),
+        "external_ref_count": _formula_issue_count(formulas, "external_ref"),
+        "volatile_formula_count": _formula_issue_count(formulas, "volatile_formula"),
+    }
+    warnings = list(preflight.warnings)
+    if summary["formula_error_count"]:
+        warnings.append(f"Formula cached error values detected: {summary['formula_error_count']}.")
+    if summary["broken_ref_count"]:
+        warnings.append(f"Broken formula references detected: {summary['broken_ref_count']}.")
+    if summary["external_ref_count"]:
+        warnings.append(f"External formula workbook references detected: {summary['external_ref_count']}.")
+    if summary["volatile_formula_count"]:
+        warnings.append(f"Volatile formulas detected: {summary['volatile_formula_count']}.")
+
+    checks = [
+        ValidationCheck(name="format_is_xlsx", status="passed", details=preflight.usage["format"]),
+        ValidationCheck(name="workbook_xml_present", status="passed", details={"member": "xl/workbook.xml"}),
+        ValidationCheck(
+            name="formulas_scanned",
+            status="passed",
+            details={
+                "sheet_count": summary["sheet_count"],
+                "formula_count": summary["formula_count"],
+                "evaluation": "structural_only",
+            },
+        ),
+        _validation_check(
+            "formula_errors_absent",
+            condition=summary["formula_error_count"] == 0,
+            failed_status="warning",
+            passed_details={"formula_error_count": summary["formula_error_count"]},
+            failed_message="Formula cached error values were detected.",
+        ),
+        _validation_check(
+            "broken_refs_absent",
+            condition=summary["broken_ref_count"] == 0,
+            failed_status="warning",
+            passed_details={"broken_ref_count": summary["broken_ref_count"]},
+            failed_message="Broken formula references were detected.",
+        ),
+        _validation_check(
+            "external_formula_refs_absent",
+            condition=summary["external_ref_count"] == 0,
+            failed_status="warning",
+            passed_details={"external_ref_count": summary["external_ref_count"]},
+            failed_message="External formula workbook references were detected.",
+        ),
+        _validation_check(
+            "volatile_formulas_absent",
+            condition=summary["volatile_formula_count"] == 0,
+            failed_status="warning",
+            passed_details={"volatile_formula_count": summary["volatile_formula_count"]},
+            failed_message="Volatile formulas were detected.",
+        ),
+    ]
+
+    return ToolResult(
+        job_id=_job_id(),
+        status="succeeded",
+        tool=VALIDATE_FORMULAS_TOOL_NAME,
+        validation=ValidationReport(
+            status=_validation_report_status(checks),
+            checks=checks,
+            warnings=warnings,
+        ),
+        warnings=warnings,
+        usage={
+            "workbook": {
+                "path": source_path.as_posix(),
+                "format": "xlsx",
+                "package_type": preflight.usage["format"]["package_type"],
+            },
+            "summary": summary,
+            "formulas": formulas,
+            "engine": {"evaluation": "structural_only", "recalculated": False},
+            "safety": preflight.usage["safety"],
+        },
+        next_recommended_tools=[
+            "sheet.validate.workbook",
+            "sheet.profile.data",
+            "deck.compose.plan",
             "office.workflow.sheet_to_deck",
         ],
     )
@@ -726,6 +861,130 @@ def _source_refs_summary(sheets: list[dict[str, object]]) -> dict[str, object]:
 def _is_source_refs_sheet(sheet: dict[str, object]) -> bool:
     normalized_name = str(sheet.get("name", "")).replace(" ", "").replace("_", "").lower()
     return normalized_name == "sourcerefs"
+
+
+def _formula_payloads(
+    path: Path,
+    worksheet_members: list[str],
+    sheet_names: list[str],
+    shared_strings: list[str],
+) -> list[dict[str, object]]:
+    formulas = []
+    for sheet_index, member in enumerate(worksheet_members, start=1):
+        worksheet_root = read_xml(path, member)
+        if worksheet_root is None:
+            continue
+        sheet_name = sheet_names[sheet_index - 1] if sheet_index <= len(sheet_names) else f"Sheet {sheet_index}"
+        for row_element in worksheet_root.findall(".//main:sheetData/main:row", SHEET_NS):
+            row_index = _row_index(row_element)
+            for cell_position, cell_element in enumerate(row_element.findall("./main:c", SHEET_NS), start=1):
+                formula = cell_element.find("./main:f", SHEET_NS)
+                formula_text = (formula.text or "").strip() if formula is not None else ""
+                if not formula_text:
+                    continue
+                cell_ref = str(cell_element.get("r") or "")
+                parsed_ref = _parse_cell_ref(cell_ref)
+                if parsed_ref is None:
+                    column_index = cell_position
+                    resolved_ref = f"{_column_letters(column_index)}{row_index}"
+                else:
+                    row_index, column_index = parsed_ref
+                    resolved_ref = cell_ref.upper()
+                cached_value = _cell_value(cell_element, shared_strings)
+                data_type = str(cell_element.get("t") or "number")
+                external_refs = _external_formula_refs(formula_text)
+                volatile_functions = _volatile_formula_functions(formula_text)
+                issues = _formula_issues(
+                    formula_text=formula_text,
+                    cached_value=cached_value,
+                    data_type=data_type,
+                    external_refs=external_refs,
+                    volatile_functions=volatile_functions,
+                )
+                formulas.append(
+                    {
+                        "sheet_name": sheet_name,
+                        "sheet_index": sheet_index,
+                        "member": member,
+                        "cell_ref": resolved_ref,
+                        "row_index": row_index,
+                        "column_index": column_index,
+                        "formula": formula_text,
+                        "cached_value": cached_value,
+                        "data_type": data_type,
+                        "precedents": _formula_precedents(formula_text),
+                        "external_refs": external_refs,
+                        "volatile_functions": volatile_functions,
+                        "issues": issues,
+                        "source": {
+                            "workbook_path": path.as_posix(),
+                            "sheet_name": sheet_name,
+                            "sheet_index": sheet_index,
+                            "cell_ref": resolved_ref,
+                            "row_index": row_index,
+                            "column_index": column_index,
+                        },
+                    }
+                )
+    return formulas
+
+
+def _formula_issues(
+    *,
+    formula_text: str,
+    cached_value: str,
+    data_type: str,
+    external_refs: list[str],
+    volatile_functions: list[str],
+) -> list[dict[str, object]]:
+    issues: list[dict[str, object]] = []
+    normalized_value = cached_value.upper()
+    normalized_formula = formula_text.upper()
+    if data_type == "e" or normalized_value in FORMULA_ERROR_VALUES:
+        issues.append({"kind": "formula_error", "cached_value": cached_value})
+    if "#REF!" in normalized_formula:
+        issues.append({"kind": "broken_ref", "token": "#REF!"})
+    if external_refs:
+        issues.append({"kind": "external_ref", "refs": external_refs})
+    if volatile_functions:
+        issues.append({"kind": "volatile_formula", "functions": volatile_functions})
+    return issues
+
+
+def _formula_precedents(formula_text: str) -> list[str]:
+    precedents = []
+    for match in FORMULA_CELL_REF_RE.finditer(formula_text):
+        ref = match.group(0).replace("$", "").upper()
+        if ref not in precedents:
+            precedents.append(ref)
+    return precedents
+
+
+def _external_formula_refs(formula_text: str) -> list[str]:
+    refs = []
+    for workbook, sheet_name in EXTERNAL_FORMULA_REF_RE.findall(formula_text):
+        ref = f"[{workbook}]{sheet_name}"
+        if ref not in refs:
+            refs.append(ref)
+    return refs
+
+
+def _volatile_formula_functions(formula_text: str) -> list[str]:
+    functions = []
+    for match in VOLATILE_FORMULA_RE.finditer(formula_text):
+        name = match.group(1).upper()
+        if name not in functions:
+            functions.append(name)
+    return functions
+
+
+def _formula_issue_count(formulas: list[dict[str, object]], kind: str) -> int:
+    count = 0
+    for formula in formulas:
+        issues = formula.get("issues", [])
+        if isinstance(issues, list) and any(isinstance(issue, dict) and issue.get("kind") == kind for issue in issues):
+            count += 1
+    return count
 
 
 def _profile_sheet_payload(sheet: dict[str, object]) -> dict[str, object]:

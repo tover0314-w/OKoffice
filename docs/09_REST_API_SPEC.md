@@ -179,6 +179,42 @@ Output highlights:
 
 Limitations: this local tool writes a deterministic XLSX evidence workbook and SourceRefs sheet. It does not require cloud workers or model calls, and it does not yet create charts, formulas, pivots, or styled financial models.
 
+## Example: Implemented Formula Validation Tool
+
+```http
+POST /v1/tools/sheet.validation.formulas/run
+```
+
+Input:
+
+```json
+{
+  "path": ".okoffice-out/evidence.xlsx"
+}
+```
+
+Output highlights:
+
+```json
+{
+  "status": "succeeded",
+  "tool": "sheet.validation.formulas",
+  "validation": {"status": "passed"},
+  "usage": {
+    "summary": {
+      "formula_count": 0,
+      "formula_error_count": 0,
+      "broken_ref_count": 0,
+      "external_ref_count": 0,
+      "volatile_formula_count": 0
+    },
+    "engine": {"evaluation": "structural_only", "recalculated": false}
+  }
+}
+```
+
+Limitations: the OSS tool performs static OOXML formula QA. It does not recalculate formulas, resolve named ranges, detect circular references, or validate chart/table bindings yet.
+
 ## Example: Implemented Context Packet Build
 
 ```http

@@ -159,6 +159,7 @@ from agentpdf.tools.runner import (
     run_sheet_inspect_workbook,
     run_sheet_profile_data,
     run_sheet_read_workbook,
+    run_sheet_validate_formulas,
     run_sheet_validate_workbook,
     run_sheet_write_workbook,
     run_split,
@@ -376,6 +377,8 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
         )
     if tool_name == "sheet.validate.workbook":
         return run_sheet_validate_workbook(payload.get("path", payload.get("input_path", "")))
+    if tool_name == "sheet.validation.formulas":
+        return run_sheet_validate_formulas(payload.get("path", payload.get("input_path", "")))
     if tool_name == "deck.inspect.presentation":
         return run_deck_inspect_presentation(payload.get("path", payload.get("input_path", "")))
     if tool_name == "deck.validate.presentation":

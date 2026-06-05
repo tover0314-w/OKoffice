@@ -41,6 +41,7 @@ okoffice sheet extract-tables path/to/model.xlsx --json
 okoffice sheet create-evidence-workbook records.json -o .okoffice-out/evidence.xlsx --json
 okoffice sheet write-workbook records.json -o .okoffice-out/model.xlsx --json
 okoffice sheet validate .okoffice-out/model.xlsx --json
+okoffice sheet validate-formulas .okoffice-out/model.xlsx --json
 okoffice deck inspect path/to/deck.pptx --json
 okoffice deck compose-plan .okoffice-out/evidence.xlsx -o .okoffice-out/deck.plan.json --title "Board Review" --json
 okoffice deck create-from-outline outline.json -o .okoffice-out/board-review.pptx --json
@@ -112,7 +113,7 @@ okpdf serve --api
 | Extract | `word.extract.tables`, `sheet.read.workbook`, `sheet.profile.data`, `sheet.extract.tables`, `deck.extract.notes`, `pdf.convert.pdf_to_text` |
 | Create | `word.write.document`, `sheet.create.evidence_workbook`, `sheet.write.workbook`, `deck.compose.plan`, `deck.create.from_outline`, `pdf.convert.markdown_to_pdf` |
 | Patch | `office.patch.plan`, `word.edit.patch`, `sheet.edit.patch`, `deck.edit.patch`, `pdf.patch.apply` |
-| Validate | `office.validation.run`, `word.validation.document`, `sheet.validate.workbook`, `deck.validate.presentation`, `pdf.validation.render_check` |
+| Validate | `office.validation.run`, `word.validation.document`, `sheet.validate.workbook`, `sheet.validation.formulas`, `deck.validate.presentation`, `pdf.validation.render_check` |
 | Evidence | `office.context.build_packet`, `office.evidence.coverage`, `office.source_map.create` |
 | Workflow | `office.workflow.extract_to_sheet`, `office.workflow.sheet_to_deck`, `office.workflow.board_pack`, `pdf.workflow.run` |
 | Bundle | `office.bundle.export`, `office.bundle.verify`, `pdf.artifacts.export_bundle` |

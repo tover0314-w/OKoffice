@@ -72,7 +72,7 @@ Acceptance:
 Deliverables:
 
 - `word.validation.document`.
-- `sheet.validation.formulas`.
+- `sheet.validation.formulas` as structural formula QA.
 - `deck.validation.presentation`.
 - `office.validation.package`.
 

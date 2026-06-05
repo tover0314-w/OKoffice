@@ -162,6 +162,7 @@ from agentpdf.office.sheet import (
     inspect_sheet_workbook,
     profile_sheet_data,
     read_sheet_workbook,
+    validate_sheet_formulas,
     validate_sheet_workbook,
     write_sheet_workbook,
 )
@@ -310,6 +311,10 @@ def run_sheet_create_evidence_workbook(
 
 def run_sheet_validate_workbook(path: str | Path) -> ToolResult:
     return validate_sheet_workbook(path)
+
+
+def run_sheet_validate_formulas(path: str | Path) -> ToolResult:
+    return validate_sheet_formulas(path)
 
 
 def run_deck_inspect_presentation(path: str | Path) -> ToolResult:

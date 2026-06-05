@@ -564,7 +564,67 @@ Checks DOCX package health, styles, comments/tracked changes policy, metadata, a
 
 ### `sheet.validation.formulas`
 
-Checks formula references, formula errors when evaluation is available, external links, circular refs, named ranges, and chart/table bindings.
+Purpose: structurally validate workbook formulas without recalculating them.
+
+CLI:
+
+```bash
+okoffice sheet validate-formulas .okoffice-out/evidence.xlsx --json
+```
+
+MCP:
+
+```python
+sheet_validate_formulas(".okoffice-out/evidence.xlsx")
+```
+
+REST:
+
+```http
+POST /v1/tools/sheet.validation.formulas/run
+```
+
+Expected output highlights:
+
+```json
+{
+  "status": "succeeded",
+  "tool": "sheet.validation.formulas",
+  "validation": {"status": "warning"},
+  "usage": {
+    "summary": {
+      "sheet_count": 2,
+      "formula_count": 4,
+      "formula_error_count": 1,
+      "broken_ref_count": 1,
+      "external_ref_count": 1,
+      "volatile_formula_count": 1
+    },
+    "engine": {"evaluation": "structural_only", "recalculated": false}
+  },
+  "next_recommended_tools": ["sheet.validate.workbook", "sheet.profile.data", "deck.compose.plan"]
+}
+```
+
+Error example:
+
+```json
+{
+  "status": "failed",
+  "tool": "sheet.validation.formulas",
+  "error": {
+    "code": "unsupported_file_type",
+    "message": "sheet.validation.formulas requires an XLSX-compatible OOXML package."
+  }
+}
+```
+
+Limitations and dependency notes:
+
+- Runs locally with deterministic OOXML parsing; it does not require Microsoft Excel, LibreOffice, cloud workers, or model calls.
+- Detects formula cells, cached error values, `#REF!`, external workbook refs, volatile functions, and simple cell/range precedents.
+- Does not recalculate formulas, resolve named ranges, detect circular references, or validate chart/table bindings yet.
+- Use optional formula worker/recalculation backends later when exact evaluated values are required.
 
 ### `deck.validation.presentation`
 

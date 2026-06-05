@@ -13,6 +13,7 @@ from agentpdf.office.sheet import (
     inspect_sheet_workbook,
     profile_sheet_data,
     read_sheet_workbook,
+    validate_sheet_formulas,
     validate_sheet_workbook,
     write_sheet_workbook,
 )
@@ -41,6 +42,7 @@ __all__ = [
     "plan_office_workflow",
     "profile_sheet_data",
     "read_sheet_workbook",
+    "validate_sheet_formulas",
     "validate_sheet_workbook",
     "validate_office_package",
     "write_sheet_workbook",

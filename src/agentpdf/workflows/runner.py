@@ -74,6 +74,7 @@ SUPPORTED_LOCAL_WORKFLOW_TOOLS = {
     "sheet.profile.data",
     "sheet.read.workbook",
     "sheet.validate.workbook",
+    "sheet.validation.formulas",
     "sheet.write.workbook",
     "word.extract.tables",
     "word.inspect.document",
@@ -451,6 +452,8 @@ def _run_local_step(tool: str, payload: dict[str, Any]) -> ToolResult:
         )
     if tool == "sheet.validate.workbook":
         return runner.run_sheet_validate_workbook(payload.get("path", payload.get("input_path", "")))
+    if tool == "sheet.validation.formulas":
+        return runner.run_sheet_validate_formulas(payload.get("path", payload.get("input_path", "")))
     if tool == "deck.create.from_outline":
         outline = payload.get("outline", payload)
         return runner.run_deck_create_from_outline(

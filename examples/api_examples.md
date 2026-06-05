@@ -146,6 +146,18 @@ curl -X POST http://127.0.0.1:7331/v1/tools/sheet.create.evidence_workbook/run \
   }'
 ```
 
+## Validate Formulas
+
+```bash
+curl -X POST http://127.0.0.1:7331/v1/tools/sheet.validation.formulas/run \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "path": ".okoffice-out/vendor-evidence.xlsx"
+  }'
+```
+
+Expected output includes `usage.summary.formula_count`, `formula_error_count`, `broken_ref_count`, `external_ref_count`, and `volatile_formula_count`. The local OSS tool is structural-only and does not recalculate formulas.
+
 ## Compose Deck Plan
 
 ```bash

@@ -95,6 +95,8 @@ okoffice extract schema .okoffice-out/vendor.context.json \
 okoffice sheet create-evidence-workbook .okoffice-out/vendor.evidence.json \
   -o .okoffice-out/vendor-evidence.xlsx \
   --json
+
+okoffice sheet validate-formulas .okoffice-out/vendor-evidence.xlsx --json
 ```
 
 ## Validate Package Safety

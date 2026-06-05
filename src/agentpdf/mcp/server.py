@@ -155,6 +155,7 @@ from agentpdf.tools.runner import (
     run_sheet_inspect_workbook,
     run_sheet_profile_data,
     run_sheet_read_workbook,
+    run_sheet_validate_formulas,
     run_sheet_validate_workbook,
     run_sheet_write_workbook,
     run_split,
@@ -212,6 +213,7 @@ def create_mcp_server() -> FastMCP:
     server.tool(name="sheet_create_evidence_workbook")(sheet_create_evidence_workbook)
     server.tool(name="sheet_write_workbook")(sheet_write_workbook)
     server.tool(name="sheet_validate_workbook")(sheet_validate_workbook)
+    server.tool(name="sheet_validate_formulas")(sheet_validate_formulas)
     server.tool(name="deck_inspect_presentation")(deck_inspect_presentation)
     server.tool(name="deck_compose_plan")(deck_compose_plan)
     server.tool(name="deck_create_from_outline")(deck_create_from_outline)
@@ -557,6 +559,11 @@ def sheet_create_evidence_workbook(data: dict[str, object], output_path: str) ->
 def sheet_validate_workbook(path: str) -> str:
     """Validate a local Excel workbook for agent-readable structure and safety markers."""
     return run_sheet_validate_workbook(path).model_dump_json()
+
+
+def sheet_validate_formulas(path: str) -> str:
+    """Validate workbook formulas for cached errors, broken refs, external refs, and volatile functions."""
+    return run_sheet_validate_formulas(path).model_dump_json()
 
 
 def deck_inspect_presentation(path: str) -> str:

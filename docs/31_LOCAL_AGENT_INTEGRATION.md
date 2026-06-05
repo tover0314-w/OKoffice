@@ -80,6 +80,7 @@ MCP wrapper groups:
 - `office_workflow_extract_to_sheet`
 - `sheet_create_evidence_workbook`
 - `sheet_write_workbook`
+- `sheet_validate_formulas`
 - `deck_compose_plan`
 - `deck_create_from_outline`
 - `deck_validate_presentation`

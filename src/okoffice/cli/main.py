@@ -18,6 +18,7 @@ from agentpdf.office.sheet import (
     inspect_sheet_workbook,
     profile_sheet_data,
     read_sheet_workbook,
+    validate_sheet_formulas,
     validate_sheet_workbook,
     write_sheet_workbook,
 )
@@ -199,6 +200,15 @@ def sheet_validate(
 ) -> None:
     """Validate workbook structure, safety markers, and source-map readiness."""
     _emit_result(validate_sheet_workbook(path), json_output=json_output)
+
+
+@sheet_app.command("validate-formulas")
+def sheet_validate_formulas(
+    path: Annotated[Path, typer.Argument(help="XLSX artifact path to validate formulas in.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Validate workbook formulas for cached errors, broken refs, external refs, and volatile functions."""
+    _emit_result(validate_sheet_formulas(path), json_output=json_output)
 
 
 @deck_app.command("inspect")

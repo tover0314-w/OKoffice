@@ -57,9 +57,11 @@ Workbook:
 okoffice sheet create-evidence-workbook .okoffice-out/evidence.json -o .okoffice-out/evidence.xlsx --json
 okoffice sheet write-workbook .okoffice-out/evidence.json -o .okoffice-out/workbook.xlsx --json
 okoffice sheet validate .okoffice-out/evidence.xlsx --json
+okoffice sheet validate-formulas .okoffice-out/evidence.xlsx --json
 ```
 
 `sheet.create-evidence-workbook` is the okoffice-first workflow command for source-mapped evidence. `sheet.write-workbook` remains available as the lower-level compatibility writer for structured records.
+`sheet.validate-formulas` performs structural formula QA without recalculating formulas; optional recalculation workers remain outside the OSS default path.
 
 Document and deck:
 

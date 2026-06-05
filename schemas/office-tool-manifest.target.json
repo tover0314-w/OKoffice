@@ -2,7 +2,7 @@
     "manifest_version":  "0.1",
     "product":  "okoffice",
     "compatibility_package":  "agentpdf",
-    "tool_count":  49,
+    "tool_count":  50,
     "domains":  [
                     "office",
                     "word",
@@ -562,6 +562,21 @@
                              "name":  "sheet.validate.workbook",
                              "status":  "beta",
                              "description":  "Validate formulas, dimensions, blank sheets, chart refs, and workbook renderability.",
+                             "domain":  "sheet",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  true,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "sheet.validation.formulas",
+                             "status":  "beta",
+                             "description":  "Validate workbook formulas for cached errors, broken references, external workbook refs, and volatile functions without recalculating formulas.",
                              "domain":  "sheet",
                              "interfaces":  [
                                                 "cli",
