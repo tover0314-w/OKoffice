@@ -83,7 +83,10 @@ from agentpdf.office.context import build_office_context_packet
 from agentpdf.office.deck import (
     create_deck_from_outline,
     create_deck_presentation as create_deck_presentation_from_outline,
+    export_deck_pptx,
     inspect_deck_presentation,
+    render_deck_html,
+    validate_deck_html_preview,
     validate_deck_presentation as validate_deck_outline_presentation,
 )
 from agentpdf.office.deck_patch import apply_deck_patch
@@ -502,6 +505,46 @@ def run_deck_compose_plan(
         style=style,
         max_rows_per_sheet=max_rows_per_sheet,
     )
+
+
+def run_deck_render_html(
+    plan_or_path: dict[str, object] | str | Path | None = None,
+    plan_path: str | Path | None = None,
+    output_path: str | Path | None = None,
+    artifact_dir: str | Path | None = None,
+    plan: dict[str, Any] | None = None,
+    outline: dict[str, Any] | None = None,
+) -> ToolResult:
+    if output_path is None:
+        return ToolResult(
+            job_id=_job_id(),
+            status="failed",
+            tool="deck.render.html",
+            error=AgentPDFError(code="invalid_input", message="output_path is required."),
+            warnings=["output_path is required."],
+        )
+    payload = plan if plan is not None else outline if outline is not None else plan_path or plan_or_path
+    if payload is None:
+        return ToolResult(
+            job_id=_job_id(),
+            status="failed",
+            tool="deck.render.html",
+            error=AgentPDFError(code="invalid_input", message="plan_path, plan, or outline is required."),
+            warnings=["plan_path, plan, or outline is required."],
+        )
+    return render_deck_html(payload, output_path, artifact_dir=artifact_dir)
+
+
+def run_deck_validate_html_preview(path: str | Path) -> ToolResult:
+    return validate_deck_html_preview(path)
+
+
+def run_deck_validation_html_preview(path: str | Path) -> ToolResult:
+    return run_deck_validate_html_preview(path)
+
+
+def run_deck_export_pptx(html_path: str | Path, output_path: str | Path) -> ToolResult:
+    return export_deck_pptx(html_path, output_path)
 
 
 def run_deck_validate_presentation(path: str | Path) -> ToolResult:

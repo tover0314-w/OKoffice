@@ -115,7 +115,7 @@ First target wrappers:
 - `office_bundle_export`
 - `office_bundle_verify`
 
-Wrappers for `deck_render_html`, `deck_validation_html_preview`, and `deck_export_pptx` are target names for the HTML-first deck route. They should appear in the manifest as planned until an implementation or optional worker adapter exists; MCP must not expose them as runnable tools prematurely.
+Wrappers for `deck_render_html`, `deck_validation_html_preview`, and `deck_export_pptx` are implemented local beta tools for the HTML-first deck route. They expose the deterministic OSS baseline: HTML preview package + manifest, preview validation, and PPTX export through the local outline route. Browser screenshot/contact-sheet validation and richer HTML-to-PPTX worker export remain optional-worker follow-ups.
 
 Wrappers should map to canonical tool names in `structuredContent.tool`, for example:
 

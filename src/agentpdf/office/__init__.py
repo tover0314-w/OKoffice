@@ -2,7 +2,14 @@
 
 from agentpdf.office.context import build_office_context_packet
 from agentpdf.office.bundle import export_office_bundle, verify_office_bundle
-from agentpdf.office.deck import create_deck_from_outline, inspect_deck_presentation, validate_deck_presentation
+from agentpdf.office.deck import (
+    create_deck_from_outline,
+    export_deck_pptx,
+    inspect_deck_presentation,
+    render_deck_html,
+    validate_deck_html_preview,
+    validate_deck_presentation,
+)
 from agentpdf.office.deck_plan import compose_deck_plan
 from agentpdf.office.deck_patch import apply_deck_patch
 from agentpdf.office.deck_validation import (
@@ -50,7 +57,10 @@ __all__ = [
     "extract_word_tables",
     "compose_deck_plan",
     "create_deck_from_outline",
+    "export_deck_pptx",
     "inspect_deck_presentation",
+    "render_deck_html",
+    "validate_deck_html_preview",
     "validate_deck_presentation",
     "validate_deck_quality_presentation",
     "validate_deck_contact_sheet",

@@ -9,11 +9,12 @@ from uuid import uuid4
 from zipfile import ZIP_DEFLATED, BadZipFile, ZipFile
 
 from agentpdf.artifacts.store import build_artifact
-from agentpdf.office.deck import create_deck_from_outline, validate_deck_presentation
+from agentpdf.office.deck import export_deck_pptx, render_deck_html, validate_deck_html_preview, validate_deck_presentation
 from agentpdf.office.context import build_office_context_packet
+from agentpdf.office.deck_plan import compose_deck_plan
 from agentpdf.office.extract import extract_schema
 from agentpdf.office.inspect import inspect_office_file
-from agentpdf.office.sheet import extract_sheet_tables, profile_sheet_data, validate_sheet_workbook
+from agentpdf.office.sheet import extract_sheet_tables, validate_sheet_workbook
 from agentpdf.office.validation import validate_sheet_formulas
 from agentpdf.office.word import extract_word_tables, inspect_word_document
 from agentpdf.office.workbook import write_sheet_workbook as write_evidence_workbook
@@ -269,76 +270,114 @@ def sheet_to_deck(
     except AgentPDFException as exc:
         return _failed(exc.to_error(), tool=SHEET_TO_DECK_TOOL_NAME)
 
-    profile_result = profile_sheet_data(workbook_path, max_rows_per_sheet=max_rows_per_sheet)
-    if profile_result.status == "failed":
-        return _failed(
-            profile_result.error
-            or AgentPDFError(code="unsupported_file_type", message="Workbook profile failed before deck creation."),
-            tool=SHEET_TO_DECK_TOOL_NAME,
-        )
-
-    profile_usage = profile_result.usage
-    summary = profile_usage.get("summary", {}) if isinstance(profile_usage.get("summary"), dict) else {}
-    profiles = profile_usage.get("profiles", []) if isinstance(profile_usage.get("profiles"), list) else []
-    data_row_count = int(summary.get("data_row_count", 0))
-    profiled_profiles = [profile for profile in profiles if isinstance(profile, dict) and int(profile.get("data_row_count", 0)) > 0]
-    if data_row_count <= 0 or not profiled_profiles:
-        return _failed(
-            AgentPDFError(
-                code="unsafe_input_rejected",
-                message="office.workflow.sheet_to_deck requires at least one profiled workbook data row.",
-                details={"workbook_path": str(workbook_path), "profiled_sheet_count": len(profiled_profiles)},
-            ),
-            tool=SHEET_TO_DECK_TOOL_NAME,
-        )
-
-    outline = _sheet_profile_outline(
-        workbook_path=workbook_path,
+    plan_path = output.with_suffix(".plan.json")
+    html_path = output.with_suffix(".html")
+    plan_result = compose_deck_plan(
+        workbook_path,
+        output_path=plan_path,
         title=title,
-        profile_summary=summary,
-        profiles=profiled_profiles,
-        warnings=profile_result.warnings,
+        max_rows_per_sheet=max_rows_per_sheet,
     )
-    deck_result = create_deck_from_outline(outline, output)
-    if deck_result.status == "failed":
-        return _failed(
-            deck_result.error or AgentPDFError(code="artifact_validation_failed", message="Deck creation failed."),
-            tool=SHEET_TO_DECK_TOOL_NAME,
+    if plan_result.status == "failed":
+        return _failed_from_workflow_step(SHEET_TO_DECK_TOOL_NAME, plan_result, [plan_result])
+
+    render_result = render_deck_html(plan_path, html_path)
+    if render_result.status == "failed":
+        return _failed_from_workflow_step(SHEET_TO_DECK_TOOL_NAME, render_result, [plan_result, render_result])
+
+    html_validation_result = validate_deck_html_preview(html_path)
+    if html_validation_result.status == "failed":
+        return _failed_from_workflow_step(
+            SHEET_TO_DECK_TOOL_NAME,
+            html_validation_result,
+            [plan_result, render_result, html_validation_result],
         )
 
-    artifact = build_artifact(output, SHEET_TO_DECK_TOOL_NAME)
-    deck_summary = deck_result.usage.get("summary", {}) if isinstance(deck_result.usage.get("summary"), dict) else {}
-    warnings = [*profile_result.warnings, *deck_result.warnings]
+    export_result = export_deck_pptx(html_path, output)
+    if export_result.status == "failed":
+        return _failed_from_workflow_step(
+            SHEET_TO_DECK_TOOL_NAME,
+            export_result,
+            [plan_result, render_result, html_validation_result, export_result],
+        )
+
+    presentation_validation_result = validate_deck_presentation(output)
+    if presentation_validation_result.status == "failed":
+        return _failed_from_workflow_step(
+            SHEET_TO_DECK_TOOL_NAME,
+            presentation_validation_result,
+            [plan_result, render_result, html_validation_result, export_result, presentation_validation_result],
+        )
+
+    step_results = [
+        plan_result,
+        render_result,
+        html_validation_result,
+        export_result,
+        presentation_validation_result,
+    ]
+    plan_summary = plan_result.usage.get("summary", {}) if isinstance(plan_result.usage.get("summary"), dict) else {}
+    render_summary = render_result.usage.get("summary", {}) if isinstance(render_result.usage.get("summary"), dict) else {}
+    deck_summary = (
+        presentation_validation_result.usage.get("summary", {})
+        if isinstance(presentation_validation_result.usage.get("summary"), dict)
+        else {}
+    )
+    outline = plan_result.usage.get("outline", {}) if isinstance(plan_result.usage.get("outline"), dict) else {}
+    profiles = []
+    artifacts = _workflow_sidecar_artifacts(
+        [
+            plan_path,
+            html_path,
+            html_path.with_suffix(".html-manifest.json"),
+            output,
+            output.with_suffix(".deck-source-map.json"),
+        ],
+        source_tool=SHEET_TO_DECK_TOOL_NAME,
+    )
+    warnings = _dedupe_workflow_warnings([warning for result in step_results for warning in result.warnings])
     checks = [
         ValidationCheck(
-            name="workbook_profiled",
-            status="passed",
+            name="deck_compose_plan",
+            status=plan_result.validation.status if plan_result.validation is not None else "skipped",
             details={
-                "workbook_path": str(workbook_path),
-                "profiled_sheet_count": summary.get("profiled_sheet_count", 0),
-                "data_row_count": data_row_count,
-                "source_coverage": summary.get("source_coverage", {}),
+                "job_id": plan_result.job_id,
+                "path": plan_path.as_posix(),
+                "slide_count": plan_summary.get("slide_count", 0),
             },
         ),
         ValidationCheck(
-            name="deck_outline_created",
-            status="passed",
+            name="deck_render_html",
+            status=render_result.validation.status if render_result.validation is not None else "skipped",
             details={
-                "slide_count": len(outline["slides"]),
-                "style": outline["style"],
-                "source": outline["source"],
+                "job_id": render_result.job_id,
+                "path": html_path.as_posix(),
+                "slide_count": render_summary.get("slide_count", 0),
             },
         ),
         ValidationCheck(
-            name="pptx_written",
-            status="passed",
-            details={"path": output.as_posix(), "mime_type": PPTX_MIME_TYPE},
+            name="deck_validation_html_preview",
+            status=html_validation_result.validation.status if html_validation_result.validation is not None else "skipped",
+            details={
+                "job_id": html_validation_result.job_id,
+                "path": html_path.as_posix(),
+            },
         ),
         ValidationCheck(
-            name="deck_validated",
-            status=deck_result.validation.status if deck_result.validation is not None else "warning",
+            name="deck_export_pptx",
+            status=export_result.validation.status if export_result.validation is not None else "skipped",
+            details={"job_id": export_result.job_id, "path": output.as_posix(), "mime_type": PPTX_MIME_TYPE},
+        ),
+        ValidationCheck(
+            name="deck_validate_presentation",
+            status=(
+                presentation_validation_result.validation.status
+                if presentation_validation_result.validation is not None
+                else "skipped"
+            ),
             details={
-                "slide_count": deck_summary.get("slide_count", len(outline["slides"])),
+                "job_id": presentation_validation_result.job_id,
+                "slide_count": deck_summary.get("slide_count", render_summary.get("slide_count", 0)),
                 "text_run_count": deck_summary.get("text_run_count", 0),
             },
         ),
@@ -348,9 +387,9 @@ def sheet_to_deck(
         job_id=_job_id(),
         status="succeeded",
         tool=SHEET_TO_DECK_TOOL_NAME,
-        artifacts=[artifact],
+        artifacts=artifacts,
         validation=ValidationReport(
-            status="warning" if warnings else "passed",
+            status=_validation_report_status_from_checks(checks),
             checks=checks,
             warnings=warnings,
         ),
@@ -359,26 +398,50 @@ def sheet_to_deck(
             "summary": {
                 "workbook_path": str(workbook_path),
                 "deck_path": output.as_posix(),
-                "slide_count": deck_summary.get("slide_count", len(outline["slides"])),
-                "profiled_sheet_count": summary.get("profiled_sheet_count", len(profiled_profiles)),
-                "column_count": summary.get("column_count", 0),
-                "data_row_count": data_row_count,
-                "missing_cell_count": summary.get("missing_cell_count", 0),
-                "formula_cell_count": summary.get("formula_cell_count", 0),
-                "source_coverage": summary.get("source_coverage", {}),
+                "html_preview_path": html_path.as_posix(),
+                "plan_path": plan_path.as_posix(),
+                "slide_count": deck_summary.get("slide_count", render_summary.get("slide_count", 0)),
+                "profiled_sheet_count": plan_summary.get("profiled_sheet_count", 0),
+                "column_count": plan_summary.get("column_count", 0),
+                "data_row_count": plan_summary.get("data_row_count", 0),
+                "missing_cell_count": plan_summary.get("missing_cell_count", 0),
+                "formula_cell_count": plan_summary.get("formula_cell_count", 0),
+                "source_coverage": plan_summary.get("source_coverage", {}),
             },
             "workbook_profile": {
-                "summary": summary,
-                "profiles": profiled_profiles,
+                "summary": plan_summary,
+                "profiles": profiles,
             },
+            "workflow": {
+                "workflow_id": f"sheet_to_deck_{uuid4().hex[:16]}",
+                "creation_route": {
+                    "route": "html_first",
+                    "fallback_used": False,
+                    "html_preview_used": True,
+                },
+                "steps": [result.tool for result in step_results],
+                "sidecars": {
+                    "plan_path": plan_path.as_posix(),
+                    "html_preview_path": html_path.as_posix(),
+                    "html_manifest_path": html_path.with_suffix(".html-manifest.json").as_posix(),
+                    "source_map_path": output.with_suffix(".deck-source-map.json").as_posix(),
+                },
+                "mutates_inputs": False,
+            },
+            "steps": [_workflow_step_summary(result) for result in step_results],
             "outline": outline,
+            "composition_ir": plan_result.usage.get("composition_ir", {}),
+            "html_preview": html_validation_result.usage,
+            "export": export_result.usage.get("export", {}),
+            "presentation_validation": presentation_validation_result.model_dump(mode="json"),
             "deck": {
                 "path": output.as_posix(),
                 "format": "pptx",
-                "artifact_id": artifact.artifact_id,
+                "artifact_id": _artifact_id_for_path(artifacts, output),
             },
         },
         next_recommended_tools=[
+            "deck.validation.contact_sheet",
             "deck.inspect.presentation",
             "deck.validate.presentation",
             "office.workflow.board_pack",
@@ -779,6 +842,18 @@ def _dedupe_workflow_artifacts(artifacts: list[Any]) -> list[Any]:
             seen.add(key)
             deduped.append(artifact)
     return deduped
+
+
+def _workflow_sidecar_artifacts(paths: list[Path], *, source_tool: str) -> list[Any]:
+    return _dedupe_workflow_artifacts([build_artifact(path, source_tool) for path in paths if path.exists()])
+
+
+def _artifact_id_for_path(artifacts: list[Any], path: Path) -> str | None:
+    resolved = path.resolve()
+    for artifact in artifacts:
+        if getattr(artifact, "path", None) == resolved:
+            return str(getattr(artifact, "artifact_id", ""))
+    return None
 
 
 def _failed_from_workflow_step(tool: str, failed_result: ToolResult, step_results: list[ToolResult]) -> ToolResult:

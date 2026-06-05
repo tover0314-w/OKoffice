@@ -43,9 +43,9 @@ Implemented okoffice target snapshot lives in `schemas/office-tool-manifest.targ
 | deck.validate.presentation | beta | yes |
 | deck.validation.presentation | beta | yes |
 | deck.validation.contact_sheet | beta | yes |
-| deck.render.html | planned | yes |
-| deck.validation.html_preview | planned | yes |
-| deck.export.pptx | planned | yes |
+| deck.render.html | beta | yes |
+| deck.validation.html_preview | beta | yes |
+| deck.export.pptx | beta | yes |
 | deck.review.taste | planned | yes |
 | office.workflow.docset_to_sheet | beta | yes |
 | office.workflow.extract_to_sheet | beta | yes |

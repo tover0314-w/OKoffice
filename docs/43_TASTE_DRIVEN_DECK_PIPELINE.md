@@ -17,7 +17,7 @@ evidence workbook / source graph
 -> office.bundle.export
 ```
 
-`deck.create.presentation` remains the public convenience tool. In the current OSS beta it writes an editable PPTX directly from an outline or deck composition plan. In the target pipeline it should orchestrate the HTML-first route when the renderer/export worker is available, and fall back to the deterministic local PPTX writer only when that is the best available local path.
+`deck.create.presentation` remains the public convenience tool. In the current OSS beta, the HTML-first route exists as explicit tools: `deck.render.html`, `deck.validation.html_preview`, and `deck.export.pptx`. The convenience writer still writes an editable PPTX directly from an outline or deck composition plan; future orchestration should call the HTML-first route when that is the best available local path and report direct PPTX creation as fallback evidence.
 
 ## External Research Notes
 
@@ -39,52 +39,53 @@ Relevant sources:
 
 The HTML-first deck layer is not a marketing demo. It is an agent-native artifact with structured evidence.
 
-`deck.render.html` should emit:
+The current `deck.render.html` beta emits:
 
 - a self-contained HTML slide package;
 - a package manifest;
 - theme/style token usage;
 - slide ids and DOM anchors;
 - source refs for claims, charts, tables, images, and notes;
-- render profile and renderer backend evidence;
-- warnings for remote assets, unsafe scripts, missing alt text, overflow risk, and placeholder leakage;
+- render profile and local package evidence;
+- warnings for unsafe scripts, remote assets, and placeholder leakage;
 - next recommended tools.
 
-`deck.validation.html_preview` should check:
+The current `deck.validation.html_preview` beta checks:
 
-- one main claim per slide unless the profile permits otherwise;
 - placeholder leakage;
-- text overflow and clipped regions from browser screenshots when available;
-- contrast and visual density;
-- evidence coverage for claims, tables, charts, and speaker notes;
-- slide rhythm, sectioning, and duplicated titles;
-- asset packaging and offline renderability.
+- manifest presence;
+- slide DOM anchors;
+- unsafe script tags;
+- remote or file asset references;
+- offline renderability markers.
 
-`deck.export.pptx` should convert the validated HTML/component tree into an editable PPTX and preserve:
+The current `deck.export.pptx` beta converts the HTML package manifest back through the local outline exporter and preserves:
 
 - slide order and section ids;
 - text boxes and speaker notes;
-- chart/table source refs where feasible;
-- image assets and alt text;
-- style pack/theme metadata;
 - source map links back to the HTML package and Composition IR.
+
+Planned optional-worker enhancements should add browser screenshot checks, contact sheets, overflow detection, contrast/density scoring, image/alt-text preservation, richer style/theme transfer, and true HTML/component-tree to editable PPTX export.
 
 ## Current vs Target
 
 Current OSS beta:
 
 - `deck.compose.plan` creates source-mapped Composition IR and outline JSON from an evidence workbook.
+- `deck.render.html` creates a self-contained HTML preview package with a manifest, DOM anchors, and source refs.
+- `deck.validation.html_preview` validates package integrity, offline asset discipline, script absence, and placeholder leakage.
+- `deck.export.pptx` writes editable PPTX through the local outline exporter and records HTML package lineage.
 - `deck.create.presentation` writes a local editable PPTX directly from an outline or plan.
 - `office.workflow.sheet_to_deck` profiles a workbook and produces a PPTX through the current deterministic route.
 - `deck.validate.presentation` performs package/text/placeholder/source-map checks without claiming full visual QA.
 
-Target route:
+Next target route:
 
 - `deck.compose.plan` plans story and evidence.
-- `deck.render.html` creates the visual preview package.
-- `deck.validation.html_preview` and `deck.validation.contact_sheet` make taste and layout inspectable.
-- `deck.export.pptx` produces the editable PowerPoint file after preview validation.
-- `deck.create.presentation` becomes a convenience orchestrator over the target route, with explicit fallback evidence when workers are unavailable.
+- `deck.render.html` grows richer visual/component metadata.
+- `deck.validation.html_preview` and `deck.validation.contact_sheet` make taste, screenshots, overflow, and layout inspectable.
+- `deck.export.pptx` upgrades from local outline export to richer HTML/component-tree conversion.
+- `deck.create.presentation` becomes a convenience orchestrator over the HTML-first route, with explicit fallback evidence when workers are unavailable.
 
 ## Tool Naming
 

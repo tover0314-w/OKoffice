@@ -131,7 +131,10 @@ See [Taste-Driven HTML-First Deck Pipeline](docs/43_TASTE_DRIVEN_DECK_PIPELINE.m
 | `sheet.validation.formulas` | beta | Scans formulas for cached errors, broken refs, external workbook refs, and volatile functions without recalculation. |
 | `deck.inspect.presentation` | beta | Reads PPTX slide, notes, layout, theme, media, and chart facts. |
 | `deck.compose.plan` | beta | Composes source-mapped Composition IR and outline JSON from an evidence workbook without writing HTML or PPTX. |
-| `deck.create.presentation` | beta | Current local writer creates editable PPTX from outlines/plans; target route orchestrates HTML preview validation before PPTX export. |
+| `deck.render.html` | beta | Renders a deck plan or outline into an offline HTML slide preview package with a manifest, DOM anchors, and source refs. |
+| `deck.validation.html_preview` | beta | Validates the HTML preview package for manifest/anchor integrity, offline assets, scripts, and placeholder leakage. |
+| `deck.export.pptx` | beta | Exports the HTML preview package to editable PPTX through the local outline route while preserving package lineage. |
+| `deck.create.presentation` | beta | Convenience writer creates editable PPTX from outlines/plans; future versions can orchestrate the HTML preview/export route. |
 | `deck.create.from_outline` | beta | Lower-level direct outline-to-PPTX writer for compatibility and fallback paths. |
 | `deck.validate.presentation` | beta | Validates PPTX structure, blank slides, placeholder leakage, safety markers, and source-map readiness. |
 | `office.workflow.extract_to_sheet` | beta | Builds a source-mapped XLSX evidence workbook from DOCX/XLSX tables or an OKoffice context packet source graph. |

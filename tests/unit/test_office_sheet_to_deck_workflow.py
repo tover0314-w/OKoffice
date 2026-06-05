@@ -15,21 +15,36 @@ def test_sheet_to_deck_profiles_workbook_and_writes_presentation(tmp_path: Path)
 
     result = sheet_to_deck(workbook_path, deck_path, title="Q4 Board Review")
     inspect = inspect_deck_presentation(deck_path)
+    plan_path = deck_path.with_suffix(".plan.json")
+    html_path = deck_path.with_suffix(".html")
 
     assert result.status == "succeeded"
     assert result.tool == "office.workflow.sheet_to_deck"
     assert deck_path.exists()
-    assert result.artifacts[0].path == deck_path
-    assert result.artifacts[0].source_tool == "office.workflow.sheet_to_deck"
+    assert plan_path.exists()
+    assert html_path.exists()
+    assert any(artifact.path == deck_path for artifact in result.artifacts)
+    assert any(artifact.path == html_path for artifact in result.artifacts)
+    assert all(artifact.source_tool == "office.workflow.sheet_to_deck" for artifact in result.artifacts)
     assert result.validation is not None
     assert result.validation.status == "passed"
     assert result.usage["summary"]["slide_count"] >= 4
     assert result.usage["summary"]["profiled_sheet_count"] == 1
     assert result.usage["summary"]["data_row_count"] == 3
     assert result.usage["summary"]["source_coverage"]["status"] == "complete"
+    assert result.usage["workflow"]["creation_route"]["route"] == "html_first"
+    assert result.usage["workflow"]["steps"] == [
+        "deck.compose.plan",
+        "deck.render.html",
+        "deck.validation.html_preview",
+        "deck.export.pptx",
+        "deck.validate.presentation",
+    ]
+    assert result.usage["workflow"]["sidecars"]["plan_path"] == plan_path.as_posix()
+    assert result.usage["workflow"]["sidecars"]["html_preview_path"] == html_path.as_posix()
     assert result.usage["outline"]["slides"][0]["title"] == "Q4 Board Review"
     assert "Revenue" in result.usage["outline"]["slides"][2]["bullets"][1]
-    assert "deck.inspect.presentation" in result.next_recommended_tools
+    assert "deck.validation.contact_sheet" in result.next_recommended_tools
     assert inspect.status == "succeeded"
     assert inspect.usage["presentation"]["slide_count"] == result.usage["summary"]["slide_count"]
 
@@ -97,11 +112,14 @@ def test_sheet_to_deck_agent_interfaces(tmp_path: Path) -> None:
 
     assert cli.exit_code == 0
     assert json.loads(cli.stdout)["tool"] == "office.workflow.sheet_to_deck"
+    assert json.loads(cli.stdout)["usage"]["workflow"]["creation_route"]["route"] == "html_first"
     assert cli_output.exists()
     assert response.status_code == 200
     assert response.json()["usage"]["summary"]["slide_count"] >= 4
+    assert response.json()["usage"]["workflow"]["creation_route"]["route"] == "html_first"
     assert api_output.exists()
     assert mcp_payload["tool"] == "office.workflow.sheet_to_deck"
+    assert mcp_payload["usage"]["workflow"]["creation_route"]["route"] == "html_first"
     assert mcp_output.exists()
     assert workflow.status == "succeeded"
     assert workflow_output.exists()

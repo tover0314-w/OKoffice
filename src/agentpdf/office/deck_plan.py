@@ -165,6 +165,9 @@ def compose_deck_plan(
             **plan,
         },
         next_recommended_tools=[
+            "deck.render.html",
+            "deck.validation.html_preview",
+            "deck.export.pptx",
             "deck.create.presentation",
             "deck.create.from_outline",
             "deck.validate.presentation",
