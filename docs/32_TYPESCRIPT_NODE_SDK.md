@@ -65,10 +65,18 @@ import { OkOfficeClient } from "@okoffice/node";
 
 const client = new OkOfficeClient({ baseUrl: "http://127.0.0.1:7331" });
 
-const pack = await client.runTool("office.workflow.docset_to_board_pack", {
+const pack = await client.runTool("office.workflow.board_pack", {
   files: ["memo.docx", "diligence.pdf", "metrics.xlsx"],
+  schema: {
+    fields: [
+      { name: "vendor", type: "string", aliases: ["Vendor"] },
+      { name: "renewal_date", type: "date", aliases: ["Renewal date"] },
+    ],
+  },
   out_dir: ".okoffice-out/board-pack",
+  title: "Vendor Renewal Review",
   profile: "board_review",
+  include_pdf_handout: true,
 });
 
 console.log(pack.artifacts);
@@ -88,6 +96,9 @@ await client.contextBuild({
   files: ["memo.docx", "diligence.pdf", "metrics.xlsx"],
   outputPath: ".okoffice-out/context.json",
 });
+await client.wordValidateDocument({
+  path: "memo.docx",
+});
 await client.docsetToSheet({
   files: ["memo.docx", "diligence.pdf"],
   schemaPath: "examples/schemas/kpi-review.json",
@@ -96,6 +107,9 @@ await client.docsetToSheet({
 await client.sheetToDeck({
   workbookPath: ".okoffice-out/evidence.xlsx",
   outputPath: ".okoffice-out/board-review.pptx",
+});
+await client.deckValidatePresentation({
+  path: ".okoffice-out/board-review.pptx",
 });
 await client.exportBundle({
   files: [

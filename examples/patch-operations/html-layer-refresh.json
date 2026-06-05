@@ -1,0 +1,9 @@
+[
+  {
+    "op": "regenerate_block",
+    "title": "Refresh HTML Layer Metrics",
+    "replacement_markdown": "## Runtime Metrics\n\nThe metrics block was refreshed from `ctx_002` using the HTML layer evidence recorded in the artifact graph.",
+    "source_refs": ["ctx_002"],
+    "html_layer_id": "html_layer_item_ctx_002"
+  }
+]

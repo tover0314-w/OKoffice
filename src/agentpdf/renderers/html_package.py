@@ -12,8 +12,18 @@ from uuid import uuid4
 
 from agentpdf.artifacts.store import build_artifact
 from agentpdf.conversion.local import html_to_pdf
+from agentpdf.renderers.browser import browser_chromium_html_to_pdf
+from agentpdf.renderers.html_contract import (
+    HTML_LAYER_BBOX_PRECISION,
+    SUPPORTED_RENDERER_BACKENDS,
+    browser_chromium_backend,
+    browser_chromium_backend_unavailable,
+    document_render_profile,
+    local_html_package_fallback_backend,
+    renderer_constraints,
+)
 from agentpdf.schemas.errors import AgentPDFException
-from agentpdf.schemas.models import ToolResult, ValidationCheck, ValidationReport
+from agentpdf.schemas.models import AgentPDFError, ToolResult, ValidationCheck, ValidationReport
 from agentpdf.security.paths import resolve_input_path, resolve_output_path
 
 
@@ -36,6 +46,7 @@ def write_composition_html_package(
     source_refs = _source_refs(blocks, source_map)
     assets = _package_assets(blocks, assets_dir=assets_dir, package_root=output.parent)
     assets_by_block = _assets_by_block(assets)
+    layer_map = _layer_map(blocks)
     document = _html_document(
         composition_ir=composition_ir,
         source_map=source_map,
@@ -45,6 +56,7 @@ def write_composition_html_package(
         assets_by_block=assets_by_block,
     )
     validation = _validate_html_package(assets)
+    constraints = renderer_constraints()
     manifest = {
         "html_package_version": "0.1",
         "html_package_id": f"htmlpkg_{uuid4().hex[:16]}",
@@ -57,11 +69,15 @@ def write_composition_html_package(
         "context_packet_id": composition_ir.get("context_packet_id"),
         "target_profile_id": composition_ir.get("target_profile_id") or target_profile.get("profile_id"),
         "block_count": len(blocks),
+        "layer_map_count": len(layer_map),
         "source_map_count": len(source_map),
         "source_ref_count": len(source_refs),
         "source_refs": source_refs,
         "javascript_enabled": False,
         "remote_assets_enabled": False,
+        "render_profile": document_render_profile(),
+        "renderer_constraints": constraints,
+        "renderer_backend": local_html_package_fallback_backend(constraints),
         "assets_root": str(assets_dir.resolve()),
         "asset_count": len(assets),
         "assets": assets,
@@ -70,11 +86,15 @@ def write_composition_html_package(
             "body_attribute": "data-agentpdf-document",
             "block_selector": "[data-block-id]",
             "source_refs_attribute": "data-source-refs",
+            "layer_id_attribute": "data-layer-id",
+            "bbox_precision": HTML_LAYER_BBOX_PRECISION,
             "renderer_attribute": "data-agentpdf-renderer",
         },
+        "layer_map": layer_map,
         "blocks": [
             {
                 "block_id": str(block.get("block_id") or ""),
+                "layer_id": _layer_id(str(block.get("block_id") or "")),
                 "block_type": str(block.get("type") or "section"),
                 "target_slot": block.get("target_slot"),
                 "source_refs": [str(ref) for ref in block.get("source_refs", [])],
@@ -95,16 +115,137 @@ def write_composition_html_package(
     }
 
 
-def render_html_package(package_path: str | Path, output_path: str | Path) -> ToolResult:
+def render_html_package(
+    package_path: str | Path,
+    output_path: str | Path,
+    renderer_backend: str = "auto",
+) -> ToolResult:
     tool = "pdf.render.html_package"
     manifest_path = _resolve_manifest_path(package_path)
     manifest = _load_html_package_manifest(manifest_path)
     html_path = _manifest_html_path(manifest)
     html_validation = _validate_existing_html_package_manifest(manifest, manifest_path=manifest_path, html_path=html_path)
-    rendered = html_to_pdf(html_path, output_path)
-    pdf_validation = rendered.validation or ValidationReport(status="skipped", checks=[])
-    validation = _merge_validation(html_validation, pdf_validation)
+    render_profile = _manifest_render_profile(manifest)
+    renderer_constraints_value = _manifest_renderer_constraints(manifest)
+    requested_renderer_backend = _normalize_renderer_backend(renderer_backend)
+    renderer_backend_evidence = _renderer_backend_evidence(requested_renderer_backend, renderer_constraints_value)
+    backend_validation = _renderer_backend_validation(renderer_backend_evidence)
     output = Path(output_path).expanduser().resolve()
+    if html_validation.status == "failed":
+        skipped_pdf_validation = _skipped_pdf_render_validation("html_package_validation_failed")
+        validation = _merge_validation(_merge_validation(html_validation, backend_validation), skipped_pdf_validation)
+        return ToolResult(
+            job_id=f"job_{uuid4().hex[:16]}",
+            status="failed",
+            tool=tool,
+            artifacts=[
+                build_artifact(html_path, source_tool=tool),
+                build_artifact(manifest_path, source_tool=tool),
+            ],
+            validation=validation,
+            warnings=validation.warnings,
+            usage={
+                "renderer": str(renderer_backend_evidence["backend_id"]),
+                "requested_renderer_backend": requested_renderer_backend,
+                "renderer_backend": renderer_backend_evidence,
+                "input": str(manifest_path),
+                "html_path": str(html_path),
+                "output": str(output),
+                "render_skipped": True,
+                "render_skip_reason": "html_package_validation_failed",
+                "render_profile": render_profile,
+                "renderer_constraints": renderer_constraints_value,
+                "html_package_manifest": manifest,
+                "html_package_validation": html_validation.model_dump(mode="json"),
+            },
+            next_recommended_tools=["pdf.create.html_package"],
+        )
+    if renderer_backend_evidence.get("available") is False:
+        skipped_pdf_validation = _skipped_pdf_render_validation("renderer_backend_unavailable")
+        validation = _merge_validation(_merge_validation(html_validation, backend_validation), skipped_pdf_validation)
+        return ToolResult(
+            job_id=f"job_{uuid4().hex[:16]}",
+            status="failed",
+            tool=tool,
+            artifacts=[
+                build_artifact(html_path, source_tool=tool),
+                build_artifact(manifest_path, source_tool=tool),
+            ],
+            validation=validation,
+            warnings=validation.warnings,
+            usage={
+                "renderer": str(renderer_backend_evidence["backend_id"]),
+                "requested_renderer_backend": requested_renderer_backend,
+                "renderer_backend": renderer_backend_evidence,
+                "input": str(manifest_path),
+                "html_path": str(html_path),
+                "output": str(output),
+                "render_skipped": True,
+                "render_skip_reason": "renderer_backend_unavailable",
+                "render_profile": render_profile,
+                "renderer_constraints": renderer_constraints_value,
+                "html_package_manifest": manifest,
+                "html_package_validation": html_validation.model_dump(mode="json"),
+            },
+            next_recommended_tools=["pdf.render.html_package"],
+            error=AgentPDFError(
+                code="dependency_missing",
+                message="Requested browser renderer backend is not available in this local install.",
+                retry_hint="Install the optional browser renderer worker or rerun with renderer_backend='auto'.",
+                details={
+                    "requested_renderer_backend": requested_renderer_backend,
+                    "renderer_backend": renderer_backend_evidence,
+                },
+            ),
+        )
+    try:
+        rendered = (
+            browser_chromium_html_to_pdf(
+                html_path=html_path,
+                manifest_path=manifest_path,
+                output_path=output,
+                render_profile=render_profile,
+                renderer_constraints=renderer_constraints_value,
+            )
+            if requested_renderer_backend == "browser_chromium"
+            else html_to_pdf(html_path, output_path)
+        )
+    except AgentPDFException as exc:
+        if requested_renderer_backend == "browser_chromium" and exc.code == "dependency_missing":
+            renderer_backend_evidence = browser_chromium_backend_unavailable(renderer_constraints_value)
+            backend_validation = _renderer_backend_validation(renderer_backend_evidence)
+            skipped_pdf_validation = _skipped_pdf_render_validation("renderer_backend_unavailable")
+            validation = _merge_validation(_merge_validation(html_validation, backend_validation), skipped_pdf_validation)
+            return ToolResult(
+                job_id=f"job_{uuid4().hex[:16]}",
+                status="failed",
+                tool=tool,
+                artifacts=[
+                    build_artifact(html_path, source_tool=tool),
+                    build_artifact(manifest_path, source_tool=tool),
+                ],
+                validation=validation,
+                warnings=validation.warnings,
+                usage={
+                    "renderer": str(renderer_backend_evidence["backend_id"]),
+                    "requested_renderer_backend": requested_renderer_backend,
+                    "renderer_backend": renderer_backend_evidence,
+                    "input": str(manifest_path),
+                    "html_path": str(html_path),
+                    "output": str(output),
+                    "render_skipped": True,
+                    "render_skip_reason": "renderer_backend_unavailable",
+                    "render_profile": render_profile,
+                    "renderer_constraints": renderer_constraints_value,
+                    "html_package_manifest": manifest,
+                    "html_package_validation": html_validation.model_dump(mode="json"),
+                },
+                next_recommended_tools=["pdf.render.html_package"],
+                error=exc.to_error(),
+            )
+        raise
+    pdf_validation = rendered.validation or ValidationReport(status="skipped", checks=[])
+    validation = _merge_validation(_merge_validation(html_validation, backend_validation), pdf_validation)
     artifacts = [
         build_artifact(output, source_tool=tool),
         build_artifact(html_path, source_tool=tool),
@@ -118,10 +259,16 @@ def render_html_package(package_path: str | Path, output_path: str | Path) -> To
         validation=validation,
         warnings=[*rendered.warnings, *validation.warnings],
         usage={
-            "renderer": "local_html_package_fallback",
+            "renderer": str(renderer_backend_evidence["backend_id"]),
+            "requested_renderer_backend": requested_renderer_backend,
+            "renderer_backend": renderer_backend_evidence,
             "input": str(manifest_path),
             "html_path": str(html_path),
             "output": str(output),
+            "render_skipped": False,
+            "render_skip_reason": None,
+            "render_profile": render_profile,
+            "renderer_constraints": renderer_constraints_value,
             "html_package_manifest": manifest,
             "html_package_validation": html_validation.model_dump(mode="json"),
         },
@@ -192,6 +339,7 @@ def _html_document(
 
 def _block_html(block: dict[str, Any], asset: dict[str, Any] | None = None) -> str:
     block_id = str(block.get("block_id") or "")
+    layer_id = _layer_id(block_id)
     block_type = str(block.get("type") or "section")
     title = str(block.get("title") or block_type)
     target_slot = str(block.get("target_slot") or "body")
@@ -202,7 +350,7 @@ def _block_html(block: dict[str, Any], asset: dict[str, Any] | None = None) -> s
         hints = {**data, **hints}
     return "\n".join(
         [
-            f'    <article class="agentpdf-block block-{_class_token(block_type)}" data-block-id="{_attr(block_id)}" data-block-type="{_attr(block_type)}" data-slot="{_attr(target_slot)}" data-source-refs="{_attr(" ".join(source_refs))}">',
+            f'    <article class="agentpdf-block block-{_class_token(block_type)}" data-block-id="{_attr(block_id)}" data-layer-id="{_attr(layer_id)}" data-block-type="{_attr(block_type)}" data-slot="{_attr(target_slot)}" data-source-refs="{_attr(" ".join(source_refs))}">',
             f"      <h2>{html.escape(title)}</h2>",
             f"      <p><strong>Type:</strong> {html.escape(block_type)}</p>",
             _render_hints_html(hints, asset),
@@ -326,6 +474,16 @@ def _validate_html_package(assets: list[dict[str, Any]]) -> ValidationReport:
             details={"asset_count": len(assets)},
         ),
         ValidationCheck(
+            name="html_layer_map_written",
+            status="passed",
+            details={"bbox_precision": HTML_LAYER_BBOX_PRECISION},
+        ),
+        ValidationCheck(
+            name="render_profile_recorded",
+            status="passed",
+            details={"render_profile": document_render_profile()},
+        ),
+        ValidationCheck(
             name="no_remote_assets",
             status="passed",
             details={"remote_assets_enabled": False},
@@ -400,6 +558,7 @@ def _validate_existing_html_package_manifest(
         _validate_manifest_asset(asset, manifest_path=manifest_path)
     remote_assets_enabled = bool(manifest.get("remote_assets_enabled", False))
     javascript_enabled = bool(manifest.get("javascript_enabled", False))
+    render_profile = _manifest_render_profile(manifest)
     checks = [
         ValidationCheck(
             name="html_package_manifest_valid",
@@ -428,6 +587,15 @@ def _validate_existing_html_package_manifest(
             message="HTML package rendering disables JavaScript." if javascript_enabled else None,
         ),
         ValidationCheck(
+            name="render_profile_recorded",
+            status="passed" if manifest.get("render_profile") else "warning",
+            details={"render_profile": render_profile},
+            message="HTML package manifest did not include a render_profile; using local defaults."
+            if not manifest.get("render_profile")
+            else None,
+        ),
+        *_render_profile_safety_checks(render_profile),
+        ValidationCheck(
             name="no_forbidden_asset_paths",
             status="passed",
             details={"checked_assets": len(assets)},
@@ -437,6 +605,129 @@ def _validate_existing_html_package_manifest(
         status="failed" if any(check.status == "failed" for check in checks) else "passed",
         checks=checks,
     )
+
+
+def _manifest_render_profile(manifest: dict[str, Any]) -> dict[str, Any]:
+    render_profile = manifest.get("render_profile")
+    return render_profile if isinstance(render_profile, dict) else document_render_profile()
+
+
+def _manifest_renderer_constraints(manifest: dict[str, Any]) -> dict[str, Any]:
+    constraints = manifest.get("renderer_constraints")
+    return constraints if isinstance(constraints, dict) else renderer_constraints()
+
+
+def _normalize_renderer_backend(renderer_backend: str) -> str:
+    normalized = str(renderer_backend or "auto").strip()
+    if normalized not in SUPPORTED_RENDERER_BACKENDS:
+        raise AgentPDFException(
+            "html_render_failed",
+            "Unsupported HTML package renderer backend.",
+            details={
+                "renderer_backend": normalized,
+                "supported_renderer_backends": sorted(SUPPORTED_RENDERER_BACKENDS),
+            },
+        )
+    return normalized
+
+
+def _renderer_backend_evidence(renderer_backend: str, constraints: dict[str, Any]) -> dict[str, Any]:
+    if renderer_backend == "browser_chromium":
+        return browser_chromium_backend(constraints)
+    return local_html_package_fallback_backend(constraints)
+
+
+def _renderer_backend_validation(renderer_backend: dict[str, Any]) -> ValidationReport:
+    available = renderer_backend.get("available", True) is not False
+    checks = [
+        ValidationCheck(
+            name="renderer_backend_declared",
+            status="passed",
+            details=renderer_backend,
+        ),
+        ValidationCheck(
+            name="renderer_backend_available",
+            status="passed" if available else "failed",
+            details=renderer_backend,
+            message="Requested renderer backend is not available." if not available else None,
+        ),
+    ]
+    return ValidationReport(
+        status="passed" if available else "failed",
+        checks=checks,
+    )
+
+
+def _skipped_pdf_render_validation(reason: str) -> ValidationReport:
+    if reason == "renderer_backend_unavailable":
+        message = "PDF render skipped because the requested renderer backend is unavailable."
+        check_name = "pdf_render_skipped_due_to_renderer_backend_unavailable"
+    else:
+        message = "PDF render skipped because the HTML package failed validation."
+        check_name = "pdf_render_skipped_due_to_html_package_validation"
+    return ValidationReport(
+        status="skipped",
+        checks=[
+            ValidationCheck(
+                name=check_name,
+                status="skipped",
+                details={"reason": reason},
+                message=message,
+            )
+        ],
+        warnings=[message],
+    )
+
+
+def _render_profile_safety_checks(render_profile: dict[str, Any]) -> list[ValidationCheck]:
+    javascript_enabled = _any_profile_flag(render_profile, "javascript_enabled", "allow_javascript")
+    remote_assets_enabled = _any_profile_flag(render_profile, "remote_assets_enabled", "allow_remote_assets")
+    allow_private_hosts = bool(render_profile.get("allow_private_hosts", False))
+    allow_file_urls = bool(render_profile.get("allow_file_urls", False))
+    allowed_origins = render_profile.get("allowed_origins")
+    allowed_origin_count = len(allowed_origins) if isinstance(allowed_origins, list) else 0
+    return [
+        ValidationCheck(
+            name="render_profile_no_javascript",
+            status="failed" if javascript_enabled else "passed",
+            details={
+                "javascript_enabled": bool(render_profile.get("javascript_enabled", False)),
+                "allow_javascript": bool(render_profile.get("allow_javascript", False)),
+            },
+            message="HTML package render profiles must keep JavaScript disabled." if javascript_enabled else None,
+        ),
+        ValidationCheck(
+            name="render_profile_no_remote_assets",
+            status="failed" if remote_assets_enabled else "passed",
+            details={
+                "remote_assets_enabled": bool(render_profile.get("remote_assets_enabled", False)),
+                "allow_remote_assets": bool(render_profile.get("allow_remote_assets", False)),
+            },
+            message="HTML package render profiles must block remote assets." if remote_assets_enabled else None,
+        ),
+        ValidationCheck(
+            name="render_profile_no_private_hosts",
+            status="failed" if allow_private_hosts else "passed",
+            details={"allow_private_hosts": allow_private_hosts},
+            message="HTML package render profiles must not allow private hosts." if allow_private_hosts else None,
+        ),
+        ValidationCheck(
+            name="render_profile_no_file_urls",
+            status="failed" if allow_file_urls else "passed",
+            details={"allow_file_urls": allow_file_urls},
+            message="HTML package render profiles must not allow file URLs." if allow_file_urls else None,
+        ),
+        ValidationCheck(
+            name="render_profile_allowed_origins_empty",
+            status="failed" if allowed_origin_count else "passed",
+            details={"allowed_origin_count": allowed_origin_count},
+            message="HTML package render profiles must not whitelist remote origins." if allowed_origin_count else None,
+        ),
+    ]
+
+
+def _any_profile_flag(render_profile: dict[str, Any], *keys: str) -> bool:
+    return any(bool(render_profile.get(key, False)) for key in keys)
 
 
 def _validate_manifest_asset(asset: dict[str, Any], *, manifest_path: Path) -> None:
@@ -530,6 +821,63 @@ def _source_refs(blocks: list[dict[str, Any]], source_map: list[dict[str, Any]])
     }
     refs.update(str(mapping["source_ref"]) for mapping in source_map if mapping.get("source_ref"))
     return sorted(refs)
+
+
+def _layer_map(blocks: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [_layer_entry(block, index=index) for index, block in enumerate(blocks)]
+
+
+def _layer_entry(block: dict[str, Any], *, index: int) -> dict[str, Any]:
+    block_id = str(block.get("block_id") or "")
+    layer_id = _layer_id(block_id)
+    block_type = str(block.get("type") or "section")
+    source_refs = [str(ref) for ref in block.get("source_refs", []) if str(ref).strip()]
+    return {
+        "layer_id": layer_id,
+        "block_id": block_id,
+        "block_type": block_type,
+        "target_slot": block.get("target_slot"),
+        "source_refs": source_refs,
+        "anchor": _estimated_layer_anchor(layer_id, index=index),
+        "edit_policy": {
+            "editable": True,
+            "allowed_operations": ["append_note", "append_citation", "regenerate_block"],
+        },
+    }
+
+
+def _estimated_layer_anchor(layer_id: str, *, index: int) -> dict[str, Any]:
+    page_estimate = 2 + index // 4
+    row = index % 4
+    x = 64
+    y = 96 + (row * 180)
+    width = 672
+    height = 150
+    page_width = 800
+    page_height = 1120
+    normalized_bbox = [
+        round(x / page_width, 4),
+        round(y / page_height, 4),
+        round((x + width) / page_width, 4),
+        round((y + height) / page_height, 4),
+    ]
+    return {
+        "anchor_kind": "estimated_dom_anchor",
+        "page_estimate": page_estimate,
+        "dom_selector": f'[data-layer-id="{layer_id}"]',
+        "dom_bbox_px": {
+            "x": x,
+            "y": y,
+            "width": width,
+            "height": height,
+        },
+        "normalized_bbox": normalized_bbox,
+        "bbox_precision": HTML_LAYER_BBOX_PRECISION,
+    }
+
+
+def _layer_id(block_id: str) -> str:
+    return f"html_layer_{_class_token(block_id or 'block')}"
 
 
 def _attr(value: object) -> str:

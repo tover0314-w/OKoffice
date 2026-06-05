@@ -152,10 +152,21 @@ A future docs page should show transparent status:
 Tool                         Status     CLI  MCP  API  SDK  Tests  Validation
 pdf.organize.merge           stable     yes  yes  yes  yes  yes    yes
 pdf.validation.render_check  stable     yes  yes  yes  yes  yes    yes
-word.inspect.document        planned    no   no   no   no   no     no
-sheet.inspect.workbook       planned    no   no   no   no   no     no
-deck.inspect.presentation    planned    no   no   no   no   no     no
-office.workflow.docset_to_sheet planned no   no   no   no   no     no
+word.inspect.document        beta       yes  yes  yes  yes  yes    yes
+word.validation.document     beta       yes  yes  yes  yes  yes    yes
+sheet.inspect.workbook       beta       yes  yes  yes  yes  yes    yes
+deck.inspect.presentation    beta       yes  yes  yes  yes  yes    yes
+office.context.build_packet  beta       yes  yes  yes  yes  yes    yes
+office.extract.schema        beta       yes  yes  yes  yes  yes    yes
+office.workflow.docset_to_sheet beta       yes  yes  yes  yes  yes    yes
+deck.create.presentation     beta       yes  yes  yes  yes  yes    yes
+office.workflow.sheet_to_deck beta       yes  yes  yes  yes  yes    yes
+deck.validation.contact_sheet beta       yes  yes  yes  yes  yes    yes
+deck.validation.presentation beta       yes  yes  yes  yes  yes    yes
+office.bundle.export       beta       yes  yes  yes  yes  yes    yes
+office.bundle.verify       beta       yes  yes  yes  yes  yes    yes
+word.create.report         beta       yes  yes  yes  yes  yes    yes
+office.workflow.board_pack beta       yes  yes  yes  yes  yes    yes
 ```
 
 ## Competitive Lens

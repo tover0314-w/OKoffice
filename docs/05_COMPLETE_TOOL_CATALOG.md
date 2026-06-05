@@ -10,7 +10,7 @@ The public okoffice surface is organized around artifact types and workflows:
 
 - Cross-format: `office.inspect`, `office.context`, `office.extract`, `office.evidence`, `office.patch`, `office.workflow`, `office.bundle`, `office.agent.setup`.
 - Word: `word.inspect`, `word.extract`, `word.create`, `word.patch`, `word.validation`, `word.review`.
-- Excel: `sheet.inspect`, `sheet.extract`, `sheet.create`, `sheet.patch`, `sheet.validation`, `sheet.review`.
+- Excel: `sheet.inspect`, `sheet.extract`, `sheet.write`, `sheet.create`, `sheet.patch`, `sheet.validation`, `sheet.review`.
 - PowerPoint: `deck.inspect`, `deck.extract`, `deck.compose`, `deck.create`, `deck.patch`, `deck.validation`, `deck.review`.
 - PDF: `pdf.inspect`, `pdf.organize`, `pdf.convert`, `pdf.validation`, `pdf.security`, plus compatibility tools already implemented.
 
@@ -18,9 +18,9 @@ Do not treat the current `pdf.*` manifest as the okoffice product boundary.
 
 ## okoffice Migration Note
 
-The current manifest is PDF-centered and contains 241 tools. During the okoffice migration, these `pdf.*` tools remain the compatibility surface and the first implemented domain.
+The current manifest contains 262 tools. During the okoffice migration, the `pdf.*` tools remain the compatibility surface while the okoffice beta tools introduce Word, Excel, PowerPoint, validation, bundle, worker, and workflow capabilities.
 
-The target product adds an `office.*` namespace for Word, Excel, PowerPoint, PDF, evidence, validation, bundles, and cross-document workflows. Do not add `office.*` rows to the table sections below until the machine manifest, registry, CLI/MCP/REST adapters, and tests are updated together.
+The target product adds an `office.*` namespace for Word, Excel, PowerPoint, PDF, evidence, validation, bundles, and cross-document workflows. The table sections below now include the implemented okoffice beta wave plus the preserved `pdf.*` compatibility surface.
 
 Target namespace families:
 
@@ -65,14 +65,44 @@ These namespaces make the larger product shape explicit. Early local releases ma
 
 ### `agent.setup`
 
-Generate local runtime configs for agent ecosystems that call the current compatibility server through MCP or REST.
+Generate local runtime configs for agent ecosystems that call the okoffice local server through MCP or REST, while keeping explicit legacy configuration options.
 
 | Tool | Status | Description |
 |---|---:|---|
-| `agent.setup.claude_code` | beta | Generate a Claude Code project-level MCP config for local compatibility tools. |
-| `agent.setup.codex` | beta | Generate a Codex MCP/workspace integration config for local compatibility tools. |
-| `agent.setup.kilo_code` | beta | Generate a Kilo Code MCP config for local compatibility tools. |
-| `agent.setup.openclaw` | beta | Generate an OpenClaw MCP config for local compatibility tools. |
+| `agent.setup.claude_code` | beta | Generate a Claude Code project-level MCP config for local okoffice tools. |
+| `agent.setup.codex` | beta | Generate a Codex MCP/workspace integration config for local okoffice tools. |
+| `agent.setup.kilo_code` | beta | Generate a Kilo Code MCP config for local okoffice tools. |
+| `agent.setup.openclaw` | beta | Generate an OpenClaw MCP config for local okoffice tools. |
+
+### okoffice beta tools
+
+Implemented local-first Office tools for the okoffice beta wave.
+
+| Tool | Status | Description |
+|---|---:|---|
+| `office.inspect.file` | beta | Detect Office artifact format, package health, safety markers, and recommended next tools. |
+| `word.inspect.document` | beta | Inspect DOCX structure, paragraphs, headings, tables, comments, styles, sections, and safety markers. |
+| `word.validation.document` | beta | Validate DOCX/DOCM package health, comments, tracked changes, metadata, accessibility hints, and render-evidence availability. |
+| `word.create.report` | beta | Create an editable Word report from an evidence workbook. |
+| `word.patch.plan` | beta | Preview a non-mutating Word patch transaction. |
+| `word.patch.apply` | beta | Apply a Word patch transaction to a new DOCX output and validate the result. |
+| `sheet.inspect.workbook` | beta | Inspect XLSX sheets, used ranges, tables, formulas, charts, named ranges, comments, hidden content, and external links. |
+| `sheet.write.workbook` | beta | Write a validated evidence workbook with source map, data model, and chart plan sheets. |
+| `sheet.validation.formulas` | beta | Validate workbook formulas and table/chart/model bindings with local structural checks. |
+| `deck.inspect.presentation` | beta | Inspect PPTX slides, text, notes, shapes, placeholders, charts, media references, layouts, and theme metadata. |
+| `deck.create.presentation` | beta | Create an editable styled PowerPoint presentation from an evidence workbook. |
+| `deck.patch.apply` | beta | Apply a presentation text or theme patch transaction to a new PPTX output. |
+| `deck.validation.contact_sheet` | beta | Validate contact-sheet preview availability for PPTX output. |
+| `deck.validation.presentation` | beta | Validate PPTX/PPTM structure, titles, notes, media refs, themes, safety markers, and render-evidence availability. |
+| `office.context.build_packet` | beta | Build a reusable cross-format context packet and source graph from local Office/PDF sources. |
+| `office.extract.schema` | beta | Extract schema-shaped rows from mixed Office/PDF sources with source refs, confidence, and warnings. |
+| `office.validation.package` | beta | Validate Office/PDF package structure, unsafe entries, macros, external relationships, and baseline safety markers. |
+| `office.workflow.docset_to_sheet` | beta | Turn a local source document set into a validated evidence workbook with context and evidence sidecars. |
+| `office.workflow.sheet_to_deck` | beta | Turn an evidence workbook into a validated editable PowerPoint deck with source refs. |
+| `office.workflow.board_pack` | beta | Create a validated board pack directory containing evidence workbook, memo, deck, sidecars, optional HTML-first PDF handout, and checksum bundle. |
+| `office.workers.status` | beta | Report optional worker contracts, feature flags, dependency availability, license notes, and cloud boundaries. |
+| `office.bundle.export` | beta | Export local Office artifacts, manifests, validation reports, and source maps into a portable checksum bundle. |
+| `office.bundle.verify` | beta | Verify an okoffice bundle manifest, included artifacts, and SHA-256 checksums. |
 
 ### `pdf.context`
 

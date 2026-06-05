@@ -6,9 +6,17 @@ from typing import Annotated, Any
 
 import typer
 
+from agentpdf.tools.runner import run_agent_setup_codex
+from agentpdf.office.bundle import export_office_bundle, verify_office_bundle
 from agentpdf.office.context import build_office_context_packet
 from agentpdf.office.deck import create_deck_from_outline, inspect_deck_presentation, validate_deck_presentation
 from agentpdf.office.deck_plan import compose_deck_plan
+from agentpdf.office.deck_patch import apply_deck_patch
+from agentpdf.office.deck_validation import (
+    validate_deck_contact_sheet,
+    validate_deck_presentation as validate_deck_quality_presentation,
+)
+from agentpdf.office.deck_writer import create_deck_presentation
 from agentpdf.office.extract import extract_schema
 from agentpdf.office.inspect import inspect_office_file
 from agentpdf.office.planner import plan_office_workflow
@@ -18,18 +26,23 @@ from agentpdf.office.sheet import (
     inspect_sheet_workbook,
     profile_sheet_data,
     read_sheet_workbook,
-    validate_sheet_formulas,
     validate_sheet_workbook,
     write_sheet_workbook,
 )
-from agentpdf.office.validation import validate_office_package
+from agentpdf.office.validation import validate_office_package, validate_sheet_formulas
 from agentpdf.office.word import extract_word_tables, inspect_word_document
-from agentpdf.office.workflows import board_pack, extract_to_sheet, sheet_to_deck, verify_board_pack
+from agentpdf.office.word_patch import apply_word_patch, plan_word_patch
+from agentpdf.office.word_report import create_word_report
+from agentpdf.office.word_validation import validate_word_document
+from agentpdf.office.workers import inspect_office_workers
+from agentpdf.office.workflows import board_pack, docset_to_sheet, extract_to_sheet, sheet_to_deck, verify_board_pack
 from okoffice import __version__
 from okoffice.tools.registry import load_okoffice_manifest
 
 
 app = typer.Typer(help="okoffice local-first agent-native Office CLI")
+agent_app = typer.Typer(help="Generate local agent integration config.")
+agent_setup_app = typer.Typer(help="Generate MCP setup config for local agents.")
 tools_app = typer.Typer(help="Discover target okoffice tools and legacy compatibility tools.")
 word_app = typer.Typer(help="Inspect and transform Word documents.")
 sheet_app = typer.Typer(help="Inspect and transform Excel workbooks.")
@@ -39,6 +52,7 @@ extract_app = typer.Typer(help="Extract structured evidence from OKoffice contex
 validate_app = typer.Typer(help="Validate Office artifacts and packages.")
 workflow_app = typer.Typer(help="Run local cross-format OKoffice workflows.")
 bundle_app = typer.Typer(help="Verify and export portable OKoffice artifact bundles.")
+workers_app = typer.Typer(help="Inspect optional local Office worker contracts and feature flags.")
 
 
 @app.callback()
@@ -50,6 +64,56 @@ def main() -> None:
 def version() -> None:
     """Print the okoffice version."""
     typer.echo(f"okoffice {__version__}")
+
+
+@app.command()
+def serve(
+    mcp: Annotated[bool, typer.Option("--mcp", help="Run the local MCP server.")] = False,
+    api: Annotated[bool, typer.Option("--api", help="Run the local REST API.")] = False,
+    host: Annotated[str, typer.Option("--host", help="REST API bind host.")] = "127.0.0.1",
+    port: Annotated[int, typer.Option("--port", help="REST API bind port.")] = 7331,
+    transport: Annotated[
+        str,
+        typer.Option("--transport", help="MCP transport: stdio, sse, or streamable-http."),
+    ] = "stdio",
+    safe_root: Annotated[
+        Path | None,
+        typer.Option("--safe-root", help="Reserved local safe root for agent configs."),
+    ] = None,
+) -> None:
+    """Serve local okoffice interfaces."""
+    if mcp:
+        from agentpdf.mcp.server import run_mcp_server
+
+        run_mcp_server(transport=transport)  # type: ignore[arg-type]
+        return
+    if api:
+        import uvicorn
+
+        uvicorn.run("agentpdf.api.app:create_app", factory=True, host=host, port=port)
+        return
+    typer.echo("Choose --mcp for the local MCP server or --api for the local REST server.")
+    raise typer.Exit(1)
+
+
+@agent_setup_app.command("codex")
+def agent_setup_codex(
+    output_path: Annotated[Path | None, typer.Option("--output", "-o", help="Output Codex MCP JSON path.")] = None,
+    safe_root: Annotated[str, typer.Option("--safe-root", help="Safe root passed to okoffice serve.")] = ".",
+    command: Annotated[str, typer.Option("--command", help="Command used by Codex to start okoffice.")] = "okoffice",
+    server_name: Annotated[str, typer.Option("--server-name", help="MCP server name.")] = "okoffice",
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Generate a Codex MCP config for local okoffice tools."""
+    _emit_result(
+        run_agent_setup_codex(
+            output_path=output_path,
+            safe_root=safe_root,
+            command=command,
+            server_name=server_name,
+        ),
+        json_output=json_output,
+    )
 
 
 @app.command("manifest")
@@ -120,6 +184,56 @@ def word_extract_tables(
 ) -> None:
     """Extract Word tables into normalized agent-readable records."""
     _emit_result(extract_word_tables(path), json_output=json_output)
+
+
+@word_app.command("validate-document")
+def word_validate_document_command(
+    path: Annotated[Path, typer.Argument(help="DOCX artifact path to validate.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Validate a Word document for structure, safety, comments, and render-preview readiness."""
+    _emit_result(validate_word_document(path), json_output=json_output)
+
+
+@word_app.command("create-report")
+def word_create_report_command(
+    workbook_path: Annotated[Path, typer.Option("--from-workbook", help="Evidence workbook path.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output DOCX report path.")],
+    title: Annotated[str | None, typer.Option("--title", help="Report title.")] = None,
+    profile: Annotated[str, typer.Option("--profile", help="Report profile.")] = "executive_memo",
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Create an editable Word report from an evidence workbook."""
+    _emit_result(
+        create_word_report(workbook_path=workbook_path, output_path=output_path, title=title, profile=profile),
+        json_output=json_output,
+    )
+
+
+@word_app.command("patch-plan")
+def word_patch_plan_command(
+    input_path: Annotated[Path, typer.Argument(help="Input DOCX artifact path.")],
+    operations_path: Annotated[Path, typer.Option("--operations", help="JSON patch operations path.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Preview a non-mutating Word patch transaction."""
+    operations = json.loads(operations_path.read_text(encoding="utf-8"))
+    _emit_result(plan_word_patch(input_path=input_path, operations=_operations(operations)), json_output=json_output)
+
+
+@word_app.command("patch-apply")
+def word_patch_apply_command(
+    input_path: Annotated[Path, typer.Argument(help="Input DOCX artifact path.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output DOCX artifact path.")],
+    operations_path: Annotated[Path, typer.Option("--operations", help="JSON patch operations path.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Apply a non-mutating Word patch transaction into a new DOCX output."""
+    operations = json.loads(operations_path.read_text(encoding="utf-8"))
+    _emit_result(
+        apply_word_patch(input_path=input_path, output_path=output_path, operations=_operations(operations)),
+        json_output=json_output,
+    )
 
 
 @sheet_app.command("inspect")
@@ -229,6 +343,62 @@ def deck_validate(
     _emit_result(validate_deck_presentation(path), json_output=json_output)
 
 
+@deck_app.command("validate-contact-sheet")
+def deck_validate_contact_sheet_command(
+    path: Annotated[Path, typer.Argument(help="PPTX artifact path to validate.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Validate contact-sheet preview readiness and render-worker status."""
+    _emit_result(validate_deck_contact_sheet(path), json_output=json_output)
+
+
+@deck_app.command("validate-presentation")
+def deck_validate_presentation_command(
+    path: Annotated[Path, typer.Argument(help="PPTX artifact path to validate.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Validate presentation structure, speaker notes, theme metadata, and render evidence state."""
+    _emit_result(validate_deck_quality_presentation(path), json_output=json_output)
+
+
+@deck_app.command("create")
+def deck_create_command(
+    workbook_path: Annotated[Path, typer.Option("--from-workbook", help="Evidence workbook path.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output PPTX deck path.")],
+    title: Annotated[str | None, typer.Option("--title", help="Deck title.")] = None,
+    profile: Annotated[str, typer.Option("--profile", help="Deck profile.")] = "board_review",
+    style_path: Annotated[Path | None, typer.Option("--style", help="Optional JSON style override path.")] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Create an editable PowerPoint deck from an evidence workbook."""
+    style = json.loads(style_path.read_text(encoding="utf-8")) if style_path else None
+    _emit_result(
+        create_deck_presentation(
+            workbook_path=workbook_path,
+            output_path=output_path,
+            title=title,
+            profile=profile,
+            style=style if isinstance(style, dict) else None,
+        ),
+        json_output=json_output,
+    )
+
+
+@deck_app.command("patch-apply")
+def deck_patch_apply_command(
+    input_path: Annotated[Path, typer.Argument(help="Input PPTX artifact path.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output PPTX artifact path.")],
+    operations_path: Annotated[Path, typer.Option("--operations", help="JSON patch operations path.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Apply a non-mutating PowerPoint patch transaction into a new PPTX output."""
+    operations = json.loads(operations_path.read_text(encoding="utf-8"))
+    _emit_result(
+        apply_deck_patch(input_path=input_path, output_path=output_path, operations=_operations(operations)),
+        json_output=json_output,
+    )
+
+
 @deck_app.command("create-from-outline")
 def deck_create_from_outline(
     outline_path: Annotated[Path, typer.Argument(help="JSON deck outline path.")],
@@ -333,6 +503,32 @@ def workflow_extract_to_sheet(
     )
 
 
+@workflow_app.command("docset-to-sheet")
+def workflow_docset_to_sheet(
+    schema_path: Annotated[Path, typer.Option("--schema", help="Schema JSON path.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output XLSX evidence workbook path.")],
+    files: Annotated[
+        list[Path] | None,
+        typer.Option("--file", "-f", help="Input Office artifact path to include in the context packet."),
+    ] = None,
+    title: Annotated[str | None, typer.Option("--title", help="Context/workbook title.")] = None,
+    intent: Annotated[str | None, typer.Option("--intent", help="User or agent intent for this packet.")] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Build a context packet, extract schema evidence, write a workbook, and validate formulas."""
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    _emit_result(
+        docset_to_sheet(
+            files=files or [],
+            schema=schema if isinstance(schema, dict) else {},
+            output_path=output_path,
+            title=title,
+            intent=intent,
+        ),
+        json_output=json_output,
+    )
+
+
 @workflow_app.command("sheet-to-deck")
 def workflow_sheet_to_deck(
     workbook_path: Annotated[Path, typer.Argument(help="Input XLSX workbook to profile and turn into a deck.")],
@@ -373,7 +569,42 @@ def bundle_verify(
     json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
 ) -> None:
     """Verify a local board pack ZIP manifest, validation report, members, and checksums."""
-    _emit_result(verify_board_pack(bundle_path), json_output=json_output)
+    result = verify_office_bundle(bundle_path)
+    if result.status == "failed":
+        result = verify_board_pack(bundle_path)
+    _emit_result(result, json_output=json_output)
+
+
+@bundle_app.command("export")
+def bundle_export(
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output OKoffice bundle ZIP path.")],
+    files: Annotated[
+        list[Path] | None,
+        typer.Option("--file", "-f", help="Office artifact path to include in the bundle."),
+    ] = None,
+    title: Annotated[str | None, typer.Option("--title", help="Bundle title.")] = None,
+    metadata_path: Annotated[Path | None, typer.Option("--metadata", help="Optional JSON metadata path.")] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Export local Office artifacts into a portable OKoffice bundle."""
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8")) if metadata_path else None
+    _emit_result(
+        export_office_bundle(
+            artifact_paths=files or [],
+            output_path=output_path,
+            title=title,
+            metadata=metadata if isinstance(metadata, dict) else None,
+        ),
+        json_output=json_output,
+    )
+
+
+@workers_app.command("status")
+def workers_status(
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Inspect optional Office worker contracts, flags, dependency status, and license boundaries."""
+    _emit_result(inspect_office_workers(), json_output=json_output)
 
 
 @tools_app.command("list")
@@ -409,6 +640,8 @@ def tools_show(
     typer.echo(f"{tool['name']}\nstatus: {tool['status']}\nimplemented: {tool.get('implemented', False)}")
 
 
+agent_app.add_typer(agent_setup_app, name="setup")
+app.add_typer(agent_app, name="agent")
 app.add_typer(tools_app, name="tools")
 app.add_typer(word_app, name="word")
 app.add_typer(sheet_app, name="sheet")
@@ -418,6 +651,7 @@ app.add_typer(extract_app, name="extract")
 app.add_typer(validate_app, name="validate")
 app.add_typer(workflow_app, name="workflow")
 app.add_typer(bundle_app, name="bundle")
+app.add_typer(workers_app, name="workers")
 
 
 def _find_tool(name: str) -> dict[str, Any]:
@@ -435,3 +669,9 @@ def _emit_result(result: object, json_output: bool) -> None:
         typer.echo(result.model_dump_json(indent=2))
     if result.status == "failed":
         raise typer.Exit(1)
+
+
+def _operations(payload: object) -> list[dict[str, Any]]:
+    if isinstance(payload, list) and all(isinstance(item, dict) for item in payload):
+        return payload
+    raise typer.BadParameter("--operations must decode to a JSON array of objects.")

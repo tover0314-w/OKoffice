@@ -5,6 +5,9 @@ from typing import Annotated, Any
 import typer
 
 from agentpdf import __version__
+from agentpdf.office.manifest import load_office_tool_manifest
+from agentpdf.office.inspect import inspect_office_file
+from agentpdf.office.planner import plan_office_workflow
 from agentpdf.schemas.models import ToolResult
 from agentpdf.tools.registry import get_tool, load_tool_manifest
 from agentpdf.tools.runner import (
@@ -52,6 +55,7 @@ from agentpdf.tools.runner import (
     run_context_classify,
     run_context_code_snapshot,
     run_context_data_profile,
+    run_context_web_capture,
     run_context_image_analyze,
     run_context_ingest,
     run_context_packet,
@@ -161,10 +165,11 @@ from agentpdf.tools.runner import (
     run_xlsx_to_pdf,
 )
 
-app = typer.Typer(help="AgentPDF Infra CLI")
+app = typer.Typer(help="OKoffice agent-native Office infra CLI")
+office_app = typer.Typer(help="Plan OKoffice cross-format Word, Excel, PPT, and PDF workflows.")
 agent_app = typer.Typer(help="Generate local agent runtime configs.")
 agent_setup_app = typer.Typer(help="Set up specific agent runtimes.")
-tools_app = typer.Typer(help="Discover AgentPDF tools.")
+tools_app = typer.Typer(help="Discover compatibility PDF tools.")
 metadata_app = typer.Typer(help="Read and write PDF metadata.")
 security_app = typer.Typer(help="Run local PDF security and privacy tools.")
 forms_app = typer.Typer(help="Create, import, and validate PDF forms.")
@@ -185,6 +190,7 @@ design_app = typer.Typer(help="Resolve safe local authoring design tokens.")
 storyboard_app = typer.Typer(help="Plan page-by-page deck and report structures.")
 pages_app = typer.Typer(help="Write page JSON from storyboards and evidence.")
 qa_app = typer.Typer(help="Run authoring and visual QA reports.")
+app.add_typer(office_app, name="office")
 app.add_typer(agent_app, name="agent")
 agent_app.add_typer(agent_setup_app, name="setup")
 app.add_typer(tools_app, name="tools")
@@ -212,13 +218,58 @@ app.add_typer(qa_app, name="qa")
 
 @app.callback()
 def main() -> None:
-    """Open-source PDF infrastructure for AI agents."""
+    """Local-first Office infrastructure for AI agents."""
 
 
 @app.command()
 def version() -> None:
-    """Print the AgentPDF version."""
-    typer.echo(f"agentpdf {__version__}")
+    """Print the OKoffice compatibility package version."""
+    typer.echo(f"okoffice {__version__} (compatibility package: agentpdf)")
+
+
+@office_app.command("manifest")
+def office_manifest(
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Print the target OKoffice tool manifest."""
+    manifest = load_office_tool_manifest()
+    if json_output:
+        typer.echo(manifest.model_dump_json())
+        return
+    typer.echo(manifest.model_dump_json(indent=2))
+
+
+@office_app.command("plan")
+def office_plan(
+    goal: Annotated[str, typer.Option("--goal", "-g", help="Workflow goal for the office agent.")],
+    input_paths: Annotated[
+        list[Path] | None,
+        typer.Option("--input", "-i", help="Input Word, Excel, PPT, PDF, or text source path."),
+    ] = None,
+    output_paths: Annotated[
+        list[Path] | None,
+        typer.Option("--output", "-o", help="Desired output document, workbook, deck, or PDF path."),
+    ] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Plan a cross-format OKoffice workflow without mutating files."""
+    _emit_result(
+        plan_office_workflow(
+            goal=goal,
+            input_paths=input_paths or [],
+            output_paths=output_paths or [],
+        ),
+        json_output=json_output,
+    )
+
+
+@office_app.command("inspect")
+def office_inspect(
+    path: Annotated[Path, typer.Argument(help="Office artifact path to inspect.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Inspect a local Office artifact without mutating it."""
+    _emit_result(inspect_office_file(path), json_output=json_output)
 
 
 @agent_setup_app.command("claude-code")
@@ -653,10 +704,25 @@ def html_to_pdf_cmd(
 def render_html_package_cmd(
     package_path: Annotated[Path, typer.Argument(help="HTML package manifest or HTML file.")],
     output_path: Annotated[Path, typer.Option("--output", "-o", help="Output PDF path.")],
+    renderer_backend: Annotated[
+        str,
+        typer.Option(
+            "--renderer-backend",
+            "--backend",
+            help="Renderer backend: auto, local_html_package_fallback, or browser_chromium.",
+        ),
+    ] = "auto",
     json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
 ) -> None:
     """Validate and render an AgentPDF HTML package to PDF."""
-    _emit_result(run_render_html_package(package_path, output_path=output_path), json_output=json_output)
+    _emit_result(
+        run_render_html_package(
+            package_path,
+            output_path=output_path,
+            renderer_backend=renderer_backend,
+        ),
+        json_output=json_output,
+    )
 
 
 @app.command("url-to-pdf")
@@ -1339,6 +1405,10 @@ def context_ingest(
     label: Annotated[str | None, typer.Option("--label", help="Context item label override.")] = None,
     item_type: Annotated[str | None, typer.Option("--type", help="Explicit context item type override.")] = None,
     transcript: Annotated[str | None, typer.Option("--transcript", help="Provided audio/video transcript.")] = None,
+    transcript_path: Annotated[
+        Path | None,
+        typer.Option("--transcript-path", help="Provided audio/video transcript sidecar file."),
+    ] = None,
     duration_seconds: Annotated[
         float | None,
         typer.Option("--duration-seconds", help="Provided media duration in seconds."),
@@ -1357,6 +1427,7 @@ def context_ingest(
                 label=label,
                 item_type=item_type,
                 transcript=transcript,
+                transcript_path=transcript_path,
                 duration_seconds=duration_seconds,
             ),
             output_path=output_path,
@@ -1495,6 +1566,46 @@ def context_data_profile(
             context_item_id=context_item_id,
             sheet=sheet,
             max_rows=max_rows,
+        ),
+        json_output=json_output,
+    )
+
+
+@context_app.command("web-capture")
+def context_web_capture(
+    url: Annotated[str, typer.Argument(help="HTTP or HTTPS URL to fetch as web context.")],
+    output_path: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", help="Optional output context item JSON path."),
+    ] = None,
+    label: Annotated[str | None, typer.Option("--label", help="Context item label.")] = None,
+    role: Annotated[str, typer.Option("--role", help="Context item role.")] = "citation",
+    context_item_id: Annotated[
+        str | None,
+        typer.Option("--context-item-id", help="Stable context item/source ref id."),
+    ] = None,
+    max_bytes: Annotated[int, typer.Option("--max-bytes", help="Maximum response bytes to keep.")] = 1_000_000,
+    timeout_seconds: Annotated[
+        float,
+        typer.Option("--timeout-seconds", help="HTTP request timeout in seconds."),
+    ] = 10,
+    allow_private_hosts: Annotated[
+        bool,
+        typer.Option("--allow-private-hosts", help="Allow local/private hosts. Disabled by default."),
+    ] = False,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Fetch a web page into a context item with SSRF-safe local evidence."""
+    _emit_result(
+        run_context_web_capture(
+            url=url,
+            output_path=output_path,
+            label=label,
+            role=role,
+            context_item_id=context_item_id,
+            max_bytes=max_bytes,
+            timeout_seconds=timeout_seconds,
+            allow_private_hosts=allow_private_hosts,
         ),
         json_output=json_output,
     )
@@ -2056,6 +2167,10 @@ def patch_plan(
         Path | None,
         typer.Option("--layers", help="Optional template layer manifest JSON artifact for layer/block/slot refs."),
     ] = None,
+    artifact_graph_path: Annotated[
+        Path | None,
+        typer.Option("--artifact-graph", help="Optional artifact graph JSON artifact for HTML layer refs."),
+    ] = None,
     reason: Annotated[str | None, typer.Option("--reason", help="Reason for this patch transaction.")] = None,
     json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
 ) -> None:
@@ -2069,6 +2184,7 @@ def patch_plan(
             output_path=output_path,
             composition_path=composition_path,
             layer_manifest_path=layer_manifest_path,
+            artifact_graph_path=artifact_graph_path,
             reason=reason,
         ),
         json_output=json_output,
@@ -3397,6 +3513,19 @@ def workflow_createpdf(
         Path | None,
         typer.Option("--page-document", help="Optional page document JSON path."),
     ] = None,
+    context_packet_path: Annotated[
+        Path | None,
+        typer.Option("--context-packet", help="Optional Context Packet JSON path."),
+    ] = None,
+    target_profile_name: Annotated[
+        str,
+        typer.Option("--profile", "--target-profile", help="Target PDF profile id."),
+    ] = "research_brief",
+    target_profile_path: Annotated[
+        Path | None,
+        typer.Option("--profile-json", help="Optional target profile JSON path."),
+    ] = None,
+    style_pack: Annotated[str | None, typer.Option("--style-pack", help="Optional style pack.")] = None,
     title: Annotated[str | None, typer.Option("--title", help="Optional document title.")] = None,
     html_source: Annotated[str | None, typer.Option("--html", help="Raw HTML string to package.")] = None,
     html_input_path: Annotated[
@@ -3407,11 +3536,23 @@ def workflow_createpdf(
         Path | None,
         typer.Option("--artifact-dir", help="Directory for QA and artifact reports."),
     ] = None,
+    bundle_output_path: Annotated[
+        Path | None,
+        typer.Option("--bundle-output", help="Optional portable audit bundle ZIP output path."),
+    ] = None,
     expected_page_count: Annotated[
         int | None,
         typer.Option("--expected-page-count", help="Expected generated PDF page count."),
     ] = None,
     pages: Annotated[str, typer.Option("--pages", help="Pages to render/check during QA.")] = "all",
+    renderer_backend: Annotated[
+        str,
+        typer.Option(
+            "--renderer-backend",
+            "--backend",
+            help="Renderer backend: auto, local_html_package_fallback, or browser_chromium.",
+        ),
+    ] = "auto",
     json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
 ) -> None:
     """Create a validated PDF through the local HTML-first workflow."""
@@ -3422,10 +3563,17 @@ def workflow_createpdf(
             html=html_source,
             html_path=html_input_path,
             page_document=_read_json_object(page_document_path) if page_document_path is not None else None,
+            context_packet_path=context_packet_path,
+            target_profile=_read_json_object(target_profile_path)
+            if target_profile_path is not None
+            else target_profile_name,
+            style_pack=style_pack,
             title=title,
             artifact_dir=artifact_dir,
+            bundle_output_path=bundle_output_path,
             expected_page_count=expected_page_count,
             pages=pages,
+            renderer_backend=renderer_backend,
         ),
         json_output=json_output,
     )
@@ -3442,6 +3590,19 @@ def createpdf(
         Path | None,
         typer.Option("--page-document", help="Optional page document JSON path."),
     ] = None,
+    context_packet_path: Annotated[
+        Path | None,
+        typer.Option("--context-packet", help="Optional Context Packet JSON path."),
+    ] = None,
+    target_profile_name: Annotated[
+        str,
+        typer.Option("--profile", "--target-profile", help="Target PDF profile id."),
+    ] = "research_brief",
+    target_profile_path: Annotated[
+        Path | None,
+        typer.Option("--profile-json", help="Optional target profile JSON path."),
+    ] = None,
+    style_pack: Annotated[str | None, typer.Option("--style-pack", help="Optional style pack.")] = None,
     title: Annotated[str | None, typer.Option("--title", help="Optional document title.")] = None,
     html_source: Annotated[str | None, typer.Option("--html", help="Raw HTML string to package.")] = None,
     html_input_path: Annotated[
@@ -3452,11 +3613,23 @@ def createpdf(
         Path | None,
         typer.Option("--artifact-dir", help="Directory for QA and artifact reports."),
     ] = None,
+    bundle_output_path: Annotated[
+        Path | None,
+        typer.Option("--bundle-output", help="Optional portable audit bundle ZIP output path."),
+    ] = None,
     expected_page_count: Annotated[
         int | None,
         typer.Option("--expected-page-count", help="Expected generated PDF page count."),
     ] = None,
     pages: Annotated[str, typer.Option("--pages", help="Pages to render/check during QA.")] = "all",
+    renderer_backend: Annotated[
+        str,
+        typer.Option(
+            "--renderer-backend",
+            "--backend",
+            help="Renderer backend: auto, local_html_package_fallback, or browser_chromium.",
+        ),
+    ] = "auto",
     json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
 ) -> None:
     """Create a validated PDF through the local HTML-first workflow."""
@@ -3467,10 +3640,17 @@ def createpdf(
             html=html_source,
             html_path=html_input_path,
             page_document=_read_json_object(page_document_path) if page_document_path is not None else None,
+            context_packet_path=context_packet_path,
+            target_profile=_read_json_object(target_profile_path)
+            if target_profile_path is not None
+            else target_profile_name,
+            style_pack=style_pack,
             title=title,
             artifact_dir=artifact_dir,
+            bundle_output_path=bundle_output_path,
             expected_page_count=expected_page_count,
             pages=pages,
+            renderer_backend=renderer_backend,
         ),
         json_output=json_output,
     )
@@ -3670,6 +3850,7 @@ def _single_context_item_from_cli(
     label: str | None,
     item_type: str | None,
     transcript: str | None,
+    transcript_path: Path | None,
     duration_seconds: float | None,
 ) -> dict[str, object]:
     items = _context_items_from_cli(
@@ -3689,6 +3870,8 @@ def _single_context_item_from_cli(
         item["type"] = item_type
     if transcript is not None:
         item["transcript"] = transcript
+    if transcript_path is not None:
+        item["transcript_path"] = transcript_path.as_posix()
     if duration_seconds is not None:
         item["duration_seconds"] = duration_seconds
     return item

@@ -9,6 +9,7 @@ from agentpdf.api.app import create_app
 from agentpdf.cli.main import app
 from agentpdf.mcp.server import create_mcp_server
 from agentpdf.tools.registry import get_tool
+from okoffice.cli.main import app as okoffice_app
 
 
 runner = CliRunner()
@@ -119,6 +120,35 @@ def test_codex_setup_cli_writes_local_mcp_config(tmp_path: Path) -> None:
     assert "pdf_evidence_context_packet_report" in payload["usage"]["recommended_mcp_tools"]
     assert "pdf_patch_plan" in payload["usage"]["recommended_mcp_tools"]
     assert payload["next_recommended_tools"] == ["agentpdf_tool_manifest", "pdf_target_profiles"]
+
+
+def test_okoffice_codex_setup_cli_defaults_to_okoffice_mcp_server(tmp_path: Path) -> None:
+    output_path = tmp_path / "codex.mcp.json"
+
+    result = runner.invoke(
+        okoffice_app,
+        [
+            "agent",
+            "setup",
+            "codex",
+            "--output",
+            str(output_path),
+            "--safe-root",
+            ".",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    config = json.loads(output_path.read_text(encoding="utf-8"))
+    server = config["mcpServers"]["okoffice"]
+
+    assert payload["tool"] == "agent.setup.codex"
+    assert payload["usage"]["server_name"] == "okoffice"
+    assert payload["usage"]["mcp_config"] == config
+    assert server["command"] == "okoffice"
+    assert server["args"] == ["serve", "--mcp", "--safe-root", "."]
 
 
 def test_codex_setup_rest_and_mcp_are_exposed(tmp_path: Path) -> None:

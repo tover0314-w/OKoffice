@@ -1,0 +1,39 @@
+{
+  "ir_version": "0.3",
+  "document_id": "doc_metrics",
+  "artifact_kind": "workbook",
+  "source": {
+    "source_id": "src_xlsx_001",
+    "filename": "metrics.xlsx",
+    "sha256": "abc123"
+  },
+  "metadata": {
+    "title": "Q1 Metrics",
+    "sheet_count": 1,
+    "has_macros": false,
+    "has_external_links": false
+  },
+  "sheets": [
+    {
+      "name": "Revenue",
+      "used_range": "A1:F40",
+      "formulas": [
+        {
+          "cell": "F12",
+          "formula": "SUM(B12:E12)",
+          "cached_value": 1250000,
+          "source_ref": {
+            "source_id": "src_xlsx_001",
+            "locator": {
+              "kind": "sheet",
+              "sheet": "Revenue",
+              "cell": "F12",
+              "formula": "SUM(B12:E12)"
+            }
+          }
+        }
+      ],
+      "charts": []
+    }
+  ]
+}

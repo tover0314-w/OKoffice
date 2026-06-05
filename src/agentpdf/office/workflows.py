@@ -10,9 +10,13 @@ from zipfile import ZIP_DEFLATED, BadZipFile, ZipFile
 
 from agentpdf.artifacts.store import build_artifact
 from agentpdf.office.deck import create_deck_from_outline, validate_deck_presentation
+from agentpdf.office.context import build_office_context_packet
+from agentpdf.office.extract import extract_schema
 from agentpdf.office.inspect import inspect_office_file
 from agentpdf.office.sheet import extract_sheet_tables, profile_sheet_data, validate_sheet_workbook
+from agentpdf.office.validation import validate_sheet_formulas
 from agentpdf.office.word import extract_word_tables, inspect_word_document
+from agentpdf.office.workbook import write_sheet_workbook as write_evidence_workbook
 from agentpdf.office.xlsx import write_xlsx
 from agentpdf.schemas.errors import AgentPDFException
 from agentpdf.schemas.models import AgentPDFError, ToolResult, ValidationCheck, ValidationReport
@@ -20,6 +24,7 @@ from agentpdf.security.paths import resolve_input_path, resolve_output_path
 
 
 EXTRACT_TO_SHEET_TOOL_NAME = "office.workflow.extract_to_sheet"
+DOCSET_TO_SHEET_TOOL_NAME = "office.workflow.docset_to_sheet"
 SHEET_TO_DECK_TOOL_NAME = "office.workflow.sheet_to_deck"
 BOARD_PACK_TOOL_NAME = "office.workflow.board_pack"
 BUNDLE_VERIFY_TOOL_NAME = "office.bundle.verify"
@@ -27,6 +32,110 @@ TOOL_NAME = EXTRACT_TO_SHEET_TOOL_NAME
 XLSX_MIME_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 PPTX_MIME_TYPE = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
 ZIP_MIME_TYPE = "application/zip"
+
+
+def docset_to_sheet(
+    *,
+    files: list[str | Path | dict[str, Any]],
+    schema: dict[str, Any] | str | Path,
+    output_path: str | Path,
+    title: str | None = None,
+    intent: str | None = None,
+    context_output_path: str | Path | None = None,
+    evidence_output_path: str | Path | None = None,
+) -> ToolResult:
+    try:
+        output = resolve_output_path(output_path)
+        context_path = resolve_output_path(context_output_path or output.with_suffix(".context.json"))
+        evidence_path = resolve_output_path(evidence_output_path or output.with_suffix(".evidence.json"))
+        schema_obj = _workflow_schema_object(schema)
+    except (AgentPDFException, json.JSONDecodeError) as exc:
+        error = exc.to_error() if isinstance(exc, AgentPDFException) else AgentPDFError(code="invalid_input", message=str(exc))
+        return _failed(error, tool=DOCSET_TO_SHEET_TOOL_NAME)
+
+    context_result = build_office_context_packet(
+        files=files,
+        output_path=context_path,
+        title=title or "OKoffice Docset To Sheet Context",
+        intent=intent or "Build an evidence-backed workbook from source documents.",
+    )
+    if context_result.status != "succeeded":
+        return _failed_from_workflow_step(DOCSET_TO_SHEET_TOOL_NAME, context_result, [context_result])
+
+    extract_result = extract_schema(context_result.usage["context_packet"], schema_obj)
+    if extract_result.status != "succeeded":
+        return _failed_from_workflow_step(DOCSET_TO_SHEET_TOOL_NAME, extract_result, [context_result, extract_result])
+
+    extraction = _workflow_extraction_payload(extract_result, schema_obj)
+    evidence_path.write_text(json.dumps(extraction, ensure_ascii=False, indent=2, sort_keys=True), encoding="utf-8")
+    evidence_artifact = build_artifact(evidence_path, DOCSET_TO_SHEET_TOOL_NAME)
+
+    workbook_result = write_evidence_workbook(evidence=extraction, output_path=output)
+    if workbook_result.status != "succeeded":
+        return _failed_from_workflow_step(
+            DOCSET_TO_SHEET_TOOL_NAME,
+            workbook_result,
+            [context_result, extract_result, workbook_result],
+        )
+
+    validation_result = validate_sheet_formulas(output)
+    if validation_result.status != "succeeded":
+        return _failed_from_workflow_step(
+            DOCSET_TO_SHEET_TOOL_NAME,
+            validation_result,
+            [context_result, extract_result, workbook_result, validation_result],
+        )
+
+    step_results = [context_result, extract_result, workbook_result, validation_result]
+    warnings = _dedupe_workflow_warnings([warning for result in step_results for warning in result.warnings])
+    artifacts = _dedupe_workflow_artifacts([*context_result.artifacts, evidence_artifact, *workbook_result.artifacts])
+    values = extraction["rows"][0]["values"] if extraction["rows"] else {}
+    filled_value_count = len([value for value in values.values() if value not in {None, ""}])
+    checks = [
+        ValidationCheck(
+            name=result.tool.replace(".", "_"),
+            status=result.validation.status if result.validation is not None else "skipped",
+            details={"job_id": result.job_id, "artifact_count": len(result.artifacts)},
+        )
+        for result in step_results
+    ]
+    return ToolResult(
+        job_id=_job_id(),
+        status="succeeded",
+        tool=DOCSET_TO_SHEET_TOOL_NAME,
+        artifacts=artifacts,
+        validation=ValidationReport(
+            status=_validation_report_status_from_checks(checks),
+            checks=checks,
+            warnings=warnings,
+        ),
+        warnings=warnings,
+        usage={
+            "summary": {
+                "file_count": len(files),
+                "field_count": len(extraction["fields"]),
+                "row_count": len(extraction["rows"]),
+                "filled_value_count": filled_value_count,
+                "artifact_count": len(artifacts),
+                "workbook_validation_status": validation_result.validation.status if validation_result.validation else "skipped",
+            },
+            "workflow": {
+                "workflow_id": f"docset_to_sheet_{uuid4().hex[:16]}",
+                "output_path": output.as_posix(),
+                "sidecars": {
+                    "context_packet_path": context_path.as_posix(),
+                    "evidence_path": evidence_path.as_posix(),
+                },
+                "mutates_inputs": False,
+            },
+            "steps": [_workflow_step_summary(result) for result in step_results],
+            "context_packet": context_result.usage.get("context_packet", {}),
+            "extraction": extraction,
+            "workbook": workbook_result.usage,
+            "workbook_validation": validation_result.model_dump(mode="json"),
+        },
+        next_recommended_tools=["sheet.inspect.workbook", "office.workflow.sheet_to_deck", "office.bundle.export"],
+    )
 
 
 def extract_to_sheet(
@@ -556,6 +665,148 @@ def verify_board_pack(bundle_path: str | Path) -> ToolResult:
             "office.context.build_packet",
             "office.workflow.extract_to_sheet",
         ],
+    )
+
+
+def _workflow_schema_object(schema: dict[str, Any] | str | Path) -> dict[str, Any]:
+    if isinstance(schema, dict):
+        return schema
+    if isinstance(schema, Path) or (isinstance(schema, str) and Path(schema).exists()):
+        data = json.loads(Path(schema).read_text(encoding="utf-8"))
+        if not isinstance(data, dict):
+            raise AgentPDFException("invalid_input", "Schema JSON must be an object.")
+        return data
+    if isinstance(schema, str):
+        data = json.loads(schema)
+        if not isinstance(data, dict):
+            raise AgentPDFException("invalid_input", "Schema JSON must be an object.")
+        return data
+    raise AgentPDFException("invalid_input", "schema must be a JSON object, JSON string, or path.")
+
+
+def _workflow_extraction_payload(extract_result: ToolResult, schema: dict[str, Any]) -> dict[str, Any]:
+    evidence = extract_result.usage.get("evidence", {}) if isinstance(extract_result.usage.get("evidence"), dict) else {}
+    records = [record for record in evidence.get("records", []) if isinstance(record, dict)]
+    fields = evidence.get("fields") if isinstance(evidence.get("fields"), list) else schema.get("fields", [])
+    normalized_fields = [_workflow_field(field) for field in fields if isinstance(field, dict)]
+    values = {str(record.get("field")): record.get("value", "") for record in records if record.get("field")}
+    field_evidence = {
+        str(record.get("field")): {
+            "source_ref": record.get("source_ref"),
+            "source_type": record.get("source_type"),
+            "locator": record.get("locator"),
+            "confidence": record.get("confidence"),
+            "excerpt": record.get("matched_text"),
+        }
+        for record in records
+        if record.get("field")
+    }
+    source_refs = _workflow_source_refs(records)
+    return {
+        "extraction_id": f"extract_{uuid4().hex[:16]}",
+        "schema_name": str(schema.get("name") or "schema"),
+        "context_packet_id": evidence.get("context_packet_id"),
+        "source_graph_id": evidence.get("source_graph_id"),
+        "fields": normalized_fields,
+        "rows": [
+            {
+                "row_id": "row_001",
+                "values": values,
+                "field_evidence": field_evidence,
+            }
+        ],
+        "source_refs": source_refs,
+        "method": str(evidence.get("method") or "local_label_value_match_v0"),
+    }
+
+
+def _workflow_field(field: dict[str, Any]) -> dict[str, Any]:
+    name = str(field.get("name") or "")
+    aliases = field.get("aliases") if isinstance(field.get("aliases"), list) else []
+    return {
+        "name": name,
+        "type": str(field.get("type") or "string"),
+        "aliases": [str(alias) for alias in aliases],
+        "required": bool(field.get("required", False)),
+    }
+
+
+def _workflow_source_refs(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    refs: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for record in records:
+        source_ref = str(record.get("source_ref") or "")
+        if not source_ref or source_ref in seen:
+            continue
+        seen.add(source_ref)
+        refs.append(
+            {
+                "source_ref": source_ref,
+                "source_type": record.get("source_type"),
+                "locator": record.get("locator"),
+            }
+        )
+    return refs
+
+
+def _workflow_step_summary(result: ToolResult) -> dict[str, Any]:
+    return {
+        "tool": result.tool,
+        "status": result.status,
+        "job_id": result.job_id,
+        "artifact_count": len(result.artifacts),
+        "validation_status": result.validation.status if result.validation is not None else "skipped",
+        "warning_count": len(result.warnings),
+    }
+
+
+def _dedupe_workflow_warnings(warnings: list[str]) -> list[str]:
+    seen: set[str] = set()
+    deduped: list[str] = []
+    for warning in warnings:
+        if warning and warning not in seen:
+            seen.add(warning)
+            deduped.append(warning)
+    return deduped
+
+
+def _dedupe_workflow_artifacts(artifacts: list[Any]) -> list[Any]:
+    deduped = []
+    seen: set[str] = set()
+    for artifact in artifacts:
+        key = getattr(artifact, "artifact_id", "")
+        if key and key not in seen:
+            seen.add(key)
+            deduped.append(artifact)
+    return deduped
+
+
+def _failed_from_workflow_step(tool: str, failed_result: ToolResult, step_results: list[ToolResult]) -> ToolResult:
+    error = failed_result.error or AgentPDFError(
+        code="output_validation_failed",
+        message=f"Workflow step failed: {failed_result.tool}",
+    )
+    warnings = _dedupe_workflow_warnings([warning for result in step_results for warning in result.warnings])
+    return ToolResult(
+        job_id=_job_id(),
+        status="failed",
+        tool=tool,
+        artifacts=_dedupe_workflow_artifacts([artifact for result in step_results for artifact in result.artifacts]),
+        validation=ValidationReport(
+            status="failed",
+            checks=[
+                ValidationCheck(
+                    name=result.tool.replace(".", "_"),
+                    status="failed" if result is failed_result else result.validation.status if result.validation else "skipped",
+                    details={"job_id": result.job_id, "artifact_count": len(result.artifacts)},
+                )
+                for result in step_results
+            ],
+            warnings=warnings,
+        ),
+        warnings=warnings or [error.message],
+        error=error,
+        usage={"steps": [_workflow_step_summary(result) for result in step_results]},
     )
 
 

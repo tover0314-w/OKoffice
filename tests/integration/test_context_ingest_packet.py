@@ -1,3 +1,5 @@
+import hashlib
+import importlib
 import json
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
@@ -133,6 +135,157 @@ def test_context_web_link_rejects_unsafe_schemes() -> None:
             assert exc.code == "unsafe_input_rejected"
         else:  # pragma: no cover - defensive assertion for clearer test failures
             raise AssertionError(f"Expected unsafe_input_rejected for {url}")
+
+
+def test_context_web_capture_fetches_html_into_auditable_context_item(tmp_path: Path, monkeypatch) -> None:
+    context_web = importlib.import_module("agentpdf.context.web")
+    html = (
+        b"<!doctype html><html><head><title>AgentPDF Context</title></head>"
+        b"<body><h1>AgentPDF Context</h1><p>Traceable web evidence for target PDFs.</p></body></html>"
+    )
+
+    class FakeResponse:
+        status = 200
+        headers = {"Content-Type": "text/html; charset=utf-8"}
+        url = "https://okpdf.dev/docs/context"
+
+        def __enter__(self) -> "FakeResponse":
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+        def read(self, size: int = -1) -> bytes:
+            return html[:size] if size >= 0 else html
+
+    monkeypatch.setattr(context_web, "urlopen", lambda request, timeout: FakeResponse())
+    monkeypatch.setattr(context_web, "_validate_public_url_host", lambda hostname, allow_private_hosts: None)
+
+    result = context_web.capture_web_context(
+        "OKPDF.dev/docs/context",
+        output_path=tmp_path / "context-web.json",
+        label="Context Docs",
+        role="citation",
+        context_item_id="ctx_web",
+        max_bytes=4096,
+    )
+    item = result.usage["context_item"]
+    evidence = item["metadata"]["citation_evidence"]
+
+    assert result.status == "succeeded"
+    assert result.tool == "pdf.context.web_capture"
+    assert result.artifacts[0].source_tool == "pdf.context.web_capture"
+    assert item["type"] == "web_link"
+    assert item["context_item_id"] == "ctx_web"
+    assert item["uri"] == "https://okpdf.dev/docs/context"
+    assert "Traceable web evidence" in item["content"]["text"]
+    assert evidence["fetch_status"] == "fetched"
+    assert evidence["status_code"] == 200
+    assert evidence["content_type"] == "text/html; charset=utf-8"
+    assert evidence["sha256"] == hashlib.sha256(html).hexdigest()
+    assert evidence["bytes_read"] == len(html)
+    assert evidence["max_bytes"] == 4096
+    assert evidence["ssrf_policy"]["allow_private_hosts"] is False
+    assert evidence["analysis_method"] == "local_http_fetch_text_v0"
+    assert result.usage["source_graph_node"]["evidence"]["citation_evidence"]["fetch_status"] == "fetched"
+
+
+def test_context_web_capture_is_exposed_to_cli_rest_mcp_and_registry(tmp_path: Path, monkeypatch) -> None:
+    context_web = importlib.import_module("agentpdf.context.web")
+    mcp_server = importlib.import_module("agentpdf.mcp.server")
+    html = b"<html><body><h1>AgentPDF Web Capture</h1><p>Captured for context packets.</p></body></html>"
+
+    class FakeResponse:
+        status = 200
+        headers = {"Content-Type": "text/html"}
+        url = "https://okpdf.dev/docs/context"
+
+        def __enter__(self) -> "FakeResponse":
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+        def read(self, size: int = -1) -> bytes:
+            return html[:size] if size >= 0 else html
+
+    monkeypatch.setattr(context_web, "urlopen", lambda request, timeout: FakeResponse())
+    monkeypatch.setattr(context_web, "_validate_public_url_host", lambda hostname, allow_private_hosts: None)
+
+    cli_output = tmp_path / "cli-web.context-item.json"
+    cli_result = runner.invoke(
+        app,
+        [
+            "context",
+            "web-capture",
+            "OKPDF.dev/docs/context",
+            "--label",
+            "CLI Web Capture",
+            "--context-item-id",
+            "ctx_cli_web",
+            "-o",
+            str(cli_output),
+            "--json",
+        ],
+    )
+    client = TestClient(create_app())
+    api_response = client.post(
+        "/v1/tools/pdf.context.web_capture/run",
+        json={
+            "url": "OKPDF.dev/docs/context",
+            "label": "API Web Capture",
+            "context_item_id": "ctx_api_web",
+            "output_path": str(tmp_path / "api-web.context-item.json"),
+        },
+    )
+    mcp_result = json.loads(
+        mcp_server.pdf_context_web_capture(
+            "OKPDF.dev/docs/context",
+            output_path=str(tmp_path / "mcp-web.context-item.json"),
+            label="MCP Web Capture",
+            context_item_id="ctx_mcp_web",
+        )
+    )
+
+    assert cli_result.exit_code == 0
+    assert json.loads(cli_result.stdout)["tool"] == "pdf.context.web_capture"
+    assert cli_output.exists()
+    assert api_response.status_code == 200
+    assert api_response.json()["usage"]["context_item"]["context_item_id"] == "ctx_api_web"
+    assert mcp_result["usage"]["context_item"]["metadata"]["citation_evidence"]["fetch_status"] == "fetched"
+    assert get_tool("pdf.context.web_capture").implemented is True
+
+
+def test_context_web_capture_validates_final_redirect_host(monkeypatch) -> None:
+    context_web = importlib.import_module("agentpdf.context.web")
+    html = b"<html><body><p>Redirected content</p></body></html>"
+    checked_hosts: list[str | None] = []
+
+    class FakeResponse:
+        status = 200
+        headers = {"Content-Type": "text/html"}
+        url = "https://cdn.okpdf.dev/context"
+
+        def __enter__(self) -> "FakeResponse":
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+        def read(self, size: int = -1) -> bytes:
+            return html[:size] if size >= 0 else html
+
+    def record_host(hostname: str | None, allow_private_hosts: bool) -> None:
+        checked_hosts.append(hostname)
+
+    monkeypatch.setattr(context_web, "urlopen", lambda request, timeout: FakeResponse())
+    monkeypatch.setattr(context_web, "_validate_public_url_host", record_host)
+
+    result = context_web.capture_web_context("okpdf.dev/docs/context")
+
+    assert result.status == "succeeded"
+    assert checked_hosts == ["okpdf.dev", "cdn.okpdf.dev"]
+    assert result.usage["web_capture"]["final_url"] == "https://cdn.okpdf.dev/context"
 
 
 def test_context_ingest_extracts_docx_text_evidence_for_packets(tmp_path: Path) -> None:
@@ -444,6 +597,47 @@ def test_context_ingest_and_packet_are_exposed_to_cli_rest_mcp_and_registry(tmp_
     assert mcp_packet.exists()
     assert get_tool("pdf.context.ingest").implemented is True
     assert get_tool("pdf.context.packet").implemented is True
+
+
+def test_context_ingest_cli_accepts_media_transcript_sidecar_path(tmp_path: Path) -> None:
+    audio = tmp_path / "meeting.mp3"
+    audio.write_bytes(b"ID3 local audio fixture")
+    transcript = tmp_path / "meeting.transcript.txt"
+    transcript.write_text("00:00 Kickoff\n00:11 Keep sidecar provenance.", encoding="utf-8")
+    output_path = tmp_path / "meeting.context-item.json"
+
+    result = runner.invoke(
+        app,
+        [
+            "context",
+            "ingest",
+            "--file",
+            str(audio),
+            "--role",
+            "audio_context",
+            "--label",
+            "Meeting Audio",
+            "--transcript-path",
+            str(transcript),
+            "-o",
+            str(output_path),
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    context_item = payload["usage"]["context_item"]
+    expected_hash = hashlib.sha256(transcript.read_bytes()).hexdigest()
+    assert context_item["content"]["transcript"]["source"] == "sidecar_file"
+    assert context_item["metadata"]["transcript_source_path"] == transcript.resolve().as_posix()
+    assert context_item["metadata"]["transcript_sha256"] == expected_hash
+    assert payload["usage"]["source_graph"]["edge_count"] == 1
+    assert payload["usage"]["source_graph"]["edges"][0]["relation"] == "provides_transcript_for"
+    written = json.loads(output_path.read_text(encoding="utf-8"))
+    assert written["source_graph_node"]["evidence"]["transcript_source_path"] == transcript.resolve().as_posix()
+    assert written["source_graph"]["nodes"][1]["type"] == "transcript"
+    assert written["source_graph"]["edges"][0]["sidecar_source_ref"] == "ctx_001#transcript"
 
 
 def _write_minimal_docx(path: Path, paragraphs: list[str]) -> None:

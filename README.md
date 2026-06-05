@@ -125,7 +125,7 @@ okpdf serve --api
 | `office.workflow.sheet_to_deck` | beta | Profiles an evidence workbook and creates an editable PPTX review deck. |
 | `office.workflow.board_pack` | beta | Creates a local ZIP board pack with artifacts, manifest, validation report, and delivery metadata. |
 | `office.bundle.verify` | beta | Verifies board pack ZIP manifests, validation reports, artifact members, sizes, and SHA-256 checksums. |
-| `pdf.*` compatibility | stable/beta | 241 local PDF and agent setup tools remain available through `okpdf`, MCP, REST, and SDKs. |
+| `pdf.*` compatibility | stable/beta | The full manifest currently covers 264 local PDF, Office, and agent setup tools available through `okpdf`, MCP, REST, and SDKs. |
 
 The codebase still exposes the compatibility Python package as `agentpdf` and the compatibility Node package as `@okpdf/agentpdf-node`. The target package identity is OKoffice; compatibility names are preserved deliberately.
 

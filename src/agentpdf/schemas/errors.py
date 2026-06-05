@@ -31,6 +31,8 @@ KNOWN_ERROR_CODES = {
     "quota_required_for_cloud_feature",
     "cloud_feature_disabled",
     "source_ref_not_found",
+    "invalid_artifact_graph",
+    "html_layer_ref_not_found",
     "layer_operation_not_allowed",
 }
 

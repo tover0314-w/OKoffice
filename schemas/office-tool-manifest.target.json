@@ -125,8 +125,8 @@
                          },
                          {
                              "name":  "office.workflow.docset_to_sheet",
-                             "status":  "planned",
-                             "description":  "Turn a set of source documents into an evidence-backed workbook.",
+                             "status":  "beta",
+                             "description":  "Build a context packet, extract schema-shaped evidence, write an auditable workbook, and validate formulas.",
                              "domain":  "office",
                              "interfaces":  [
                                                 "cli",
@@ -134,7 +134,7 @@
                                                 "rest",
                                                 "sdk"
                                             ],
-                             "implemented":  false,
+                             "implemented":  true,
                              "oss_default":  true,
                              "requires_model":  false
                          },
@@ -172,6 +172,36 @@
                              "name":  "office.bundle.verify",
                              "status":  "beta",
                              "description":  "Verify a local OKoffice board pack ZIP manifest, validation report, artifact members, sizes, and SHA-256 checksums.",
+                             "domain":  "office",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  true,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "office.bundle.export",
+                             "status":  "beta",
+                             "description":  "Export local Office artifacts into a portable OKoffice bundle with manifest and checksums.",
+                             "domain":  "office",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  true,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "office.workers.status",
+                             "status":  "beta",
+                             "description":  "Report optional Office worker contracts, feature flags, dependency status, and license boundaries.",
                              "domain":  "office",
                              "interfaces":  [
                                                 "cli",
@@ -367,6 +397,36 @@
                              "name":  "word.extract.tables",
                              "status":  "beta",
                              "description":  "Extract Word tables into normalized records with source cell locations.",
+                             "domain":  "word",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  true,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "word.validation.document",
+                             "status":  "beta",
+                             "description":  "Validate DOCX structure, package safety, comments, tracked changes, metadata, and render-preview readiness.",
+                             "domain":  "word",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  true,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "word.create.report",
+                             "status":  "beta",
+                             "description":  "Create an editable Word report from an evidence workbook without mutating the source workbook.",
                              "domain":  "word",
                              "interfaces":  [
                                                 "cli",
@@ -634,6 +694,36 @@
                              "requires_model":  false
                          },
                          {
+                             "name":  "deck.create.presentation",
+                             "status":  "beta",
+                             "description":  "Create a styled, editable PowerPoint deck from an evidence workbook with speaker-note source refs.",
+                             "domain":  "deck",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  true,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "deck.validation.contact_sheet",
+                             "status":  "beta",
+                             "description":  "Validate PowerPoint contact-sheet preview readiness and render-worker status.",
+                             "domain":  "deck",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  true,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
                              "name":  "deck.edit.apply_theme",
                              "status":  "planned",
                              "description":  "Apply or replace presentation themes, masters, tokens, fonts, and layout rules.",
@@ -682,6 +772,21 @@
                              "name":  "deck.validate.presentation",
                              "status":  "beta",
                              "description":  "Validate PPTX structure, slide text, blank slides, placeholder leakage, safety markers, and source-map readiness.",
+                             "domain":  "deck",
+                             "interfaces":  [
+                                                "cli",
+                                                "mcp",
+                                                "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  true,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "deck.validation.presentation",
+                             "status":  "beta",
+                             "description":  "Validate presentation structure, notes policy, media refs, theme metadata, and render evidence readiness.",
                              "domain":  "deck",
                              "interfaces":  [
                                                 "cli",

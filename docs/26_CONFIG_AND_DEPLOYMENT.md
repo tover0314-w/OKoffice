@@ -60,6 +60,12 @@ OKOFFICE_MODEL_PROVIDER
 OKOFFICE_OPENAI_API_KEY
 OKOFFICE_ANTHROPIC_API_KEY
 OKOFFICE_MAX_FILE_SIZE_MB
+OKOFFICE_ENABLE_OFFICECLI_WORKER
+OKOFFICE_ENABLE_LIBREOFFICE_WORKER
+OKOFFICE_ENABLE_BROWSER_RENDERER
+OKOFFICE_ENABLE_OCR_WORKER
+OKOFFICE_ENABLE_FORMULA_WORKER
+OKOFFICE_ENABLE_AI_PROVIDER
 ```
 
 Compatibility:
@@ -103,6 +109,17 @@ Target:
 ```bash
 okoffice serve --mcp --safe-root .
 ```
+
+## Optional Worker Status
+
+Optional workers are disabled by default. Use the status tool before relying on conversion, render, OCR, formula, or AI capabilities:
+
+```bash
+okoffice workers status --json
+okoffice workers status --enable libreoffice --command libreoffice=soffice --json
+```
+
+The result records feature flags, dependency availability, default-core status, cloud requirements, and license notes for each worker contract.
 
 ## Docker Target
 

@@ -96,6 +96,82 @@ export interface SetupOpenClawInput {
   serverName?: string;
 }
 
+export interface OfficeWorkersStatusInput {
+  featureFlags?: Record<string, boolean>;
+  commandPaths?: Record<string, string>;
+}
+
+export interface DeckValidatePresentationInput {
+  path: string;
+}
+
+export interface WordValidateDocumentInput {
+  path: string;
+}
+
+export type OfficeWorkerStatus = "disabled" | "available" | "missing_dependency" | "not_configured";
+
+export interface OfficeWorkersStatusSummary extends JsonObject {
+  worker_count: number;
+  enabled_count: number;
+  available_count: number;
+  missing_dependency_count: number;
+  cloud_required_count: number;
+  default_core_dependency_count: number;
+}
+
+export interface OfficeWorkerCheck extends JsonObject {
+  name: string;
+  status: ValidationCheck["status"];
+  path?: string;
+  command?: string;
+}
+
+export interface OfficeWorkerStatusRecord extends JsonObject {
+  worker_id: string;
+  label: string;
+  category: string;
+  enabled: boolean;
+  status: OfficeWorkerStatus;
+  feature_flag: string;
+  command?: string | null;
+  executable_path?: string | null;
+  install_extra?: string | null;
+  cloud_required: boolean;
+  default_core_dependency: boolean;
+  license_note: string;
+  description: string;
+  output_evidence: string[];
+  checks: OfficeWorkerCheck[];
+}
+
+export interface OfficeWorkerContract extends JsonObject {
+  worker_id: string;
+  label: string;
+  category: string;
+  feature_flag: string;
+  command_name?: string | null;
+  install_extra?: string | null;
+  default_core_dependency: boolean;
+  cloud_required: boolean;
+  license_note: string;
+  description: string;
+  output_evidence: string[];
+}
+
+export interface OfficeWorkersFeatureFlagPolicy extends JsonObject {
+  default_enabled: boolean;
+  source: string;
+  cloud_required_by_default: boolean;
+}
+
+export interface OfficeWorkersStatusUsage extends JsonObject {
+  summary: OfficeWorkersStatusSummary;
+  workers: OfficeWorkerStatusRecord[];
+  "office.worker_contracts": OfficeWorkerContract[];
+  feature_flag_policy: OfficeWorkersFeatureFlagPolicy;
+}
+
 export interface InspectDocumentInput {
   path: string;
 }
@@ -192,10 +268,127 @@ export interface WorkflowCreatePdfInput {
   html?: string;
   htmlPath?: string;
   pageDocument?: JsonObject;
+  contextPacket?: JsonObject;
+  contextPacketPath?: string;
+  targetProfile?: JsonObject | string;
+  stylePack?: string;
   title?: string;
   artifactDir?: string;
+  bundleOutputPath?: string;
+  rendererBackend?: "auto" | "local_html_package_fallback" | "browser_chromium" | string;
   expectedPageCount?: number;
   pages?: string;
+}
+
+export interface WorkflowCreatePdfAuditSummary extends JsonObject {
+  artifact_count?: number;
+  source_ref_count?: number;
+  html_package_count?: number;
+  html_render_profile_count?: number;
+  renderer_backend_count?: number;
+  html_layer_count?: number;
+  context_packet_count?: number;
+  source_graph_node_count?: number;
+  source_graph_edge_count?: number;
+  node_count?: number;
+  edge_count?: number;
+}
+
+export interface WorkflowCreatePdfRenderProfileRef extends JsonObject {
+  html_package_id?: string;
+  path?: string;
+  html_path?: string;
+  renderer_contract?: string;
+  render_profile_id: string;
+  render_profile?: JsonObject;
+  renderer_constraints?: JsonObject;
+  page_size?: string;
+  prefer_css_page_size?: boolean;
+  print_background?: boolean;
+  javascript_enabled?: boolean;
+  remote_assets_enabled?: boolean;
+}
+
+export interface WorkflowCreatePdfHtmlLayerRef extends JsonObject {
+  html_package_id?: string;
+  path?: string;
+  html_path?: string;
+  layer_id: string;
+  block_id?: string;
+  block_type?: string;
+  target_slot?: string;
+  source_refs?: string[];
+  anchor?: JsonObject;
+  bbox_precision?: string;
+  edit_policy?: JsonObject;
+}
+
+export interface WorkflowCreatePdfRendererBackendRef extends JsonObject {
+  html_package_id?: string;
+  path?: string;
+  html_path?: string;
+  renderer_contract?: string;
+  backend_id: string;
+  renderer_backend?: RenderHtmlPackageRendererBackend;
+  engine?: string;
+  source?: string;
+  is_browser_renderer?: boolean;
+  fallback?: boolean;
+  fallback_reason?: string | null;
+  layout_fidelity?: string;
+  network?: string;
+  javascript?: string;
+  file_urls?: string;
+}
+
+export interface WorkflowCreatePdfStep extends JsonObject {
+  tool: string;
+  job_id?: string;
+  status?: string;
+  validation_status?: string | null;
+  artifact_paths?: string[];
+  warning_count?: number;
+  renderer_backend_id?: string | null;
+  render_skipped?: boolean;
+}
+
+export interface WorkflowCreatePdfUsage extends JsonObject {
+  workflow_id?: string;
+  mode?: "html_first" | "context_packet" | string;
+  source_format?: "raw_html" | "page_document" | "context_packet" | string;
+  context_packet_id?: string;
+  context_packet_path?: string | null;
+  target_profile?: JsonObject;
+  renderer?: string;
+  html_output_path: string;
+  html_package_manifest_path: string;
+  composition_path?: string;
+  pdf_output_path: string;
+  qa_report_path: string;
+  artifact_manifest_path: string;
+  artifact_graph_path: string;
+  requested_renderer_backend?: string;
+  renderer_backend: RenderHtmlPackageRendererBackend;
+  render_skipped: boolean;
+  render_skip_reason?: string | null;
+  artifact_manifest_summary: WorkflowCreatePdfAuditSummary;
+  artifact_graph_summary: WorkflowCreatePdfAuditSummary;
+  html_render_profile_count: number;
+  html_render_profile_refs: WorkflowCreatePdfRenderProfileRef[];
+  renderer_backend_count: number;
+  renderer_backend_refs: WorkflowCreatePdfRendererBackendRef[];
+  html_layer_count: number;
+  html_layer_refs: WorkflowCreatePdfHtmlLayerRef[];
+  source_graph_node_count: number;
+  source_graph_edge_count: number;
+  bundle_path?: string;
+  bundle_export?: ToolResult;
+  bundle_verification?: ToolResult;
+  steps: WorkflowCreatePdfStep[];
+}
+
+export interface WorkflowCreatePdfToolUsage extends JsonObject {
+  createpdf: WorkflowCreatePdfUsage;
 }
 
 export interface AuthoringPlanInput {
@@ -246,6 +439,17 @@ export interface BuildContextPacketInput {
 export interface IngestContextInput {
   contextItem: JsonObject;
   outputPath?: string;
+}
+
+export interface ContextWebCaptureInput {
+  url: string;
+  outputPath?: string;
+  label?: string;
+  role?: string;
+  contextItemId?: string;
+  maxBytes?: number;
+  timeoutSeconds?: number;
+  allowPrivateHosts?: boolean;
 }
 
 export interface ContextPacketInput {
@@ -478,6 +682,7 @@ export interface PatchPlanInput {
   outputPath: string;
   compositionPath?: string;
   layerManifestPath?: string;
+  artifactGraphPath?: string;
   reason?: string;
 }
 
@@ -551,6 +756,38 @@ export interface HtmlToPdfInput {
 export interface RenderHtmlPackageInput {
   packagePath: string;
   outputPath: string;
+  rendererBackend?: "auto" | "local_html_package_fallback" | "browser_chromium" | string;
+}
+
+export interface RenderHtmlPackageRendererBackend extends JsonObject {
+  backend_id: string;
+  engine: string;
+  source: string;
+  is_browser_renderer: boolean;
+  fallback: boolean;
+  available?: boolean;
+  fallback_reason?: string | null;
+  missing_optional_dependency?: string | null;
+  install_extra?: string | null;
+  layout_fidelity: string;
+  network: string;
+  javascript: string;
+  file_urls: string;
+}
+
+export interface RenderHtmlPackageUsage extends JsonObject {
+  renderer: string;
+  requested_renderer_backend?: string;
+  renderer_backend: RenderHtmlPackageRendererBackend;
+  input: string;
+  html_path: string;
+  output: string;
+  render_skipped: boolean;
+  render_skip_reason?: string | null;
+  render_profile: JsonObject;
+  renderer_constraints: JsonObject;
+  html_package_manifest: JsonObject;
+  html_package_validation: JsonObject;
 }
 
 export interface UrlToPdfInput {

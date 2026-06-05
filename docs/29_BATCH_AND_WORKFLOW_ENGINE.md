@@ -100,7 +100,7 @@ steps:
         - vendor
         - renewal_date
         - annual_amount
-  - tool: sheet.create.workbook
+  - tool: sheet.write.workbook
   - tool: sheet.validation.formulas
   - tool: office.evidence.coverage
 outputs:
@@ -119,6 +119,7 @@ steps:
   - tool: sheet.extract.tables
   - tool: deck.compose.plan
   - tool: deck.create.presentation
+  - tool: deck.validation.presentation
   - tool: deck.validation.contact_sheet
 outputs:
   deck: ./out/vendor-board-deck.pptx

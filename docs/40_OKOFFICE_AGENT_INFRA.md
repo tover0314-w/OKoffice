@@ -30,7 +30,7 @@ Needs:
 - JSON-first tool outputs;
 - clear implementation order docs.
 
-Target:
+Beta command:
 
 ```bash
 okoffice agent setup codex -o codex.mcp.json --safe-root . --json
@@ -46,7 +46,7 @@ Needs:
 - artifact paths;
 - structured content.
 
-Target:
+Beta command:
 
 ```bash
 okoffice agent setup claude-code -o .mcp.json --safe-root . --json
@@ -172,9 +172,10 @@ Agents should not:
 office.inspect.file
 -> office.context.build_packet
 -> office.extract.schema
--> sheet.create.evidence_workbook
+-> sheet.write.workbook
 -> sheet.validation.formulas
 -> deck.create.presentation
+-> deck.validation.presentation
 -> deck.validation.contact_sheet
 -> office.bundle.export
 -> office.bundle.verify

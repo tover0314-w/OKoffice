@@ -19,6 +19,8 @@ error_codes:
   tool_not_implemented: Tool is specified but not implemented.
   unsafe_input_rejected: Input was rejected by safety checks.
   source_ref_not_found: A referenced source id was not found in the composition source map.
+  invalid_artifact_graph: Artifact graph JSON is invalid or missing required indexes.
+  html_layer_ref_not_found: A referenced HTML layer id was not found in the artifact graph.
   layer_operation_not_allowed: A requested patch operation is not allowed by the template layer edit policy.
   path_traversal_rejected: Path traversal attempt was rejected.
   overwrite_not_allowed: Output file exists and overwrite was not enabled.

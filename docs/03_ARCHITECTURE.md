@@ -97,7 +97,7 @@ sequenceDiagram
   participant PDF as PDF Export/Validate
   participant Bundle as Bundle Export
 
-  User->>API: office.workflow.docset_to_board_pack
+  User->>API: office.workflow.board_pack
   API->>Context: ingest PDF/DOCX/XLSX/PPTX/text/link inputs
   Context->>Evidence: build source graph and extraction tasks
   Evidence->>Sheet: create evidence workbook with row/cell source refs

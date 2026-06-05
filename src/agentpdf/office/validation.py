@@ -1,17 +1,21 @@
 from __future__ import annotations
 
+import re
 import zipfile
 from pathlib import Path, PurePosixPath
 from typing import Any
 from uuid import uuid4
 
 from agentpdf.office.inspect import inspect_office_file
+from agentpdf.office.sheet import inspect_sheet_workbook
 from agentpdf.schemas.errors import AgentPDFException
 from agentpdf.schemas.models import AgentPDFError, ToolResult, ValidationCheck, ValidationReport
 from agentpdf.security.paths import resolve_input_path
 
 
 TOOL_NAME = "office.validation.package"
+FORMULA_TOOL_NAME = "sheet.validation.formulas"
+FORMULA_ERROR_VALUES = {"#DIV/0!", "#N/A", "#NAME?", "#NULL!", "#NUM!", "#REF!", "#VALUE!", "#SPILL!", "#CALC!"}
 OOXML_PRIMARY_MEMBERS = {
     "word/document.xml": "ooxml_docx",
     "xl/workbook.xml": "ooxml_xlsx",
@@ -27,6 +31,51 @@ OOXML_EXTENSIONS = {
 }
 MACRO_EXTENSIONS = {".docm", ".xlsm", ".pptm"}
 MAX_XML_SCAN_BYTES = 1_000_000
+
+
+def validate_sheet_formulas(path: str | Path) -> ToolResult:
+    inspected = inspect_sheet_workbook(path)
+    if inspected.status != "succeeded":
+        return _failed_formula(
+            inspected.error
+            or AgentPDFError(code="output_validation_failed", message="Workbook inspect failed before formula validation.")
+        )
+
+    usage = inspected.usage
+    formulas = [formula for formula in usage.get("formulas", []) if isinstance(formula, dict)]
+    issues = _formula_issues(formulas)
+    warnings = _formula_warnings(usage, issues)
+    validation = _formula_validation_report(usage, issues, warnings)
+    return ToolResult(
+        job_id=_job_id(),
+        status="succeeded",
+        tool=FORMULA_TOOL_NAME,
+        validation=validation,
+        warnings=warnings,
+        usage={
+            "summary": _formula_summary(usage, issues),
+            "issues": issues,
+            "formula_evaluation": {
+                "status": "structural_only",
+                "evaluated": False,
+                "worker_configured": False,
+                "reason": "Local OSS validation does not calculate workbook formulas.",
+            },
+            "bindings": {
+                "table_count": usage.get("summary", {}).get("table_count", 0),
+                "chart_count": usage.get("summary", {}).get("chart_count", 0),
+                "named_range_count": usage.get("summary", {}).get("named_range_count", 0),
+                "tables": usage.get("tables", []),
+                "charts": usage.get("charts", []),
+                "named_ranges": usage.get("named_ranges", []),
+                "data_model": usage.get("data_model", {"field_count": 0, "fields": []}),
+                "chart_plan": usage.get("chart_plan", {"chart_plan_count": 0, "charts": []}),
+            },
+            "package": usage.get("package", {}),
+            "formulas": formulas,
+        },
+        next_recommended_tools=["sheet.inspect.workbook", "office.context.build_packet", "office.workflow.sheet_to_deck"],
+    )
 
 
 def validate_office_package(path: str | Path) -> ToolResult:
@@ -211,6 +260,120 @@ def _package_error(path: Path, unsafe_members: list[str], content_types_present:
     return AgentPDFError(code="output_validation_failed", message="Office package validation failed.")
 
 
+def _formula_issues(formulas: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
+    external_references = [formula for formula in formulas if formula.get("has_external_reference")]
+    cached_errors = [formula for formula in formulas if _is_formula_error_value(formula.get("cached_value"))]
+    missing_cached_values = [formula for formula in formulas if formula.get("cached_value") in {None, ""}]
+    self_references = [formula for formula in formulas if _is_self_reference(formula)]
+    return {
+        "external_references": external_references,
+        "cached_errors": cached_errors,
+        "missing_cached_values": missing_cached_values,
+        "self_references": self_references,
+    }
+
+
+def _formula_summary(usage: dict[str, Any], issues: dict[str, list[dict[str, Any]]]) -> dict[str, Any]:
+    summary = usage.get("summary", {})
+    formula_count = int(summary.get("formula_count", 0))
+    return {
+        "formula_count": formula_count,
+        "external_formula_count": len(issues["external_references"]),
+        "cached_error_count": len(issues["cached_errors"]),
+        "missing_cached_value_count": len(issues["missing_cached_values"]),
+        "self_reference_count": len(issues["self_references"]),
+        "named_range_count": int(summary.get("named_range_count", 0)),
+        "table_count": int(summary.get("table_count", 0)),
+        "chart_count": int(summary.get("chart_count", 0)),
+        "data_model_count": int(summary.get("data_model_count", 0)),
+        "chart_plan_count": int(summary.get("chart_plan_count", 0)),
+        "external_link_count": int(summary.get("external_link_count", 0)),
+        "formula_evaluated": False,
+    }
+
+
+def _formula_warnings(usage: dict[str, Any], issues: dict[str, list[dict[str, Any]]]) -> list[str]:
+    warnings: list[str] = []
+    formula_count = int(usage.get("summary", {}).get("formula_count", 0))
+    if formula_count:
+        warnings.append("Formula evaluation worker is not configured; validation is structural only.")
+    if issues["external_references"]:
+        warnings.append(f"External formula references detected: {len(issues['external_references'])}.")
+    if issues["cached_errors"]:
+        warnings.append(f"Cached formula error values detected: {len(issues['cached_errors'])}.")
+    if issues["missing_cached_values"]:
+        warnings.append(f"Formulas without cached values detected: {len(issues['missing_cached_values'])}.")
+    if issues["self_references"]:
+        warnings.append(f"Potential self-referential formulas detected: {len(issues['self_references'])}.")
+    package = usage.get("package", {})
+    if package.get("macro_enabled"):
+        warnings.append("Macro-enabled workbook package markers were detected; macros are not executed.")
+    if package.get("has_external_relationships"):
+        warnings.append("External workbook relationship targets were detected.")
+    return warnings
+
+
+def _formula_validation_report(
+    usage: dict[str, Any],
+    issues: dict[str, list[dict[str, Any]]],
+    warnings: list[str],
+) -> ValidationReport:
+    summary = _formula_summary(usage, issues)
+    return ValidationReport(
+        status="warning" if warnings else "passed",
+        checks=[
+            ValidationCheck(name="workbook_inspected", status="passed", details=usage.get("file", {})),
+            ValidationCheck(name="formula_inventory", status="passed", details={"formula_count": summary["formula_count"]}),
+            ValidationCheck(
+                name="external_formula_references",
+                status="warning" if issues["external_references"] else "passed",
+                details={"count": summary["external_formula_count"]},
+            ),
+            ValidationCheck(
+                name="cached_formula_errors",
+                status="warning" if issues["cached_errors"] else "passed",
+                details={"count": summary["cached_error_count"]},
+            ),
+            ValidationCheck(
+                name="self_references_structural",
+                status="warning" if issues["self_references"] else "passed",
+                details={"count": summary["self_reference_count"]},
+            ),
+            ValidationCheck(
+                name="formula_evaluation_worker",
+                status="skipped",
+                details={"worker_configured": False, "evaluated": False},
+                message="Formula value evaluation requires an optional worker.",
+            ),
+            ValidationCheck(
+                name="table_chart_bindings_structural",
+                status="passed",
+                details={
+                    "table_count": summary["table_count"],
+                    "chart_count": summary["chart_count"],
+                    "named_range_count": summary["named_range_count"],
+                    "data_model_count": summary["data_model_count"],
+                    "chart_plan_count": summary["chart_plan_count"],
+                },
+            ),
+        ],
+        warnings=warnings,
+    )
+
+
+def _is_formula_error_value(value: Any) -> bool:
+    return isinstance(value, str) and value.strip().upper() in FORMULA_ERROR_VALUES
+
+
+def _is_self_reference(formula: dict[str, Any]) -> bool:
+    cell = str(formula.get("cell") or formula.get("cell_ref") or "")
+    expression = str(formula.get("formula") or "")
+    if not cell or not expression:
+        return False
+    pattern = re.compile(rf"(?<![A-Z0-9_]){re.escape(cell)}(?![A-Z0-9_])", re.IGNORECASE)
+    return bool(pattern.search(expression))
+
+
 def _detect_ooxml_package_type(names: set[str], suffix: str) -> str:
     for primary_member, package_type in OOXML_PRIMARY_MEMBERS.items():
         if primary_member in names:
@@ -288,6 +451,10 @@ def _starts_with_pdf_header(path: Path) -> bool:
 
 def _failed(error: AgentPDFError) -> ToolResult:
     return ToolResult(job_id=_job_id(), status="failed", tool=TOOL_NAME, error=error, warnings=[error.message])
+
+
+def _failed_formula(error: AgentPDFError) -> ToolResult:
+    return ToolResult(job_id=_job_id(), status="failed", tool=FORMULA_TOOL_NAME, error=error, warnings=[error.message])
 
 
 def _job_id() -> str:

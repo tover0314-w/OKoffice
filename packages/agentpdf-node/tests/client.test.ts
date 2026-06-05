@@ -3,7 +3,12 @@ import test from "node:test";
 
 import { AgentPDFClient } from "../src/index.js";
 import type { ToolManifest, ToolResult } from "../src/index.js";
-import type { AuthoringBrief, EvidenceCard, WorkflowResearchDeckRequest } from "../src/types.js";
+import type {
+  AuthoringBrief,
+  EvidenceCard,
+  OfficeWorkersStatusUsage,
+  WorkflowResearchDeckRequest,
+} from "../src/types.js";
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -75,6 +80,172 @@ test("AgentPDFClient runs text-to-PDF with the expected payload", async () => {
     title: "Hello",
   });
   assert.equal(result.tool, "pdf.convert.text_to_pdf");
+});
+
+test("AgentPDFClient exposes okoffice worker status helper", async () => {
+  const calls: Array<{ url: string; body: unknown }> = [];
+  const workerResult: ToolResult<OfficeWorkersStatusUsage> = {
+    job_id: "job_workers",
+    status: "succeeded",
+    tool: "office.workers.status",
+    artifacts: [],
+    validation: {
+      status: "warning",
+      checks: [
+        {
+          name: "worker_libreoffice",
+          status: "warning",
+          details: { enabled: true, status: "missing_dependency" },
+        },
+      ],
+      warnings: ["LibreOffice worker is enabled but its executable was not found."],
+    },
+    warnings: ["LibreOffice worker is enabled but its executable was not found."],
+    usage: {
+      summary: {
+        worker_count: 6,
+        enabled_count: 1,
+        available_count: 0,
+        missing_dependency_count: 1,
+        cloud_required_count: 1,
+        default_core_dependency_count: 0,
+      },
+      workers: [
+        {
+          worker_id: "libreoffice",
+          label: "LibreOffice conversion/render adapter",
+          category: "office_conversion",
+          enabled: true,
+          status: "missing_dependency",
+          feature_flag: "OKOFFICE_ENABLE_LIBREOFFICE_WORKER",
+          command: "soffice",
+          executable_path: null,
+          install_extra: "libreoffice-worker",
+          cloud_required: false,
+          default_core_dependency: false,
+          license_note: "Optional system dependency.",
+          description: "Local Office-to-PDF conversion and preview rendering.",
+          output_evidence: ["executable_path", "worker_version", "conversion_log"],
+          checks: [{ name: "dependency_available", status: "failed", command: "soffice" }],
+        },
+      ],
+      "office.worker_contracts": [],
+      feature_flag_policy: {
+        default_enabled: false,
+        source: "explicit input or environment variables",
+        cloud_required_by_default: false,
+      },
+    },
+    next_recommended_tools: ["office.inspect.file"],
+    error: null,
+  };
+  const client = new AgentPDFClient({
+    baseUrl: "http://agentpdf.test",
+    fetch: async (input, init) => {
+      calls.push({ url: String(input), body: JSON.parse(String(init?.body)) });
+      return jsonResponse(workerResult);
+    },
+  });
+
+  const result = await client.officeWorkersStatus({
+    featureFlags: { libreoffice: true, ocr: false },
+    commandPaths: { libreoffice: "soffice" },
+  });
+
+  assert.deepEqual(calls, [
+    {
+      url: "http://agentpdf.test/v1/tools/office.workers.status/run",
+      body: {
+        feature_flags: { libreoffice: true, ocr: false },
+        command_paths: { libreoffice: "soffice" },
+      },
+    },
+  ]);
+  assert.equal(result.tool, "office.workers.status");
+  assert.equal(result.usage.summary.worker_count, 6);
+  assert.equal(result.usage.workers[0]?.status, "missing_dependency");
+});
+
+
+test("AgentPDFClient exposes deck presentation validation helper", async () => {
+  const calls: Array<{ url: string; body: unknown }> = [];
+  const validationResult: ToolResult = {
+    job_id: "job_deck_validation",
+    status: "succeeded",
+    tool: "deck.validation.presentation",
+    artifacts: [],
+    validation: { status: "warning", checks: [], warnings: [] },
+    warnings: ["Presentation has slides without speaker notes: 1."],
+    usage: {
+      summary: {
+        slide_count: 2,
+        missing_title_count: 0,
+        slide_without_notes_count: 1,
+      },
+    },
+    next_recommended_tools: ["deck.validation.contact_sheet"],
+    error: null,
+  };
+  const client = new AgentPDFClient({
+    baseUrl: "http://agentpdf.test",
+    fetch: async (input, init) => {
+      calls.push({ url: String(input), body: JSON.parse(String(init?.body)) });
+      return jsonResponse(validationResult);
+    },
+  });
+
+  const result = await client.deckValidatePresentation({ path: "board-review.pptx" });
+
+  assert.deepEqual(calls, [
+    {
+      url: "http://agentpdf.test/v1/tools/deck.validation.presentation/run",
+      body: { path: "board-review.pptx" },
+    },
+  ]);
+  assert.equal(result.tool, "deck.validation.presentation");
+  const usage = result.usage as { summary: { slide_count: number } };
+  assert.equal(usage.summary.slide_count, 2);
+});
+
+
+test("AgentPDFClient exposes word document validation helper", async () => {
+  const calls: Array<{ url: string; body: unknown }> = [];
+  const validationResult: ToolResult = {
+    job_id: "job_word_validation",
+    status: "succeeded",
+    tool: "word.validation.document",
+    artifacts: [],
+    validation: { status: "warning", checks: [], warnings: [] },
+    warnings: ["Document contains unresolved comments: 1."],
+    usage: {
+      summary: {
+        paragraph_count: 4,
+        comment_count: 1,
+        tracked_change_count: 1,
+      },
+    },
+    next_recommended_tools: ["word.inspect.document"],
+    error: null,
+  };
+  const client = new AgentPDFClient({
+    baseUrl: "http://agentpdf.test",
+    fetch: async (input, init) => {
+      calls.push({ url: String(input), body: JSON.parse(String(init?.body)) });
+      return jsonResponse(validationResult);
+    },
+  });
+
+  const result = await client.wordValidateDocument({ path: "memo.docx" });
+
+  assert.deepEqual(calls, [
+    {
+      url: "http://agentpdf.test/v1/tools/word.validation.document/run",
+      body: { path: "memo.docx" },
+    },
+  ]);
+  assert.equal(result.tool, "word.validation.document");
+  const usage = result.usage as { summary: { comment_count: number } };
+  assert.equal(usage.summary.comment_count, 1);
 });
 
 
@@ -152,7 +323,12 @@ test("AgentPDFClient exposes context ingest and packet helpers", async () => {
       return jsonResponse({
         job_id: "job_context",
         status: "succeeded",
-        tool: calls.length === 1 ? "pdf.context.ingest" : "pdf.context.packet",
+        tool:
+          calls.length === 1
+            ? "pdf.context.ingest"
+            : calls.length === 2
+              ? "pdf.context.packet"
+              : "pdf.context.web_capture",
         artifacts: [],
         validation: null,
         warnings: [],
@@ -173,10 +349,18 @@ test("AgentPDFClient exposes context ingest and packet helpers", async () => {
     title: "Agent Context",
     intent: "Compose a target PDF.",
   });
+  await client.contextWebCapture({
+    url: "OKPDF.dev/docs/context",
+    outputPath: "context-web.json",
+    label: "Context Docs",
+    contextItemId: "ctx_web",
+    maxBytes: 4096,
+  });
 
   assert.deepEqual(calls.map((call) => call.url), [
     "http://agentpdf.test/v1/tools/pdf.context.ingest/run",
     "http://agentpdf.test/v1/tools/pdf.context.packet/run",
+    "http://agentpdf.test/v1/tools/pdf.context.web_capture/run",
   ]);
   assert.deepEqual(calls[0]?.body, {
     context_item: { path: "src/service.ts", role: "code_evidence" },
@@ -187,6 +371,13 @@ test("AgentPDFClient exposes context ingest and packet helpers", async () => {
     output_path: "context.packet.json",
     title: "Agent Context",
     intent: "Compose a target PDF.",
+  });
+  assert.deepEqual(calls[2]?.body, {
+    url: "OKPDF.dev/docs/context",
+    output_path: "context-web.json",
+    label: "Context Docs",
+    context_item_id: "ctx_web",
+    max_bytes: 4096,
   });
 });
 
@@ -556,7 +747,11 @@ test("AgentPDFClient exposes conversion, PDF/A, and security helpers", async () 
   await client.subsetFonts({ inputPath: "report.pdf", outputPath: "report.subset.pdf" });
   await client.toPdfa({ inputPath: "report.pdf", outputPath: "report.pdfa.pdf", profile: "PDF/A-2b" });
   await client.htmlToPdf({ inputPath: "page.html", outputPath: "page.pdf" });
-  await client.renderHtmlPackage({ packagePath: "page.html-manifest.json", outputPath: "page.pdf" });
+  await client.renderHtmlPackage({
+    packagePath: "page.html-manifest.json",
+    outputPath: "page.pdf",
+    rendererBackend: "local_html_package_fallback",
+  });
   await client.urlToPdf({
     url: "https://example.com",
     outputPath: "url.pdf",
@@ -646,6 +841,7 @@ test("AgentPDFClient exposes conversion, PDF/A, and security helpers", async () 
   assert.deepEqual(calls[3]?.body, {
     package_path: "page.html-manifest.json",
     output_path: "page.pdf",
+    renderer_backend: "local_html_package_fallback",
   });
   assert.deepEqual(calls[4]?.body, {
     url: "https://example.com",
@@ -1259,8 +1455,19 @@ test("AgentPDFClient exposes authoring workflow helpers", async () => {
     htmlOutputPath: "createpdf.html",
     pdfOutputPath: "createpdf.pdf",
     artifactDir: "audit",
+    bundleOutputPath: "createpdf.agentpdf-bundle.zip",
+    rendererBackend: "local_html_package_fallback",
     expectedPageCount: 1,
     pages: "1",
+  });
+  await client.workflowCreatePdf({
+    contextPacketPath: "context.packet.json",
+    targetProfile: "technical_audit",
+    stylePack: "paper_ink",
+    htmlOutputPath: "context-createpdf.html",
+    pdfOutputPath: "context-createpdf.pdf",
+    artifactDir: "context-audit",
+    rendererBackend: "local_html_package_fallback",
   });
 
   assert.deepEqual(calls.map((call) => call.url), [
@@ -1276,6 +1483,7 @@ test("AgentPDFClient exposes authoring workflow helpers", async () => {
     "http://agentpdf.test/v1/tools/pdf.create.html_package/run",
     "http://agentpdf.test/v1/tools/pdf.qa.visual_report/run",
     "http://agentpdf.test/v1/tools/pdf.workflow.research_deck/run",
+    "http://agentpdf.test/v1/tools/pdf.workflow.createpdf/run",
     "http://agentpdf.test/v1/tools/pdf.workflow.createpdf/run",
   ]);
   assert.deepEqual(calls[0]?.body, { brief });
@@ -1303,9 +1511,163 @@ test("AgentPDFClient exposes authoring workflow helpers", async () => {
     html_output_path: "createpdf.html",
     pdf_output_path: "createpdf.pdf",
     artifact_dir: "audit",
+    bundle_output_path: "createpdf.agentpdf-bundle.zip",
+    renderer_backend: "local_html_package_fallback",
     expected_page_count: 1,
     pages: "1",
   });
+  assert.deepEqual(calls[13]?.body, {
+    context_packet_path: "context.packet.json",
+    target_profile: "technical_audit",
+    style_pack: "paper_ink",
+    html_output_path: "context-createpdf.html",
+    pdf_output_path: "context-createpdf.pdf",
+    artifact_dir: "context-audit",
+    renderer_backend: "local_html_package_fallback",
+  });
+});
+
+test("AgentPDFClient types workflowCreatePdf audit summary usage", async () => {
+  const client = new AgentPDFClient({
+    baseUrl: "http://agentpdf.test",
+    fetch: async () =>
+      jsonResponse({
+        job_id: "job_createpdf",
+        status: "succeeded",
+        tool: "pdf.workflow.createpdf",
+        artifacts: [],
+        validation: null,
+        warnings: [],
+        usage: {
+          createpdf: {
+            workflow_id: "createpdf_123",
+            mode: "html_first",
+            source_format: "raw_html",
+            html_output_path: "createpdf.html",
+            html_package_manifest_path: "createpdf.html-manifest.json",
+            pdf_output_path: "createpdf.pdf",
+            qa_report_path: "audit/createpdf.qa.json",
+            artifact_manifest_path: "audit/createpdf.artifact-manifest.json",
+            artifact_graph_path: "audit/createpdf.artifact-graph.json",
+            renderer_backend: {
+              backend_id: "local_html_package_fallback",
+              engine: "reportlab_text_fallback",
+              source: "agentpdf.conversion.local.html_to_pdf",
+              is_browser_renderer: false,
+              fallback: true,
+              fallback_reason: "browser_renderer_worker_unavailable",
+              layout_fidelity: "text_layout_approximation",
+              network: "blocked",
+              javascript: "blocked",
+              file_urls: "blocked",
+            },
+            render_skipped: false,
+            render_skip_reason: null,
+            html_render_profile_count: 1,
+            html_render_profile_refs: [
+              {
+                render_profile_id: "browser_print_a4_v0",
+                page_size: "A4",
+                prefer_css_page_size: true,
+              },
+            ],
+            artifact_graph_summary: {
+              html_render_profile_count: 1,
+              renderer_backend_count: 1,
+              html_layer_count: 0,
+              edge_count: 4,
+            },
+            renderer_backend_count: 1,
+            renderer_backend_refs: [
+              {
+                html_package_id: "htmlpkg_123",
+                backend_id: "local_html_package_fallback",
+                fallback: true,
+              },
+            ],
+            steps: [],
+          },
+        },
+        next_recommended_tools: [],
+        error: null,
+      }),
+  });
+
+  const result = await client.workflowCreatePdf({
+    html: "<main><h1>CreatePDF</h1></main>",
+    pdfOutputPath: "createpdf.pdf",
+  });
+
+  assert.equal(result.usage.createpdf.html_render_profile_count, 1);
+  assert.equal(result.usage.createpdf.html_render_profile_refs[0]?.render_profile_id, "browser_print_a4_v0");
+  assert.equal(result.usage.createpdf.artifact_graph_summary.html_render_profile_count, 1);
+  assert.equal(result.usage.createpdf.renderer_backend.backend_id, "local_html_package_fallback");
+  assert.equal(result.usage.createpdf.render_skipped, false);
+  assert.equal(result.usage.createpdf.renderer_backend_count, 1);
+  assert.equal(result.usage.createpdf.renderer_backend_refs[0]?.backend_id, "local_html_package_fallback");
+});
+
+test("AgentPDFClient types renderHtmlPackage backend usage", async () => {
+  let postedBody: unknown;
+  const client = new AgentPDFClient({
+    baseUrl: "http://agentpdf.test",
+    fetch: async (_input, init) => {
+      postedBody = JSON.parse(String(init?.body));
+      return jsonResponse({
+        job_id: "job_render_html_package",
+        status: "succeeded",
+        tool: "pdf.render.html_package",
+        artifacts: [],
+        validation: null,
+        warnings: [],
+        usage: {
+          renderer: "browser_chromium",
+          requested_renderer_backend: "browser_chromium",
+          renderer_backend: {
+            backend_id: "browser_chromium",
+            engine: "playwright_chromium",
+            source: "agentpdf.renderers.browser_worker",
+            is_browser_renderer: true,
+            fallback: false,
+            available: false,
+            missing_optional_dependency: "playwright",
+            install_extra: "browser-renderer",
+            layout_fidelity: "browser_print_unavailable",
+            network: "blocked",
+            javascript: "blocked",
+            file_urls: "blocked",
+          },
+          input: "page.html-manifest.json",
+          html_path: "page.html",
+          output: "page.pdf",
+          render_skipped: false,
+          render_skip_reason: null,
+          render_profile: { profile_id: "browser_print_a4_v0" },
+          renderer_constraints: { network: "blocked" },
+          html_package_manifest: { renderer_contract: "html-package-v0" },
+          html_package_validation: { status: "passed" },
+        },
+        next_recommended_tools: [],
+        error: null,
+      });
+    },
+  });
+
+  const result = await client.renderHtmlPackage({
+    packagePath: "page.html-manifest.json",
+    outputPath: "page.pdf",
+    rendererBackend: "browser_chromium",
+  });
+
+  assert.deepEqual(postedBody, {
+    package_path: "page.html-manifest.json",
+    output_path: "page.pdf",
+    renderer_backend: "browser_chromium",
+  });
+  assert.equal(result.usage.requested_renderer_backend, "browser_chromium");
+  assert.equal(result.usage.renderer_backend.missing_optional_dependency, "playwright");
+  assert.equal(result.usage.renderer_backend.is_browser_renderer, true);
+  assert.equal(result.usage.render_skipped, false);
 });
 
 test("AgentPDFClient exposes artifact bundle export helper", async () => {
@@ -1871,6 +2233,7 @@ test("AgentPDFClient exposes high-frequency PDF utility wrappers", async () => {
     outputPath: "technical-audit.patch.json",
     compositionPath: "technical-audit.composition.json",
     layerManifestPath: "technical-audit.layers.json",
+    artifactGraphPath: "technical-audit.artifact-graph.json",
     reason: "Append structured evidence.",
   });
   await client.patchPreview({
@@ -2123,6 +2486,7 @@ test("AgentPDFClient exposes high-frequency PDF utility wrappers", async () => {
     output_path: "technical-audit.patch.json",
     composition_path: "technical-audit.composition.json",
     layer_manifest_path: "technical-audit.layers.json",
+    artifact_graph_path: "technical-audit.artifact-graph.json",
     reason: "Append structured evidence.",
   });
   assert.deepEqual(calls[34]?.body, {

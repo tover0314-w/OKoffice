@@ -48,6 +48,11 @@
       "status": "beta"
     },
     {
+      "name": "office_workflow_docset_to_sheet",
+      "maps_to": "office.workflow.docset_to_sheet",
+      "status": "beta"
+    },
+    {
       "name": "office_workflow_extract_to_sheet",
       "maps_to": "office.workflow.extract_to_sheet",
       "status": "beta"
@@ -63,6 +68,16 @@
       "status": "beta"
     },
     {
+      "name": "office_workers_status",
+      "maps_to": "office.workers.status",
+      "status": "beta"
+    },
+    {
+      "name": "office_bundle_export",
+      "maps_to": "office.bundle.export",
+      "status": "beta"
+    },
+    {
       "name": "office_bundle_verify",
       "maps_to": "office.bundle.verify",
       "status": "beta"
@@ -70,6 +85,26 @@
     {
       "name": "word_inspect_document",
       "maps_to": "word.inspect.document",
+      "status": "beta"
+    },
+    {
+      "name": "word_validate_document",
+      "maps_to": "word.validation.document",
+      "status": "beta"
+    },
+    {
+      "name": "word_create_report",
+      "maps_to": "word.create.report",
+      "status": "beta"
+    },
+    {
+      "name": "word_patch_plan",
+      "maps_to": "word.patch.plan",
+      "status": "beta"
+    },
+    {
+      "name": "word_patch_apply",
+      "maps_to": "word.patch.apply",
       "status": "beta"
     },
     {
@@ -130,6 +165,21 @@
     {
       "name": "deck_create_from_outline",
       "maps_to": "deck.create.from_outline",
+      "status": "beta"
+    },
+    {
+      "name": "deck_create_presentation",
+      "maps_to": "deck.create.presentation",
+      "status": "beta"
+    },
+    {
+      "name": "deck_patch_apply",
+      "maps_to": "deck.patch.apply",
+      "status": "beta"
+    },
+    {
+      "name": "deck_validate_contact_sheet",
+      "maps_to": "deck.validation.contact_sheet",
       "status": "beta"
     },
     {
@@ -240,6 +290,11 @@
     {
       "name": "pdf_context_packet",
       "maps_to": "pdf.context.packet",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_context_web_capture",
+      "maps_to": "pdf.context.web_capture",
       "status": "beta"
     },
     {

@@ -1,0 +1,63 @@
+{
+  "source_graph_id": "sg_okoffice_demo",
+  "nodes": [
+    {
+      "source_id": "src_docx_001_p_012",
+      "source_type": "word_paragraph",
+      "parent_source_id": "src_docx_001",
+      "locator": {
+        "kind": "word",
+        "section": 1,
+        "paragraph_id": "p_0012",
+        "paragraph_index": 12
+      },
+      "text": "Renewal risk is concentrated in enterprise accounts.",
+      "confidence": 0.93
+    },
+    {
+      "source_id": "src_xlsx_001_range_revenue",
+      "source_type": "sheet_range",
+      "parent_source_id": "src_xlsx_001",
+      "locator": {
+        "kind": "sheet",
+        "sheet": "Revenue",
+        "range": "B4:F18",
+        "row": 8,
+        "column": "D"
+      },
+      "confidence": 1.0
+    },
+    {
+      "source_id": "src_pptx_001_shape_12",
+      "source_type": "shape",
+      "parent_source_id": "src_pptx_001_slide_007",
+      "locator": {
+        "kind": "deck",
+        "slide": 7,
+        "shape_id": "shape_12",
+        "bbox": [1.5, 4.0, 14.2, 6.8],
+        "unit": "cm"
+      }
+    },
+    {
+      "source_id": "src_pdf_001_page_005_bbox",
+      "source_type": "pdf_block",
+      "parent_source_id": "src_pdf_001_page_005",
+      "locator": {
+        "kind": "pdf",
+        "page": 5,
+        "bbox": [72, 144, 520, 210]
+      },
+      "confidence": 0.88
+    }
+  ],
+  "edges": [
+    {
+      "edge_id": "edge_docx_to_sheet",
+      "from_source_id": "src_docx_001_p_012",
+      "to_source_id": "src_xlsx_001_range_revenue",
+      "relation": "derived_from",
+      "confidence": 0.72
+    }
+  ]
+}

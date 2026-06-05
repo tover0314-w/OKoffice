@@ -1,7 +1,7 @@
 {
   "mcpServers": {
-    "agentpdf": {
-      "command": "okpdf",
+    "okoffice": {
+      "command": "okoffice",
       "args": [
         "serve",
         "--mcp",

@@ -1,0 +1,2 @@
+00:00 Kickoff
+00:12 Decision: keep the local worker boundary explicit.

@@ -91,6 +91,7 @@ def ingest_context_item(
         "context_item_version": "0.1",
         "context_item": item,
         "source_graph_node": source_graph_node,
+        "source_graph": source_graph,
     }
 
     artifacts = []
@@ -113,9 +114,10 @@ def ingest_context_item(
             "source_graph_node": source_graph_node,
             "source_graph": {
                 "source_graph_id": source_graph["source_graph_id"],
-                "node_count": 1,
-                "edge_count": 0,
+                "node_count": len(source_graph["nodes"]),
+                "edge_count": len(source_graph["edges"]),
                 "nodes": source_graph["nodes"],
+                "edges": source_graph["edges"],
             },
         },
         next_recommended_tools=["pdf.context.packet", "pdf.context.build_packet", "pdf.compose.from_context"],
@@ -254,6 +256,7 @@ def _build_context_packet(
                 "node_count": len(source_graph["nodes"]),
                 "edge_count": len(source_graph["edges"]),
                 "nodes": source_graph["nodes"],
+                "edges": source_graph["edges"],
             },
         },
         next_recommended_tools=["pdf.compose.from_context"],
@@ -266,6 +269,7 @@ def _context_item_result(
     output_path: str | Path | None,
     next_recommended_tools: list[str],
     extra_usage: dict[str, Any] | None = None,
+    warnings: list[str] | None = None,
 ) -> ToolResult:
     source_graph = _build_source_graph([item])
     source_graph_node = source_graph["nodes"][0]
@@ -273,6 +277,7 @@ def _context_item_result(
         "context_item_version": "0.1",
         "context_item": item,
         "source_graph_node": source_graph_node,
+        "source_graph": source_graph,
     }
 
     artifacts = []
@@ -289,9 +294,10 @@ def _context_item_result(
         "source_graph_node": source_graph_node,
         "source_graph": {
             "source_graph_id": source_graph["source_graph_id"],
-            "node_count": 1,
-            "edge_count": 0,
+            "node_count": len(source_graph["nodes"]),
+            "edge_count": len(source_graph["edges"]),
             "nodes": source_graph["nodes"],
+            "edges": source_graph["edges"],
         },
     }
     if extra_usage:
@@ -302,7 +308,7 @@ def _context_item_result(
         status="succeeded",
         tool=tool,
         artifacts=artifacts,
-        warnings=_packet_warnings([item]),
+        warnings=[*_packet_warnings([item]), *(warnings or [])],
         usage=usage,
         next_recommended_tools=next_recommended_tools,
     )
@@ -637,13 +643,20 @@ def _file_metadata(path: Path, item_type: str, raw: dict[str, Any] | None = None
     if item_type in {"audio", "video", "media"}:
         metadata["media_kind"] = item_type
         duration_seconds = _duration_seconds(raw or {})
-        transcript = _transcript_text(raw or {})
+        transcript = _transcript_payload(raw or {})
         chapters = _normalize_timed_markers((raw or {}).get("chapters"))
         keyframes = _normalize_timed_markers((raw or {}).get("keyframes"))
         if duration_seconds is not None:
             metadata["duration_seconds"] = duration_seconds
-        if transcript:
-            metadata["transcript_char_count"] = len(transcript)
+        if transcript["text"]:
+            metadata["transcript_char_count"] = len(transcript["text"])
+            metadata["transcript_source"] = transcript["source"]
+            if transcript["path"]:
+                metadata["transcript_source_path"] = transcript["path"]
+            if transcript["sha256"]:
+                metadata["transcript_sha256"] = transcript["sha256"]
+            if transcript["size_bytes"] is not None:
+                metadata["transcript_size_bytes"] = transcript["size_bytes"]
         if chapters:
             metadata["chapter_count"] = len(chapters)
         if keyframes:
@@ -695,15 +708,19 @@ def _file_content_preview(path: Path, item_type: str, raw: dict[str, Any] | None
                 "mime_type": mimetypes.guess_type(path.name)[0] or "application/octet-stream",
             }
         }
-        transcript = _transcript_text(raw)
+        transcript = _transcript_payload(raw)
         chapters = _normalize_timed_markers(raw.get("chapters"))
         keyframes = _normalize_timed_markers(raw.get("keyframes"))
-        if transcript:
+        if transcript["text"]:
             content["transcript"] = {
-                "text": transcript[:6000],
-                "char_count": len(transcript),
-                "source": str(raw.get("transcript_source") or "provided"),
+                "text": transcript["text"][:6000],
+                "char_count": len(transcript["text"]),
+                "source": transcript["source"],
             }
+            if transcript["path"]:
+                content["transcript"]["path"] = transcript["path"]
+            if transcript["sha256"]:
+                content["transcript"]["sha256"] = transcript["sha256"]
         if chapters:
             content["chapters"] = chapters
         if keyframes:
@@ -724,17 +741,40 @@ def _duration_seconds(raw: dict[str, Any]) -> float | None:
 
 
 def _transcript_text(raw: dict[str, Any]) -> str:
+    return _transcript_payload(raw)["text"]
+
+
+def _transcript_payload(raw: dict[str, Any]) -> dict[str, Any]:
     transcript = raw.get("transcript") or raw.get("transcript_text")
     if isinstance(transcript, dict):
-        return str(transcript.get("text") or "").strip()
+        return {
+            "text": str(transcript.get("text") or "").strip(),
+            "source": str(transcript.get("source") or raw.get("transcript_source") or "provided"),
+            "path": str(transcript.get("path") or "") or None,
+            "sha256": str(transcript.get("sha256") or "") or None,
+            "size_bytes": transcript.get("size_bytes") if isinstance(transcript.get("size_bytes"), int) else None,
+        }
     if transcript is not None:
-        return str(transcript).strip()
+        return {
+            "text": str(transcript).strip(),
+            "source": str(raw.get("transcript_source") or "provided"),
+            "path": None,
+            "sha256": None,
+            "size_bytes": None,
+        }
     transcript_path = raw.get("transcript_path")
     if transcript_path:
         path = Path(str(transcript_path)).resolve()
         if path.exists():
-            return _read_text_preview(path, max_chars=12000).strip()
-    return ""
+            data = path.read_bytes()
+            return {
+                "text": _read_text_preview(path, max_chars=12000).strip(),
+                "source": "sidecar_file",
+                "path": path.as_posix(),
+                "sha256": hashlib.sha256(data).hexdigest(),
+                "size_bytes": len(data),
+            }
+    return {"text": "", "source": "none", "path": None, "sha256": None, "size_bytes": None}
 
 
 def _normalize_timed_markers(value: Any) -> list[dict[str, Any]]:
@@ -1297,11 +1337,13 @@ def _read_text(path: Path) -> str:
 
 def _build_source_graph(items: list[dict[str, Any]]) -> dict[str, Any]:
     nodes = []
+    edges = []
     for item in items:
         metadata = item.get("metadata", {})
+        item_node_id = f"src_{len(nodes) + 1:03d}"
         nodes.append(
             {
-                "node_id": f"src_{len(nodes) + 1:03d}",
+                "node_id": item_node_id,
                 "context_item_id": item["context_item_id"],
                 "source_ref": item["source_ref"],
                 "type": item["type"],
@@ -1333,6 +1375,10 @@ def _build_source_graph(items: list[dict[str, Any]]) -> dict[str, Any]:
                         "data_profile_evidence",
                         "duration_seconds",
                         "transcript_char_count",
+                        "transcript_source",
+                        "transcript_source_path",
+                        "transcript_sha256",
+                        "transcript_size_bytes",
                         "chapter_count",
                         "keyframe_count",
                         "media_kind",
@@ -1340,11 +1386,44 @@ def _build_source_graph(items: list[dict[str, Any]]) -> dict[str, Any]:
                 },
             }
         )
+        transcript_path = metadata.get("transcript_source_path")
+        transcript_sha256 = metadata.get("transcript_sha256")
+        if transcript_path and transcript_sha256:
+            transcript_node_id = f"src_{len(nodes) + 1:03d}"
+            transcript_source_ref = f"{item['source_ref']}#transcript"
+            nodes.append(
+                {
+                    "node_id": transcript_node_id,
+                    "context_item_id": item["context_item_id"],
+                    "source_ref": transcript_source_ref,
+                    "type": "transcript",
+                    "role": "transcript_sidecar",
+                    "label": f"{item['label']} Transcript",
+                    "uri": str(transcript_path),
+                    "evidence": {
+                        "path": str(transcript_path),
+                        "sha256": str(transcript_sha256),
+                        "size_bytes": metadata.get("transcript_size_bytes"),
+                        "transcript_char_count": metadata.get("transcript_char_count"),
+                        "transcript_source": metadata.get("transcript_source"),
+                    },
+                }
+            )
+            edges.append(
+                {
+                    "from_node_id": transcript_node_id,
+                    "to_node_id": item_node_id,
+                    "relation": "provides_transcript_for",
+                    "context_item_id": item["context_item_id"],
+                    "source_ref": item["source_ref"],
+                    "sidecar_source_ref": transcript_source_ref,
+                }
+            )
     return {
         "source_graph_version": "0.1",
         "source_graph_id": f"srcgraph_{uuid4().hex[:16]}",
         "nodes": nodes,
-        "edges": [],
+        "edges": edges,
     }
 
 
@@ -1353,9 +1432,26 @@ def _packet_warnings(items: list[dict[str, Any]]) -> list[str]:
     media_count = sum(1 for item in items if item["type"] in {"audio", "video", "media"})
     if media_count:
         warnings.append("Media context uses provided transcript")
-    web_count = sum(1 for item in items if item["type"] == "web_link")
-    if web_count:
+    web_items = [item for item in items if item["type"] == "web_link"]
+    not_fetched_count = sum(
+        1
+        for item in web_items
+        if (
+            item.get("metadata", {})
+            .get("citation_evidence", {})
+            .get("fetch_status", "not_fetched")
+            == "not_fetched"
+        )
+    )
+    fetched_count = sum(
+        1
+        for item in web_items
+        if item.get("metadata", {}).get("citation_evidence", {}).get("fetch_status") == "fetched"
+    )
+    if not_fetched_count:
         warnings.append("Web links are recorded as source refs; local fetching is not enabled by default.")
+    if fetched_count:
+        warnings.append("Web links were fetched locally with SSRF guards and byte limits.")
     return warnings
 
 

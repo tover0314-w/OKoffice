@@ -163,8 +163,8 @@ okoffice tools list --json
 okoffice inspect tests/fixtures/simple_report.docx --json
 okoffice inspect tests/fixtures/simple_table.xlsx --json
 okoffice inspect tests/fixtures/simple_deck.pptx --json
-okoffice workflow docset-to-sheet tests/fixtures/simple_report.docx tests/fixtures/simple_text.pdf -o .okoffice-out/evidence.xlsx --json
-okoffice workflow sheet-to-deck .okoffice-out/evidence.xlsx -o .okoffice-out/deck.pptx --json
+okoffice workflow docset-to-sheet --file tests/fixtures/simple_report.docx --file tests/fixtures/simple_text.pdf --schema examples/schemas/kpi-review.json -o .okoffice-out/evidence.xlsx --json
+okoffice workflow sheet-to-deck --workbook .okoffice-out/evidence.xlsx -o .okoffice-out/deck.pptx --json
 okoffice bundle verify .okoffice-out/board-pack.okoffice.zip --json
 ```
 

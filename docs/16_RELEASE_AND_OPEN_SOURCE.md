@@ -60,7 +60,7 @@ Add:
 - `office.workflow.docset_to_sheet`.
 - `office.workflow.sheet_to_deck`.
 - `word.create.document` baseline.
-- `sheet.create.workbook` baseline.
+- `sheet.write.workbook` baseline.
 - `deck.create.presentation` baseline.
 - `office.bundle.export`.
 - `office.bundle.verify`.

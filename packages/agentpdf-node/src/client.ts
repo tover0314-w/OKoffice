@@ -19,6 +19,7 @@ import type {
   ContextImageAnalyzeInput,
   ContextPacketInput,
   ContextPacketReportInput,
+  ContextWebCaptureInput,
   CreateAgentInput,
   CreateHtmlPackageInput,
   DesignTokensInput,
@@ -29,6 +30,7 @@ import type {
   CreateTemplatePacksInput,
   CreateTextPdfInput,
   DataProfileInput,
+  DeckValidatePresentationInput,
   EvidenceCoverageReportInput,
   EvidenceCiteClaimsInput,
   EvidenceMapSourcesInput,
@@ -61,6 +63,8 @@ import type {
   OcrSearchablePdfInput,
   OcrScanToPdfInput,
   OfficeToPdfInput,
+  OfficeWorkersStatusInput,
+  OfficeWorkersStatusUsage,
   OptimizePdfInput,
   MarkBboxInput,
   PageNumbersInput,
@@ -69,6 +73,7 @@ import type {
   PagesWriteInput,
   PlanTemplatePackInput,
   RenderHtmlPackageInput,
+  RenderHtmlPackageUsage,
   PatchApplyInput,
   PatchPlanInput,
   PatchPreviewInput,
@@ -123,7 +128,9 @@ import type {
   VisualDiffInput,
   VerifyBundleInput,
   WatermarkInput,
+  WordValidateDocumentInput,
   WorkflowCreatePdfInput,
+  WorkflowCreatePdfToolUsage,
   WorkflowPlanInput,
   WorkflowResearchDeckInput,
   WorkflowReportInput,
@@ -183,6 +190,27 @@ export class AgentPDFClient {
       `/v1/tools/${encodeURIComponent(toolName)}/run`,
       payload,
     );
+  }
+
+  async officeWorkersStatus(
+    input: OfficeWorkersStatusInput = {},
+  ): Promise<ToolResult<OfficeWorkersStatusUsage>> {
+    return this.runTool("office.workers.status", {
+      ...(input.featureFlags ? { feature_flags: input.featureFlags } : {}),
+      ...(input.commandPaths ? { command_paths: input.commandPaths } : {}),
+    });
+  }
+
+  async deckValidatePresentation(input: DeckValidatePresentationInput): Promise<ToolResult> {
+    return this.runTool("deck.validation.presentation", {
+      path: input.path,
+    });
+  }
+
+  async wordValidateDocument(input: WordValidateDocumentInput): Promise<ToolResult> {
+    return this.runTool("word.validation.document", {
+      path: input.path,
+    });
   }
 
   async inspectDocument(input: InspectDocumentInput): Promise<ToolResult> {
@@ -265,15 +293,21 @@ export class AgentPDFClient {
     });
   }
 
-  async workflowCreatePdf(input: WorkflowCreatePdfInput): Promise<ToolResult> {
-    return this.runTool("pdf.workflow.createpdf", {
+  async workflowCreatePdf(input: WorkflowCreatePdfInput): Promise<ToolResult<WorkflowCreatePdfToolUsage>> {
+    return this.runTool<WorkflowCreatePdfToolUsage>("pdf.workflow.createpdf", {
       pdf_output_path: input.pdfOutputPath,
       ...(input.htmlOutputPath ? { html_output_path: input.htmlOutputPath } : {}),
       ...(input.html ? { html: input.html } : {}),
       ...(input.htmlPath ? { html_path: input.htmlPath } : {}),
       ...(input.pageDocument ? { page_document: input.pageDocument } : {}),
+      ...(input.contextPacket ? { context_packet: input.contextPacket } : {}),
+      ...(input.contextPacketPath ? { context_packet_path: input.contextPacketPath } : {}),
+      ...(input.targetProfile ? { target_profile: input.targetProfile } : {}),
+      ...(input.stylePack ? { style_pack: input.stylePack } : {}),
       ...(input.title ? { title: input.title } : {}),
       ...(input.artifactDir ? { artifact_dir: input.artifactDir } : {}),
+      ...(input.bundleOutputPath ? { bundle_output_path: input.bundleOutputPath } : {}),
+      ...(input.rendererBackend ? { renderer_backend: input.rendererBackend } : {}),
       ...(input.expectedPageCount !== undefined ? { expected_page_count: input.expectedPageCount } : {}),
       ...(input.pages ? { pages: input.pages } : {}),
     });
@@ -379,6 +413,19 @@ export class AgentPDFClient {
     return this.runTool("pdf.context.ingest", {
       context_item: input.contextItem,
       ...(input.outputPath ? { output_path: input.outputPath } : {}),
+    });
+  }
+
+  async contextWebCapture(input: ContextWebCaptureInput): Promise<ToolResult> {
+    return this.runTool("pdf.context.web_capture", {
+      url: input.url,
+      ...(input.outputPath ? { output_path: input.outputPath } : {}),
+      ...(input.label ? { label: input.label } : {}),
+      ...(input.role ? { role: input.role } : {}),
+      ...(input.contextItemId ? { context_item_id: input.contextItemId } : {}),
+      ...(input.maxBytes !== undefined ? { max_bytes: input.maxBytes } : {}),
+      ...(input.timeoutSeconds !== undefined ? { timeout_seconds: input.timeoutSeconds } : {}),
+      ...(input.allowPrivateHosts !== undefined ? { allow_private_hosts: input.allowPrivateHosts } : {}),
     });
   }
 
@@ -655,6 +702,7 @@ export class AgentPDFClient {
       output_path: input.outputPath,
       ...(input.compositionPath ? { composition_path: input.compositionPath } : {}),
       ...(input.layerManifestPath ? { layer_manifest_path: input.layerManifestPath } : {}),
+      ...(input.artifactGraphPath ? { artifact_graph_path: input.artifactGraphPath } : {}),
       ...(input.reason ? { reason: input.reason } : {}),
     });
   }
@@ -773,10 +821,11 @@ export class AgentPDFClient {
     });
   }
 
-  async renderHtmlPackage(input: RenderHtmlPackageInput): Promise<ToolResult> {
+  async renderHtmlPackage(input: RenderHtmlPackageInput): Promise<ToolResult<RenderHtmlPackageUsage>> {
     return this.runTool("pdf.render.html_package", {
       package_path: input.packagePath,
       output_path: input.outputPath,
+      ...(input.rendererBackend ? { renderer_backend: input.rendererBackend } : {}),
     });
   }
 

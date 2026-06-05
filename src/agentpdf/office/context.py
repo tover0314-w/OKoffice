@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import json
+import zipfile
 from datetime import UTC, datetime
 from pathlib import Path
+from pathlib import PurePosixPath
 from typing import Any
+from xml.etree import ElementTree
 from uuid import uuid4
 
 from agentpdf.artifacts.store import build_artifact
@@ -72,6 +75,7 @@ def build_office_context_packet(
         "nodes": source_nodes,
         "edges": source_edges,
     }
+    _finalize_source_graph(source_graph)
     packet = {
         "product": "okoffice",
         "context_packet_version": "0.1",
@@ -80,7 +84,11 @@ def build_office_context_packet(
         "intent": (intent or "").strip(),
         "created_at": datetime.now(UTC).isoformat(),
         "items": items,
-        "source_graph": source_graph,
+        "source_graph": {
+            **source_graph,
+            "node_count": len(source_nodes),
+            "edge_count": len(source_edges),
+        },
     }
 
     artifacts = []
@@ -145,6 +153,7 @@ def build_office_context_packet(
                 "node_count": len(source_nodes),
                 "edge_count": len(source_edges),
                 "nodes": source_nodes,
+                "edges": source_edges,
             },
             "sources": sources,
         },
@@ -155,6 +164,58 @@ def build_office_context_packet(
             "office.workflow.sheet_to_deck",
         ],
     )
+
+
+def _finalize_source_graph(source_graph: dict[str, Any]) -> None:
+    for node in source_graph.get("nodes", []):
+        if not isinstance(node, dict):
+            continue
+        node_type = str(node.get("type") or "")
+        node.setdefault("source_type", _compact_source_type(node_type))
+        locators = node.get("locators")
+        if "locator" not in node and isinstance(locators, list) and locators and isinstance(locators[0], dict):
+            node["locator"] = locators[0]
+        if "text" not in node:
+            node["text"] = _node_text(node)
+    for edge in source_graph.get("edges", []):
+        if not isinstance(edge, dict):
+            continue
+        relationship = str(edge.get("relationship") or "contains")
+        edge.setdefault("relation", "contains" if relationship.startswith("contains") else relationship)
+
+
+def _compact_source_type(node_type: str) -> str:
+    mapping = {
+        "file": "file",
+        "word.document": "document",
+        "word.paragraph": "word_paragraph",
+        "word.table": "table",
+        "sheet.workbook": "workbook",
+        "sheet.sheet": "sheet",
+        "sheet.table": "table",
+        "sheet.chart": "chart",
+        "sheet.formula_summary": "formula",
+        "deck.presentation": "deck",
+        "deck.slide": "slide",
+        "deck.shape": "shape",
+        "deck.speaker_note": "speaker_note",
+        "pdf.document": "pdf",
+    }
+    return mapping.get(node_type, node_type.rsplit(".", 1)[-1] if "." in node_type else node_type)
+
+
+def _node_text(node: dict[str, Any]) -> str:
+    for key in ("label", "evidence_text"):
+        value = str(node.get(key) or "").strip()
+        if value:
+            return value
+    evidence = node.get("evidence")
+    if isinstance(evidence, dict):
+        for key in ("text", "summary", "excerpt"):
+            value = str(evidence.get(key) or "").strip()
+            if value:
+                return value
+    return ""
 
 
 def _context_item_from_inspect(
@@ -276,6 +337,36 @@ def _word_source_nodes(
         tables = [table for table in table_result.usage.get("tables", []) if isinstance(table, dict)]
 
     structure = inspect_result.usage.get("structure", {})
+    paragraphs = [paragraph for paragraph in inspect_result.usage.get("paragraphs", []) if isinstance(paragraph, dict)]
+    for paragraph in paragraphs:
+        paragraph_index = int(paragraph.get("paragraph_index", len(nodes)))
+        text = str(paragraph.get("text") or "").strip()
+        if not text:
+            continue
+        locator = paragraph.get("locator") if isinstance(paragraph.get("locator"), dict) else {
+            "kind": "word",
+            "path": path.as_posix(),
+            "paragraph_index": paragraph_index,
+        }
+        nodes.append(
+            {
+                "node_id": f"src_{index:03d}_word_paragraph_{paragraph_index + 1}",
+                "context_item_id": str(native_node["context_item_id"]),
+                "source_ref": f"{native_node['source_ref']}:paragraph:{paragraph_index + 1}",
+                "type": "word.paragraph",
+                "role": "paragraph",
+                "label": f"{path.name} paragraph {paragraph_index + 1}",
+                "uri": path.as_posix(),
+                "locators": [locator],
+                "text": text,
+                "evidence": {
+                    "text": text,
+                    "style": paragraph.get("style"),
+                    "paragraph_id": paragraph.get("paragraph_id"),
+                    "document_structure": structure,
+                },
+            }
+        )
     for table in tables:
         table_index = int(table.get("table_index", len(nodes) + 1))
         row_count = len(table.get("rows", [])) if isinstance(table.get("rows"), list) else 0
@@ -378,7 +469,25 @@ def _sheet_source_nodes(
             }
         )
 
-    formula_count = int(inspect_result.usage.get("formulas", {}).get("formula_count", 0))
+    charts = [chart for chart in inspect_result.usage.get("charts", []) if isinstance(chart, dict)]
+    for chart_index, chart in enumerate(charts, start=1):
+        locator = chart.get("locator") if isinstance(chart.get("locator"), dict) else {}
+        nodes.append(
+            {
+                "node_id": f"src_{index:03d}_sheet_chart_{chart_index}",
+                "context_item_id": str(native_node["context_item_id"]),
+                "source_ref": f"{native_node['source_ref']}:chart:{chart_index}",
+                "type": "sheet.chart",
+                "role": "chart",
+                "label": str(chart.get("title") or chart.get("chart_id") or f"{path.name} chart {chart_index}"),
+                "uri": path.as_posix(),
+                "locators": [locator or {"kind": "sheet", "path": path.as_posix()}],
+                "evidence": chart,
+            }
+        )
+
+    formula_usage = inspect_result.usage.get("formulas", [])
+    formula_count = len(formula_usage) if isinstance(formula_usage, list) else int(formula_usage.get("formula_count", 0))
     if formula_count:
         nodes.append(
             {
@@ -408,32 +517,144 @@ def _deck_source_nodes(
     presentation = inspect_result.usage.get("presentation", {})
     slide_count = int(presentation.get("slide_count", 0))
     text_run_count = int(presentation.get("text_run_count", 0))
-    nodes = [
-        {
-            "node_id": f"src_{index:03d}_deck_slide_{slide_index}",
-            "context_item_id": str(native_node["context_item_id"]),
-            "source_ref": f"{native_node['source_ref']}:slide:{slide_index}",
-            "type": "deck.slide",
-            "role": "slide",
-            "label": f"{path.name} slide {slide_index}",
-            "uri": path.as_posix(),
-            "locators": [
-                {
-                    "kind": "deck_slide",
-                    "path": path.as_posix(),
+    slide_texts, note_texts = _deck_text_parts(path)
+    nodes: list[dict[str, Any]] = []
+    for slide_index in range(1, slide_count + 1):
+        slide_part = f"ppt/slides/slide{slide_index}.xml"
+        slide_text = slide_texts.get(slide_part, "")
+        nodes.append(
+            {
+                "node_id": f"src_{index:03d}_deck_slide_{slide_index}",
+                "context_item_id": str(native_node["context_item_id"]),
+                "source_ref": f"{native_node['source_ref']}:slide:{slide_index}",
+                "type": "deck.slide",
+                "role": "slide",
+                "label": f"{path.name} slide {slide_index}",
+                "uri": path.as_posix(),
+                "locators": [
+                    {
+                        "kind": "deck_slide",
+                        "path": path.as_posix(),
+                        "slide_index": slide_index,
+                        "package_part": slide_part,
+                    }
+                ],
+                "text": slide_text,
+                "evidence": {
                     "slide_index": slide_index,
-                    "package_part": f"ppt/slides/slide{slide_index}.xml",
+                    "package_part": slide_part,
+                    "presentation_text_run_count": text_run_count,
+                },
+            }
+        )
+        if slide_text:
+            nodes.append(
+                {
+                    "node_id": f"src_{index:03d}_deck_slide_{slide_index}_shape_1",
+                    "context_item_id": str(native_node["context_item_id"]),
+                    "source_ref": f"{native_node['source_ref']}:slide:{slide_index}:shape:1",
+                    "type": "deck.shape",
+                    "role": "shape_text",
+                    "label": f"{path.name} slide {slide_index} text",
+                    "uri": path.as_posix(),
+                    "locators": [
+                        {
+                            "kind": "deck_shape",
+                            "path": path.as_posix(),
+                            "slide_index": slide_index,
+                            "shape_index": 1,
+                            "package_part": slide_part,
+                        }
+                    ],
+                    "text": slide_text,
+                    "evidence": {"text": slide_text},
                 }
-            ],
-            "evidence": {
-                "slide_index": slide_index,
-                "package_part": f"ppt/slides/slide{slide_index}.xml",
-                "presentation_text_run_count": text_run_count,
-            },
-        }
-        for slide_index in range(1, slide_count + 1)
-    ]
+            )
+        note_text = note_texts.get(slide_index, "")
+        if note_text:
+            nodes.append(
+                {
+                    "node_id": f"src_{index:03d}_deck_slide_{slide_index}_speaker_note",
+                    "context_item_id": str(native_node["context_item_id"]),
+                    "source_ref": f"{native_node['source_ref']}:slide:{slide_index}:speaker_note",
+                    "type": "deck.speaker_note",
+                    "role": "speaker_note",
+                    "label": f"{path.name} slide {slide_index} speaker notes",
+                    "uri": path.as_posix(),
+                    "locators": [
+                        {
+                            "kind": "deck_notes",
+                            "path": path.as_posix(),
+                            "slide_index": slide_index,
+                            "package_part": f"ppt/notesSlides/notesSlide{slide_index - 1}.xml",
+                        }
+                    ],
+                    "text": note_text,
+                    "evidence": {"text": note_text},
+                }
+            )
     return nodes, _contains_edges(native_node, nodes), []
+
+
+def _deck_text_parts(path: Path) -> tuple[dict[str, str], dict[int, str]]:
+    slide_texts: dict[str, str] = {}
+    note_texts: dict[int, str] = {}
+    try:
+        with zipfile.ZipFile(path) as archive:
+            names = {name.replace("\\", "/") for name in archive.namelist()}
+            slide_members = sorted(
+                [name for name in names if name.startswith("ppt/slides/slide") and name.endswith(".xml")],
+                key=_deck_part_index,
+            )
+            for slide_index, slide_part in enumerate(slide_members, start=1):
+                slide_texts[slide_part] = _ooxml_text(archive.read(slide_part))
+                rels_part = _deck_rels_part(slide_part)
+                if rels_part not in names:
+                    continue
+                rels_root = ElementTree.fromstring(archive.read(rels_part))
+                for relationship in rels_root:
+                    rel_type = str(relationship.attrib.get("Type") or "")
+                    if not rel_type.endswith("/notesSlide"):
+                        continue
+                    target = _deck_resolve_target(slide_part, str(relationship.attrib.get("Target") or ""))
+                    if target in names:
+                        note_texts[slide_index] = _ooxml_text(archive.read(target))
+    except (OSError, zipfile.BadZipFile, ElementTree.ParseError):
+        return slide_texts, note_texts
+    return slide_texts, note_texts
+
+
+def _ooxml_text(data: bytes) -> str:
+    root = ElementTree.fromstring(data)
+    values = [node.text or "" for node in root.iter() if str(node.tag).endswith("}t")]
+    return "\n".join(value for value in values if value).strip()
+
+
+def _deck_rels_part(part: str) -> str:
+    path = PurePosixPath(part)
+    return str(path.parent / "_rels" / f"{path.name}.rels")
+
+
+def _deck_resolve_target(source_part: str, target: str) -> str:
+    if target.startswith("/"):
+        return target.lstrip("/")
+    path = PurePosixPath(source_part).parent / target
+    parts: list[str] = []
+    for part in path.parts:
+        if part in {"", "."}:
+            continue
+        if part == "..":
+            if parts:
+                parts.pop()
+        else:
+            parts.append(part)
+    return "/".join(parts)
+
+
+def _deck_part_index(part: str) -> int:
+    stem = PurePosixPath(part).stem
+    digits = "".join(char for char in stem if char.isdigit())
+    return int(digits or "0")
 
 
 def _contains_edges(parent_node: dict[str, Any], child_nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:

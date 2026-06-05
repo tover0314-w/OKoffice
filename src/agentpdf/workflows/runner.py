@@ -11,16 +11,23 @@ from agentpdf.schemas.models import AgentPDFError, Artifact, ToolResult
 SUPPORTED_LOCAL_WORKFLOW_TOOLS = {
     "deck.compose.plan",
     "deck.create.from_outline",
+    "deck.create.presentation",
     "deck.inspect.presentation",
+    "deck.patch.apply",
+    "deck.validation.contact_sheet",
+    "deck.validation.presentation",
     "deck.validate.presentation",
+    "office.bundle.export",
     "office.bundle.verify",
     "office.context.build_packet",
     "office.extract.schema",
     "office.inspect.file",
     "office.validation.package",
     "office.workflow.board_pack",
+    "office.workflow.docset_to_sheet",
     "office.workflow.extract_to_sheet",
     "office.workflow.sheet_to_deck",
+    "office.workers.status",
     "pdf.inspect.document",
     "pdf.inspect.pages",
     "pdf.organize.merge",
@@ -76,8 +83,12 @@ SUPPORTED_LOCAL_WORKFLOW_TOOLS = {
     "sheet.validate.workbook",
     "sheet.validation.formulas",
     "sheet.write.workbook",
+    "word.create.report",
     "word.extract.tables",
     "word.inspect.document",
+    "word.patch.apply",
+    "word.patch.plan",
+    "word.validation.document",
 }
 
 
@@ -394,6 +405,17 @@ def _run_local_step(tool: str, payload: dict[str, Any]) -> ToolResult:
         )
     if tool == "office.validation.package":
         return runner.run_office_validation_package(payload.get("path", payload.get("input_path", "")))
+    if tool == "office.workflow.docset_to_sheet":
+        files = payload.get("files", payload.get("input_paths", payload.get("paths", [])))
+        return runner.run_office_workflow_docset_to_sheet(
+            files=files if isinstance(files, list) else [],
+            schema=payload.get("schema", {}),
+            output_path=payload.get("output_path", payload.get("output", ".okoffice-out/evidence.xlsx")),
+            title=str(payload["title"]) if payload.get("title") is not None else None,
+            intent=str(payload["intent"]) if payload.get("intent") is not None else None,
+            context_output_path=payload.get("context_output_path"),
+            evidence_output_path=payload.get("evidence_output_path"),
+        )
     if tool == "office.workflow.extract_to_sheet":
         input_paths = payload.get("input_paths", payload.get("files", payload.get("paths", [])))
         return runner.run_office_workflow_extract_to_sheet(
@@ -415,6 +437,21 @@ def _run_local_step(tool: str, payload: dict[str, Any]) -> ToolResult:
             output_path=payload.get("output_path", payload.get("output", ".okoffice-out/board-pack.zip")),
             title=str(payload["title"]) if payload.get("title") is not None else None,
         )
+    if tool == "office.workers.status":
+        feature_flags = payload.get("feature_flags")
+        command_paths = payload.get("command_paths")
+        return runner.run_office_workers_status(
+            feature_flags=feature_flags if isinstance(feature_flags, dict) else None,
+            command_paths=command_paths if isinstance(command_paths, dict) else None,
+        )
+    if tool == "office.bundle.export":
+        artifact_paths = payload.get("artifact_paths", payload.get("files", payload.get("paths", [])))
+        return runner.run_office_bundle_export(
+            artifact_paths=artifact_paths if isinstance(artifact_paths, list) else [],
+            output_path=payload.get("output_path", payload.get("output", ".okoffice-out/artifacts.okoffice.zip")),
+            title=str(payload["title"]) if payload.get("title") is not None else None,
+            metadata=payload.get("metadata") if isinstance(payload.get("metadata"), dict) else None,
+        )
     if tool == "office.bundle.verify":
         return runner.run_office_bundle_verify(
             payload.get("bundle_path", payload.get("path", payload.get("input_path", ""))),
@@ -423,6 +460,28 @@ def _run_local_step(tool: str, payload: dict[str, Any]) -> ToolResult:
         return runner.run_word_inspect_document(payload.get("path", payload.get("input_path", "")))
     if tool == "word.extract.tables":
         return runner.run_word_extract_tables(payload.get("path", payload.get("input_path", "")))
+    if tool == "word.validation.document":
+        return runner.run_word_validate_document(payload.get("path", payload.get("input_path", "")))
+    if tool == "word.create.report":
+        return runner.run_word_create_report(
+            workbook_path=payload.get("workbook_path", payload.get("from_workbook", payload.get("input_path"))),
+            output_path=payload.get("output_path", payload.get("output")),
+            title=str(payload["title"]) if payload.get("title") is not None else None,
+            profile=str(payload.get("profile", "executive_memo")),
+        )
+    if tool == "word.patch.plan":
+        operations = payload.get("operations")
+        return runner.run_word_patch_plan(
+            input_path=payload.get("input_path", payload.get("path", "")),
+            operations=operations if isinstance(operations, list) else [],
+        )
+    if tool == "word.patch.apply":
+        operations = payload.get("operations")
+        return runner.run_word_patch_apply(
+            input_path=payload.get("input_path", payload.get("path", "")),
+            output_path=payload.get("output_path", payload.get("output", "")),
+            operations=operations if isinstance(operations, list) else [],
+        )
     if tool == "sheet.inspect.workbook":
         return runner.run_sheet_inspect_workbook(payload.get("path", payload.get("input_path", "")))
     if tool == "sheet.read.workbook":
@@ -449,6 +508,8 @@ def _run_local_step(tool: str, payload: dict[str, Any]) -> ToolResult:
         return runner.run_sheet_write_workbook(
             data=data if isinstance(data, (dict, list)) else {},
             output_path=payload.get("output_path", payload.get("output", ".okoffice-out/workbook.xlsx")),
+            evidence_path=payload.get("evidence_path"),
+            evidence=payload.get("evidence") if isinstance(payload.get("evidence"), dict) else None,
         )
     if tool == "sheet.validate.workbook":
         return runner.run_sheet_validate_workbook(payload.get("path", payload.get("input_path", "")))
@@ -460,6 +521,21 @@ def _run_local_step(tool: str, payload: dict[str, Any]) -> ToolResult:
             outline=outline if isinstance(outline, dict) else {},
             output_path=payload.get("output_path", payload.get("output", ".okoffice-out/deck.pptx")),
         )
+    if tool == "deck.create.presentation":
+        return runner.run_deck_create_presentation(
+            workbook_path=payload.get("workbook_path", payload.get("from_workbook", payload.get("input_path"))),
+            output_path=payload.get("output_path", payload.get("output")),
+            title=str(payload["title"]) if payload.get("title") is not None else None,
+            profile=str(payload.get("profile", "board_review")),
+            style=payload.get("style") if isinstance(payload.get("style"), dict) else None,
+        )
+    if tool == "deck.patch.apply":
+        operations = payload.get("operations")
+        return runner.run_deck_patch_apply(
+            input_path=payload.get("input_path", payload.get("path", "")),
+            output_path=payload.get("output_path", payload.get("output", "")),
+            operations=operations if isinstance(operations, list) else [],
+        )
     if tool == "deck.compose.plan":
         return runner.run_deck_compose_plan(
             workbook_path=payload.get("workbook_path", payload.get("path", payload.get("input_path", ""))),
@@ -470,6 +546,10 @@ def _run_local_step(tool: str, payload: dict[str, Any]) -> ToolResult:
         )
     if tool == "deck.inspect.presentation":
         return runner.run_deck_inspect_presentation(payload.get("path", payload.get("input_path", "")))
+    if tool == "deck.validation.contact_sheet":
+        return runner.run_deck_validation_contact_sheet(payload.get("path", payload.get("input_path", "")))
+    if tool == "deck.validation.presentation":
+        return runner.run_deck_validation_presentation(payload.get("path", payload.get("input_path", "")))
     if tool == "deck.validate.presentation":
         return runner.run_deck_validate_presentation(payload.get("path", payload.get("input_path", "")))
     if tool == "pdf.inspect.document":
@@ -709,6 +789,8 @@ def _summarize_result(result: ToolResult) -> dict[str, Any]:
             "code": result.error.code,
             "message": result.error.message,
         }
+    if result.validation:
+        summary["validation"] = result.validation.model_dump(mode="json")
     return summary
 
 

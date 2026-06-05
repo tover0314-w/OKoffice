@@ -16,7 +16,7 @@ Core workflow:
 office.inspect.batch
 -> office.context.build_packet
 -> office.extract.schema
--> sheet.create.evidence_workbook
+-> sheet.write.workbook
 -> sheet.validation.formulas
 -> office.evidence.coverage
 ```
@@ -44,6 +44,7 @@ sheet.inspect.workbook
 -> sheet.extract.tables
 -> deck.compose.plan
 -> deck.create.presentation
+-> deck.validation.presentation
 -> deck.validation.contact_sheet
 ```
 
@@ -102,7 +103,7 @@ Outputs:
 ```text
 office.context.build_packet
 -> office.extract.obligations
--> sheet.create.evidence_workbook
+-> sheet.write.workbook
 -> word.create.report
 -> office.evidence.coverage
 -> office.bundle.export

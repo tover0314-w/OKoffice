@@ -66,6 +66,10 @@ def test_write_authoring_html_package_writes_html_and_manifest(tmp_path: Path) -
     assert manifest["page_count"] == 2
     assert manifest["javascript_enabled"] is False
     assert manifest["remote_assets_enabled"] is False
+    assert manifest["render_profile"]["profile_id"] == "browser_print_deck_16x9_v0"
+    assert manifest["render_profile"]["page_size"] == "1280px 720px"
+    assert manifest["render_profile"]["margin"] == {"top": "0", "right": "0", "bottom": "0", "left": "0"}
+    assert manifest["renderer_constraints"]["javascript"] == "blocked"
     assert 'data-agentpdf-authoring-document' in html
     assert 'data-page-number="1"' in html
     assert "AgentPDF Authoring" in html
@@ -94,6 +98,8 @@ def test_create_html_package_accepts_raw_html_then_renders_pdf(tmp_path: Path) -
     assert manifest["renderer_contract"] == "html-package-v0"
     assert manifest["remote_assets_enabled"] is False
     assert manifest["javascript_enabled"] is False
+    assert manifest["render_profile"]["profile_id"] == "browser_print_a4_v0"
+    assert manifest["renderer_constraints"]["asset_policy"] == "local_packaged_assets_only"
     assert result.usage["source_format"] == "raw_html"
     assert result.next_recommended_tools == ["pdf.render.html_package", "pdf.qa.visual_report"]
 
@@ -102,6 +108,7 @@ def test_create_html_package_accepts_raw_html_then_renders_pdf(tmp_path: Path) -
     assert rendered.status == "succeeded"
     assert pdf_output.exists()
     assert rendered.usage["html_package_manifest"]["source_format"] == "raw_html"
+    assert rendered.usage["render_profile"]["prefer_css_page_size"] is True
 
 
 @pytest.mark.parametrize(

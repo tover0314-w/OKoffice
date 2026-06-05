@@ -1,6 +1,6 @@
 {
   "manifest_version": "0.1-full",
-  "tool_count": 241,
+  "tool_count": 264,
   "tools": [
     {
       "name": "agent.setup.claude_code",
@@ -52,6 +52,348 @@
       "status": "beta",
       "description": "Generate an OpenClaw MCP config for local AgentPDF tools.",
       "category": "agent",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "office.inspect.file",
+      "status": "beta",
+      "description": "Detect Office artifact format, package health, safety markers, and recommended next tools.",
+      "category": "office",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "word.inspect.document",
+      "status": "beta",
+      "description": "Inspect DOCX structure, paragraphs, headings, tables, comments, styles, sections, and safety markers.",
+      "category": "word",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "word.validation.document",
+      "status": "beta",
+      "description": "Validate DOCX/DOCM package health, comments, tracked changes, metadata, accessibility hints, and render-evidence availability.",
+      "category": "word",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "word.create.report",
+      "status": "beta",
+      "description": "Create an editable Word report from an evidence workbook.",
+      "category": "word",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "word.patch.plan",
+      "status": "beta",
+      "description": "Preview a non-mutating Word patch transaction.",
+      "category": "word",
+      "interfaces": [
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "word.patch.apply",
+      "status": "beta",
+      "description": "Apply a Word patch transaction to a new DOCX output and validate the result.",
+      "category": "word",
+      "interfaces": [
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "sheet.inspect.workbook",
+      "status": "beta",
+      "description": "Inspect XLSX sheets, used ranges, tables, formulas, charts, named ranges, comments, hidden content, and external links.",
+      "category": "sheet",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "sheet.write.workbook",
+      "status": "beta",
+      "description": "Write a validated evidence workbook with source map, data model, and chart plan sheets.",
+      "category": "sheet",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "sheet.validation.formulas",
+      "status": "beta",
+      "description": "Validate workbook formulas and table/chart/model bindings with local structural checks.",
+      "category": "sheet",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "deck.inspect.presentation",
+      "status": "beta",
+      "description": "Inspect PPTX slides, text, notes, shapes, placeholders, charts, media references, layouts, and theme metadata.",
+      "category": "deck",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "deck.create.presentation",
+      "status": "beta",
+      "description": "Create an editable styled PowerPoint presentation from an evidence workbook.",
+      "category": "deck",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "deck.patch.apply",
+      "status": "beta",
+      "description": "Apply a presentation text or theme patch transaction to a new PPTX output.",
+      "category": "deck",
+      "interfaces": [
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "deck.validation.contact_sheet",
+      "status": "beta",
+      "description": "Validate contact-sheet preview availability for PPTX output.",
+      "category": "deck",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "deck.validation.presentation",
+      "status": "beta",
+      "description": "Validate PPTX/PPTM structure, titles, notes, media refs, themes, safety markers, and render-evidence availability.",
+      "category": "deck",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "office.context.build_packet",
+      "status": "beta",
+      "description": "Build a reusable cross-format context packet and source graph from local Office/PDF sources.",
+      "category": "office",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "office.extract.schema",
+      "status": "beta",
+      "description": "Extract schema-shaped rows from mixed Office/PDF sources with source refs, confidence, and warnings.",
+      "category": "office",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "office.validation.package",
+      "status": "beta",
+      "description": "Validate Office/PDF package structure, unsafe entries, macros, external relationships, and baseline safety markers.",
+      "category": "office",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "office.workflow.docset_to_sheet",
+      "status": "beta",
+      "description": "Turn a local source document set into a validated evidence workbook with context and evidence sidecars.",
+      "category": "office",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "office.workflow.sheet_to_deck",
+      "status": "beta",
+      "description": "Turn an evidence workbook into a validated editable PowerPoint deck with source refs.",
+      "category": "office",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "office.workflow.board_pack",
+      "status": "beta",
+      "description": "Create a validated board pack directory containing evidence workbook, memo, deck, sidecars, optional HTML-first PDF handout, and checksum bundle.",
+      "category": "office",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "office.workers.status",
+      "status": "beta",
+      "description": "Report optional okoffice worker contracts, feature flags, dependency availability, license notes, and cloud boundaries.",
+      "category": "office",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "office.bundle.export",
+      "status": "beta",
+      "description": "Export local Office artifacts, manifests, validation reports, and source maps into a portable checksum bundle.",
+      "category": "office",
+      "interfaces": [
+        "cli",
+        "mcp",
+        "rest",
+        "sdk"
+      ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "office.bundle.verify",
+      "status": "beta",
+      "description": "Verify an okoffice bundle manifest, included artifacts, and SHA-256 checksums.",
+      "category": "office",
       "interfaces": [
         "cli",
         "mcp",
@@ -181,17 +523,54 @@
     },
     {
       "name": "pdf.context.web_capture",
-      "status": "cloud_only",
-      "description": "Capture web links/pages with source refs and SSRF-safe fetching.",
+      "status": "beta",
+      "description": "Fetch an HTTP/HTTPS page into a web_link context item with SSRF-safe local evidence, byte limits, text preview, and source refs.",
       "category": "context",
       "interfaces": [
+        "cli",
+        "mcp",
         "rest",
-        "sdk",
-        "mcp"
+        "sdk"
       ],
-      "implemented": false,
-      "oss_default": false,
-      "requires_model": true
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false,
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "output_path": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "default": "citation"
+          },
+          "context_item_id": {
+            "type": "string"
+          },
+          "max_bytes": {
+            "type": "integer",
+            "default": 1000000
+          },
+          "timeout_seconds": {
+            "type": "number",
+            "default": 10
+          },
+          "allow_private_hosts": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      }
     },
     {
       "name": "pdf.context.code_snapshot",
@@ -817,7 +1196,7 @@
     {
       "name": "pdf.workflow.createpdf",
       "status": "beta",
-      "description": "Create a validated PDF through a local HTML-first workflow with visual QA and artifact lineage reports.",
+      "description": "Create a validated PDF through a local HTML-first workflow with selectable renderer backend evidence, visual QA, artifact lineage reports, and optional verified audit bundle export.",
       "category": "workflow",
       "interfaces": [
         "cli",
@@ -1432,7 +1811,7 @@
     {
       "name": "pdf.render.html_package",
       "status": "beta",
-      "description": "Validate an AgentPDF HTML package manifest and render it to a validated PDF through the local fallback renderer.",
+      "description": "Validate an AgentPDF HTML package manifest, render profile safety, packaged assets, and requested renderer backend evidence before rendering to a validated PDF.",
       "category": "render",
       "interfaces": [
         "cli",

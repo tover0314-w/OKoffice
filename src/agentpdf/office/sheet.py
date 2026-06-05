@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import json
 import re
+import zipfile
 from pathlib import Path
+from pathlib import PurePosixPath
 from typing import Any
 from xml.etree import ElementTree
 from uuid import uuid4
@@ -30,6 +32,11 @@ EXTERNAL_FORMULA_REF_RE = re.compile(r"\[([^\]]+)\]([^'!]+)")
 VOLATILE_FORMULA_RE = re.compile(r"\b(NOW|TODAY|RAND|RANDBETWEEN|OFFSET|INDIRECT)\s*\(", re.IGNORECASE)
 FORMULA_ERROR_VALUES = {"#REF!", "#DIV/0!", "#VALUE!", "#NAME?", "#N/A", "#NUM!", "#NULL!"}
 XLSX_MIME_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+RICH_SHEET_NS = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
+REL_NS = "{http://schemas.openxmlformats.org/package/2006/relationships}"
+OFFICE_R_NS = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}"
+DC_NS = "{http://purl.org/dc/elements/1.1/}"
+CORE_NS = "{http://schemas.openxmlformats.org/package/2006/metadata/core-properties}"
 
 
 def inspect_sheet_workbook(path: str | Path) -> ToolResult:
@@ -50,38 +57,40 @@ def inspect_sheet_workbook(path: str | Path) -> ToolResult:
         )
 
     source_path = Path(preflight.usage["file"]["path"])
-    names = zip_names(source_path)
-    workbook_root = read_xml(source_path, "xl/workbook.xml")
-    sheet_names = _sheet_names(workbook_root)
-    worksheet_members = sorted_members(names, prefix="xl/worksheets/sheet")
-    sheets = _sheet_summaries(source_path, worksheet_members, sheet_names)
-    formula_count = sum(int(sheet["formula_count"]) for sheet in sheets)
+    try:
+        usage, warnings = _rich_inspect_sheet_workbook(source_path, preflight)
+    except AgentPDFException as exc:
+        return _failed(INSPECT_TOOL_NAME, exc.to_error())
+    except (OSError, zipfile.BadZipFile, ElementTree.ParseError) as exc:
+        return _failed(
+            INSPECT_TOOL_NAME,
+            AgentPDFError(
+                code="output_validation_failed",
+                message=f"Unable to inspect workbook package structure: {exc}",
+                details={"path": source_path.as_posix()},
+            ),
+        )
 
     return ToolResult(
         job_id=_job_id(),
         status="succeeded",
         tool=INSPECT_TOOL_NAME,
         validation=ValidationReport(
-            status="passed",
+            status="warning" if warnings else "passed",
             checks=[
                 ValidationCheck(name="format_is_xlsx", status="passed", details=preflight.usage["format"]),
-                ValidationCheck(name="workbook_xml_present", status="passed"),
+                ValidationCheck(name="workbook_xml_present", status="passed", details={"member": "xl/workbook.xml"}),
+                ValidationCheck(name="structure_extracted", status="passed", details=usage["summary"]),
+                ValidationCheck(
+                    name="formula_evaluation_explicit",
+                    status="passed",
+                    details=usage["formula_evaluation"],
+                ),
             ],
+            warnings=warnings,
         ),
-        usage={
-            "workbook": {
-                "path": source_path.as_posix(),
-                "format": "xlsx",
-                "package_type": preflight.usage["format"]["package_type"],
-                "sheet_count": len(sheets),
-            },
-            "sheets": sheets,
-            "formulas": {"formula_count": formula_count},
-            "tables": {"table_count": count_members(names, prefix="xl/tables/")},
-            "charts": {"chart_count": count_members(names, prefix="xl/charts/")},
-            "links": {"external_link_count": count_members(names, prefix="xl/externalLinks/")},
-            "safety": preflight.usage["safety"],
-        },
+        warnings=warnings,
+        usage=usage,
         next_recommended_tools=[
             "sheet.extract.tables",
             "sheet.profile.data",
@@ -740,6 +749,541 @@ def validate_sheet_formulas(path: str | Path) -> ToolResult:
             "office.workflow.sheet_to_deck",
         ],
     )
+
+
+class _CountedList(list[dict[str, Any]]):
+    def __init__(self, items: list[dict[str, Any]], **metrics: int) -> None:
+        super().__init__(items)
+        self._metrics = metrics
+
+    def __getitem__(self, item: Any) -> Any:
+        if isinstance(item, str):
+            if item in self._metrics:
+                return self._metrics[item]
+            raise KeyError(item)
+        return super().__getitem__(item)
+
+    def get(self, key: str, default: Any = None) -> Any:
+        return self._metrics.get(key, default)
+
+
+def _rich_inspect_sheet_workbook(path: Path, preflight: ToolResult) -> tuple[dict[str, Any], list[str]]:
+    names = {name.replace("\\", "/") for name in zip_names(path)}
+    unsafe_entries = [name for name in names if _rich_unsafe_zip_entry(name)]
+    if unsafe_entries:
+        raise AgentPDFException(
+            "unsafe_input_rejected",
+            "Workbook package contains unsafe ZIP entry names.",
+            details={"unsafe_package_entries": unsafe_entries},
+        )
+    workbook_root = read_xml(path, "xl/workbook.xml")
+    if workbook_root is None:
+        raise AgentPDFException(
+            "unsupported_file_type",
+            "Workbook package is missing xl/workbook.xml.",
+            details={"path": path.as_posix()},
+        )
+
+    with zipfile.ZipFile(path) as archive:
+        workbook_rels = _rich_read_relationships(archive, "xl/_rels/workbook.xml.rels", "xl/workbook.xml", names)
+        shared_strings = _shared_strings(read_xml(path, "xl/sharedStrings.xml"))
+        external_relationships = _rich_external_relationships(archive, names)
+        sheets, formulas, tables, comments, charts, rows_by_sheet = _rich_read_sheets(
+            archive,
+            path,
+            workbook_root,
+            workbook_rels,
+            names,
+            shared_strings,
+        )
+        named_ranges = _rich_named_ranges(workbook_root)
+        metadata = _rich_core_metadata(archive, names)
+
+    data_model = _rich_data_model(rows_by_sheet.get("DataModel", []))
+    chart_plan = _rich_chart_plan(rows_by_sheet.get("Charts", []))
+    charts.extend(_rich_planned_charts(chart_plan))
+    hidden_sheet_count = sum(1 for sheet in sheets if bool(sheet["hidden"]))
+    safety = dict(preflight.usage.get("safety", {}))
+    package = {
+        "path": path.as_posix(),
+        "package_type": preflight.usage["format"]["package_type"],
+        "zip_entry_count": len(names),
+        "macro_enabled": bool(safety.get("macro_enabled", False)),
+        "has_external_relationships": bool(safety.get("has_external_relationships", False))
+        or bool(external_relationships),
+        "external_relationships": external_relationships,
+        "unsafe_package_entries": unsafe_entries,
+    }
+    summary = {
+        "sheet_count": len(sheets),
+        "visible_sheet_count": len(sheets) - hidden_sheet_count,
+        "hidden_sheet_count": hidden_sheet_count,
+        "table_count": len(tables),
+        "formula_count": len(formulas),
+        "chart_count": len(charts),
+        "data_model_count": int(data_model["field_count"]),
+        "chart_plan_count": int(chart_plan["chart_plan_count"]),
+        "named_range_count": len(named_ranges),
+        "comment_count": len(comments),
+        "external_link_count": len(external_relationships) or count_members(names, prefix="xl/externalLinks/"),
+    }
+    warnings = _dedupe_strings(
+        [
+            *preflight.warnings,
+            *(["Macro-enabled workbook package markers were detected; macros are not executed."] if package["macro_enabled"] else []),
+            *(["External workbook relationship targets were detected."] if package["has_external_relationships"] else []),
+            *(["Hidden workbook sheets were detected."] if hidden_sheet_count else []),
+        ]
+    )
+    return (
+        {
+            "file": preflight.usage["file"],
+            "workbook": {
+                "path": path.as_posix(),
+                "format": "xlsx",
+                "package_type": preflight.usage["format"]["package_type"],
+                "sheet_count": len(sheets),
+            },
+            "summary": summary,
+            "metadata": metadata,
+            "package": package,
+            "sheets": sheets,
+            "formulas": _CountedList(formulas, formula_count=len(formulas)),
+            "tables": _CountedList(tables, table_count=len(tables)),
+            "charts": _CountedList(charts, chart_count=len(charts)),
+            "links": {"external_link_count": summary["external_link_count"]},
+            "data_model": data_model,
+            "chart_plan": chart_plan,
+            "comments": comments,
+            "named_ranges": named_ranges,
+            "formula_evaluation": {
+                "status": "structural_only",
+                "evaluated": False,
+                "reason": "Local OSS workbook inspect does not calculate formulas.",
+            },
+            "safety": safety,
+        },
+        warnings,
+    )
+
+
+def _rich_read_sheets(
+    archive: zipfile.ZipFile,
+    path: Path,
+    workbook_root: ElementTree.Element,
+    workbook_rels: dict[str, dict[str, str]],
+    names: set[str],
+    shared_strings: list[str],
+) -> tuple[
+    list[dict[str, Any]],
+    list[dict[str, Any]],
+    list[dict[str, Any]],
+    list[dict[str, Any]],
+    list[dict[str, Any]],
+    dict[str, list[list[str]]],
+]:
+    sheets: list[dict[str, Any]] = []
+    formulas: list[dict[str, Any]] = []
+    tables: list[dict[str, Any]] = []
+    comments: list[dict[str, Any]] = []
+    charts: list[dict[str, Any]] = []
+    rows_by_sheet: dict[str, list[list[str]]] = {}
+
+    for index, sheet in enumerate(workbook_root.findall(f"{RICH_SHEET_NS}sheets/{RICH_SHEET_NS}sheet"), start=1):
+        sheet_name = str(sheet.attrib.get("name") or f"Sheet{index}")
+        rel_id = sheet.attrib.get(f"{OFFICE_R_NS}id")
+        state = str(sheet.attrib.get("state") or "visible")
+        part = workbook_rels.get(str(rel_id), {}).get("target") if rel_id else None
+        if not part:
+            guessed_part = f"xl/worksheets/sheet{index}.xml"
+            if guessed_part in names:
+                part = guessed_part
+        sheet_info: dict[str, Any] = {
+            "name": sheet_name,
+            "sheet_index": index,
+            "sheet_id": sheet.attrib.get("sheetId"),
+            "state": state,
+            "hidden": state in {"hidden", "veryHidden"},
+            "member": part,
+            "part": part,
+            "dimension": "",
+            "used_range": None,
+            "row_count": 0,
+            "formula_count": 0,
+            "table_count": 0,
+            "chart_count": 0,
+            "comment_count": 0,
+            "locator": _rich_locator(sheet=sheet_name),
+        }
+        if part and part in names:
+            sheet_root = ElementTree.fromstring(archive.read(part))
+            rows_by_sheet[sheet_name] = _rich_worksheet_rows(sheet_root, shared_strings)
+            dimension = _rich_dimension(sheet_root)
+            sheet_info["dimension"] = dimension
+            sheet_info["used_range"] = dimension or None
+            sheet_info["row_count"] = len(sheet_root.findall(f"{RICH_SHEET_NS}sheetData/{RICH_SHEET_NS}row"))
+            sheet_rels = _rich_read_relationships(archive, _rich_rels_part_for(part), part, names)
+            sheet_formulas = _rich_formulas(sheet_root, sheet_name, shared_strings)
+            sheet_tables = _rich_tables(archive, sheet_name, sheet_rels, names)
+            sheet_comments = _rich_comments(archive, sheet_name, sheet_rels, names)
+            sheet_charts = _rich_charts(archive, sheet_name, sheet_rels, names)
+            formulas.extend(sheet_formulas)
+            tables.extend(sheet_tables)
+            comments.extend(sheet_comments)
+            charts.extend(sheet_charts)
+            sheet_info["formula_count"] = len(sheet_formulas)
+            sheet_info["table_count"] = len(sheet_tables)
+            sheet_info["chart_count"] = len(sheet_charts)
+            sheet_info["comment_count"] = len(sheet_comments)
+        sheets.append(sheet_info)
+    tables.extend(_rich_orphan_tables(archive, names, tables))
+    charts.extend(_rich_orphan_charts(names, charts))
+    return sheets, formulas, tables, comments, charts, rows_by_sheet
+
+
+def _rich_dimension(sheet_root: ElementTree.Element) -> str:
+    dimension = sheet_root.find(f"{RICH_SHEET_NS}dimension")
+    return str(dimension.attrib.get("ref") or "") if dimension is not None else ""
+
+
+def _rich_formulas(
+    sheet_root: ElementTree.Element,
+    sheet_name: str,
+    shared_strings: list[str],
+) -> list[dict[str, Any]]:
+    formulas: list[dict[str, Any]] = []
+    for cell in sheet_root.findall(f".//{RICH_SHEET_NS}c"):
+        formula_node = cell.find(f"{RICH_SHEET_NS}f")
+        if formula_node is None or not formula_node.text:
+            continue
+        cell_ref = str(cell.attrib.get("r") or "")
+        formula = formula_node.text
+        cached_value = _cell_value(cell, shared_strings)
+        formulas.append(
+            {
+                "sheet": sheet_name,
+                "sheet_name": sheet_name,
+                "cell": cell_ref,
+                "cell_ref": cell_ref,
+                "formula": formula,
+                "cached_value": cached_value if cached_value != "" else None,
+                "has_external_reference": "[" in formula,
+                "locator": _rich_locator(sheet=sheet_name, cell=cell_ref, formula=formula),
+            }
+        )
+    return formulas
+
+
+def _rich_tables(
+    archive: zipfile.ZipFile,
+    sheet_name: str,
+    relationships: dict[str, dict[str, str]],
+    names: set[str],
+) -> list[dict[str, Any]]:
+    tables: list[dict[str, Any]] = []
+    for relationship in relationships.values():
+        if not relationship["type"].endswith("/table") or relationship["target"] not in names:
+            continue
+        root = ElementTree.fromstring(archive.read(relationship["target"]))
+        name = root.attrib.get("displayName") or root.attrib.get("name") or root.attrib.get("id")
+        table_range = root.attrib.get("ref")
+        tables.append(
+            {
+                "sheet": sheet_name,
+                "name": name,
+                "range": table_range,
+                "part": relationship["target"],
+                "member": relationship["target"],
+                "column_count": len(root.findall(f"{RICH_SHEET_NS}tableColumns/{RICH_SHEET_NS}tableColumn")),
+                "locator": _rich_locator(sheet=sheet_name, range=table_range, table=name),
+            }
+        )
+    return tables
+
+
+def _rich_orphan_tables(
+    archive: zipfile.ZipFile,
+    names: set[str],
+    tables: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    referenced_parts = {str(table.get("part") or "") for table in tables}
+    orphans: list[dict[str, Any]] = []
+    for part in sorted(name for name in names if name.startswith("xl/tables/") and name.endswith(".xml")):
+        if part in referenced_parts:
+            continue
+        root = ElementTree.fromstring(archive.read(part))
+        name = str(root.attrib.get("displayName") or root.attrib.get("name") or PurePosixPath(part).stem)
+        range_ref = str(root.attrib.get("ref") or "")
+        orphans.append(
+            {
+                "name": name,
+                "display_name": name,
+                "sheet_name": None,
+                "range": range_ref,
+                "range_ref": range_ref,
+                "part": part,
+                "member": part,
+                "column_count": len(root.findall(f"{RICH_SHEET_NS}tableColumns/{RICH_SHEET_NS}tableColumn")),
+                "locator": _rich_locator(table=name, range_ref=range_ref),
+            }
+        )
+    return orphans
+
+
+def _rich_comments(
+    archive: zipfile.ZipFile,
+    sheet_name: str,
+    relationships: dict[str, dict[str, str]],
+    names: set[str],
+) -> list[dict[str, Any]]:
+    comments: list[dict[str, Any]] = []
+    for relationship in relationships.values():
+        if not relationship["type"].endswith("/comments") or relationship["target"] not in names:
+            continue
+        root = ElementTree.fromstring(archive.read(relationship["target"]))
+        authors = [author.text or "" for author in root.findall(f"{RICH_SHEET_NS}authors/{RICH_SHEET_NS}author")]
+        for comment in root.findall(f"{RICH_SHEET_NS}commentList/{RICH_SHEET_NS}comment"):
+            author_index = int(comment.attrib.get("authorId", "0"))
+            cell_ref = str(comment.attrib.get("ref") or "")
+            comments.append(
+                {
+                    "sheet": sheet_name,
+                    "cell": cell_ref,
+                    "author": authors[author_index] if author_index < len(authors) else None,
+                    "text": _rich_text_content(comment),
+                    "locator": _rich_locator(sheet=sheet_name, cell=cell_ref),
+                }
+            )
+    return comments
+
+
+def _rich_charts(
+    archive: zipfile.ZipFile,
+    sheet_name: str,
+    relationships: dict[str, dict[str, str]],
+    names: set[str],
+) -> list[dict[str, Any]]:
+    charts: list[dict[str, Any]] = []
+    for relationship in relationships.values():
+        if not relationship["type"].endswith("/drawing") or relationship["target"] not in names:
+            continue
+        drawing_rels = _rich_read_relationships(
+            archive,
+            _rich_rels_part_for(relationship["target"]),
+            relationship["target"],
+            names,
+        )
+        for drawing_relationship in drawing_rels.values():
+            if not drawing_relationship["type"].endswith("/chart"):
+                continue
+            chart_id = PurePosixPath(drawing_relationship["target"]).stem
+            charts.append(
+                {
+                    "sheet": sheet_name,
+                    "chart_id": chart_id,
+                    "part": drawing_relationship["target"],
+                    "locator": _rich_locator(sheet=sheet_name, chart=chart_id),
+                }
+            )
+    return charts
+
+
+def _rich_orphan_charts(names: set[str], charts: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    referenced_parts = {str(chart.get("part") or "") for chart in charts}
+    orphans: list[dict[str, Any]] = []
+    for part in sorted(name for name in names if name.startswith("xl/charts/") and name.endswith(".xml")):
+        if part in referenced_parts:
+            continue
+        chart_id = PurePosixPath(part).stem
+        orphans.append(
+            {
+                "chart_id": chart_id,
+                "title": chart_id,
+                "sheet_name": None,
+                "part": part,
+                "member": part,
+                "locator": _rich_locator(chart=chart_id),
+            }
+        )
+    return orphans
+
+
+def _rich_worksheet_rows(sheet_root: ElementTree.Element, shared_strings: list[str]) -> list[list[str]]:
+    rows: list[list[str]] = []
+    for row in sheet_root.findall(f"{RICH_SHEET_NS}sheetData/{RICH_SHEET_NS}row"):
+        cells: dict[int, str] = {}
+        for cell in row.findall(f"{RICH_SHEET_NS}c"):
+            cell_ref = str(cell.attrib.get("r") or "")
+            column = _column_number(re.match(r"([A-Z]+)", cell_ref, re.IGNORECASE).group(1)) if re.match(r"([A-Z]+)", cell_ref, re.IGNORECASE) else 0
+            if column:
+                cells[column] = _cell_value(cell, shared_strings)
+        if cells:
+            rows.append([cells.get(index, "") for index in range(1, max(cells) + 1)])
+    return rows
+
+
+def _rich_data_model(rows: list[list[str]]) -> dict[str, Any]:
+    fields = _rich_table_dicts(rows)
+    return {"field_count": len(fields), "fields": fields}
+
+
+def _rich_chart_plan(rows: list[list[str]]) -> dict[str, Any]:
+    charts = _rich_table_dicts(rows)
+    return {"chart_plan_count": len(charts), "charts": charts}
+
+
+def _rich_planned_charts(chart_plan: dict[str, Any]) -> list[dict[str, Any]]:
+    charts: list[dict[str, Any]] = []
+    for chart in chart_plan.get("charts", []):
+        if not isinstance(chart, dict):
+            continue
+        chart_id = str(chart.get("chart_id") or "")
+        if not chart_id:
+            continue
+        source_sheet = str(chart.get("source_sheet") or "Evidence")
+        charts.append(
+            {
+                "sheet": source_sheet,
+                "chart_id": chart_id,
+                "chart_type": chart.get("chart_type"),
+                "title": chart.get("title"),
+                "source_range": chart.get("source_range"),
+                "planned": True,
+                "locator": _rich_locator(sheet=source_sheet, chart=chart_id),
+            }
+        )
+    return charts
+
+
+def _rich_table_dicts(rows: list[list[str]]) -> list[dict[str, str]]:
+    if not rows:
+        return []
+    headers = [header.strip() for header in rows[0]]
+    records: list[dict[str, str]] = []
+    for row in rows[1:]:
+        records.append({header: row[index] if index < len(row) else "" for index, header in enumerate(headers) if header})
+    return records
+
+
+def _rich_named_ranges(workbook_root: ElementTree.Element) -> list[dict[str, Any]]:
+    named_ranges: list[dict[str, Any]] = []
+    for defined_name in workbook_root.findall(f"{RICH_SHEET_NS}definedNames/{RICH_SHEET_NS}definedName"):
+        named_ranges.append(
+            {
+                "name": defined_name.attrib.get("name"),
+                "refers_to": defined_name.text or "",
+                "scope": defined_name.attrib.get("localSheetId"),
+            }
+        )
+    return named_ranges
+
+
+def _rich_core_metadata(archive: zipfile.ZipFile, names: set[str]) -> dict[str, Any]:
+    if "docProps/core.xml" not in names:
+        return {}
+    root = ElementTree.fromstring(archive.read("docProps/core.xml"))
+    return {
+        "title": _rich_first_text(root, f"{DC_NS}title"),
+        "creator": _rich_first_text(root, f"{DC_NS}creator"),
+        "last_modified_by": _rich_first_text(root, f"{CORE_NS}lastModifiedBy"),
+    }
+
+
+def _rich_read_relationships(
+    archive: zipfile.ZipFile,
+    rels_part: str,
+    source_part: str,
+    names: set[str],
+) -> dict[str, dict[str, str]]:
+    if rels_part not in names:
+        return {}
+    root = ElementTree.fromstring(archive.read(rels_part))
+    relationships: dict[str, dict[str, str]] = {}
+    for relationship in root.findall(f"{REL_NS}Relationship"):
+        rel_id = str(relationship.attrib.get("Id") or "")
+        target = str(relationship.attrib.get("Target") or "")
+        relationships[rel_id] = {
+            "id": rel_id,
+            "type": str(relationship.attrib.get("Type") or ""),
+            "target": _rich_resolve_target(source_part, target),
+            "target_mode": str(relationship.attrib.get("TargetMode") or ""),
+        }
+    return relationships
+
+
+def _rich_external_relationships(archive: zipfile.ZipFile, names: set[str]) -> list[dict[str, str]]:
+    relationships: list[dict[str, str]] = []
+    for name in sorted(names):
+        if not name.endswith(".rels"):
+            continue
+        root = ElementTree.fromstring(archive.read(name))
+        for relationship in root.findall(f"{REL_NS}Relationship"):
+            if relationship.attrib.get("TargetMode") == "External":
+                relationships.append(
+                    {
+                        "relationship_part": name,
+                        "type": str(relationship.attrib.get("Type") or ""),
+                        "target": str(relationship.attrib.get("Target") or ""),
+                    }
+                )
+    return relationships
+
+
+def _rich_rels_part_for(part: str) -> str:
+    path = PurePosixPath(part)
+    return str(path.parent / "_rels" / f"{path.name}.rels")
+
+
+def _rich_resolve_target(source_part: str, target: str) -> str:
+    if "://" in target:
+        return target
+    if target.startswith("/"):
+        return target.lstrip("/")
+    path = PurePosixPath(source_part).parent / target
+    parts: list[str] = []
+    for part in path.parts:
+        if part in {"", "."}:
+            continue
+        if part == "..":
+            if parts:
+                parts.pop()
+            continue
+        else:
+            parts.append(part)
+    return "/".join(parts)
+
+
+def _rich_text_content(element: ElementTree.Element) -> str:
+    return "".join(node.text or "" for node in element.iter() if node.tag == f"{RICH_SHEET_NS}t").strip()
+
+
+def _rich_first_text(root: ElementTree.Element, tag: str) -> str | None:
+    node = root.find(tag)
+    return node.text if node is not None else None
+
+
+def _rich_locator(**kwargs: Any) -> dict[str, Any]:
+    locator = {"kind": "sheet"}
+    locator.update({key: value for key, value in kwargs.items() if value not in {None, ""}})
+    return locator
+
+
+def _rich_unsafe_zip_entry(name: str) -> bool:
+    normalized = name.replace("\\", "/")
+    parts = PurePosixPath(normalized).parts
+    if not parts or normalized.startswith("/") or normalized.startswith("../") or ":" in parts[0]:
+        return True
+    return any(part in {"", ".", ".."} for part in parts)
+
+
+def _dedupe_strings(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    deduped: list[str] = []
+    for value in values:
+        if value and value not in seen:
+            seen.add(value)
+            deduped.append(value)
+    return deduped
 
 
 def _sheet_names(workbook_root: object | None) -> list[str]:

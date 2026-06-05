@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import html
 import json
+import re
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -9,6 +11,7 @@ from pypdf import PdfReader, PdfWriter
 
 from agentpdf.artifacts.store import build_artifact
 from agentpdf.core.pdf import create_markdown_pdf, create_slide_deck_pdf
+from agentpdf.renderers.html_package import render_html_package
 from agentpdf.schemas.errors import AgentPDFException
 from agentpdf.schemas.models import ToolResult
 from agentpdf.validation.pdf import validate_pdf
@@ -32,6 +35,7 @@ def plan_patch_transaction(
     output_path: str | Path,
     composition_path: str | Path | None = None,
     layer_manifest_path: str | Path | None = None,
+    artifact_graph_path: str | Path | None = None,
     reason: str | None = None,
 ) -> ToolResult:
     tool = "pdf.patch.plan"
@@ -44,6 +48,7 @@ def plan_patch_transaction(
     normalized_operations = [_normalize_operation(operation, index) for index, operation in enumerate(operations, start=1)]
     source_ref_validation = _validate_operation_source_refs(normalized_operations, composition_path)
     layer_ref_validation = _validate_operation_layer_refs(normalized_operations, layer_manifest_path)
+    html_layer_ref_validation = _validate_operation_html_layer_refs(normalized_operations, artifact_graph_path)
     source_artifact = build_artifact(source, source_tool="pdf.patch.input")
     manifest = {
         "patch_manifest_version": "0.1",
@@ -52,6 +57,7 @@ def plan_patch_transaction(
         "input_artifact": source_artifact.model_dump(mode="json"),
         "composition_path": Path(composition_path).resolve().as_posix() if composition_path else None,
         "layer_manifest_path": Path(layer_manifest_path).resolve().as_posix() if layer_manifest_path else None,
+        "artifact_graph_path": Path(artifact_graph_path).resolve().as_posix() if artifact_graph_path else None,
         "reason": reason or "",
         "operation_count": len(normalized_operations),
         "operations": normalized_operations,
@@ -59,11 +65,15 @@ def plan_patch_transaction(
         "operation_source_map": source_ref_validation["operation_source_map"],
         "layer_ref_validation": layer_ref_validation["summary"],
         "operation_layer_map": layer_ref_validation["operation_layer_map"],
+        "html_layer_ref_validation": html_layer_ref_validation["summary"],
+        "operation_html_layer_map": html_layer_ref_validation["operation_html_layer_map"],
         "safety": {
             "mutates_input": False,
             "requires_new_output_path": True,
             "supported_operations": SUPPORTED_PATCH_OPERATIONS,
             "supports_layer_anchors": True,
+            "supports_html_layer_anchors": True,
+            "html_layer_bbox_precision": "estimated_dom_not_pdf_glyph_bbox",
             "claims_layout_preservation": False,
         },
         "validation_required": ["parseable_pdf", "page_count_delta"],
@@ -96,7 +106,9 @@ def preview_patch_transaction(
             "title": operation.get("title"),
             "source_refs": operation.get("source_refs", []),
             "target_layer_refs": operation.get("target_layer_refs", {}),
+            "target_html_layer_refs": operation.get("target_html_layer_refs", {}),
             "matched_layer_count": len(operation.get("layer_evidence", [])),
+            "matched_html_layer_count": len(operation.get("html_layer_evidence", [])),
             "expected_effect": _operation_expected_effect(operation),
         }
         for operation in manifest["operations"]
@@ -135,6 +147,13 @@ def apply_patch_transaction(
     input_path = Path(manifest["input_path"]).resolve()
     destination = Path(output_path)
     destination.parent.mkdir(parents=True, exist_ok=True)
+    if _should_apply_html_layer_rerender(manifest):
+        return _apply_html_layer_rerender(
+            manifest=manifest,
+            output_path=destination,
+            input_path=input_path,
+            tool=tool,
+        )
     input_reader = PdfReader(input_path)
     writer = PdfWriter()
     for page in input_reader.pages:
@@ -210,6 +229,226 @@ def apply_patch_transaction(
     )
 
 
+def _should_apply_html_layer_rerender(manifest: dict[str, Any]) -> bool:
+    operations = manifest.get("operations")
+    if not isinstance(operations, list) or not operations:
+        return False
+    return all(
+        isinstance(operation, dict)
+        and operation.get("op") == "regenerate_block"
+        and bool(operation.get("html_layer_evidence"))
+        for operation in operations
+    )
+
+
+def _apply_html_layer_rerender(
+    *,
+    manifest: dict[str, Any],
+    output_path: Path,
+    input_path: Path,
+    tool: str,
+) -> ToolResult:
+    html_context = _html_layer_patch_context(manifest)
+    patched_html_path = output_path.with_suffix(".html")
+    patched_manifest_path = patched_html_path.with_suffix(".html-manifest.json")
+    patched_html = _apply_html_layer_replacements(
+        html_context["html_path"].read_text(encoding="utf-8"),
+        manifest["operations"],
+    )
+    patched_manifest = _patched_html_package_manifest(
+        html_context["manifest"],
+        html_output_path=patched_html_path,
+        manifest_output_path=patched_manifest_path,
+        patch_manifest=manifest,
+    )
+    patched_html_path.write_text(patched_html, encoding="utf-8")
+    patched_manifest_path.write_text(json.dumps(patched_manifest, indent=2), encoding="utf-8")
+
+    render_result = render_html_package(patched_manifest_path, output_path=output_path)
+    validation = render_result.validation or validate_pdf(output_path)
+    page_count_delta = len(PdfReader(output_path).pages) - len(PdfReader(input_path).pages)
+    output_artifact = build_artifact(output_path, source_tool=tool)
+    html_layer_patch = {
+        "mode": "html_layer_rerender",
+        "source_html_path": html_context["html_path"].as_posix(),
+        "source_html_package_manifest_path": html_context["manifest_path"].as_posix(),
+        "html_output_path": patched_html_path.resolve().as_posix(),
+        "html_package_manifest_path": patched_manifest_path.resolve().as_posix(),
+        "rewritten_layer_ids": _patched_html_layer_ids(manifest["operations"]),
+        "bbox_precision": "estimated_dom_not_pdf_glyph_bbox",
+        "mutates_input": False,
+        "claims_layout_preservation": False,
+    }
+    applied_manifest = dict(manifest)
+    applied_manifest["apply_mode"] = "html_layer_rerender"
+    applied_manifest["output_path"] = output_path.resolve().as_posix()
+    applied_manifest["output_artifact"] = output_artifact.model_dump(mode="json")
+    applied_manifest["page_count_delta"] = page_count_delta
+    applied_manifest["html_layer_patch"] = html_layer_patch
+    applied_path = output_path.with_suffix(".patch-applied.json")
+    applied_path.write_text(json.dumps(applied_manifest, indent=2), encoding="utf-8")
+    rollback = {
+        "rollback_manifest_version": "0.1",
+        "patch_id": manifest["patch_id"],
+        "restore_path": manifest["input_path"],
+        "patched_path": output_path.resolve().as_posix(),
+        "input_artifact": manifest["input_artifact"],
+        "html_restore_path": html_context["html_path"].as_posix(),
+    }
+    rollback_path = output_path.with_suffix(".rollback.json")
+    rollback_path.write_text(json.dumps(rollback, indent=2), encoding="utf-8")
+    return ToolResult(
+        job_id=f"job_{uuid4().hex[:16]}",
+        status="succeeded" if validation.status == "passed" else "failed",
+        tool=tool,
+        artifacts=[
+            output_artifact,
+            build_artifact(patched_html_path, source_tool=tool),
+            build_artifact(patched_manifest_path, source_tool=tool),
+            build_artifact(applied_path, source_tool=tool),
+            build_artifact(rollback_path, source_tool="pdf.patch.rollback_manifest"),
+        ],
+        validation=validation,
+        warnings=[*render_result.warnings, *validation.warnings],
+        usage={
+            "patch_manifest": applied_manifest,
+            "rollback_manifest": rollback,
+            "html_layer_patch": html_layer_patch,
+            "page_count_delta": page_count_delta,
+            "input_unchanged": _sha256_matches(input_path, manifest["input_artifact"]["sha256"]),
+        },
+        next_recommended_tools=["pdf.patch.verify", "pdf.validation.render_check"],
+    )
+
+
+def _html_layer_patch_context(manifest: dict[str, Any]) -> dict[str, Any]:
+    first_layer = _first_html_layer_evidence(manifest["operations"])
+    if first_layer is None:
+        raise AgentPDFException("invalid_patch", "HTML layer rerender requires html_layer_evidence.")
+    manifest_path = Path(str(first_layer.get("path") or "")).expanduser().resolve()
+    html_path = Path(str(first_layer.get("html_path") or "")).expanduser().resolve()
+    if not manifest_path.exists():
+        raise AgentPDFException("file_not_found", f"HTML package manifest not found: {manifest_path}")
+    if not html_path.exists():
+        raise AgentPDFException("file_not_found", f"HTML source not found: {html_path}")
+    for operation in manifest["operations"]:
+        for layer in operation.get("html_layer_evidence", []):
+            if not isinstance(layer, dict):
+                continue
+            if Path(str(layer.get("path") or "")).expanduser().resolve() != manifest_path:
+                raise AgentPDFException(
+                    "invalid_patch",
+                    "HTML layer rerender operations must target one HTML package manifest.",
+                )
+            if Path(str(layer.get("html_path") or "")).expanduser().resolve() != html_path:
+                raise AgentPDFException(
+                    "invalid_patch",
+                    "HTML layer rerender operations must target one HTML source file.",
+                )
+    payload = json.loads(manifest_path.read_text(encoding="utf-8-sig"))
+    if not isinstance(payload, dict):
+        raise AgentPDFException("html_invalid_package", "HTML package manifest must be a JSON object.")
+    return {"manifest_path": manifest_path, "html_path": html_path, "manifest": payload}
+
+
+def _first_html_layer_evidence(operations: list[dict[str, Any]]) -> dict[str, Any] | None:
+    for operation in operations:
+        for layer in operation.get("html_layer_evidence", []):
+            if isinstance(layer, dict):
+                return layer
+    return None
+
+
+def _apply_html_layer_replacements(html_text: str, operations: list[dict[str, Any]]) -> str:
+    patched = html_text
+    for operation in operations:
+        for layer in operation.get("html_layer_evidence", []):
+            if not isinstance(layer, dict):
+                continue
+            layer_id = str(layer.get("layer_id") or "").strip()
+            if not layer_id:
+                continue
+            patched = _replace_html_layer_article(patched, layer_id=layer_id, operation=operation)
+    return patched
+
+
+def _replace_html_layer_article(html_text: str, *, layer_id: str, operation: dict[str, Any]) -> str:
+    pattern = re.compile(
+        rf'(<article\b[^>]*\bdata-layer-id="{re.escape(layer_id)}"[^>]*>)(.*?)(\n\s*</article>)',
+        re.DOTALL,
+    )
+    replacement_html = _replacement_markdown_html(operation)
+    patched, count = pattern.subn(
+        lambda match: f"{match.group(1)}\n{replacement_html}{match.group(3)}",
+        html_text,
+        count=1,
+    )
+    if count != 1:
+        raise AgentPDFException(
+            "html_layer_ref_not_found",
+            "HTML layer id was not found in the source HTML.",
+            details={"html_layer_id": layer_id},
+        )
+    return patched
+
+
+def _replacement_markdown_html(operation: dict[str, Any]) -> str:
+    markdown = str(operation.get("replacement_markdown") or "").strip()
+    lines = []
+    for line in markdown.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if stripped.startswith("## "):
+            lines.append(f"      <h2>{html.escape(stripped[3:].strip())}</h2>")
+        elif stripped.startswith("# "):
+            lines.append(f"      <h2>{html.escape(stripped[2:].strip())}</h2>")
+        elif stripped.startswith("- "):
+            lines.append(f"      <p>&bull; {html.escape(stripped[2:].strip())}</p>")
+        else:
+            lines.append(f"      <p>{html.escape(stripped)}</p>")
+    lines.extend(
+        [
+            '      <p class="agentpdf-patch-note"><strong>Patch operation:</strong> '
+            f"{html.escape(str(operation.get('operation_id') or 'unknown'))}</p>",
+            '      <p class="agentpdf-patch-note"><strong>Patch mode:</strong> '
+            "html_layer_rerender</p>",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def _patched_html_package_manifest(
+    manifest: dict[str, Any],
+    *,
+    html_output_path: Path,
+    manifest_output_path: Path,
+    patch_manifest: dict[str, Any],
+) -> dict[str, Any]:
+    patched = dict(manifest)
+    patched["html_package_id"] = f"htmlpkg_patch_{uuid4().hex[:12]}"
+    patched["source_tool"] = "pdf.patch.apply"
+    patched["html_path"] = html_output_path.resolve().as_posix()
+    patched["manifest_path"] = manifest_output_path.resolve().as_posix()
+    patched["patched_from_html_package_id"] = manifest.get("html_package_id")
+    patched["patch_id"] = patch_manifest.get("patch_id")
+    patched["patch_mode"] = "html_layer_rerender"
+    patched["patched_layer_ids"] = _patched_html_layer_ids(patch_manifest["operations"])
+    return patched
+
+
+def _patched_html_layer_ids(operations: list[dict[str, Any]]) -> list[str]:
+    layer_ids = []
+    for operation in operations:
+        for layer in operation.get("html_layer_evidence", []):
+            if not isinstance(layer, dict):
+                continue
+            layer_id = str(layer.get("layer_id") or "").strip()
+            if layer_id and layer_id not in layer_ids:
+                layer_ids.append(layer_id)
+    return layer_ids
+
+
 def verify_patch_transaction(
     patch_manifest: dict[str, Any] | str | Path,
     patched_path: str | Path,
@@ -232,12 +471,16 @@ def verify_patch_transaction(
         "operation_count": len(manifest["operations"]),
         "source_ref_validation_status": manifest.get("source_ref_validation", {}).get("status", "unknown"),
         "layer_ref_validation_status": manifest.get("layer_ref_validation", {}).get("status", "unknown"),
+        "html_layer_ref_validation_status": manifest.get("html_layer_ref_validation", {}).get("status", "unknown"),
         "matched_source_count": _manifest_matched_source_count(manifest),
         "matched_layer_count": _manifest_matched_layer_count(manifest),
+        "matched_html_layer_count": _manifest_matched_html_layer_count(manifest),
         "source_ref_validation": manifest.get("source_ref_validation", {}),
         "layer_ref_validation": manifest.get("layer_ref_validation", {}),
+        "html_layer_ref_validation": manifest.get("html_layer_ref_validation", {}),
         "operation_source_map": manifest.get("operation_source_map", []),
         "operation_layer_map": manifest.get("operation_layer_map", []),
+        "operation_html_layer_map": manifest.get("operation_html_layer_map", []),
     }
     status = "succeeded" if validation.status == "passed" and verification["page_count_delta"] >= 0 else "failed"
     return ToolResult(
@@ -264,6 +507,9 @@ def _normalize_operation(operation: dict[str, Any], index: int) -> dict[str, Any
     target_layer_refs = _target_layer_refs(operation)
     if any(target_layer_refs.values()):
         normalized["target_layer_refs"] = target_layer_refs
+    target_html_layer_refs = _target_html_layer_refs(operation)
+    if any(target_html_layer_refs.values()):
+        normalized["target_html_layer_refs"] = target_html_layer_refs
     if op == "append_markdown":
         markdown = str(operation.get("markdown") or "").strip()
         if not markdown:
@@ -346,10 +592,10 @@ def _normalize_operation(operation: dict[str, Any], index: int) -> dict[str, Any
                 "invalid_patch",
                 "regenerate_block operation requires replacement_markdown.",
             )
-        if not any(target_layer_refs.values()):
+        if not any(target_layer_refs.values()) and not any(target_html_layer_refs.values()):
             raise AgentPDFException(
                 "invalid_patch",
-                "regenerate_block operation requires layer_id, block_id, or target_slot.",
+                "regenerate_block operation requires layer_id, block_id, target_slot, or html_layer_id.",
             )
         if not normalized["source_refs"]:
             raise AgentPDFException(
@@ -357,14 +603,22 @@ def _normalize_operation(operation: dict[str, Any], index: int) -> dict[str, Any
                 "regenerate_block operation requires source_refs for audit evidence.",
             )
         normalized["replacement_markdown"] = replacement_markdown
-        normalized["regeneration_policy"] = {
-            "requested_effect": "regenerate_template_block",
-            "actual_effect": "append_regenerated_block_appendix",
+        has_html_layer_target = any(target_html_layer_refs.values())
+        regeneration_policy = {
+            "requested_effect": "regenerate_html_layer" if has_html_layer_target else "regenerate_template_block",
+            "actual_effect": (
+                "html_layer_rerender"
+                if has_html_layer_target
+                else "append_regenerated_block_appendix"
+            ),
             "mutates_original_block": False,
             "requires_new_output_path": True,
             "claims_layout_preservation": False,
             "requires_layer_evidence": True,
         }
+        if has_html_layer_target:
+            regeneration_policy["requires_html_layer_evidence"] = True
+        normalized["regeneration_policy"] = regeneration_policy
     return normalized
 
 
@@ -543,6 +797,70 @@ def _validate_operation_layer_refs(
     }
 
 
+def _validate_operation_html_layer_refs(
+    operations: list[dict[str, Any]],
+    artifact_graph_path: str | Path | None,
+) -> dict[str, Any]:
+    if artifact_graph_path is None:
+        operation_html_layer_map = [_operation_html_layer_map(operation, {}) for operation in operations]
+        return {
+            "summary": {
+                "status": "skipped",
+                "reason": "artifact_graph_path_not_provided",
+                "known_html_layer_count": 0,
+                "known_html_layer_ids": [],
+                "requested_html_layer_ids": sorted(_requested_html_layer_ids(operations)),
+                "missing_html_layer_refs": [],
+                "operation_count": len(operations),
+            },
+            "operation_html_layer_map": operation_html_layer_map,
+        }
+
+    graph = _load_artifact_graph(artifact_graph_path)
+    html_layer_index = graph.get("html_layer_index")
+    if not isinstance(html_layer_index, dict):
+        raise AgentPDFException("invalid_artifact_graph", "Artifact graph html_layer_index must be an object.")
+    requested_html_layer_ids = _requested_html_layer_ids(operations)
+    known_html_layer_ids = {str(layer_id) for layer_id in html_layer_index if layer_id}
+    missing_html_layer_refs = [
+        f"html_layer_id:{layer_id}"
+        for layer_id in sorted(requested_html_layer_ids - known_html_layer_ids)
+    ]
+    operation_html_layer_map = [_operation_html_layer_map(operation, html_layer_index) for operation in operations]
+    unmatched_operations = [
+        item["operation_id"]
+        for item in operation_html_layer_map
+        if item["html_layer_ids"] and item["matched_html_layer_count"] == 0
+    ]
+    if unmatched_operations:
+        missing_html_layer_refs.extend([f"operation:{operation_id}" for operation_id in unmatched_operations])
+    if missing_html_layer_refs:
+        raise AgentPDFException(
+            "html_layer_ref_not_found",
+            "Patch operation HTML layer references were not found in the artifact graph.",
+            retry_hint="Inspect the .artifact-graph.json artifact and retry with html_layer_id values from html_layer_index.",
+            details={
+                "artifact_graph_path": Path(artifact_graph_path).resolve().as_posix(),
+                "missing_html_layer_refs": missing_html_layer_refs,
+                "known_html_layer_ids": sorted(known_html_layer_ids),
+            },
+        )
+    return {
+        "summary": {
+            "status": "passed",
+            "artifact_graph_path": Path(artifact_graph_path).resolve().as_posix(),
+            "artifact_graph_id": graph.get("artifact_graph_id"),
+            "known_html_layer_count": len(known_html_layer_ids),
+            "known_html_layer_ids": sorted(known_html_layer_ids),
+            "requested_html_layer_ids": sorted(requested_html_layer_ids),
+            "missing_html_layer_refs": [],
+            "operation_count": len(operations),
+            "bbox_precision": "estimated_dom_not_pdf_glyph_bbox",
+        },
+        "operation_html_layer_map": operation_html_layer_map,
+    }
+
+
 def _validate_operation_layer_policies(operation_layer_map: list[dict[str, Any]]) -> None:
     for item in operation_layer_map:
         op = str(item.get("op") or "")
@@ -603,6 +921,16 @@ def _load_layer_manifest(layer_manifest_path: str | Path) -> dict[str, Any]:
     payload = json.loads(path.read_text(encoding="utf-8-sig"))
     if not isinstance(payload, dict) or "template_layer_manifest_id" not in payload:
         raise AgentPDFException("invalid_layer_manifest", "Layer manifest must include template_layer_manifest_id.")
+    return payload
+
+
+def _load_artifact_graph(artifact_graph_path: str | Path) -> dict[str, Any]:
+    path = Path(artifact_graph_path)
+    if not path.exists():
+        raise AgentPDFException("file_not_found", f"Artifact graph not found: {path}")
+    payload = json.loads(path.read_text(encoding="utf-8-sig"))
+    if not isinstance(payload, dict) or "artifact_graph_version" not in payload:
+        raise AgentPDFException("invalid_artifact_graph", "Artifact graph must include artifact_graph_version.")
     return payload
 
 
@@ -680,6 +1008,15 @@ def _requested_target_slots(operations: list[dict[str, Any]]) -> set[str]:
     }
 
 
+def _requested_html_layer_ids(operations: list[dict[str, Any]]) -> set[str]:
+    return {
+        html_layer_id
+        for operation in operations
+        for html_layer_id in operation.get("target_html_layer_refs", {}).get("html_layer_ids", [])
+        if html_layer_id
+    }
+
+
 def _operation_source_map(
     operation: dict[str, Any],
     source_map_by_ref: dict[str, list[dict[str, Any]]],
@@ -725,6 +1062,62 @@ def _operation_layer_map(
         "matched_layer_count": len(matched_layers),
         "matched_layers": matched_layers,
     }
+
+
+def _operation_html_layer_map(
+    operation: dict[str, Any],
+    html_layer_index: dict[str, Any],
+) -> dict[str, Any]:
+    target_html_layer_refs = operation.get("target_html_layer_refs", {})
+    html_layer_ids = _string_list(target_html_layer_refs.get("html_layer_ids"))
+    matched_html_layers = _matched_html_layers(html_layer_ids, html_layer_index)
+    operation["html_layer_evidence"] = matched_html_layers
+    return {
+        "operation_id": operation["operation_id"],
+        "op": operation["op"],
+        "title": operation.get("title"),
+        "html_layer_ids": html_layer_ids,
+        "matched_html_layer_count": len(matched_html_layers),
+        "matched_html_layers": matched_html_layers,
+    }
+
+
+def _matched_html_layers(
+    html_layer_ids: list[str],
+    html_layer_index: dict[str, Any],
+) -> list[dict[str, Any]]:
+    if not html_layer_index:
+        return []
+    matched_layers = []
+    seen = set()
+    for html_layer_id in html_layer_ids:
+        if html_layer_id in seen:
+            continue
+        raw_layer = html_layer_index.get(html_layer_id)
+        if not isinstance(raw_layer, dict):
+            continue
+        seen.add(html_layer_id)
+        matched_layers.append(_html_layer_evidence(raw_layer, fallback_layer_id=html_layer_id))
+    return matched_layers
+
+
+def _html_layer_evidence(raw_layer: dict[str, Any], *, fallback_layer_id: str) -> dict[str, Any]:
+    layer_id = str(raw_layer.get("layer_id") or fallback_layer_id)
+    return _drop_empty_values(
+        {
+            "layer_id": layer_id,
+            "graph_node_id": raw_layer.get("node_id"),
+            "html_package_id": raw_layer.get("html_package_id"),
+            "path": raw_layer.get("path"),
+            "html_path": raw_layer.get("html_path"),
+            "block_id": raw_layer.get("block_id"),
+            "block_type": raw_layer.get("block_type"),
+            "target_slot": raw_layer.get("target_slot"),
+            "source_refs": _string_list(raw_layer.get("source_refs")),
+            "anchor": raw_layer.get("anchor") if isinstance(raw_layer.get("anchor"), dict) else {},
+            "bbox_precision": raw_layer.get("bbox_precision") or "estimated_dom_not_pdf_glyph_bbox",
+        }
+    )
 
 
 def _matched_layers(
@@ -897,6 +1290,9 @@ def _operation_slide(operation: dict[str, Any], manifest: dict[str, Any]) -> dic
     layer_lines = _layer_evidence_lines(operation)
     if layer_lines:
         body.extend(["Matched Template Layer Evidence", *layer_lines])
+    html_layer_lines = _html_layer_evidence_lines(operation)
+    if html_layer_lines:
+        body.extend(["Matched HTML Layer Evidence", *html_layer_lines])
     slide = {
         "title": operation.get("title") or "Patch Slide",
         "subtitle": operation.get("subtitle") or "Patch transaction appendix",
@@ -914,6 +1310,7 @@ def _patch_evidence_markdown(operation: dict[str, Any], manifest: dict[str, Any]
     refs = ", ".join(f"`{ref}`" for ref in source_refs) if source_refs else "none"
     source_map_evidence = _source_map_evidence_markdown(operation)
     layer_evidence = _layer_evidence_markdown(operation)
+    html_layer_evidence = _html_layer_evidence_markdown(operation)
     return (
         "## Patch Evidence\n\n"
         f"- Patch id: `{manifest['patch_id']}`\n"
@@ -922,6 +1319,7 @@ def _patch_evidence_markdown(operation: dict[str, Any], manifest: dict[str, Any]
         "- Input PDF was not mutated; this page was appended to a new output artifact.\n"
         f"{source_map_evidence}"
         f"{layer_evidence}"
+        f"{html_layer_evidence}"
     )
 
 
@@ -1005,7 +1403,28 @@ def _target_layer_refs(operation: dict[str, Any]) -> dict[str, list[str]]:
     }
 
 
+def _target_html_layer_refs(operation: dict[str, Any]) -> dict[str, list[str]]:
+    target_html_layer_refs = (
+        operation.get("target_html_layer_refs")
+        if isinstance(operation.get("target_html_layer_refs"), dict)
+        else {}
+    )
+    return {
+        "html_layer_ids": _string_list(
+            operation.get("html_layer_ids")
+            or operation.get("html_layer_id")
+            or target_html_layer_refs.get("html_layer_ids")
+            or target_html_layer_refs.get("html_layer_id")
+        ),
+    }
+
+
 def _operation_expected_effect(operation: dict[str, Any]) -> str:
+    if operation["op"] == "regenerate_block" and operation.get("target_html_layer_refs"):
+        return (
+            "write a patched HTML source package and rerender a new PDF; original PDF and "
+            "HTML source remain unchanged"
+        )
     return {
         "append_markdown": "append one or more audited markdown pages",
         "append_code_block": "append one or more audited code appendix pages",
@@ -1032,6 +1451,13 @@ def _layer_evidence_markdown(operation: dict[str, Any]) -> str:
     if not lines:
         return ""
     return "\n### Matched Template Layer Evidence\n\n" + "\n".join(f"- {line}" for line in lines) + "\n"
+
+
+def _html_layer_evidence_markdown(operation: dict[str, Any]) -> str:
+    lines = _html_layer_evidence_lines(operation)
+    if not lines:
+        return ""
+    return "\n### Matched HTML Layer Evidence\n\n" + "\n".join(f"- {line}" for line in lines) + "\n"
 
 
 def _source_map_evidence_lines(operation: dict[str, Any]) -> list[str]:
@@ -1069,6 +1495,25 @@ def _layer_evidence_lines(operation: dict[str, Any]) -> list[str]:
     return lines
 
 
+def _html_layer_evidence_lines(operation: dict[str, Any]) -> list[str]:
+    lines = []
+    for layer in operation.get("html_layer_evidence", []):
+        if not isinstance(layer, dict):
+            continue
+        layer_id = str(layer.get("layer_id") or "unknown_html_layer")
+        block_id = str(layer.get("block_id") or "unknown_block")
+        block_type = str(layer.get("block_type") or "unknown_type")
+        target_slot = str(layer.get("target_slot") or "unknown_slot")
+        anchor = layer.get("anchor") if isinstance(layer.get("anchor"), dict) else {}
+        selector = str(anchor.get("dom_selector") or "unknown_selector")
+        bbox_precision = str(layer.get("bbox_precision") or anchor.get("bbox_precision") or "unknown_precision")
+        lines.append(
+            f"`{layer_id}` for block `{block_id}` ({block_type}, slot: `{target_slot}`, "
+            f"selector: `{selector}`, bbox: `{bbox_precision}`)"
+        )
+    return lines
+
+
 def _manifest_matched_source_count(manifest: dict[str, Any]) -> int:
     return sum(
         int(operation_map.get("matched_source_count") or 0)
@@ -1083,6 +1528,18 @@ def _manifest_matched_layer_count(manifest: dict[str, Any]) -> int:
         for operation_map in manifest.get("operation_layer_map", [])
         if isinstance(operation_map, dict)
     )
+
+
+def _manifest_matched_html_layer_count(manifest: dict[str, Any]) -> int:
+    return sum(
+        int(operation_map.get("matched_html_layer_count") or 0)
+        for operation_map in manifest.get("operation_html_layer_map", [])
+        if isinstance(operation_map, dict)
+    )
+
+
+def _drop_empty_values(payload: dict[str, Any]) -> dict[str, Any]:
+    return {key: value for key, value in payload.items() if value not in (None, "", [], {})}
 
 
 def _escape_markdown_table_cell(value: str) -> str:

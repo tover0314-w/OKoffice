@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import html
 import zipfile
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 from uuid import uuid4
 
@@ -19,6 +19,9 @@ CREATE_FROM_OUTLINE_TOOL_NAME = "deck.create.from_outline"
 VALIDATE_TOOL_NAME = "deck.validate.presentation"
 PPTX_MIME_TYPE = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
 REL_NS = {"rel": "http://schemas.openxmlformats.org/package/2006/relationships"}
+REL_URI = REL_NS["rel"]
+OFFICE_REL_URI = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+OFFICE_R = f"{{{OFFICE_REL_URI}}}"
 PLACEHOLDER_MARKERS = ("{{", "}}", "[[", "]]", "<<", ">>", "TODO", "TBD", "lorem ipsum")
 
 
@@ -41,37 +44,410 @@ def inspect_deck_presentation(path: str | Path) -> ToolResult:
 
     source_path = Path(preflight.usage["file"]["path"])
     names = zip_names(source_path)
-    slide_members = sorted_members(names, prefix="ppt/slides/slide")
-    text_run_count = _slide_text_run_count(source_path, slide_members)
+    presentation_root = read_xml(source_path, "ppt/presentation.xml")
+    if presentation_root is None:
+        return _failed(
+            INSPECT_TOOL_NAME,
+            AgentPDFError(
+                code="unsupported_file_type",
+                message="deck.inspect.presentation requires ppt/presentation.xml in the PPTX package.",
+                details={"path": source_path.as_posix()},
+            ),
+        )
+    inventory = _deck_inventory(source_path, names, presentation_root)
+    summary = inventory["summary"]
+    warnings = list(preflight.warnings)
+    if summary["external_link_count"]:
+        warnings.append("External presentation relationship targets were detected.")
+    warnings = _dedupe(warnings)
 
     return ToolResult(
         job_id=_job_id(),
         status="succeeded",
         tool=INSPECT_TOOL_NAME,
         validation=ValidationReport(
-            status="passed",
+            status="warning" if warnings else "passed",
             checks=[
                 ValidationCheck(name="format_is_pptx", status="passed", details=preflight.usage["format"]),
                 ValidationCheck(name="presentation_xml_present", status="passed"),
+                ValidationCheck(
+                    name="slide_inventory",
+                    status="passed" if summary["slide_count"] else "warning",
+                    details={"slide_count": summary["slide_count"]},
+                ),
+                ValidationCheck(
+                    name="package_safety_markers",
+                    status="warning" if warnings else "passed",
+                    details=inventory["package"],
+                ),
             ],
+            warnings=warnings,
         ),
+        warnings=warnings,
         usage={
             "presentation": {
                 "path": source_path.as_posix(),
                 "format": "pptx",
                 "package_type": preflight.usage["format"]["package_type"],
-                "slide_count": len(slide_members),
-                "text_run_count": text_run_count,
+                "slide_count": summary["slide_count"],
+                "text_run_count": summary["text_run_count"],
             },
-            "notes": {"notes_slide_count": count_members(names, prefix="ppt/notesSlides/")},
+            "summary": summary,
+            "slides": inventory["slides"],
+            "shapes": inventory["shapes"],
+            "notes": _CountedList(inventory["notes"], notes_slide_count=len(inventory["notes"])),
             "layouts": {"layout_count": count_members(names, prefix="ppt/slideLayouts/")},
-            "theme": {"theme_count": count_members(names, prefix="ppt/theme/")},
-            "media": {"media_count": _media_count(names)},
-            "charts": {"chart_count": count_members(names, prefix="ppt/charts/")},
+            "theme": {"theme_count": summary["theme_count"]},
+            "themes": inventory["themes"],
+            "media": _CountedList(inventory["media"], media_count=len(inventory["media"])),
+            "charts": _CountedList(inventory["charts"], chart_count=len(inventory["charts"])),
+            "package": inventory["package"],
+            "layout": {
+                "rendered_layout_claimed": False,
+                "preview_available": False,
+                "render_worker_required": "pptx_contact_sheet_renderer",
+            },
             "safety": preflight.usage["safety"],
         },
-        next_recommended_tools=["deck.edit.patch", "deck.export.pdf", "office.context.build_packet"],
+        next_recommended_tools=[
+            "deck.edit.patch",
+            "deck.validation.presentation",
+            "deck.validation.contact_sheet",
+            "deck.export.pdf",
+            "office.context.build_packet",
+        ],
     )
+
+
+class _CountedList(list[dict[str, Any]]):
+    def __init__(self, values: list[dict[str, Any]], **counts: int) -> None:
+        super().__init__(values)
+        self._counts = counts
+
+    def __getitem__(self, key: int | str) -> Any:
+        if isinstance(key, str):
+            return self._counts[key]
+        return super().__getitem__(key)
+
+    def get(self, key: str, default: Any = None) -> Any:
+        return self._counts.get(key, default)
+
+
+def _deck_inventory(source_path: Path, names: set[str], presentation_root: object) -> dict[str, Any]:
+    presentation_rels = _relationship_map(read_xml(source_path, "ppt/_rels/presentation.xml.rels"), "ppt/presentation.xml")
+    slide_order = _slide_order(presentation_root, presentation_rels, names)
+    slides: list[dict[str, Any]] = []
+    shapes: list[dict[str, Any]] = []
+    notes: list[dict[str, Any]] = []
+    charts: list[dict[str, Any]] = []
+    media: list[dict[str, Any]] = []
+    external_links = [rel for rel in presentation_rels.values() if rel["target_mode"].lower() == "external"]
+    allow_note_fallback = not any(name.startswith("ppt/slides/_rels/") and name.endswith(".rels") for name in names)
+
+    for slide_number, slide in enumerate(slide_order, start=1):
+        slide_part = slide["part"]
+        slide_id = str(slide["slide_id"])
+        slide_root = read_xml(source_path, slide_part)
+        slide_rels = _relationship_map(read_xml(source_path, _rels_part_for(slide_part)), slide_part)
+        external_links.extend([rel for rel in slide_rels.values() if rel["target_mode"].lower() == "external"])
+        slide_shapes = _slide_shapes(source_path, slide_root, slide_number=slide_number, slide_id=slide_id)
+        slide_charts = _slide_charts(slide_root, slide_rels, slide_number=slide_number, slide_id=slide_id)
+        slide_media = _slide_media(slide_root, slide_rels, slide_number=slide_number, slide_id=slide_id)
+        note_payload = _slide_notes(
+            source_path,
+            slide_rels,
+            names,
+            slide_number=slide_number,
+            slide_id=slide_id,
+            allow_fallback=allow_note_fallback,
+        )
+        if note_payload is not None:
+            notes.append(note_payload)
+        shapes.extend(slide_shapes)
+        charts.extend(slide_charts)
+        media.extend(slide_media)
+        title = next((shape["text"] for shape in slide_shapes if shape.get("placeholder") == "title" and shape["text"]), "")
+        if not title:
+            title = slide_shapes[0]["text"] if slide_shapes else ""
+        slides.append(
+            {
+                "slide_number": slide_number,
+                "slide_id": slide_id,
+                "part": slide_part,
+                "title": title,
+                "text": "\n".join(shape["text"] for shape in slide_shapes if shape["text"]),
+                "text_run_count": sum(int(shape["text_run_count"]) for shape in slide_shapes),
+                "shape_count": len(slide_shapes),
+                "chart_count": len(slide_charts),
+                "media_count": len(slide_media),
+                "has_notes": note_payload is not None and bool(note_payload.get("text")),
+                "locator": {"kind": "deck", "slide": slide_number, "slide_id": slide_id},
+            }
+        )
+
+    charts.extend(_orphan_charts(names, charts))
+    media.extend(_orphan_media(names, media))
+    themes = _themes(source_path, names)
+    package = {
+        "macro_enabled": source_path.suffix.lower() == ".pptm" or any(name.lower().endswith("vbaproject.bin") for name in names),
+        "has_external_relationships": bool(external_links),
+        "external_relationships": external_links,
+    }
+    summary = {
+        "slide_count": len(slides),
+        "slide_with_notes_count": len([slide for slide in slides if slide["has_notes"]]),
+        "shape_count": len(shapes),
+        "text_run_count": sum(int(slide["text_run_count"]) for slide in slides),
+        "chart_count": len(charts),
+        "media_count": len(media),
+        "theme_count": len(themes),
+        "external_link_count": len(external_links),
+    }
+    return {
+        "summary": summary,
+        "slides": slides,
+        "shapes": shapes,
+        "notes": notes,
+        "charts": charts,
+        "media": media,
+        "themes": themes,
+        "package": package,
+    }
+
+
+def _slide_order(presentation_root: object, presentation_rels: dict[str, dict[str, str]], names: set[str]) -> list[dict[str, str]]:
+    slides = []
+    for index, slide_id_node in enumerate(presentation_root.findall(".//p:sldId", DECK_NS), start=1):
+        rel_id = slide_id_node.get(f"{OFFICE_R}id")
+        target = presentation_rels.get(str(rel_id), {}).get("target") if rel_id else None
+        if target and target in names:
+            slides.append({"slide_id": str(slide_id_node.get("id") or 255 + index), "part": target})
+    if slides:
+        return slides
+    return [
+        {"slide_id": str(255 + index), "part": member}
+        for index, member in enumerate(sorted_members(names, prefix="ppt/slides/slide"), start=1)
+    ]
+
+
+def _slide_shapes(source_path: Path, slide_root: object | None, *, slide_number: int, slide_id: str) -> list[dict[str, Any]]:
+    if slide_root is None:
+        return []
+    shapes = []
+    for shape in slide_root.findall(".//p:sp", DECK_NS):
+        c_nv_pr = shape.find(".//p:cNvPr", DECK_NS)
+        placeholder = shape.find(".//p:ph", DECK_NS)
+        shape_id = str(c_nv_pr.get("id") if c_nv_pr is not None else len(shapes) + 1)
+        placeholder_type = placeholder.get("type") if placeholder is not None else None
+        text_runs = [str(node.text or "") for node in shape.findall(".//a:t", DECK_NS)]
+        text = "".join(text_runs).strip()
+        shapes.append(
+            {
+                "slide_number": slide_number,
+                "slide_id": slide_id,
+                "shape_id": shape_id,
+                "name": c_nv_pr.get("name") if c_nv_pr is not None else None,
+                "placeholder": placeholder_type,
+                "text": text,
+                "text_run_count": len(text_runs),
+                "locator": {
+                    "kind": "deck",
+                    "slide": slide_number,
+                    "slide_id": slide_id,
+                    "shape_id": shape_id,
+                    **({"placeholder": placeholder_type} if placeholder_type else {}),
+                },
+            }
+        )
+    return shapes
+
+
+def _slide_notes(
+    source_path: Path,
+    slide_rels: dict[str, dict[str, str]],
+    names: set[str],
+    *,
+    slide_number: int,
+    slide_id: str,
+    allow_fallback: bool,
+) -> dict[str, Any] | None:
+    note_rel = next((rel for rel in slide_rels.values() if rel["type"].endswith("/notesSlide")), None)
+    if note_rel is None and not allow_fallback:
+        return None
+    note_part = note_rel["target"] if note_rel is not None else f"ppt/notesSlides/notesSlide{slide_number}.xml"
+    if note_part not in names:
+        return None
+    note_root = read_xml(source_path, note_part)
+    text = _text_content(note_root)
+    return {
+        "slide_number": slide_number,
+        "slide_id": slide_id,
+        "part": note_part,
+        "text": text,
+        "locator": {"kind": "deck", "slide": slide_number, "slide_id": slide_id, "notes": True},
+    }
+
+
+def _slide_charts(
+    slide_root: object | None,
+    slide_rels: dict[str, dict[str, str]],
+    *,
+    slide_number: int,
+    slide_id: str,
+) -> list[dict[str, Any]]:
+    if slide_root is None:
+        return []
+    charts = []
+    for index, chart in enumerate(slide_root.findall(".//c:chart", {**DECK_NS, "c": "http://schemas.openxmlformats.org/drawingml/2006/chart"}), start=1):
+        rel_id = chart.get(f"{OFFICE_R}id")
+        target = slide_rels.get(str(rel_id), {}).get("target", "")
+        chart_id = PurePosixPath(target).stem if target else f"chart{index}"
+        charts.append(
+            {
+                "slide_number": slide_number,
+                "slide_id": slide_id,
+                "chart_id": chart_id,
+                "part": target,
+                "locator": {"kind": "deck", "slide": slide_number, "slide_id": slide_id, "shape_id": chart_id},
+            }
+        )
+    return charts
+
+
+def _orphan_charts(names: set[str], charts: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    existing = {str(chart.get("part") or "") for chart in charts}
+    orphans = []
+    for part in sorted_members(names, prefix="ppt/charts/"):
+        if part in existing:
+            continue
+        chart_id = PurePosixPath(part).stem
+        orphans.append(
+            {
+                "slide_number": None,
+                "slide_id": None,
+                "chart_id": chart_id,
+                "part": part,
+                "locator": {"kind": "deck", "shape_id": chart_id},
+            }
+        )
+    return orphans
+
+
+def _slide_media(
+    slide_root: object | None,
+    slide_rels: dict[str, dict[str, str]],
+    *,
+    slide_number: int,
+    slide_id: str,
+) -> list[dict[str, Any]]:
+    if slide_root is None:
+        return []
+    media = []
+    for index, blip in enumerate(slide_root.findall(".//a:blip", DECK_NS), start=1):
+        rel_id = blip.get(f"{OFFICE_R}embed") or blip.get(f"{OFFICE_R}link")
+        rel = slide_rels.get(str(rel_id), {})
+        target = rel.get("target", "")
+        media.append(
+            {
+                "slide_number": slide_number,
+                "slide_id": slide_id,
+                "media_id": str(rel_id or f"media{index}"),
+                "kind": _media_kind(rel.get("type", ""), target),
+                "part": target,
+                "locator": {"kind": "deck", "slide": slide_number, "slide_id": slide_id, "media_id": str(rel_id or index)},
+            }
+        )
+    return media
+
+
+def _orphan_media(names: set[str], media: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    existing = {str(item.get("part") or "") for item in media}
+    orphans = []
+    for index, part in enumerate(sorted(name for name in names if name.startswith("ppt/media/")), start=1):
+        if part in existing:
+            continue
+        orphans.append(
+            {
+                "slide_number": None,
+                "slide_id": None,
+                "media_id": f"media{index}",
+                "kind": _media_kind("", part),
+                "part": part,
+                "locator": {"kind": "deck", "media_id": f"media{index}"},
+            }
+        )
+    return orphans
+
+
+def _themes(source_path: Path, names: set[str]) -> list[dict[str, Any]]:
+    themes = []
+    for index, part in enumerate(sorted_members(names, prefix="ppt/theme/"), start=1):
+        root = read_xml(source_path, part)
+        themes.append(
+            {
+                "theme_id": f"theme{index}",
+                "part": part,
+                "name": root.get("name") if root is not None else None,
+            }
+        )
+    return themes
+
+
+def _relationship_map(root: object | None, source_part: str) -> dict[str, dict[str, str]]:
+    if root is None:
+        return {}
+    relationships = {}
+    for rel in root.findall(".//rel:Relationship", REL_NS):
+        rel_id = str(rel.get("Id") or "")
+        target = str(rel.get("Target") or "")
+        relationships[rel_id] = {
+            "id": rel_id,
+            "type": str(rel.get("Type") or ""),
+            "target": target if str(rel.get("TargetMode") or "").lower() == "external" else _resolve_target(source_part, target),
+            "target_mode": str(rel.get("TargetMode") or ""),
+        }
+    return relationships
+
+
+def _rels_part_for(source_part: str) -> str:
+    path = PurePosixPath(source_part)
+    return str(path.parent / "_rels" / f"{path.name}.rels")
+
+
+def _resolve_target(source_part: str, target: str) -> str:
+    if "://" in target:
+        return target
+    base = PurePosixPath(source_part).parent
+    parts = []
+    for part in (base / target).parts:
+        if part in {"", "."}:
+            continue
+        if part == "..":
+            if parts:
+                parts.pop()
+            continue
+        parts.append(part)
+    return "/".join(parts)
+
+
+def _text_content(root: object | None) -> str:
+    if root is None:
+        return ""
+    return "".join(str(node.text or "") for node in root.findall(".//a:t", DECK_NS)).strip()
+
+
+def _media_kind(rel_type: str, target: str) -> str:
+    if rel_type.endswith("/image") or PurePosixPath(target).suffix.lower() in {".png", ".jpg", ".jpeg", ".gif"}:
+        return "image"
+    return "media"
+
+
+def _dedupe(values: list[str]) -> list[str]:
+    result: list[str] = []
+    for value in values:
+        if value and value not in result:
+            result.append(value)
+    return result
 
 
 def validate_deck_presentation(path: str | Path) -> ToolResult:

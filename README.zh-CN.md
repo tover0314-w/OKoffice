@@ -85,7 +85,7 @@ okpdf serve --api
 | `office.workflow.sheet_to_deck` | beta | 分析 evidence workbook，并创建可编辑的 PPTX review deck。 |
 | `office.workflow.board_pack` | beta | 创建本地 ZIP board pack，包含 artifacts、manifest、validation report 和交付元数据。 |
 | `office.bundle.verify` | beta | 校验 board pack ZIP 的 manifest、validation report、artifact 成员、大小和 SHA-256。 |
-| `pdf.*` 兼容层 | stable/beta | 241 个本地 PDF 和 agent setup 工具继续通过 `okpdf`、MCP、REST、SDK 可用。 |
+| `pdf.*` 兼容层 | stable/beta | 完整 manifest 当前覆盖 264 个本地 PDF、Office 和 agent setup 工具，继续通过 `okpdf`、MCP、REST、SDK 可用。 |
 
 ## 产品主循环
 
