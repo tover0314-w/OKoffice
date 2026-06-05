@@ -2,7 +2,7 @@
     "manifest_version":  "0.1",
     "product":  "okoffice",
     "compatibility_package":  "agentpdf",
-    "tool_count":  55,
+    "tool_count":  56,
     "domains":  [
                     "office",
                     "word",
@@ -192,6 +192,19 @@
                                                 "cli",
                                                 "mcp",
                                                 "rest",
+                                                "sdk"
+                                            ],
+                             "implemented":  true,
+                             "oss_default":  true,
+                             "requires_model":  false
+                         },
+                         {
+                             "name":  "office.agent.setup.claude_code",
+                             "status":  "beta",
+                             "description":  "Generate a Claude Code MCP config that starts the local OKoffice server and recommends Office-native MCP tools.",
+                             "domain":  "office",
+                             "interfaces":  [
+                                                "cli",
                                                 "sdk"
                                             ],
                              "implemented":  true,

@@ -8,6 +8,11 @@
       "status": "stable"
     },
     {
+      "name": "okoffice_tool_manifest",
+      "maps_to": "office.manifest.show",
+      "status": "beta"
+    },
+    {
       "name": "agent_setup_claude_code",
       "maps_to": "agent.setup.claude_code",
       "status": "beta"

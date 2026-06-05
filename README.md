@@ -95,10 +95,11 @@ okoffice workflow extract-to-sheet path/to/report.docx path/to/model.xlsx -o .ok
 okoffice workflow sheet-to-deck .okoffice-out/evidence.xlsx -o .okoffice-out/board-review.pptx --title "Board Review" --json
 okoffice workflow board-pack .okoffice-out/evidence.xlsx .okoffice-out/board-review.pptx -o .okoffice-out/board-pack.zip --title "Board Review" --json
 okoffice bundle verify .okoffice-out/board-pack.zip --json
+okoffice agent setup claude-code --output .mcp.json --json
+okoffice serve --mcp --safe-root .
+okoffice serve --api
 
 okpdf inspect tests/fixtures/simple.pdf --json
-okpdf serve --mcp --safe-root .
-okpdf serve --api
 ```
 
 Deck note: the current OSS beta creates deterministic editable PPTX files directly from a deck plan. The target OKoffice deck pipeline is taste-driven and HTML-first:
@@ -157,7 +158,7 @@ The codebase still exposes the compatibility Python package as `agentpdf` and th
 | Evidence | `office.context.build_packet`, `office.evidence.coverage`, `office.source_map.create` |
 | Workflow | `office.workflow.extract_to_sheet`, `office.workflow.sheet_to_deck`, `office.workflow.board_pack`, `pdf.workflow.run` |
 | Bundle | `office.bundle.export`, `office.bundle.verify`, `pdf.artifacts.export_bundle` |
-| Agents | `agent.setup.codex`, `agent.setup.claude_code`, `agent.setup.openclaw`, future `office.agent.setup.*` aliases |
+| Agents | `office.agent.setup.claude_code`, compatibility `agent.setup.codex`, `agent.setup.claude_code`, `agent.setup.openclaw` |
 
 ## Agent Interfaces
 
@@ -169,6 +170,13 @@ OKoffice is designed to be called by coding agents and automation systems:
 - Python functions expose the same model objects.
 - Node SDK compatibility remains available for the current PDF domain.
 - Tool manifests document implementation status and cloud/worker boundaries.
+
+Claude Code local setup:
+
+```bash
+okoffice agent setup claude-code --output .mcp.json --json
+claude mcp list
+```
 
 Every public tool should return evidence, not just a boolean:
 
