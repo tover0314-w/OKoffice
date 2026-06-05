@@ -4,7 +4,10 @@ from agentpdf.office.context import build_office_context_packet
 from agentpdf.office.deck import (
     create_deck_from_outline,
     create_deck_presentation,
+    export_deck_pptx,
     inspect_deck_presentation,
+    render_deck_html,
+    validate_deck_html_preview,
     validate_deck_presentation,
 )
 from agentpdf.office.deck_plan import compose_deck_plan
@@ -39,7 +42,10 @@ __all__ = [
     "compose_deck_plan",
     "create_deck_from_outline",
     "create_deck_presentation",
+    "export_deck_pptx",
     "inspect_deck_presentation",
+    "render_deck_html",
+    "validate_deck_html_preview",
     "validate_deck_presentation",
     "inspect_office_file",
     "inspect_sheet_workbook",

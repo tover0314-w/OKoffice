@@ -39,7 +39,10 @@ from agentpdf.tools.runner import (
     run_deck_compose_plan,
     run_deck_create_from_outline,
     run_deck_create_presentation,
+    run_deck_export_pptx,
     run_deck_inspect_presentation,
+    run_deck_render_html,
+    run_deck_validate_html_preview,
     run_deck_validate_presentation,
     run_create_markdown,
     run_create_text,
@@ -219,6 +222,9 @@ def create_mcp_server() -> FastMCP:
     server.tool(name="deck_compose_plan")(deck_compose_plan)
     server.tool(name="deck_create_from_outline")(deck_create_from_outline)
     server.tool(name="deck_create_presentation")(deck_create_presentation)
+    server.tool(name="deck_render_html")(deck_render_html)
+    server.tool(name="deck_validation_html_preview")(deck_validation_html_preview)
+    server.tool(name="deck_export_pptx")(deck_export_pptx)
     server.tool(name="deck_validate_presentation")(deck_validate_presentation)
     server.tool(name="pdf_inspect_document")(pdf_inspect_document)
     server.tool(name="pdf_inspect_pages")(pdf_inspect_pages)
@@ -598,6 +604,21 @@ def deck_compose_plan(
         style=style,
         max_rows_per_sheet=max_rows_per_sheet,
     ).model_dump_json()
+
+
+def deck_render_html(plan_path: str, output_path: str, artifact_dir: str | None = None) -> str:
+    """Render a deck composition plan or outline JSON into an offline HTML preview package."""
+    return run_deck_render_html(plan_path, output_path, artifact_dir=artifact_dir).model_dump_json()
+
+
+def deck_validation_html_preview(path: str) -> str:
+    """Validate an offline HTML deck preview package before PPTX export."""
+    return run_deck_validate_html_preview(path).model_dump_json()
+
+
+def deck_export_pptx(html_path: str, output_path: str) -> str:
+    """Export an HTML deck preview package into an editable PPTX deck."""
+    return run_deck_export_pptx(html_path, output_path).model_dump_json()
 
 
 def deck_validate_presentation(path: str) -> str:

@@ -43,7 +43,10 @@ from agentpdf.tools.runner import (
     run_deck_compose_plan,
     run_deck_create_from_outline,
     run_deck_create_presentation,
+    run_deck_export_pptx,
     run_deck_inspect_presentation,
+    run_deck_render_html,
+    run_deck_validate_html_preview,
     run_deck_validate_presentation,
     run_create_markdown,
     run_create_text,
@@ -394,6 +397,20 @@ def _run_tool(tool_name: str, payload: dict[str, Any]) -> ToolResult:
         outline_or_plan = payload.get("outline", payload.get("plan", payload))
         return run_deck_create_presentation(
             outline_or_plan=outline_or_plan if isinstance(outline_or_plan, dict) else {},
+            output_path=payload.get("output_path", payload.get("output", ".okoffice-out/deck.pptx")),
+        )
+    if tool_name == "deck.render.html":
+        plan_or_path = payload.get("plan", payload.get("plan_path", payload.get("path", payload.get("input_path", payload))))
+        return run_deck_render_html(
+            plan_or_path=plan_or_path if isinstance(plan_or_path, (dict, str)) else {},
+            output_path=payload.get("output_path", payload.get("output", ".okoffice-out/deck.html")),
+            artifact_dir=payload.get("artifact_dir"),
+        )
+    if tool_name == "deck.validation.html_preview":
+        return run_deck_validate_html_preview(payload.get("path", payload.get("html_path", payload.get("input_path", ""))))
+    if tool_name == "deck.export.pptx":
+        return run_deck_export_pptx(
+            html_path=payload.get("html_path", payload.get("path", payload.get("input_path", ""))),
             output_path=payload.get("output_path", payload.get("output", ".okoffice-out/deck.pptx")),
         )
     if tool_name == "deck.compose.plan":

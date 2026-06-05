@@ -429,7 +429,7 @@ Phase 3:
 
 - Implement DOCX/XLSX/PPTX inspect and validation.
 - Implement `docset_to_sheet` and the source-mapped `sheet_to_deck` planning path.
-- Add the deck HTML preview/export worker contract: `deck.render.html`, `deck.validation.html_preview`, `deck.export.pptx`.
+- Expand the deck HTML preview/export beta (`deck.render.html`, `deck.validation.html_preview`, `deck.export.pptx`) from the local baseline toward richer worker-backed rendering and export.
 - Add worker abstraction.
 
 Phase 4:

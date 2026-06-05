@@ -12,7 +12,10 @@ SUPPORTED_LOCAL_WORKFLOW_TOOLS = {
     "deck.compose.plan",
     "deck.create.from_outline",
     "deck.create.presentation",
+    "deck.export.pptx",
     "deck.inspect.presentation",
+    "deck.render.html",
+    "deck.validation.html_preview",
     "deck.validate.presentation",
     "office.bundle.verify",
     "office.context.build_packet",
@@ -465,6 +468,22 @@ def _run_local_step(tool: str, payload: dict[str, Any]) -> ToolResult:
         outline_or_plan = payload.get("outline", payload.get("plan", payload))
         return runner.run_deck_create_presentation(
             outline_or_plan=outline_or_plan if isinstance(outline_or_plan, dict) else {},
+            output_path=payload.get("output_path", payload.get("output", ".okoffice-out/deck.pptx")),
+        )
+    if tool == "deck.render.html":
+        plan_or_path = payload.get("plan", payload.get("plan_path", payload.get("path", payload.get("input_path", payload))))
+        return runner.run_deck_render_html(
+            plan_or_path=plan_or_path if isinstance(plan_or_path, (dict, str)) else {},
+            output_path=payload.get("output_path", payload.get("output", ".okoffice-out/deck.html")),
+            artifact_dir=payload.get("artifact_dir"),
+        )
+    if tool == "deck.validation.html_preview":
+        return runner.run_deck_validate_html_preview(
+            payload.get("path", payload.get("html_path", payload.get("input_path", ""))),
+        )
+    if tool == "deck.export.pptx":
+        return runner.run_deck_export_pptx(
+            html_path=payload.get("html_path", payload.get("path", payload.get("input_path", ""))),
             output_path=payload.get("output_path", payload.get("output", ".okoffice-out/deck.pptx")),
         )
     if tool == "deck.compose.plan":

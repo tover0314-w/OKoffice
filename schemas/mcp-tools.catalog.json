@@ -128,6 +128,21 @@
       "status": "beta"
     },
     {
+      "name": "deck_render_html",
+      "maps_to": "deck.render.html",
+      "status": "beta"
+    },
+    {
+      "name": "deck_validation_html_preview",
+      "maps_to": "deck.validation.html_preview",
+      "status": "beta"
+    },
+    {
+      "name": "deck_export_pptx",
+      "maps_to": "deck.export.pptx",
+      "status": "beta"
+    },
+    {
       "name": "deck_create_from_outline",
       "maps_to": "deck.create.from_outline",
       "status": "beta"

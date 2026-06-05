@@ -154,7 +154,10 @@ from agentpdf.ir.lite import parse_lite_pdf, write_document_ir_json, write_docum
 from agentpdf.office.deck import (
     create_deck_from_outline,
     create_deck_presentation,
+    export_deck_pptx,
     inspect_deck_presentation,
+    render_deck_html,
+    validate_deck_html_preview,
     validate_deck_presentation,
 )
 from agentpdf.office.deck_plan import compose_deck_plan
@@ -332,6 +335,22 @@ def run_deck_create_from_outline(outline: dict[str, object], output_path: str | 
 
 def run_deck_create_presentation(outline_or_plan: dict[str, object], output_path: str | Path) -> ToolResult:
     return create_deck_presentation(outline_or_plan, output_path)
+
+
+def run_deck_render_html(
+    plan_or_path: dict[str, object] | str | Path,
+    output_path: str | Path,
+    artifact_dir: str | Path | None = None,
+) -> ToolResult:
+    return render_deck_html(plan_or_path, output_path, artifact_dir=artifact_dir)
+
+
+def run_deck_validate_html_preview(path: str | Path) -> ToolResult:
+    return validate_deck_html_preview(path)
+
+
+def run_deck_export_pptx(html_path: str | Path, output_path: str | Path) -> ToolResult:
+    return export_deck_pptx(html_path, output_path)
 
 
 def run_deck_compose_plan(

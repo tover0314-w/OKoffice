@@ -184,4 +184,4 @@ office.inspect.file
 -> office.bundle.verify
 ```
 
-Current beta note: `deck.create.presentation` can write PPTX directly from a plan. Target agent behavior should prefer HTML preview validation and PPTX export when `deck.render.html` / `deck.export.pptx` are available, with direct PPTX creation reported as an explicit fallback route.
+Current beta note: agents can run `deck.render.html`, `deck.validation.html_preview`, and `deck.export.pptx` as a local HTML-first baseline. `deck.create.presentation` still writes PPTX directly from a plan as a convenience route; future orchestration should prefer the HTML preview/export chain and report direct PPTX creation as an explicit fallback path.

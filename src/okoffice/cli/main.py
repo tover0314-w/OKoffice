@@ -10,7 +10,10 @@ from agentpdf.office.context import build_office_context_packet
 from agentpdf.office.deck import (
     create_deck_from_outline,
     create_deck_presentation,
+    export_deck_pptx,
     inspect_deck_presentation,
+    render_deck_html,
+    validate_deck_html_preview,
     validate_deck_presentation,
 )
 from agentpdf.office.deck_plan import compose_deck_plan
@@ -260,6 +263,39 @@ def deck_create_presentation(
         create_deck_presentation(outline_or_plan if isinstance(outline_or_plan, dict) else {}, output_path),
         json_output=json_output,
     )
+
+
+@deck_app.command("render-html")
+def deck_render_html(
+    plan_path: Annotated[Path, typer.Argument(help="JSON deck outline or composition plan path.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output HTML deck preview path.")],
+    artifact_dir: Annotated[
+        Path | None,
+        typer.Option("--artifact-dir", help="Optional directory for the HTML package manifest."),
+    ] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Render a source-mapped deck plan into an offline HTML preview package."""
+    _emit_result(render_deck_html(plan_path, output_path, artifact_dir=artifact_dir), json_output=json_output)
+
+
+@deck_app.command("validate-html")
+def deck_validate_html(
+    path: Annotated[Path, typer.Argument(help="HTML deck preview path to validate.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Validate an offline HTML deck preview package before PPTX export."""
+    _emit_result(validate_deck_html_preview(path), json_output=json_output)
+
+
+@deck_app.command("export-pptx")
+def deck_export_pptx(
+    html_path: Annotated[Path, typer.Argument(help="HTML deck preview path to export.")],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output editable PPTX deck path.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Export a validated HTML deck package into an editable PPTX deck."""
+    _emit_result(export_deck_pptx(html_path, output_path), json_output=json_output)
 
 
 @deck_app.command("compose-plan")

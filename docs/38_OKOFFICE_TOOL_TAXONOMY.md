@@ -234,10 +234,10 @@ Build in this order:
 7. `sheet.create.evidence_workbook` (beta local writer with SourceRefs sheet)
 8. `sheet.validation.formulas` (beta structural formula QA)
 9. `deck.compose.plan` (beta source-mapped deck plan)
-10. `deck.render.html` (planned HTML slide preview package)
-11. `deck.validation.html_preview` (planned taste/layout/source validation)
+10. `deck.render.html` (beta HTML slide preview package)
+11. `deck.validation.html_preview` (beta package/source validation; screenshot taste checks remain planned)
 12. `deck.validation.contact_sheet`
-13. `deck.export.pptx` (planned editable PowerPoint export)
+13. `deck.export.pptx` (beta editable PowerPoint export through the local outline route)
 14. `deck.create.presentation` (beta direct PPTX writer now, target orchestrator)
 15. `word.create.report`
 16. `office.bundle.export`
