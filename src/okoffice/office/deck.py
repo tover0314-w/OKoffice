@@ -1839,17 +1839,28 @@ def _outline_slides(outline: dict[str, Any]) -> list[dict[str, Any]]:
         normalized_bullets = [str(bullet).strip() for bullet in bullets if str(bullet).strip()]
         notes = str(raw_slide.get("notes") or "").strip()
         layout = str(raw_slide.get("layout") or "").strip() or None
-        slides.append(
-            {
-                "slide_index": index,
-                "title": title,
-                "subtitle": subtitle,
-                "bullets": normalized_bullets,
-                "bullet_count": len(normalized_bullets),
-                "notes": notes,
-                "layout": layout,
-            }
-        )
+        metrics = raw_slide.get("metrics", [])
+        if not isinstance(metrics, list):
+            metrics = [metrics]
+        normalized_metrics = [str(m).strip() for m in metrics if str(m).strip()]
+        body = str(raw_slide.get("body") or "").strip()
+        slide_dict: dict[str, Any] = {
+            "slide_index": index,
+            "title": title,
+            "subtitle": subtitle,
+            "bullets": normalized_bullets,
+            "bullet_count": len(normalized_bullets),
+            "notes": notes,
+            "layout": layout,
+            "metrics": normalized_metrics,
+            "body": body,
+        }
+        for key in ("col_left_header", "col_right_header", "axis_y", "axis_x",
+                     "template_id", "source_refs", "workbook_ranges"):
+            val = raw_slide.get(key)
+            if val is not None:
+                slide_dict[key] = val
+        slides.append(slide_dict)
     return slides
 
 
