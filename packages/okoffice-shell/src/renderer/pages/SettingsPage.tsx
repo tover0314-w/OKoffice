@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   Tabs,
-  TabPane,
   Form,
   Input,
   Select,
@@ -17,6 +16,7 @@ import type { LLMConfig, LLMProviderType, MCPStatus } from '@shared/types';
 import api from '../api/bridge';
 
 const { Title, Text, Paragraph } = Typography;
+const { TabPane } = Tabs;
 
 const PROVIDER_OPTIONS: Array<{ label: string; value: LLMProviderType }> = [
   { label: 'OpenAI', value: 'openai' },

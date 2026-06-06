@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ConfigProvider } from '@arco-design/web-react';
-import '@arco-design/web-react/dist/css/index.css';
+import '@arco-design/web-react/dist/css/arco.css';
 
 import AppLayout from './components/layout/AppLayout';
 import ChatPage from './pages/ChatPage';
