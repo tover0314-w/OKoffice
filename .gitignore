@@ -31,8 +31,9 @@ packages/*/dist/
 htmlcov/
 coverage.xml
 
-# Local AgentPDF outputs
+# Local OKoffice / AgentPDF outputs
 .agentpdf-out/
+.okoffice-out/
 renders/
 /output/
 /outputs/
