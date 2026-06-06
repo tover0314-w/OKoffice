@@ -204,3 +204,38 @@ class TestMultiFormatBrief:
         result = build_multi_format_brief(files=[docx_path])
         assert result.status == "succeeded"
         assert result.artifacts == []
+
+
+class TestChartValidation:
+    def test_rejects_no_data_range(self, tmp_path: Path) -> None:
+        from okoffice.office.chart import create_chart
+        xlsx_path = _make_minimal_xlsx(tmp_path / "data.xlsx")
+        result = create_chart(
+            input_path=xlsx_path,
+            output_path=tmp_path / "out.xlsx",
+            chart_type="bar",
+        )
+        assert result.status == "failed"
+        assert "missing_data_range" in result.error.code
+
+    def test_rejects_invalid_range(self, tmp_path: Path) -> None:
+        from okoffice.office.chart import create_chart
+        xlsx_path = _make_minimal_xlsx(tmp_path / "data.xlsx")
+        result = create_chart(
+            input_path=xlsx_path,
+            output_path=tmp_path / "out.xlsx",
+            data_range="INVALID!!!",
+        )
+        assert result.status == "failed"
+        assert "invalid_range" in result.error.code
+
+
+class TestWordCommentValidation:
+    def test_resolve_without_output_fails(self, tmp_path: Path) -> None:
+        docx_path = _make_minimal_docx(tmp_path / "test.docx")
+        result = review_word_comments(
+            input_path=docx_path,
+            resolve_ids=["0"],
+        )
+        assert result.status == "failed"
+        assert "missing_output_path" in result.error.code

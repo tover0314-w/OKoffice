@@ -2,7 +2,7 @@
   "manifest_version": "0.1",
   "product": "okoffice",
   "compatibility_package": "agentpdf",
-  "tool_count": 113,
+  "tool_count": 112,
   "domains": [
     "office",
     "word",
@@ -1606,21 +1606,6 @@
       "name": "office.bundle.report",
       "status": "beta",
       "description": "Report on an OKoffice bundle with manifest, artifact, and checksum evidence.",
-      "domain": "office",
-      "interfaces": [
-        "cli",
-        "mcp",
-        "rest",
-        "sdk"
-      ],
-      "implemented": true,
-      "oss_default": true,
-      "requires_model": false
-    },
-    {
-      "name": "office.validate.output",
-      "status": "beta",
-      "description": "Validate generated Office output before returning artifacts.",
       "domain": "office",
       "interfaces": [
         "cli",

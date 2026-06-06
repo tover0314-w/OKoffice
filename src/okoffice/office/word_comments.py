@@ -2,10 +2,8 @@ from __future__ import annotations
 
 import xml.etree.ElementTree as ET
 import zipfile
-from datetime import datetime
 from pathlib import Path
 from typing import Any
-from uuid import uuid4
 
 from okoffice.office.shared import failed_result, job_id
 from okoffice.schemas.models import OKofficeError, ToolResult, ValidationCheck, ValidationReport
@@ -24,6 +22,15 @@ def review_word_comments(
     try:
         path = resolve_input_path(input_path)
         comments, warnings = _extract_comments(path)
+
+        if resolve_ids and not output_path:
+            return failed_result(
+                TOOL_NAME,
+                OKofficeError(
+                    code="missing_output_path",
+                    message="output_path is required when resolve_ids is provided. Comment resolution writes a new file.",
+                ),
+            )
 
         if resolve_ids and output_path is not None:
             dest = resolve_output_path(output_path)

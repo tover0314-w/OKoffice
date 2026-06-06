@@ -3,7 +3,6 @@ from __future__ import annotations
 import re
 from pathlib import Path
 from typing import Any
-from uuid import uuid4
 
 from okoffice.office.shared import failed_result, job_id
 from okoffice.schemas.models import OKofficeError, ToolResult, ValidationCheck, ValidationReport
@@ -70,11 +69,25 @@ def _parse_pages(pages: str) -> list[int] | str:
     result = []
     for part in pages.split(","):
         part = part.strip()
+        if not part:
+            continue
         if "-" in part:
-            start, end = part.split("-", 1)
-            result.extend(range(int(start), int(end) + 1))
+            start_s, end_s = part.split("-", 1)
+            try:
+                start, end = int(start_s), int(end_s)
+            except ValueError:
+                raise ValueError(f"Invalid page range: '{part}'. Use format like '1-5'.")
+            if start < 1 or end < start:
+                raise ValueError(f"Invalid page range: '{part}'. Start must be >= 1 and <= end.")
+            result.extend(range(start, end + 1))
         else:
-            result.append(int(part))
+            try:
+                page_num = int(part)
+            except ValueError:
+                raise ValueError(f"Invalid page number: '{part}'. Use integers like '1,3,5'.")
+            if page_num < 1:
+                raise ValueError(f"Invalid page number: '{part}'. Must be >= 1.")
+            result.append(page_num)
     return result
 
 

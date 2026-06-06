@@ -3,9 +3,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import Any
-from uuid import uuid4
 
 from okoffice.office.inspect import inspect_office_file
+from okoffice.office.shared import job_id
 from okoffice.schemas.errors import OKofficeException
 from okoffice.schemas.models import ToolResult, ValidationCheck, ValidationReport
 from okoffice.security.paths import resolve_input_path, resolve_output_path
@@ -79,7 +79,7 @@ def build_multi_format_brief(
             ),
         ]
         return ToolResult(
-            job_id=f"job_{uuid4().hex[:12]}",
+            job_id=job_id(),
             status="succeeded",
             tool=TOOL_NAME,
             artifacts=artifacts,
@@ -99,7 +99,7 @@ def build_multi_format_brief(
         )
     except OKofficeException as exc:
         return ToolResult(
-            job_id=f"job_{uuid4().hex[:12]}",
+            job_id=job_id(),
             status="failed",
             tool=TOOL_NAME,
             error=exc.to_error(),
@@ -119,7 +119,7 @@ def _extract_key_content(path: Path, detected_format: str) -> dict[str, Any]:
         elif detected_format in ("pptx", "deck"):
             content["summary"] = _pptx_key_content(path)
         else:
-            content["summary"] = {"text_preview": path.read_text(encoding="utf-8", errors="replace")[:500]}
+            content["summary"] = {"note": "Unsupported format, content preview skipped"}
     except Exception:
         content["summary"] = {"note": "Content extraction skipped"}
     return content

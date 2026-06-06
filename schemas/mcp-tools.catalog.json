@@ -1059,7 +1059,7 @@
     },
     {
       "name": "agent_setup_openai_agents",
-      "maps_to": "agent.setup.openai.agents",
+      "maps_to": "agent.setup.openai_agents",
       "status": "beta"
     },
     {
@@ -1139,12 +1139,12 @@
     },
     {
       "name": "office_evidence_map_sources",
-      "maps_to": "office.evidence.map.sources",
+      "maps_to": "office.evidence.map_sources",
       "status": "beta"
     },
     {
       "name": "office_evidence_verify_citations",
-      "maps_to": "office.evidence.verify.citations",
+      "maps_to": "office.evidence.verify_citations",
       "status": "beta"
     },
     {
@@ -1189,17 +1189,17 @@
     },
     {
       "name": "office_workflow_redaction_packet",
-      "maps_to": "office.workflow.redaction.packet",
+      "maps_to": "office.workflow.redaction_packet",
       "status": "beta"
     },
     {
       "name": "office_workflow_review_and_patch",
-      "maps_to": "office.workflow.review.and.patch",
+      "maps_to": "office.workflow.review_and_patch",
       "status": "beta"
     },
     {
       "name": "office_workflow_source_to_board_pack",
-      "maps_to": "office.workflow.source.to.board.pack",
+      "maps_to": "office.workflow.source_to_board_pack",
       "status": "beta"
     },
     {

@@ -3240,7 +3240,7 @@ def deck_export_pdf_handler(input_path: str, output_path: str) -> str:
 # --- Phase 4: New tool implementations ---
 
 def office_workflow_multi_format_brief_handler(
-    files: list[str | dict[str, object]],
+    files: list[str],
     output_path: str | None = None,
     title: str | None = None,
     intent: str | None = None,

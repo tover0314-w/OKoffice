@@ -4,7 +4,6 @@ import xml.etree.ElementTree as ET
 import zipfile
 from pathlib import Path
 from typing import Any
-from uuid import uuid4
 
 from okoffice.office.shared import failed_result, job_id
 from okoffice.schemas.models import OKofficeError, ToolResult, ValidationCheck, ValidationReport

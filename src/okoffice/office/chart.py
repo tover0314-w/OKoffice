@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any
-from uuid import uuid4
 
 from okoffice.office.shared import failed_result, job_id
 from okoffice.schemas.models import OKofficeError, ToolResult, ValidationCheck, ValidationReport
@@ -10,6 +10,7 @@ from okoffice.security.paths import resolve_input_path, resolve_output_path
 
 TOOL_NAME = "sheet.visualize.chart"
 VALID_TYPES = {"bar", "line", "pie", "area", "scatter"}
+_RANGE_RE = re.compile(r"^(?:'[^']+'!)?[A-Za-z]+\d+(?::[A-Za-z]+\d+)?$", re.IGNORECASE)
 
 
 def create_chart(
@@ -31,6 +32,28 @@ def create_chart(
                     message=f"chart_type must be one of {sorted(VALID_TYPES)}, got '{chart_type}'",
                 ),
             )
+
+        if not series_ranges and not data_range:
+            return failed_result(
+                TOOL_NAME,
+                OKofficeError(
+                    code="missing_data_range",
+                    message="At least one of series_ranges or data_range is required to create a chart.",
+                ),
+            )
+
+        for label, val in (("data_range", data_range), ("categories_range", categories_range)):
+            if val and not _RANGE_RE.match(val):
+                return failed_result(
+                    TOOL_NAME,
+                    OKofficeError(code="invalid_range", message=f"Invalid {label}: '{val}'. Expected format like 'A1:B10' or 'Sheet1!A1:B10'."),
+                )
+        for i, sr in enumerate(series_ranges or []):
+            if not _RANGE_RE.match(sr):
+                return failed_result(
+                    TOOL_NAME,
+                    OKofficeError(code="invalid_range", message=f"Invalid series_ranges[{i}]: '{sr}'. Expected format like 'A1:B10' or 'Sheet1!A1:B10'."),
+                )
 
         src = resolve_input_path(input_path)
         dest = resolve_output_path(output_path)
@@ -72,7 +95,7 @@ def create_chart(
             cats = Reference(ws, range_string=categories_range)
             chart.set_categories(cats)
 
-        ws.add_chart(chart, "A1" if not data_range else "K1")
+        ws.add_chart(chart, "K1")
         wb.save(dest.as_posix())
 
         checks = [
