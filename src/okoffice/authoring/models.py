@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -140,12 +141,30 @@ class Storyboard(AuthoringModel):
         return self
 
 
+RhythmKind = Literal["anchor", "dense", "breathing"]
+LayoutDensity = Literal["sparse", "moderate", "compact"]
+ShadowRestraint = Literal["none", "subtle", "medium"]
+GradientSophistication = Literal["flat", "subtle", "rich"]
+BackgroundEffect = Literal["none", "gradient"]
+
+
+@dataclass(frozen=True)
+class SlideRhythm:
+    rhythm_type: RhythmKind = "anchor"
+    content_weight: float = 0.5
+    whitespace_target: float = 0.20
+    max_text_chars: int = 1200
+    max_visual_elements: int = 9
+
+
 class DesignTokens(AuthoringModel):
     theme: str = "business_tech"
     page_size: str = "16:9"
     font_family: str = "Noto Sans CJK SC, Arial, sans-serif"
     heading_font: str = "Noto Sans CJK SC, Arial, sans-serif"
     body_font: str = "Noto Sans CJK SC, Arial, sans-serif"
+    display_font: str = "Noto Sans CJK SC, Georgia, serif"
+    mono_font: str = "Courier New, Courier, monospace"
     primary_color: str = "#2563EB"
     accent_color: str = "#0F766E"
     warning_color: str = "#B45309"
@@ -154,12 +173,20 @@ class DesignTokens(AuthoringModel):
     heading_size_px: int = 36
     subtitle_size_px: int = 22
     body_size_px: int = 16
+    caption_size_px: int = 10
     kicker_size_px: int = 11
     notes_size_px: int = 12
     line_height: float = 1.4
     heading_line_height: float = 1.2
     slide_padding_px: int = 48
     slide_gap_px: int = 28
+    rhythm: RhythmKind = "anchor"
+    layout_density: LayoutDensity = "moderate"
+    max_bullets_per_slide: int = 6
+    max_cards_per_slide: int = 6
+    shadow_restraint: ShadowRestraint = "subtle"
+    gradient_sophistication: GradientSophistication = "subtle"
+    background_effect: BackgroundEffect = "none"
 
     @field_validator(
         "primary_color",
@@ -174,7 +201,7 @@ class DesignTokens(AuthoringModel):
             raise ValueError("color tokens must be #RGB or #RRGGBB hex values")
         return value
 
-    @field_validator("font_family", "heading_font", "body_font")
+    @field_validator("font_family", "heading_font", "body_font", "display_font", "mono_font")
     @classmethod
     def font_family_must_be_plain_stack(cls, value: str) -> str:
         lowered = value.lower()
@@ -182,7 +209,7 @@ class DesignTokens(AuthoringModel):
             raise ValueError("font_family contains unsafe CSS, HTML, or remote markers")
         return value
 
-    @field_validator("heading_size_px", "subtitle_size_px", "body_size_px", "kicker_size_px", "notes_size_px")
+    @field_validator("heading_size_px", "subtitle_size_px", "body_size_px", "caption_size_px", "kicker_size_px", "notes_size_px")
     @classmethod
     def font_size_must_be_positive(cls, value: int) -> int:
         if value < 6 or value > 120:
@@ -195,6 +222,32 @@ class DesignTokens(AuthoringModel):
         if value < 0.8 or value > 3.0:
             raise ValueError("line height must be between 0.8 and 3.0")
         return value
+
+    @field_validator("max_bullets_per_slide", "max_cards_per_slide")
+    @classmethod
+    def max_elements_positive(cls, value: int) -> int:
+        if value < 1 or value > 20:
+            raise ValueError("max elements must be between 1 and 20")
+        return value
+
+
+Formality = Literal["high", "medium", "low"]
+TemplateTrack = Literal["html", "svg", "both"]
+
+
+class TemplateMetadata(AuthoringModel):
+    template_id: str
+    name: str
+    mood: list[str] = Field(default_factory=list)
+    tone: list[str] = Field(default_factory=list)
+    formality: Formality = "medium"
+    density: LayoutDensity = "moderate"
+    scheme: list[str] = Field(default_factory=list)
+    best_for: list[str] = Field(default_factory=list)
+    avoid_for: list[str] = Field(default_factory=list)
+    html_template_path: str | None = None
+    svg_template_path: str | None = None
+    track: TemplateTrack = "both"
 
 
 class PageSpec(AuthoringModel):

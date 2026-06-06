@@ -16,6 +16,7 @@ from okoffice.office.deck_themes import (
     tokens_to_css,
     tokens_to_pptx_defaults,
 )
+from okoffice.office.deck_templates import render_template_slide
 from okoffice.office.inspect import inspect_office_file
 from okoffice.office.ooxml import DECK_NS, count_members, read_xml, sorted_members, zip_names
 from okoffice.office.shared import dedupe_strings as _dedupe, failed_result, job_id, validation_report_status
@@ -1227,7 +1228,7 @@ def _html_deck_document(
 ) -> str:
     tokens = design_tokens or resolve_theme("business_tech")
     title = str(outline.get("title") or "OKoffice Deck Preview")
-    slide_markup = "\n".join(_html_slide(slide) for slide in slides)
+    slide_markup = "\n".join(_html_slide(slide, tokens=tokens) for slide in slides)
     return "\n".join(
         [
             "<!doctype html>",
@@ -1254,7 +1255,24 @@ def _html_deck_document(
     )
 
 
-def _html_slide(slide: dict[str, Any]) -> str:
+def _html_slide(slide: dict[str, Any], *, tokens: DesignTokens | None = None) -> str:
+    template_id = slide.get("template_id")
+    if template_id:
+        rendered = render_template_slide(template_id, slide, tokens)
+        if rendered:
+            source_refs = slide.get("source_refs", [])
+            src_markup = ""
+            if source_refs:
+                items = "\n".join(
+                    f"<li>{_html(_source_ref_label(ref))}</li>" for ref in source_refs if isinstance(ref, dict)
+                )
+                src_markup = f'<aside class="source-map"><ul>{items}</ul></aside>'
+            return (
+                f'    <section class="okoffice-slide" id="slide-{int(slide["slide_index"])}" '
+                f'data-slide-index="{int(slide["slide_index"])}" data-slide-id="{_html(slide.get("slide_id", ""))}" '
+                f'data-template="{_html(template_id)}">'
+                f'<div class="slide-content layout-template">{rendered}{src_markup}</div></section>'
+            )
     layout = select_layout(slide)
     source_refs = slide.get("source_refs", [])
     workbook_ranges = slide.get("workbook_ranges", [])

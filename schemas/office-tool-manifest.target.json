@@ -2,7 +2,7 @@
   "manifest_version": "0.1",
   "product": "okoffice",
   "compatibility_package": "agentpdf",
-  "tool_count": 112,
+  "tool_count": 118,
   "domains": [
     "office",
     "word",
@@ -1403,6 +1403,66 @@
         "rest",
         "sdk"
       ],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "deck.template.list",
+      "status": "beta",
+      "description": "List available deck templates with metadata including mood, tone, formality, and density.",
+      "domain": "deck",
+      "interfaces": ["cli", "mcp", "rest", "sdk"],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "deck.template.preview",
+      "status": "beta",
+      "description": "Generate preview HTML snippets for template selection based on mood and tone criteria.",
+      "domain": "deck",
+      "interfaces": ["cli", "mcp", "rest", "sdk"],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "deck.create.from_template",
+      "status": "beta",
+      "description": "Create a deck from a specific template ID with optional theme, animation, and background effects.",
+      "domain": "deck",
+      "interfaces": ["cli", "mcp", "rest", "sdk"],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "deck.spec_lock.create",
+      "status": "beta",
+      "description": "Create a frozen spec lock from a deck outline to detect generation drift.",
+      "domain": "deck",
+      "interfaces": ["cli", "mcp", "rest", "sdk"],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "deck.spec_lock.check_drift",
+      "status": "beta",
+      "description": "Check current deck slides against a spec lock to detect title, layout, and count drift.",
+      "domain": "deck",
+      "interfaces": ["cli", "mcp", "rest", "sdk"],
+      "implemented": true,
+      "oss_default": true,
+      "requires_model": false
+    },
+    {
+      "name": "deck.animation.apply",
+      "status": "beta",
+      "description": "Apply a CSS animation recipe (cascade, hero, quote, directional, pipeline) to HTML slide content.",
+      "domain": "deck",
+      "interfaces": ["cli", "mcp", "rest", "sdk"],
       "implemented": true,
       "oss_default": true,
       "requires_model": false

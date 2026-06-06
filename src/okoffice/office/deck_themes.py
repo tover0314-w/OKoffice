@@ -11,6 +11,7 @@ LayoutKind = Literal[
     "cover", "title_only", "title_subtitle", "title_bullets",
     "two_column", "metrics", "comparison", "image_left", "image_right",
     "section_cards", "funnel", "risk_grid", "sources",
+    "foreword", "agenda", "section_divider", "insight_cards", "stats", "quote", "process_flow", "cta",
 ]
 
 
@@ -46,6 +47,14 @@ CSS_CLASS_TO_LAYOUT: dict[str, str] = {
     "layout-funnel": "funnel",
     "layout-risk_grid": "risk_grid",
     "layout-sources": "sources",
+    "layout-foreword": "foreword",
+    "layout-agenda": "agenda",
+    "layout-section_divider": "section_divider",
+    "layout-insight_cards": "insight_cards",
+    "layout-stats": "stats",
+    "layout-quote": "quote",
+    "layout-process_flow": "process_flow",
+    "layout-cta": "cta",
 }
 
 
@@ -170,6 +179,82 @@ SLIDE_LAYOUTS: dict[str, SlideLayout] = {
         ],
         css_grid_template="title source_list",
     ),
+    "foreword": SlideLayout(
+        kind="foreword",
+        shapes=[
+            ShapeDef(purpose="title", x=650000, y=520000, cx=10900000, cy=700000, css_area="title", font_role="heading", bold=True),
+            ShapeDef(purpose="subtitle", x=650000, y=1400000, cx=10900000, cy=430000, css_area="subtitle", font_role="heading"),
+            ShapeDef(purpose="body_text", x=650000, y=2100000, cx=10900000, cy=3500000, css_area="body_text", font_role="body"),
+        ],
+        css_grid_template="title subtitle body_text",
+    ),
+    "agenda": SlideLayout(
+        kind="agenda",
+        shapes=[
+            ShapeDef(purpose="title", x=650000, y=520000, cx=10900000, cy=700000, css_area="title", font_role="heading", bold=True),
+            ShapeDef(purpose="col_left", x=400000, y=1500000, cx=5500000, cy=4000000, css_area="col_left", font_role="body", bullet=True),
+            ShapeDef(purpose="col_right", x=6200000, y=1500000, cx=5500000, cy=4000000, css_area="col_right", font_role="body", bullet=True),
+        ],
+        css_grid_template="title col_left col_right",
+    ),
+    "section_divider": SlideLayout(
+        kind="section_divider",
+        shapes=[
+            ShapeDef(purpose="kicker", x=650000, y=2200000, cx=10900000, cy=400000, css_area="kicker", font_role="kicker"),
+            ShapeDef(purpose="title", x=650000, y=2800000, cx=10900000, cy=1200000, css_area="title", font_role="heading", bold=True),
+        ],
+        css_grid_template="kicker title",
+    ),
+    "insight_cards": SlideLayout(
+        kind="insight_cards",
+        shapes=[
+            ShapeDef(purpose="title", x=650000, y=520000, cx=10900000, cy=700000, css_area="title", font_role="heading", bold=True),
+            ShapeDef(purpose="card_1", x=400000, y=1500000, cx=3500000, cy=3800000, css_area="card_1", font_role="body", bullet=True),
+            ShapeDef(purpose="card_2", x=4100000, y=1500000, cx=3500000, cy=3800000, css_area="card_2", font_role="body", bullet=True),
+            ShapeDef(purpose="card_3", x=7800000, y=1500000, cx=3500000, cy=3800000, css_area="card_3", font_role="body", bullet=True),
+        ],
+        css_grid_template="title card_1 card_2 card_3",
+    ),
+    "stats": SlideLayout(
+        kind="stats",
+        shapes=[
+            ShapeDef(purpose="title", x=650000, y=520000, cx=10900000, cy=700000, css_area="title", font_role="heading", bold=True),
+            ShapeDef(purpose="metric_1", x=400000, y=1500000, cx=2600000, cy=3200000, css_area="metric_1", font_role="heading", bold=True),
+            ShapeDef(purpose="metric_2", x=3200000, y=1500000, cx=2600000, cy=3200000, css_area="metric_2", font_role="heading", bold=True),
+            ShapeDef(purpose="metric_3", x=6000000, y=1500000, cx=2600000, cy=3200000, css_area="metric_3", font_role="heading", bold=True),
+            ShapeDef(purpose="metric_4", x=8800000, y=1500000, cx=2600000, cy=3200000, css_area="metric_4", font_role="heading", bold=True),
+        ],
+        css_grid_template="title metric_1 metric_2 metric_3 metric_4",
+    ),
+    "quote": SlideLayout(
+        kind="quote",
+        shapes=[
+            ShapeDef(purpose="title", x=650000, y=1800000, cx=10900000, cy=1600000, css_area="title", font_role="heading", bold=True),
+            ShapeDef(purpose="subtitle", x=650000, y=3800000, cx=10900000, cy=600000, css_area="subtitle", font_role="body"),
+            ShapeDef(purpose="kicker", x=650000, y=4800000, cx=10900000, cy=400000, css_area="kicker", font_role="kicker"),
+        ],
+        css_grid_template="title subtitle kicker",
+    ),
+    "process_flow": SlideLayout(
+        kind="process_flow",
+        shapes=[
+            ShapeDef(purpose="title", x=650000, y=520000, cx=10900000, cy=700000, css_area="title", font_role="heading", bold=True),
+            ShapeDef(purpose="stage_1", x=400000, y=1500000, cx=2600000, cy=3800000, css_area="stage_1", font_role="body"),
+            ShapeDef(purpose="stage_2", x=3200000, y=1500000, cx=2600000, cy=3800000, css_area="stage_2", font_role="body"),
+            ShapeDef(purpose="stage_3", x=6000000, y=1500000, cx=2600000, cy=3800000, css_area="stage_3", font_role="body"),
+            ShapeDef(purpose="stage_4", x=8800000, y=1500000, cx=2600000, cy=3800000, css_area="stage_4", font_role="body"),
+        ],
+        css_grid_template="title stage_1 stage_2 stage_3 stage_4",
+    ),
+    "cta": SlideLayout(
+        kind="cta",
+        shapes=[
+            ShapeDef(purpose="title", x=650000, y=1500000, cx=10900000, cy=1400000, css_area="title", font_role="heading", bold=True),
+            ShapeDef(purpose="subtitle", x=650000, y=3200000, cx=10900000, cy=600000, css_area="subtitle", font_role="body"),
+            ShapeDef(purpose="body_text", x=650000, y=4200000, cx=10900000, cy=1200000, css_area="body_text", font_role="body"),
+        ],
+        css_grid_template="title subtitle body_text",
+    ),
 }
 
 
@@ -185,6 +270,9 @@ def select_layout(slide: dict[str, Any]) -> SlideLayout:
                 return SLIDE_LAYOUTS[mapped]
     has_subtitle = bool(slide.get("subtitle"))
     bullets = slide.get("bullets", [])
+    metrics = slide.get("metrics", [])
+    if metrics and len(metrics) >= 3:
+        return SLIDE_LAYOUTS["stats"] if len(metrics) >= 4 else SLIDE_LAYOUTS["metrics"]
     if not bullets:
         if has_subtitle:
             return SLIDE_LAYOUTS["title_subtitle"]
@@ -192,7 +280,7 @@ def select_layout(slide: dict[str, Any]) -> SlideLayout:
     if len(bullets) > 6:
         return SLIDE_LAYOUTS["two_column"]
     if len(bullets) > 3:
-        return SLIDE_LAYOUTS["section_cards"]
+        return SLIDE_LAYOUTS["insight_cards"]
     return SLIDE_LAYOUTS["title_bullets"]
 
 
@@ -246,6 +334,12 @@ def _shape_lines(shape: ShapeDef, slide: dict[str, Any]) -> list[str]:
         return list(slide.get("bullets", []))
     if purpose == "kicker":
         return [f"Slide {slide.get('slide_index', 0):02d}"]
+    if purpose == "body_text":
+        body = slide.get("body", "")
+        if body:
+            return [body]
+        bullets = slide.get("bullets", [])
+        return bullets if bullets else []
     if purpose in ("col_left", "text_area", "card_1", "stage_1", "source_list"):
         bullets = slide.get("bullets", [])
         if bullets:
@@ -259,9 +353,9 @@ def _shape_lines(shape: ShapeDef, slide: dict[str, Any]) -> list[str]:
     if purpose in ("card_3", "stage_3", "stage_4"):
         bullets = slide.get("bullets", [])
         return bullets[:4] if bullets else []
-    if purpose in ("metric_1", "metric_2", "metric_3"):
+    if purpose in ("metric_1", "metric_2", "metric_3", "metric_4"):
         metrics = slide.get("metrics", [])
-        idx = {"metric_1": 0, "metric_2": 1, "metric_3": 2}.get(purpose, 0)
+        idx = {"metric_1": 0, "metric_2": 1, "metric_3": 2, "metric_4": 3}.get(purpose, 0)
         if metrics and idx < len(metrics):
             return [str(metrics[idx])]
         return []
@@ -293,11 +387,14 @@ def tokens_to_css_variables(tokens: DesignTokens) -> dict[str, str]:
         "--color-warning": tokens.warning_color,
         "--color-bg": tokens.background_color,
         "--color-dark": tokens.dark_color,
+        "--font-display": tokens.display_font,
         "--font-heading": tokens.heading_font,
         "--font-body": tokens.body_font,
+        "--font-mono": tokens.mono_font,
         "--size-heading": f"{tokens.heading_size_px}px",
         "--size-subtitle": f"{tokens.subtitle_size_px}px",
         "--size-body": f"{tokens.body_size_px}px",
+        "--size-caption": f"{tokens.caption_size_px}px",
         "--size-kicker": f"{tokens.kicker_size_px}px",
         "--size-notes": f"{tokens.notes_size_px}px",
         "--line-height": str(tokens.line_height),

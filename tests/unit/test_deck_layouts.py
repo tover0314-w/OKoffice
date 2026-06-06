@@ -20,7 +20,7 @@ class TestSlideLayouts:
                 assert shape.cy > 0
 
     def test_layout_count(self) -> None:
-        assert len(SLIDE_LAYOUTS) == 13
+        assert len(SLIDE_LAYOUTS) == 21
 
     def test_cover_layout_has_kicker_title_subtitle(self) -> None:
         cover = SLIDE_LAYOUTS["cover"]

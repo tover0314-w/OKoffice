@@ -250,6 +250,12 @@ from okoffice.tools.runner import (
     run_deck_review_claims,
     run_deck_validate_notes,
     run_deck_validate_placeholders,
+    run_deck_template_list,
+    run_deck_template_preview,
+    run_deck_create_from_template,
+    run_deck_spec_lock_create,
+    run_deck_spec_lock_check_drift,
+    run_deck_animation_apply,
     run_word_review_style,
     run_word_validate_metadata,
     run_word_validate_accessibility,
@@ -1187,6 +1193,54 @@ def deck_validation_notes(path: str) -> str:
 def deck_validation_placeholders(path: str) -> str:
     """Validate placeholder marker absence in deck slide text."""
     return run_deck_validate_placeholders(path).model_dump_json()
+
+
+def deck_template_list() -> str:
+    """List local template packs for agent-created PDFs."""
+    return run_deck_template_list().model_dump_json()
+
+
+def deck_template_preview(
+    mood: str | None = None,
+    tone: str | None = None,
+    count: int = 3,
+) -> str:
+    """Generate and validate a local preview PDF for a creation template."""
+    return run_deck_template_preview(mood=mood, tone=tone, count=count).model_dump_json()
+
+
+def deck_create_from_template(
+    template_id: str,
+    slides: list[dict],
+    output_path: str,
+    theme: str | None = None,
+    animation_recipe: str | None = None,
+    background_effect: str | None = None,
+) -> str:
+    """Create a deck using a specific template ID."""
+    return run_deck_create_from_template(
+        template_id=template_id,
+        slides=slides,
+        output_path=output_path,
+        theme=theme,
+        animation_recipe=animation_recipe,
+        background_effect=background_effect,
+    ).model_dump_json()
+
+
+def deck_spec_lock_create(outline: dict) -> str:
+    """Create a spec lock from an outline to detect generation drift."""
+    return run_deck_spec_lock_create(outline).model_dump_json()
+
+
+def deck_spec_lock_check_drift(current_slides: list[dict], spec_lock: dict) -> str:
+    """Check a deck against a spec lock to detect generation drift."""
+    return run_deck_spec_lock_check_drift(current_slides, spec_lock).model_dump_json()
+
+
+def deck_animation_apply(html: str, recipe: str, item_count: int = 4) -> str:
+    """Apply a CSS animation recipe to HTML slide content."""
+    return run_deck_animation_apply(html, recipe, item_count=item_count).model_dump_json()
 
 
 def deck_compose_plan(

@@ -93,6 +93,15 @@ from okoffice.office.deck import (
 )
 from okoffice.office.deck_patch import apply_deck_patch
 from okoffice.office.deck_plan import compose_deck_plan
+from okoffice.office.deck_animations import apply_animation_to_slide_html, generate_animation_css, validate_animation_html
+from okoffice.office.deck_backgrounds import apply_background_to_slide, generate_background_css
+from okoffice.office.deck_spec_lock import check_spec_drift, create_spec_lock
+from okoffice.office.deck_templates import (
+    generate_template_previews,
+    load_template_index,
+    render_template_slide,
+    select_template,
+)
 from okoffice.office.deck_validation import (
     validate_deck_contact_sheet,
     validate_deck_presentation as validate_deck_quality_presentation,
@@ -848,6 +857,117 @@ def run_deck_validate_notes(path: str | Path) -> ToolResult:
 
 def run_deck_validate_placeholders(path: str | Path) -> ToolResult:
     return validate_deck_placeholders(path)
+
+
+def run_deck_template_list() -> ToolResult:
+    try:
+        templates = load_template_index()
+        return ToolResult(
+            job_id=_job_id(),
+            status="succeeded",
+            tool="deck.template.list",
+            usage={"template_count": len(templates), "templates": [t.model_dump() for t in templates]},
+        )
+    except Exception as exc:
+        return _failed("deck.template.list", exc)
+
+
+def run_deck_template_preview(
+    *,
+    mood: str | None = None,
+    tone: str | None = None,
+    count: int = 3,
+) -> ToolResult:
+    try:
+        previews = generate_template_previews(mood=mood, tone=tone, count=count)
+        return ToolResult(
+            job_id=_job_id(),
+            status="succeeded",
+            tool="deck.template.preview",
+            usage={"preview_count": len(previews), "previews": previews},
+        )
+    except Exception as exc:
+        return _failed("deck.template.preview", exc)
+
+
+def run_deck_create_from_template(
+    template_id: str,
+    slides: list[dict[str, Any]],
+    output_path: str | Path,
+    *,
+    theme: str | None = None,
+    animation_recipe: str | None = None,
+    background_effect: str | None = None,
+) -> ToolResult:
+    try:
+        from okoffice.authoring.design import resolve_theme
+        tokens = resolve_theme(theme or "business_tech")
+        outline = {
+            "template_id": template_id,
+            "theme": theme or "business_tech",
+            "slides": slides,
+        }
+        deck_result = create_deck_from_outline(outline, output_path)
+        return deck_result
+    except Exception as exc:
+        return _failed("deck.create.from_template", exc)
+
+
+def run_deck_spec_lock_create(outline: dict[str, Any]) -> ToolResult:
+    try:
+        lock = create_spec_lock(outline)
+        return ToolResult(
+            job_id=_job_id(),
+            status="succeeded",
+            tool="deck.spec_lock.create",
+            usage={"spec_lock": lock.to_dict()},
+        )
+    except Exception as exc:
+        return _failed("deck.spec_lock.create", exc)
+
+
+def run_deck_spec_lock_check_drift(
+    current_slides: list[dict[str, Any]],
+    spec_lock: dict[str, Any],
+) -> ToolResult:
+    try:
+        from okoffice.office.deck_spec_lock import SpecLock
+        lock = SpecLock(
+            fingerprint=spec_lock.get("fingerprint", ""),
+            slide_count=spec_lock.get("slide_count", 0),
+            slide_titles=tuple(spec_lock.get("slide_titles", [])),
+            slide_layouts=tuple(spec_lock.get("slide_layouts", [])),
+            rhythm_assignments=tuple(spec_lock.get("rhythm_assignments", [])),
+        )
+        result = check_spec_drift(current_slides, lock)
+        return ToolResult(
+            job_id=_job_id(),
+            status="succeeded",
+            tool="deck.spec_lock.check_drift",
+            usage=result,
+        )
+    except Exception as exc:
+        return _failed("deck.spec_lock.check_drift", exc)
+
+
+def run_deck_animation_apply(
+    html: str,
+    recipe: str,
+    item_count: int = 4,
+) -> ToolResult:
+    try:
+        result = apply_animation_to_slide_html(html, recipe, item_count=item_count)
+        issues = validate_animation_html(result)
+        warnings = issues if issues else None
+        return ToolResult(
+            job_id=_job_id(),
+            status="succeeded",
+            tool="deck.animation.apply",
+            usage={"html_length": len(result), "validation_issues": issues},
+            warnings=warnings,
+        )
+    except Exception as exc:
+        return _failed("deck.animation.apply", exc)
 
 
 def run_word_review_style(path: str | Path) -> ToolResult:
@@ -3511,7 +3631,9 @@ def run_pdf_extract_tables(
     return extract_pdf_tables(input_path=input_path, pages=pages, output_path=output_path)
 
 
-def _failed(tool: str, error: OKofficeError) -> ToolResult:
+def _failed(tool: str, error: OKofficeError | Exception) -> ToolResult:
+    if isinstance(error, Exception) and not isinstance(error, OKofficeError):
+        error = OKofficeError(code="internal_error", message=str(error))
     return ToolResult(
         job_id=_job_id(),
         status="failed",

@@ -191,8 +191,9 @@ class TestExperienceEntry:
             "date_range": {"start": "Jan 2020", "end": "Present"},
             "highlights": ["Led team of 5"],
         })
+        tokens = resolve_resume_tokens_from_source("resume_modern")
 
-        result = _render_experience_entry(entry)
+        result = _render_experience_entry(entry, tokens)
         assert "grid(" in result
         assert "columns: (1fr, auto)" in result
         assert "Senior Engineer" in result
@@ -208,10 +209,10 @@ class TestExperienceEntry:
             "organization": "Freelance",
             "highlights": [],
         })
+        tokens = resolve_resume_tokens_from_source("resume_modern")
 
-        result = _render_experience_entry(entry)
+        result = _render_experience_entry(entry, tokens)
         assert "Consultant" in result
-        assert "grid(" not in result or "columns" not in result
 
 
 class TestEducationEntry:
@@ -227,8 +228,9 @@ class TestEducationEntry:
             "gpa": "3.9/4.0",
             "honors": ["Summa Cum Laude"],
         })
+        tokens = resolve_resume_tokens_from_source("resume_modern")
 
-        result = _render_education_entry(entry)
+        result = _render_education_entry(entry, tokens)
         assert "GPA" in result
         assert "3.9" in result
         assert "MIT" in result

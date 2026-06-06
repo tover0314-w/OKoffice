@@ -87,7 +87,7 @@ class TestComputeTasteScore:
         assert result["taste_score"] < 80
         assert len(result["issues"]) > 0
 
-    def test_checks_have_all_five_categories(self) -> None:
+    def test_checks_have_all_nine_categories(self) -> None:
         tokens = DesignTokens()
         result = compute_taste_score(tokens)
         assert set(result["checks"].keys()) == {
@@ -96,6 +96,10 @@ class TestComputeTasteScore:
             "whitespace_ratio",
             "slide_consistency",
             "eight_second_scan",
+            "rhythm_variation",
+            "content_density",
+            "shadow_restraint",
+            "template_consistency",
         }
 
     def test_score_is_between_0_and_100(self) -> None:

@@ -98,23 +98,137 @@ def check_8_second_scan(tokens: DesignTokens) -> dict[str, Any]:
     return {"score": max(0, score), "max": 1.0, "issues": issues}
 
 
-def compute_taste_score(tokens: DesignTokens) -> dict[str, Any]:
+def check_rhythm_variation(slides: list[dict[str, Any]]) -> dict[str, Any]:
+    if len(slides) < 3:
+        return {"score": 1.0, "max": 1.0, "issues": []}
+    layouts = [s.get("layout", "auto") for s in slides]
+    unique = len(set(layouts))
+    ratio = unique / len(layouts)
+    issues: list[str] = []
+    score = 1.0
+    if ratio < 0.3:
+        issues.append(f"only {unique} unique layouts across {len(layouts)} slides — deck looks monotonous")
+        score = ratio / 0.3
+    max_run = _longest_run(layouts)
+    if max_run > 4:
+        issues.append(f"same layout repeated {max_run} times consecutively")
+        score -= 0.2
+    return {"score": max(0, min(1, score)), "max": 1.0, "issues": issues}
+
+
+def check_content_density(
+    slides: list[dict[str, Any]],
+    tokens: DesignTokens,
+) -> dict[str, Any]:
+    issues: list[str] = []
+    violations = 0
+    max_bullets = tokens.max_bullets_per_slide
+    max_cards = tokens.max_cards_per_slide
+    for i, slide in enumerate(slides):
+        bullets = slide.get("bullets") or slide.get("body") or []
+        if isinstance(bullets, str):
+            bullets = [b.strip() for b in bullets.split("\n") if b.strip()]
+        if len(bullets) > max_bullets:
+            violations += 1
+            if violations <= 3:
+                issues.append(f"slide {i+1}: {len(bullets)} bullets exceeds max {max_bullets}")
+        cards = slide.get("cards") or []
+        if isinstance(cards, list) and len(cards) > max_cards:
+            violations += 1
+            if violations <= 3:
+                issues.append(f"slide {i+1}: {len(cards)} cards exceeds max {max_cards}")
+    score = 1.0
+    if violations > 0:
+        ratio = violations / len(slides)
+        score = max(0, 1.0 - ratio)
+    return {"score": score, "max": 1.0, "issues": issues, "violations": violations}
+
+
+def check_shadow_restraint(tokens: DesignTokens) -> dict[str, Any]:
+    issues: list[str] = []
+    score = 1.0
+    shadow = getattr(tokens, "shadow_restraint", "subtle")
+    gradient = getattr(tokens, "gradient_sophistication", "subtle")
+    if shadow == "none" and gradient == "flat":
+        pass
+    elif shadow == "medium" and gradient == "rich":
+        issues.append("shadow_restraint=medium combined with gradient_sophistication=rich risks visual clutter")
+        score -= 0.5
+    if shadow == "medium":
+        issues.append("medium shadows may compete with slide content — consider subtle")
+        score -= 0.2
+    return {"score": max(0, score), "max": 1.0, "issues": issues}
+
+
+def check_template_consistency(
+    used_templates: list[str],
+) -> dict[str, Any]:
+    if not used_templates:
+        return {"score": 1.0, "max": 1.0, "issues": []}
+    issues: list[str] = []
+    unique = set(used_templates)
+    if len(unique) > 3:
+        issues.append(f"{len(unique)} distinct templates used — consider limiting to 2-3 for visual coherence")
+    elif len(unique) == 1 and len(used_templates) > 6:
+        issues.append("single template for all slides — consider section dividers or accent layouts")
+    return {"score": max(0, 1.0 - 0.2 * max(0, len(unique) - 3)), "max": 1.0, "issues": issues}
+
+
+def _longest_run(items: list[str]) -> int:
+    if not items:
+        return 0
+    best = 1
+    current = 1
+    for i in range(1, len(items)):
+        if items[i] == items[i - 1]:
+            current += 1
+            best = max(best, current)
+        else:
+            current = 1
+    return best
+
+
+def compute_taste_score(
+    tokens: DesignTokens,
+    *,
+    slides: list[dict[str, Any]] | None = None,
+    used_templates: list[str] | None = None,
+) -> dict[str, Any]:
     contrast = check_color_contrast(tokens)
     typography = check_typography_hierarchy(tokens)
     whitespace = check_whitespace_ratio(tokens)
     consistency = check_slide_consistency(tokens)
     scan = check_8_second_scan(tokens)
-    weights = {"contrast": 0.30, "typography": 0.20, "whitespace": 0.25, "consistency": 0.15, "scan": 0.10}
-    total = (
-        weights["contrast"] * contrast["score"]
-        + weights["typography"] * typography["score"]
-        + weights["whitespace"] * whitespace["score"]
-        + weights["consistency"] * consistency["score"]
-        + weights["scan"] * scan["score"]
-    )
-    all_issues = []
-    for name, check in [("contrast", contrast), ("typography", typography), ("whitespace", whitespace), ("consistency", consistency), ("scan", scan)]:
-        for issue in check.get("issues", []):
+    rhythm = check_rhythm_variation(slides) if slides else {"score": 1.0, "max": 1.0, "issues": []}
+    density = check_content_density(slides, tokens) if slides else {"score": 1.0, "max": 1.0, "issues": []}
+    shadow = check_shadow_restraint(tokens)
+    template = check_template_consistency(used_templates or [])
+    weights = {
+        "contrast": 0.22,
+        "typography": 0.15,
+        "whitespace": 0.18,
+        "consistency": 0.10,
+        "scan": 0.08,
+        "rhythm": 0.10,
+        "density": 0.07,
+        "shadow": 0.05,
+        "template": 0.05,
+    }
+    checks_map = {
+        "contrast": contrast,
+        "typography": typography,
+        "whitespace": whitespace,
+        "consistency": consistency,
+        "scan": scan,
+        "rhythm": rhythm,
+        "density": density,
+        "shadow": shadow,
+        "template": template,
+    }
+    total = sum(weights[name] * chk["score"] for name, chk in checks_map.items())
+    all_issues: list[str] = []
+    for name, chk in checks_map.items():
+        for issue in chk.get("issues", []):
             all_issues.append(f"{name}: {issue}")
     return {
         "taste_score": round(total * 100),
@@ -124,6 +238,10 @@ def compute_taste_score(tokens: DesignTokens) -> dict[str, Any]:
             "whitespace_ratio": whitespace,
             "slide_consistency": consistency,
             "eight_second_scan": scan,
+            "rhythm_variation": rhythm,
+            "content_density": density,
+            "shadow_restraint": shadow,
+            "template_consistency": template,
         },
         "issues": all_issues,
         "passing": total >= 0.7,
@@ -202,6 +320,7 @@ def review_deck_taste(
     for issue in issues:
         warnings.append(issue)
 
+    _new_check_names = ["rhythm_variation", "content_density", "shadow_restraint", "template_consistency"]
     review_checks = [
         ValidationCheck(
             name="taste_score",
@@ -234,6 +353,14 @@ def review_deck_taste(
             details=checks_detail["eight_second_scan"],
         ),
     ]
+    for _cn in _new_check_names:
+        _cd = checks_detail.get(_cn)
+        if _cd is not None:
+            review_checks.append(ValidationCheck(
+                name=_cn,
+                status="passed" if _cd["score"] >= 0.7 else "warning",
+                details=_cd,
+            ))
 
     return ToolResult(
         job_id=_review_job_id(),

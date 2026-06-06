@@ -6,6 +6,9 @@
   ],
   "scripts": {
     "build:node": "npm --workspace @okoffice/okoffice-node run build",
+    "dev:shell": "npm --workspace @okoffice/shell run dev",
+    "build:shell": "npm --workspace @okoffice/shell run build",
+    "dist:shell": "npm --workspace @okoffice/shell run dist",
     "doctor": "python scripts/doctor.py",
     "pack:node": "npm --workspace @okoffice/okoffice-node pack --dry-run",
     "setup": "python scripts/setup_dev.py",

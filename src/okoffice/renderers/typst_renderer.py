@@ -122,6 +122,7 @@ def _typst_font_name(reportlab_font: str) -> str:
 def _esc(text: str) -> str:
     return (
         text.replace("\\", "\\\\")
+        .replace("\n", " ")
         .replace('"', '\\"')
         .replace("[", "\\[")
         .replace("]", "\\]")
@@ -138,6 +139,7 @@ def _esc(text: str) -> str:
         .replace("^", "\\^")
         .replace("|", "\\|")
         .replace("&", "\\&")
+        .replace("=", "\\=")
     )
 
 
@@ -154,13 +156,16 @@ def _render_date_range(entry: Any) -> str:
 
 def _render_header(resume: ResumeData, tokens: ResumeDesignTokens) -> str:
     parts: list[str] = []
+    name_font = _typst_font_name(tokens.name_font)
+    headline_font = _typst_font_name(tokens.headline_font)
+    contact_font = _typst_font_name(tokens.contact_font)
 
     parts.append("#align(center)[")
-    parts.append(f'  #text(size: name-size, weight: "bold", fill: name-color)[{_esc(resume.name)}]')
+    parts.append(f'  #text(font: "{name_font}", size: name-size, weight: "bold", fill: name-color)[{_esc(resume.name)}]')
 
     if resume.headline:
         parts.append("  #v(2pt)")
-        parts.append(f"  #text(size: headline-size, fill: headline-color)[{_esc(resume.headline)}]")
+        parts.append(f'  #text(font: "{headline_font}", size: headline-size, fill: headline-color)[{_esc(resume.headline)}]')
 
     # Contact info as centered grid
     contact_items: list[str] = []
@@ -186,17 +191,18 @@ def _render_header(resume: ResumeData, tokens: ResumeDesignTokens) -> str:
         parts.append(f"    columns: ({col_spec}),")
         parts.append("    column-gutter: 1.5em,")
         for item in contact_items:
-            parts.append(f"    align(center)[#text(size: contact-size, fill: contact-color)[{item}]],")
+            parts.append(f'    align(center)[#text(font: "{contact_font}", size: contact-size, fill: contact-color)[{item}]],')
         parts.append("  )")
 
     parts.append("]")
     return "\n".join(parts)
 
 
-def _render_section_title(title: str) -> str:
+def _render_section_title(title: str, tokens: ResumeDesignTokens) -> str:
+    section_font = _typst_font_name(tokens.section_title_font)
     lines = [
         "#v(section-spacing-before)",
-        f'#text(size: section-size, weight: "bold", fill: section-color)[{_esc(title)}]',
+        f'#text(font: "{section_font}", size: section-size, weight: "bold", fill: section-color)[{_esc(title)}]',
         "#if section-underline [",
         "  #v(1pt)",
         "  #box(width: 100%, height: 0.5pt, fill: section-color)",
@@ -206,7 +212,11 @@ def _render_section_title(title: str) -> str:
     return "\n".join(lines)
 
 
-def _render_experience_entry(entry: ExperienceEntry) -> str:
+def _render_experience_entry(entry: ExperienceEntry, tokens: ResumeDesignTokens) -> str:
+    title_font = _typst_font_name(tokens.entry_title_font)
+    org_font = _typst_font_name(tokens.entry_org_font)
+    date_font = _typst_font_name(tokens.entry_date_font)
+
     parts: list[str] = []
     parts.append("#block(breakable: false)[")
 
@@ -228,19 +238,19 @@ def _render_experience_entry(entry: ExperienceEntry) -> str:
         parts.append("  #grid(")
         parts.append("    columns: (1fr, auto),")
         parts.append(
-            f'    [#text(size: entry-title-size, weight: "bold", '
+            f'    [#text(font: "{title_font}", size: entry-title-size, weight: "bold", '
             f"fill: entry-title-color)[{title_text}]],"
         )
-        parts.append(f"    [#text(size: date-size, fill: date-color)[{date_text}]],")
+        parts.append(f'    [#text(font: "{date_font}", size: date-size, fill: date-color)[{date_text}]],')
         parts.append("  )")
     else:
         parts.append(
-            f'  #text(size: entry-title-size, weight: "bold", '
+            f'  #text(font: "{title_font}", size: entry-title-size, weight: "bold", '
             f"fill: entry-title-color)[{title_text}]"
         )
 
     if org_line:
-        parts.append(f"  #text(size: entry-org-size, fill: entry-org-color)[{org_line}]")
+        parts.append(f'  #text(font: "{org_font}", size: entry-org-size, fill: entry-org-color)[{org_line}]')
 
     if entry.highlights:
         parts.append("  #v(2pt)")
@@ -252,7 +262,11 @@ def _render_experience_entry(entry: ExperienceEntry) -> str:
     return "\n".join(parts)
 
 
-def _render_education_entry(entry: EducationEntry) -> str:
+def _render_education_entry(entry: EducationEntry, tokens: ResumeDesignTokens) -> str:
+    title_font = _typst_font_name(tokens.entry_title_font)
+    org_font = _typst_font_name(tokens.entry_org_font)
+    date_font = _typst_font_name(tokens.entry_date_font)
+
     parts: list[str] = []
     parts.append("#block(breakable: false)[")
 
@@ -264,19 +278,19 @@ def _render_education_entry(entry: EducationEntry) -> str:
         parts.append("  #grid(")
         parts.append("    columns: (1fr, auto),")
         parts.append(
-            f'    [#text(size: entry-title-size, weight: "bold", '
+            f'    [#text(font: "{title_font}", size: entry-title-size, weight: "bold", '
             f"fill: entry-title-color)[{title_text}]],"
         )
-        parts.append(f"    [#text(size: date-size, fill: date-color)[{date_text}]],")
+        parts.append(f'    [#text(font: "{date_font}", size: date-size, fill: date-color)[{date_text}]],')
         parts.append("  )")
     else:
         parts.append(
-            f'  #text(size: entry-title-size, weight: "bold", '
+            f'  #text(font: "{title_font}", size: entry-title-size, weight: "bold", '
             f"fill: entry-title-color)[{title_text}]"
         )
 
     if org_text:
-        parts.append(f"  #text(size: entry-org-size, fill: entry-org-color)[{org_text}]")
+        parts.append(f'  #text(font: "{org_font}", size: entry-org-size, fill: entry-org-color)[{org_text}]')
 
     gpa = getattr(entry, "gpa", None)
     if gpa:
@@ -292,7 +306,10 @@ def _render_education_entry(entry: EducationEntry) -> str:
     return "\n".join(parts)
 
 
-def _render_publication_entry(entry: Any) -> str:
+def _render_publication_entry(entry: Any, tokens: ResumeDesignTokens) -> str:
+    title_font = _typst_font_name(tokens.entry_title_font)
+    date_font = _typst_font_name(tokens.entry_date_font)
+
     parts: list[str] = []
     parts.append("#block(breakable: false)[")
 
@@ -310,11 +327,11 @@ def _render_publication_entry(entry: Any) -> str:
     if date_text:
         parts.append("  #grid(")
         parts.append("    columns: (1fr, auto),")
-        parts.append(f'    [#text(weight: "bold", fill: entry-title-color)[{pub_line}]],')
-        parts.append(f"    [#text(size: date-size, fill: date-color)[{date_text}]],")
+        parts.append(f'    [#text(font: "{title_font}", weight: "bold", fill: entry-title-color)[{pub_line}]],')
+        parts.append(f'    [#text(font: "{date_font}", size: date-size, fill: date-color)[{date_text}]],')
         parts.append("  )")
     else:
-        parts.append(f'  #text(weight: "bold", fill: entry-title-color)[{pub_line}]')
+        parts.append(f'  #text(font: "{title_font}", weight: "bold", fill: entry-title-color)[{pub_line}]')
 
     parts.append("]")
     return "\n".join(parts)
@@ -355,17 +372,17 @@ def _build_typst_markup(
 
     # Content sections
     for section in sorted(resume.sections, key=lambda s: s.order):
-        sections.append(_render_section_title(section.title))
+        sections.append(_render_section_title(section.title, tokens))
 
         entry_parts: list[str] = []
         for entry in section.entries:
             etype = entry.entry_type
             if etype == "experience":
-                entry_parts.append(_render_experience_entry(entry))
+                entry_parts.append(_render_experience_entry(entry, tokens))
             elif etype == "education":
-                entry_parts.append(_render_education_entry(entry))
+                entry_parts.append(_render_education_entry(entry, tokens))
             elif etype == "publication":
-                entry_parts.append(_render_publication_entry(entry))
+                entry_parts.append(_render_publication_entry(entry, tokens))
             elif etype == "one_line":
                 entry_parts.append(_render_one_line_entry(entry))
             elif etype == "bullet":
@@ -409,6 +426,12 @@ def _compile_typst(typst_markup: str, output_path: Path) -> None:
             "typst_compilation_error",
             f"Typst compilation failed: {exc}",
             recovery_hint="Check resume content for special characters that may need escaping.",
+        ) from exc
+    except OSError as exc:
+        raise OKofficeException(
+            "pdf_write_error",
+            f"Failed to write PDF to {output_path}: {exc}",
+            recovery_hint="Check that the output directory exists and is writable.",
         ) from exc
 
 
