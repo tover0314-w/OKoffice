@@ -260,6 +260,10 @@ IMPLEMENTED_TOOLS = {
     "pdf.convert.to_docx",
     "pdf.convert.to_xlsx",
     "pdf.convert.to_pptx",
+    # Phase 3: workflow orchestrators
+    "office.workflow.source_to_deck",
+    "office.workflow.source_to_doc",
+    "deck.export.pdf",
 }
 
 

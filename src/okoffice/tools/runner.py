@@ -159,7 +159,7 @@ from okoffice.office.evidence import classify_office_context, map_office_evidenc
 from okoffice.office.evidence_verify import verify_office_evidence_citations
 from okoffice.office.office_batch import inspect_office_batch
 from okoffice.office.office_extract import extract_office_claims, extract_office_entities, extract_office_obligations
-from okoffice.office.workflows import board_pack, docset_to_sheet, extract_to_sheet, sheet_to_deck, source_to_board_pack, verify_board_pack
+from okoffice.office.workflows import board_pack, docset_to_sheet, extract_to_sheet, sheet_to_deck, source_to_board_pack, source_to_deck, source_to_doc, verify_board_pack
 from okoffice.office.office_patch import plan_office_patch, preview_office_patch, verify_office_patch
 from okoffice.office.workflows_extended import (
     build_artifact_graph as build_office_artifact_graph,
@@ -388,6 +388,73 @@ def run_office_workflow_source_to_board_pack(
         intent=intent,
         deck_title=deck_title,
         max_rows_per_sheet=max_rows_per_sheet,
+    )
+
+
+def run_office_workflow_source_to_deck(
+    *,
+    files: list[str | Path | dict[str, Any]],
+    schema: dict[str, Any] | str | Path,
+    output_path: str | Path,
+    title: str | None = None,
+    intent: str | None = None,
+    deck_title: str | None = None,
+    max_rows_per_sheet: int = 100,
+) -> ToolResult:
+    return source_to_deck(
+        files=files,
+        schema=schema,
+        output_path=output_path,
+        title=title,
+        intent=intent,
+        deck_title=deck_title,
+        max_rows_per_sheet=max_rows_per_sheet,
+    )
+
+
+def run_office_workflow_source_to_doc(
+    *,
+    files: list[str | Path | dict[str, Any]],
+    schema: dict[str, Any] | str | Path,
+    output_path: str | Path,
+    title: str | None = None,
+    intent: str | None = None,
+    profile: str = "executive_memo",
+) -> ToolResult:
+    return source_to_doc(
+        files=files,
+        schema=schema,
+        output_path=output_path,
+        title=title,
+        intent=intent,
+        profile=profile,
+    )
+
+
+def run_deck_export_pdf(input_path: str | Path, output_path: str | Path) -> ToolResult:
+    try:
+        pdf_result = pptx_to_pdf(input_path, output_path=output_path)
+    except OKofficeException as exc:
+        return _failed("deck.export.pdf", exc.to_error())
+    render_result = run_render_check(output_path, pages="all")
+    merged_warnings = list(dict.fromkeys(
+        (pdf_result.warnings or []) + (render_result.warnings or [] if render_result.status == "succeeded" else [])
+    ))
+    merged_artifacts = (pdf_result.artifacts or [])
+    if render_result.status == "succeeded" and render_result.artifacts:
+        merged_artifacts += render_result.artifacts
+    return ToolResult(
+        job_id=_job_id(),
+        status=pdf_result.status,
+        tool="deck.export.pdf",
+        usage={
+            "summary": "Exported PPTX deck to PDF with render validation",
+            "pdf_export": pdf_result.usage,
+            "render_check": render_result.usage if render_result.status == "succeeded" else None,
+        },
+        validation=pdf_result.validation,
+        artifacts=merged_artifacts,
+        warnings=merged_warnings,
     )
 
 

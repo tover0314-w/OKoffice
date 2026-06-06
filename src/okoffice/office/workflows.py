@@ -17,6 +17,7 @@ from okoffice.office.inspect import inspect_office_file
 from okoffice.office.sheet import extract_sheet_tables, validate_sheet_workbook
 from okoffice.office.validation import validate_sheet_formulas
 from okoffice.office.word import extract_word_tables, inspect_word_document
+from okoffice.office.word_report import create_word_report
 from okoffice.office.workbook import write_sheet_workbook as write_evidence_workbook
 from okoffice.office.xlsx import write_xlsx
 from okoffice.schemas.errors import OKofficeException
@@ -29,6 +30,8 @@ DOCSET_TO_SHEET_TOOL_NAME = "office.workflow.docset_to_sheet"
 SHEET_TO_DECK_TOOL_NAME = "office.workflow.sheet_to_deck"
 BOARD_PACK_TOOL_NAME = "office.workflow.board_pack"
 SOURCE_TO_BOARD_PACK_TOOL_NAME = "office.workflow.source_to_board_pack"
+SOURCE_TO_DECK_TOOL_NAME = "office.workflow.source_to_deck"
+SOURCE_TO_DOC_TOOL_NAME = "office.workflow.source_to_doc"
 BUNDLE_VERIFY_TOOL_NAME = "office.bundle.verify"
 TOOL_NAME = EXTRACT_TO_SHEET_TOOL_NAME
 XLSX_MIME_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -666,6 +669,193 @@ def source_to_board_pack(
         next_recommended_tools=[
             "office.bundle.verify",
             "office.context.build_packet",
+        ],
+    )
+
+
+def source_to_deck(
+    *,
+    files: list[str | Path | dict[str, Any]],
+    schema: dict[str, Any] | str | Path,
+    output_path: str | Path,
+    title: str | None = None,
+    intent: str | None = None,
+    deck_title: str | None = None,
+    max_rows_per_sheet: int = 100,
+) -> ToolResult:
+    """End-to-end: source documents -> evidence workbook -> deck with taste review."""
+    output = resolve_output_path(output_path)
+    xlsx_path = output.with_suffix(".xlsx")
+    pptx_path = output.with_suffix(".pptx")
+
+    step1 = docset_to_sheet(
+        files=files,
+        schema=schema,
+        output_path=xlsx_path,
+        title=title or "OKoffice Source To Deck Evidence",
+        intent=intent or "Extract evidence from sources for deck generation.",
+    )
+    if step1.status != "succeeded":
+        return _failed_from_workflow_step(SOURCE_TO_DECK_TOOL_NAME, step1, [step1])
+
+    step2 = sheet_to_deck(
+        workbook_path=xlsx_path,
+        output_path=pptx_path,
+        title=deck_title or title or "Source Deck",
+        max_rows_per_sheet=max_rows_per_sheet,
+    )
+    if step2.status != "succeeded":
+        return _failed_from_workflow_step(SOURCE_TO_DECK_TOOL_NAME, step2, [step1, step2])
+
+    from okoffice.office.deck_taste_qa import review_deck_taste
+    step3 = review_deck_taste(pptx_path)
+    if step3.status != "succeeded":
+        return _failed_from_workflow_step(SOURCE_TO_DECK_TOOL_NAME, step3, [step1, step2, step3])
+
+    step_results = [step1, step2, step3]
+    all_warnings = _dedupe_workflow_warnings([w for r in step_results for w in r.warnings])
+    all_artifacts = _dedupe_workflow_artifacts([a for r in step_results for a in r.artifacts])
+    checks = [
+        ValidationCheck(
+            name="docset_to_sheet",
+            status=step1.validation.status if step1.validation else "skipped",
+            details={"job_id": step1.job_id, "xlsx_path": xlsx_path.as_posix()},
+        ),
+        ValidationCheck(
+            name="sheet_to_deck",
+            status=step2.validation.status if step2.validation else "skipped",
+            details={"job_id": step2.job_id, "pptx_path": pptx_path.as_posix()},
+        ),
+        ValidationCheck(
+            name="taste_review",
+            status=step3.validation.status if step3.validation else "skipped",
+            details={"job_id": step3.job_id},
+        ),
+        ValidationCheck(
+            name="end_to_end_pipeline",
+            status="passed",
+            details={
+                "source_count": len(files),
+                "steps_completed": 3,
+                "artifacts_produced": len(all_artifacts),
+            },
+        ),
+    ]
+    return ToolResult(
+        job_id=_job_id(),
+        status="succeeded",
+        tool=SOURCE_TO_DECK_TOOL_NAME,
+        artifacts=all_artifacts,
+        validation=ValidationReport(
+            status=_validation_report_status_from_checks(checks),
+            checks=checks,
+            warnings=all_warnings,
+        ),
+        warnings=all_warnings,
+        usage={
+            "pipeline": SOURCE_TO_DECK_TOOL_NAME,
+            "steps_completed": 3,
+            "source_count": len(files),
+            "artifacts": {
+                "evidence_workbook": xlsx_path.as_posix(),
+                "deck_presentation": pptx_path.as_posix(),
+            },
+            "step_results": [
+                {"step": "docset_to_sheet", "job_id": step1.job_id, "status": step1.status},
+                {"step": "sheet_to_deck", "job_id": step2.job_id, "status": step2.status},
+                {"step": "taste_review", "job_id": step3.job_id, "status": step3.status},
+            ],
+        },
+        next_recommended_tools=[
+            "office.bundle.export",
+            "deck.export.pdf",
+        ],
+    )
+
+
+def source_to_doc(
+    *,
+    files: list[str | Path | dict[str, Any]],
+    schema: dict[str, Any] | str | Path,
+    output_path: str | Path,
+    title: str | None = None,
+    intent: str | None = None,
+    profile: str = "executive_memo",
+) -> ToolResult:
+    """End-to-end: source documents -> evidence workbook -> Word report."""
+    output = resolve_output_path(output_path)
+    xlsx_path = output.with_suffix(".xlsx")
+
+    step1 = docset_to_sheet(
+        files=files,
+        schema=schema,
+        output_path=xlsx_path,
+        title=title or "OKoffice Source To Doc Evidence",
+        intent=intent or "Extract evidence from sources for Word report generation.",
+    )
+    if step1.status != "succeeded":
+        return _failed_from_workflow_step(SOURCE_TO_DOC_TOOL_NAME, step1, [step1])
+
+    step2 = create_word_report(
+        workbook_path=xlsx_path,
+        output_path=output,
+        title=title,
+        profile=profile,
+    )
+    if step2.status != "succeeded":
+        return _failed_from_workflow_step(SOURCE_TO_DOC_TOOL_NAME, step2, [step1, step2])
+
+    step_results = [step1, step2]
+    all_warnings = _dedupe_workflow_warnings([w for r in step_results for w in r.warnings])
+    all_artifacts = _dedupe_workflow_artifacts([a for r in step_results for a in r.artifacts])
+    checks = [
+        ValidationCheck(
+            name="docset_to_sheet",
+            status=step1.validation.status if step1.validation else "skipped",
+            details={"job_id": step1.job_id, "xlsx_path": xlsx_path.as_posix()},
+        ),
+        ValidationCheck(
+            name="create_word_report",
+            status=step2.validation.status if step2.validation else "skipped",
+            details={"job_id": step2.job_id, "docx_path": output.as_posix()},
+        ),
+        ValidationCheck(
+            name="end_to_end_pipeline",
+            status="passed",
+            details={
+                "source_count": len(files),
+                "steps_completed": 2,
+                "artifacts_produced": len(all_artifacts),
+            },
+        ),
+    ]
+    return ToolResult(
+        job_id=_job_id(),
+        status="succeeded",
+        tool=SOURCE_TO_DOC_TOOL_NAME,
+        artifacts=all_artifacts,
+        validation=ValidationReport(
+            status=_validation_report_status_from_checks(checks),
+            checks=checks,
+            warnings=all_warnings,
+        ),
+        warnings=all_warnings,
+        usage={
+            "pipeline": SOURCE_TO_DOC_TOOL_NAME,
+            "steps_completed": 2,
+            "source_count": len(files),
+            "artifacts": {
+                "evidence_workbook": xlsx_path.as_posix(),
+                "word_report": output.as_posix(),
+            },
+            "step_results": [
+                {"step": "docset_to_sheet", "job_id": step1.job_id, "status": step1.status},
+                {"step": "create_word_report", "job_id": step2.job_id, "status": step2.status},
+            ],
+        },
+        next_recommended_tools=[
+            "word.convert.to_pdf",
+            "office.bundle.export",
         ],
     )
 

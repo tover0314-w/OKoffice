@@ -1016,6 +1016,21 @@
             "name": "pdf_convert_to_pptx",
             "maps_to": "pdf.convert.to_pptx",
             "status": "beta"
+        },
+        {
+            "name": "office_workflow_source_to_deck",
+            "maps_to": "office.workflow.source_to_deck",
+            "status": "beta"
+        },
+        {
+            "name": "office_workflow_source_to_doc",
+            "maps_to": "office.workflow.source_to_doc",
+            "status": "beta"
+        },
+        {
+            "name": "deck_export_pdf",
+            "maps_to": "deck.export.pdf",
+            "status": "beta"
         }
     ]
 }

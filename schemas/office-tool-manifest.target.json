@@ -275,7 +275,7 @@
         },
         {
             "name": "office.workflow.source_to_deck",
-            "status": "planned",
+            "status": "beta",
             "description": "Create a taste-reviewed presentation from gathered document evidence, tables, outlines, style packs, HTML preview packages, and editable PPTX export.",
             "domain": "office",
             "interfaces": [
@@ -284,13 +284,13 @@
                 "rest",
                 "sdk"
             ],
-            "implemented": false,
+            "implemented": true,
             "oss_default": true,
             "requires_model": true
         },
         {
             "name": "office.workflow.source_to_doc",
-            "status": "planned",
+            "status": "beta",
             "description": "Create a Word document from multi-source evidence and a structured writing brief.",
             "domain": "office",
             "interfaces": [
@@ -299,7 +299,7 @@
                 "rest",
                 "sdk"
             ],
-            "implemented": false,
+            "implemented": true,
             "oss_default": true,
             "requires_model": true
         },
@@ -1289,7 +1289,7 @@
         },
         {
             "name": "deck.export.pdf",
-            "status": "planned",
+            "status": "beta",
             "description": "Export PPTX decks to validated PDFs with slide render checks.",
             "domain": "deck",
             "interfaces": [
@@ -1298,7 +1298,7 @@
                 "rest",
                 "sdk"
             ],
-            "implemented": false,
+            "implemented": true,
             "oss_default": true,
             "requires_model": false
         },

@@ -114,6 +114,9 @@ from okoffice.tools.runner import (
     run_office_workflow_plan,
     run_office_workflow_sheet_to_deck,
     run_office_workflow_source_to_board_pack,
+    run_office_workflow_source_to_deck,
+    run_office_workflow_source_to_doc,
+    run_deck_export_pdf,
     run_office_workers_status,
     run_page_numbers,
     run_patch_apply,
@@ -569,6 +572,9 @@ def create_mcp_server() -> FastMCP:
     server.tool(name="pdf_convert_to_docx")(pdf_convert_to_docx)
     server.tool(name="pdf_convert_to_xlsx")(pdf_convert_to_xlsx)
     server.tool(name="pdf_convert_to_pptx")(pdf_convert_to_pptx)
+    server.tool(name="office_workflow_source_to_deck")(office_workflow_source_to_deck)
+    server.tool(name="office_workflow_source_to_doc")(office_workflow_source_to_doc)
+    server.tool(name="deck_export_pdf")(deck_export_pdf_handler)
 
     # Schema resources for agents
     _schemas_dir = _project_root() / "schemas"
@@ -3132,6 +3138,53 @@ def pdf_convert_to_xlsx(input_path: str, output_path: str, pages: str = "all") -
 def pdf_convert_to_pptx(input_path: str, output_path: str, pages: str = "all") -> str:
     """Convert PDF page evidence into PPTX drafts with page screenshots and editable notes."""
     return run_pdf_convert_to_pptx(input_path, output_path, pages=pages).model_dump_json()
+
+
+# --- Phase 3: Workflow orchestrators ---
+
+def office_workflow_source_to_deck(
+    files: list[str | dict[str, object]],
+    schema: dict[str, object] | str,
+    output_path: str,
+    title: str | None = None,
+    intent: str | None = None,
+    deck_title: str | None = None,
+    max_rows_per_sheet: int = 100,
+) -> str:
+    """End-to-end: source documents -> evidence workbook -> deck with taste review."""
+    return run_office_workflow_source_to_deck(
+        files=files,
+        schema=schema,
+        output_path=output_path,
+        title=title,
+        intent=intent,
+        deck_title=deck_title,
+        max_rows_per_sheet=max_rows_per_sheet,
+    ).model_dump_json()
+
+
+def office_workflow_source_to_doc(
+    files: list[str | dict[str, object]],
+    schema: dict[str, object] | str,
+    output_path: str,
+    title: str | None = None,
+    intent: str | None = None,
+    profile: str = "executive_memo",
+) -> str:
+    """End-to-end: source documents -> evidence workbook -> Word report."""
+    return run_office_workflow_source_to_doc(
+        files=files,
+        schema=schema,
+        output_path=output_path,
+        title=title,
+        intent=intent,
+        profile=profile,
+    ).model_dump_json()
+
+
+def deck_export_pdf_handler(input_path: str, output_path: str) -> str:
+    """Export PPTX deck to PDF with slide render checks."""
+    return run_deck_export_pdf(input_path, output_path).model_dump_json()
 
 
 def run_mcp_server(transport: Literal["stdio", "sse", "streamable-http"] = "stdio") -> None:
