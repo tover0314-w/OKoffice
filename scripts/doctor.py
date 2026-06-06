@@ -145,14 +145,14 @@ def check_command(
 
 
 def check_node_workspace() -> dict[str, Any]:
-    package_json = ROOT / "packages" / "agentpdf-node" / "package.json"
+    package_json = ROOT / "packages" / "okoffice-node" / "package.json"
     return {
         "ok": package_json.exists(),
         "required": True,
         "category": "required_runtime",
         "message": "TypeScript package workspace is present."
         if package_json.exists()
-        else "packages/agentpdf-node is missing.",
+        else "packages/okoffice-node is missing.",
     }
 
 
