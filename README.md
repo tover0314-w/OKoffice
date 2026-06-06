@@ -143,6 +143,14 @@ See [Taste-Driven HTML-First Deck Pipeline](docs/43_TASTE_DRIVEN_DECK_PIPELINE.m
 | `office.workflow.board_pack` | beta | Creates a local ZIP board pack with artifacts, manifest, validation report, and delivery metadata. |
 | `office.bundle.verify` | beta | Verifies board pack ZIP manifests, validation reports, artifact members, sizes, and SHA-256 checksums. |
 | `pdf.*` compatibility | stable/beta | The full manifest currently covers 270 local PDF, Office, and agent setup tools available through `okpdf`, MCP, REST, and SDKs. |
+| `office.workflow.multi_format_brief` | beta | Inspects mixed-format files (DOCX/XLSX/PPTX/PDF), extracts key content, and builds a structured brief with recommended workflows. |
+| `word.comment.review` | beta | Reviews and resolves Word document comments via OOXML patching. |
+| `sheet.visualize.chart` | beta | Creates charts (bar, line, pie, area, scatter) in Excel workbooks using openpyxl. |
+| `deck.edit.apply_theme` | beta | Applies named or custom color themes to PPTX decks via OOXML theme manipulation. |
+| `pdf.extract.tables` | beta | Detects and extracts tables from PDF text layers using position-based heuristics. |
+| `office.workflow.source_to_deck` | beta | End-to-end: source documents -> evidence workbook -> deck with taste review. |
+| `office.workflow.source_to_doc` | beta | End-to-end: source documents -> evidence workbook -> Word report. |
+| Agent setup (6 platforms) | beta | Claude Code, Codex, Kilo Code, OpenClaw, Cursor, OpenAI Agents MCP config generation. |
 
 The codebase still exposes the compatibility Python package as `agentpdf` and the compatibility Node package as `@okoffice/okoffice-node`. The target package identity is OKoffice; compatibility names are preserved deliberately.
 
@@ -156,9 +164,9 @@ The codebase still exposes the compatibility Python package as `agentpdf` and th
 | Patch | `office.patch.plan`, `word.edit.patch`, `sheet.edit.patch`, `deck.edit.patch`, `pdf.patch.apply` |
 | Validate | `office.validation.run`, `word.validation.document`, `sheet.validate.workbook`, `sheet.validation.formulas`, `deck.validate.presentation`, `pdf.validation.render_check` |
 | Evidence | `office.context.build_packet`, `office.evidence.coverage`, `office.source_map.create` |
-| Workflow | `office.workflow.extract_to_sheet`, `office.workflow.sheet_to_deck`, `office.workflow.board_pack`, `pdf.workflow.run` |
+| Workflow | `office.workflow.extract_to_sheet`, `office.workflow.sheet_to_deck`, `office.workflow.board_pack`, `office.workflow.source_to_deck`, `office.workflow.source_to_doc`, `office.workflow.multi_format_brief`, `pdf.workflow.run` |
 | Bundle | `office.bundle.export`, `office.bundle.verify`, `pdf.artifacts.export_bundle` |
-| Agents | `office.agent.setup.claude_code`, compatibility `agent.setup.codex`, `agent.setup.claude_code`, `agent.setup.openclaw` |
+| Agents | `agent.setup.claude_code`, `agent.setup.codex`, `agent.setup.kilo_code`, `agent.setup.openclaw`, `agent.setup.cursor`, `agent.setup.openai_agents` |
 
 ## Agent Interfaces
 
