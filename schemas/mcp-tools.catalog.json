@@ -123,6 +123,21 @@
       "status": "beta"
     },
     {
+      "name": "word_read_document",
+      "maps_to": "word.read.document",
+      "status": "beta"
+    },
+    {
+      "name": "word_write_document",
+      "maps_to": "word.write.document",
+      "status": "beta"
+    },
+    {
+      "name": "word_edit_patch",
+      "maps_to": "word.edit.patch",
+      "status": "beta"
+    },
+    {
       "name": "sheet_inspect_workbook",
       "maps_to": "sheet.inspect.workbook",
       "status": "beta"
@@ -170,6 +185,11 @@
     {
       "name": "sheet_validate_external_links",
       "maps_to": "sheet.validation.external_links",
+      "status": "beta"
+    },
+    {
+      "name": "sheet_edit_patch",
+      "maps_to": "sheet.edit.patch",
       "status": "beta"
     },
     {
@@ -1130,6 +1150,36 @@
     {
       "name": "deck_validation_placeholders",
       "maps_to": "deck.validation.placeholders",
+      "status": "beta"
+    },
+    {
+      "name": "deck_template_list",
+      "maps_to": "deck.template.list",
+      "status": "beta"
+    },
+    {
+      "name": "deck_template_preview",
+      "maps_to": "deck.template.preview",
+      "status": "beta"
+    },
+    {
+      "name": "deck_create_from_template",
+      "maps_to": "deck.create.from_template",
+      "status": "beta"
+    },
+    {
+      "name": "deck_spec_lock_create",
+      "maps_to": "deck.spec_lock.create",
+      "status": "beta"
+    },
+    {
+      "name": "deck_spec_lock_check_drift",
+      "maps_to": "deck.spec_lock.check_drift",
+      "status": "beta"
+    },
+    {
+      "name": "deck_animation_apply",
+      "maps_to": "deck.animation.apply",
       "status": "beta"
     },
     {
