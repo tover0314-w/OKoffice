@@ -368,7 +368,7 @@
         },
         {
             "name": "office.artifacts.bundle",
-            "status": "planned",
+            "status": "beta",
             "description": "Export generated Office files and validation reports as a portable audit bundle.",
             "domain": "office",
             "interfaces": [
@@ -377,7 +377,7 @@
                 "rest",
                 "sdk"
             ],
-            "implemented": false,
+            "implemented": true,
             "oss_default": true,
             "requires_model": false
         },
@@ -414,7 +414,7 @@
         },
         {
             "name": "word.extract.structure",
-            "status": "planned",
+            "status": "beta",
             "description": "Extract a Word document outline, sections, references, and source-map anchors.",
             "domain": "word",
             "interfaces": [
@@ -423,7 +423,7 @@
                 "rest",
                 "sdk"
             ],
-            "implemented": false,
+            "implemented": true,
             "oss_default": true,
             "requires_model": false
         },
@@ -686,7 +686,7 @@
         },
         {
             "name": "word.convert.to_pdf",
-            "status": "planned",
+            "status": "beta",
             "description": "Convert DOCX to validated PDF through explicit local or configured renderer backends.",
             "domain": "word",
             "interfaces": [
@@ -695,13 +695,13 @@
                 "rest",
                 "sdk"
             ],
-            "implemented": false,
+            "implemented": true,
             "oss_default": true,
             "requires_model": false
         },
         {
             "name": "word.convert.from_pdf",
-            "status": "planned",
+            "status": "beta",
             "description": "Convert PDFs into editable DOCX drafts with layout warnings and source mapping.",
             "domain": "word",
             "interfaces": [
@@ -710,7 +710,7 @@
                 "rest",
                 "sdk"
             ],
-            "implemented": false,
+            "implemented": true,
             "oss_default": true,
             "requires_model": false
         },
@@ -1409,7 +1409,7 @@
         },
         {
             "name": "pdf.read.document",
-            "status": "planned",
+            "status": "beta",
             "description": "Read PDF document structure, pages, text, images, tables, metadata, and render facts.",
             "domain": "pdf",
             "interfaces": [
@@ -1418,7 +1418,7 @@
                 "rest",
                 "sdk"
             ],
-            "implemented": false,
+            "implemented": true,
             "oss_default": true,
             "requires_model": false
         },
@@ -1439,7 +1439,7 @@
         },
         {
             "name": "pdf.convert.to_docx",
-            "status": "planned",
+            "status": "beta",
             "description": "Convert PDF pages into DOCX drafts with source refs and layout-loss warnings.",
             "domain": "pdf",
             "interfaces": [
@@ -1448,13 +1448,13 @@
                 "rest",
                 "sdk"
             ],
-            "implemented": false,
+            "implemented": true,
             "oss_default": true,
             "requires_model": false
         },
         {
             "name": "pdf.convert.to_xlsx",
-            "status": "planned",
+            "status": "beta",
             "description": "Convert PDF tables and selected fields into XLSX workbooks with provenance.",
             "domain": "pdf",
             "interfaces": [
@@ -1463,13 +1463,13 @@
                 "rest",
                 "sdk"
             ],
-            "implemented": false,
+            "implemented": true,
             "oss_default": true,
             "requires_model": false
         },
         {
             "name": "pdf.convert.to_pptx",
-            "status": "planned",
+            "status": "beta",
             "description": "Convert PDF page evidence into PPTX drafts with page screenshots and editable notes.",
             "domain": "pdf",
             "interfaces": [
@@ -1478,7 +1478,7 @@
                 "rest",
                 "sdk"
             ],
-            "implemented": false,
+            "implemented": true,
             "oss_default": true,
             "requires_model": true
         },

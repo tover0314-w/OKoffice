@@ -103,6 +103,7 @@ from okoffice.tools.runner import (
     run_n_up,
     run_office_bundle_verify,
     run_office_bundle_export,
+    run_office_artifacts_bundle,
     run_office_context_build_packet,
     run_office_extract_schema,
     run_office_inspect_file,
@@ -127,6 +128,10 @@ from okoffice.tools.runner import (
     run_parse_formulas,
     run_parse_lite,
     run_parse_references,
+    run_pdf_convert_to_docx,
+    run_pdf_convert_to_pptx,
+    run_pdf_convert_to_xlsx,
+    run_pdf_read_document,
     run_pdf_to_docx,
     run_pdf_to_html,
     run_pdf_to_markdown,
@@ -216,8 +221,11 @@ from okoffice.tools.runner import (
     run_word_extract_outline,
     run_word_extract_revisions,
     run_word_extract_styles,
+    run_word_extract_structure,
     run_word_extract_tables,
     run_word_extract_text,
+    run_word_convert_from_pdf,
+    run_word_convert_to_pdf,
     run_word_inspect_document,
     run_word_create_report,
     run_create_word_document,
@@ -553,6 +561,14 @@ def create_mcp_server() -> FastMCP:
     server.tool(name="office_workflow_review_and_patch")(office_workflow_review_and_patch)
     server.tool(name="office_workflow_redaction_packet")(office_workflow_redaction_packet)
     server.tool(name="office_bundle_graph")(office_bundle_graph)
+    server.tool(name="office_artifacts_bundle")(office_artifacts_bundle)
+    server.tool(name="word_extract_structure")(word_extract_structure)
+    server.tool(name="word_convert_to_pdf")(word_convert_to_pdf)
+    server.tool(name="word_convert_from_pdf")(word_convert_from_pdf)
+    server.tool(name="pdf_read_document")(pdf_read_document)
+    server.tool(name="pdf_convert_to_docx")(pdf_convert_to_docx)
+    server.tool(name="pdf_convert_to_xlsx")(pdf_convert_to_xlsx)
+    server.tool(name="pdf_convert_to_pptx")(pdf_convert_to_pptx)
 
     # Schema resources for agents
     _schemas_dir = _project_root() / "schemas"
@@ -3069,6 +3085,53 @@ def office_workflow_redaction_packet(path: str, search_terms: list[str]) -> str:
 def office_bundle_graph(artifact_paths: list[str]) -> str:
     """Create an artifact lineage graph from multi-format Office outputs."""
     return run_build_artifact_graph(artifact_paths=artifact_paths).model_dump_json()
+
+
+# --- Phase 2: Alias handlers ---
+
+def office_artifacts_bundle(artifact_paths: list[str], output_path: str,
+                            title: str | None = None,
+                            metadata: dict[str, object] | None = None) -> str:
+    """Export local Office artifacts into a portable OKoffice bundle ZIP."""
+    return run_office_artifacts_bundle(artifact_paths=artifact_paths,
+                                       output_path=output_path,
+                                       title=title,
+                                       metadata=metadata).model_dump_json()
+
+
+def word_extract_structure(path: str) -> str:
+    """Extract a Word document outline, sections, references, and source-map anchors."""
+    return run_word_extract_structure(path).model_dump_json()
+
+
+def word_convert_to_pdf(input_path: str, output_path: str) -> str:
+    """Convert DOCX to validated PDF through explicit local or configured renderer backends."""
+    return run_word_convert_to_pdf(input_path, output_path).model_dump_json()
+
+
+def word_convert_from_pdf(input_path: str, output_path: str) -> str:
+    """Convert PDFs into editable DOCX drafts with layout warnings and source mapping."""
+    return run_word_convert_from_pdf(input_path, output_path).model_dump_json()
+
+
+def pdf_read_document(path: str, pages: str = "all", render_check: bool = False) -> str:
+    """Read PDF document structure, pages, text, images, tables, metadata, and render facts."""
+    return run_pdf_read_document(path, pages=pages, render_check=render_check).model_dump_json()
+
+
+def pdf_convert_to_docx(input_path: str, output_path: str, pages: str = "all") -> str:
+    """Convert PDF pages into DOCX drafts with source refs and layout-loss warnings."""
+    return run_pdf_convert_to_docx(input_path, output_path, pages=pages).model_dump_json()
+
+
+def pdf_convert_to_xlsx(input_path: str, output_path: str, pages: str = "all") -> str:
+    """Convert PDF tables and selected fields into XLSX workbooks with provenance."""
+    return run_pdf_convert_to_xlsx(input_path, output_path, pages=pages).model_dump_json()
+
+
+def pdf_convert_to_pptx(input_path: str, output_path: str, pages: str = "all") -> str:
+    """Convert PDF page evidence into PPTX drafts with page screenshots and editable notes."""
+    return run_pdf_convert_to_pptx(input_path, output_path, pages=pages).model_dump_json()
 
 
 def run_mcp_server(transport: Literal["stdio", "sse", "streamable-http"] = "stdio") -> None:

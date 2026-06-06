@@ -251,6 +251,15 @@ IMPLEMENTED_TOOLS = {
     "sheet.create.evidence_workbook",
     "sheet.validate.workbook",
     "deck.review.taste",
+    # Phase 2: alias tools
+    "office.artifacts.bundle",
+    "word.extract.structure",
+    "word.convert.to_pdf",
+    "word.convert.from_pdf",
+    "pdf.read.document",
+    "pdf.convert.to_docx",
+    "pdf.convert.to_xlsx",
+    "pdf.convert.to_pptx",
 }
 
 

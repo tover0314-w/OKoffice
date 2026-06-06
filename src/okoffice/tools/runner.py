@@ -3287,6 +3287,65 @@ def run_build_artifact_graph(*, artifact_paths: list[str | Path]) -> ToolResult:
     return build_office_artifact_graph(artifact_paths=artifact_paths)
 
 
+# --- Phase 2: Alias delegates ---
+
+def run_office_artifacts_bundle(*, artifact_paths: list[str | Path],
+                                output_path: str | Path,
+                                title: str | None = None,
+                                metadata: dict[str, Any] | None = None) -> ToolResult:
+    return run_office_bundle_export(artifact_paths=artifact_paths,
+                                    output_path=output_path,
+                                    title=title,
+                                    metadata=metadata)
+
+
+def run_word_extract_structure(path: str | Path) -> ToolResult:
+    return extract_word_outline(path)
+
+
+def run_word_convert_to_pdf(input_path: str | Path, output_path: str | Path) -> ToolResult:
+    return run_docx_to_pdf(input_path, output_path)
+
+
+def run_word_convert_from_pdf(input_path: str | Path, output_path: str | Path) -> ToolResult:
+    return run_pdf_to_docx(input_path, output_path)
+
+
+def run_pdf_read_document(path: str | Path, pages: str = "all",
+                          render_check: bool = False) -> ToolResult:
+    doc = run_inspect(path)
+    pgs = run_inspect_pages(path, pages=pages, render_check=render_check)
+    merged_usage = {"document": doc.usage, "pages": pgs.usage}
+    merged_artifacts = (doc.artifacts or []) + (pgs.artifacts or [])
+    merged_warnings = list(dict.fromkeys((doc.warnings or []) + (pgs.warnings or [])))
+    merged_next = list(dict.fromkeys((doc.next_recommended_tools or []) + (pgs.next_recommended_tools or [])))
+    return ToolResult(
+        job_id=_job_id(),
+        status="succeeded" if doc.status == "succeeded" and pgs.status == "succeeded" else "failed",
+        tool="pdf.read.document",
+        usage=merged_usage,
+        validation=doc.validation,
+        artifacts=merged_artifacts,
+        warnings=merged_warnings,
+        next_recommended_tools=merged_next,
+    )
+
+
+def run_pdf_convert_to_docx(input_path: str | Path, output_path: str | Path,
+                             pages: str = "all") -> ToolResult:
+    return run_pdf_to_docx(input_path, output_path)
+
+
+def run_pdf_convert_to_xlsx(input_path: str | Path, output_path: str | Path,
+                             pages: str = "all") -> ToolResult:
+    return run_pdf_to_xlsx(input_path, output_path)
+
+
+def run_pdf_convert_to_pptx(input_path: str | Path, output_path: str | Path,
+                             pages: str = "all") -> ToolResult:
+    return run_pdf_to_pptx(input_path, output_path)
+
+
 def _failed(tool: str, error: OKofficeError) -> ToolResult:
     return ToolResult(
         job_id=_job_id(),
