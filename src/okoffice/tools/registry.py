@@ -241,6 +241,16 @@ IMPLEMENTED_TOOLS = {
     "office.workflow.review_and_patch",
     "office.workflow.redaction_packet",
     "office.bundle.graph",
+    # Phase 1: tools with existing implementations not yet registered
+    "office.workflow.plan",
+    "office.manifest.show",
+    "word.extract.tables",
+    "sheet.read.workbook",
+    "sheet.profile.data",
+    "sheet.extract.tables",
+    "sheet.create.evidence_workbook",
+    "sheet.validate.workbook",
+    "deck.review.taste",
 }
 
 

@@ -215,7 +215,7 @@
         },
         {
             "name": "office.manifest.show",
-            "status": "planned",
+            "status": "beta",
             "description": "Return the target OKoffice tool map for agent runtimes.",
             "domain": "office",
             "interfaces": [
@@ -224,7 +224,7 @@
                 "rest",
                 "sdk"
             ],
-            "implemented": false,
+            "implemented": true,
             "oss_default": true,
             "requires_model": false
         },
@@ -244,7 +244,7 @@
         },
         {
             "name": "office.workflow.plan",
-            "status": "planned",
+            "status": "beta",
             "description": "Plan a local-first cross-format Office workflow from goals, inputs, and outputs.",
             "domain": "office",
             "interfaces": [
@@ -253,7 +253,7 @@
                 "rest",
                 "sdk"
             ],
-            "implemented": false,
+            "implemented": true,
             "oss_default": true,
             "requires_model": false
         },
@@ -429,7 +429,7 @@
         },
         {
             "name": "word.extract.tables",
-            "status": "planned",
+            "status": "beta",
             "description": "Extract Word tables into normalized records with source cell locations.",
             "domain": "word",
             "interfaces": [
@@ -438,7 +438,7 @@
                 "rest",
                 "sdk"
             ],
-            "implemented": false,
+            "implemented": true,
             "oss_default": true,
             "requires_model": false
         },
@@ -716,7 +716,7 @@
         },
         {
             "name": "sheet.read.workbook",
-            "status": "planned",
+            "status": "beta",
             "description": "Read workbook sheets, tables, formulas, styles, charts, comments, and metadata.",
             "domain": "sheet",
             "interfaces": [
@@ -725,13 +725,13 @@
                 "rest",
                 "sdk"
             ],
-            "implemented": false,
+            "implemented": true,
             "oss_default": true,
             "requires_model": false
         },
         {
             "name": "sheet.profile.data",
-            "status": "planned",
+            "status": "beta",
             "description": "Profile sheet data types, headers, empty ranges, anomalies, and source coverage.",
             "domain": "sheet",
             "interfaces": [
@@ -740,13 +740,13 @@
                 "rest",
                 "sdk"
             ],
-            "implemented": false,
+            "implemented": true,
             "oss_default": true,
             "requires_model": false
         },
         {
             "name": "sheet.extract.tables",
-            "status": "planned",
+            "status": "beta",
             "description": "Extract normalized tables from workbooks with sheet, row, column, and cell refs.",
             "domain": "sheet",
             "interfaces": [
@@ -755,7 +755,7 @@
                 "rest",
                 "sdk"
             ],
-            "implemented": false,
+            "implemented": true,
             "oss_default": true,
             "requires_model": false
         },
@@ -851,7 +851,7 @@
         },
         {
             "name": "sheet.create.evidence_workbook",
-            "status": "planned",
+            "status": "beta",
             "description": "Create an auditable evidence workbook from structured records while preserving SourceRefs provenance.",
             "domain": "sheet",
             "interfaces": [
@@ -860,7 +860,7 @@
                 "rest",
                 "sdk"
             ],
-            "implemented": false,
+            "implemented": true,
             "oss_default": true,
             "requires_model": false
         },
@@ -897,7 +897,7 @@
         },
         {
             "name": "sheet.validate.workbook",
-            "status": "planned",
+            "status": "beta",
             "description": "Validate formulas, dimensions, blank sheets, chart refs, and workbook renderability.",
             "domain": "sheet",
             "interfaces": [
@@ -906,7 +906,7 @@
                 "rest",
                 "sdk"
             ],
-            "implemented": false,
+            "implemented": true,
             "oss_default": true,
             "requires_model": false
         },
@@ -1304,7 +1304,7 @@
         },
         {
             "name": "deck.review.taste",
-            "status": "planned",
+            "status": "beta",
             "description": "Review story rhythm, one-claim-per-slide discipline, evidence placement, visual density, and brand fit for generated decks.",
             "domain": "deck",
             "interfaces": [
@@ -1313,7 +1313,7 @@
                 "rest",
                 "sdk"
             ],
-            "implemented": false,
+            "implemented": true,
             "oss_default": true,
             "requires_model": true
         },

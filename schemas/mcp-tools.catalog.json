@@ -223,6 +223,16 @@
       "status": "beta"
     },
     {
+      "name": "deck_review_taste",
+      "maps_to": "deck.review.taste",
+      "status": "beta"
+    },
+    {
+      "name": "office_manifest_show",
+      "maps_to": "office.manifest.show",
+      "status": "beta"
+    },
+    {
       "name": "pdf_inspect_document",
       "maps_to": "pdf.inspect.document",
       "status": "stable"
