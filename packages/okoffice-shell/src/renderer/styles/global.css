@@ -1,0 +1,241 @@
+/* === Color Tokens === */
+
+:root {
+  /* Backgrounds */
+  --ok-bg: #ffffff;
+  --ok-bg-secondary: #f7f8fa;
+  --ok-bg-tertiary: #f2f3f5;
+  --ok-bg-hover: #ebedf0;
+
+  /* Text */
+  --ok-text: #1d2129;
+  --ok-text-secondary: #4e5969;
+  --ok-text-tertiary: #86909c;
+  --ok-text-disabled: #c9cdd4;
+
+  /* Borders */
+  --ok-border: #e5e6eb;
+  --ok-border-light: #f2f3f5;
+
+  /* Primary */
+  --ok-primary: #165dff;
+  --ok-primary-hover: #4080ff;
+  --ok-primary-light: #e8f3ff;
+  --ok-primary-text: #ffffff;
+
+  /* Status */
+  --ok-success: #00b42a;
+  --ok-warning: #ff7d00;
+  --ok-danger: #f53f3f;
+
+  /* Shadows */
+  --ok-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --ok-shadow-md: 0 4px 10px rgba(0, 0, 0, 0.1);
+
+  /* Spacing */
+  --ok-sidebar-width: 240px;
+  --ok-topbar-height: 48px;
+
+  /* Radius */
+  --ok-radius-sm: 4px;
+  --ok-radius-md: 8px;
+
+  /* Transitions */
+  --ok-transition-fast: 150ms ease;
+  --ok-transition-normal: 250ms ease;
+}
+
+/* === Dark Theme === */
+
+[data-theme='dark'] {
+  --ok-bg: #17171a;
+  --ok-bg-secondary: #232326;
+  --ok-bg-tertiary: #2e2e32;
+  --ok-bg-hover: #3a3a40;
+
+  --ok-text: #ffffffd9;
+  --ok-text-secondary: #ffffffa6;
+  --ok-text-tertiary: #ffffff73;
+  --ok-text-disabled: #ffffff40;
+
+  --ok-border: #3a3a40;
+  --ok-border-light: #2e2e32;
+
+  --ok-primary: #3c7eff;
+  --ok-primary-hover: #5a94ff;
+  --ok-primary-light: #1d3a6e;
+  --ok-primary-text: #ffffff;
+
+  --ok-success: #23c343;
+  --ok-warning: #ff9a2e;
+  --ok-danger: #f76560;
+
+  --ok-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --ok-shadow-md: 0 4px 10px rgba(0, 0, 0, 0.4);
+}
+
+/* === Reset === */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+  color: var(--ok-text);
+  background-color: var(--ok-bg);
+  line-height: 1.5;
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+}
+
+#root {
+  height: 100%;
+  width: 100%;
+}
+
+a {
+  color: var(--ok-primary);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--ok-primary-hover);
+}
+
+/* === Scrollbar === */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--ok-border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--ok-text-tertiary);
+}
+
+/* === Utility Classes === */
+
+.flex {
+  display: flex;
+}
+
+.flex-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.flex-1 {
+  flex: 1;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.justify-center {
+  justify-content: center;
+}
+
+.justify-between {
+  justify-content: space-between;
+}
+
+.gap-1 {
+  gap: 4px;
+}
+
+.gap-2 {
+  gap: 8px;
+}
+
+.gap-3 {
+  gap: 12px;
+}
+
+.gap-4 {
+  gap: 16px;
+}
+
+.w-full {
+  width: 100%;
+}
+
+.h-full {
+  height: 100%;
+}
+
+.overflow-hidden {
+  overflow: hidden;
+}
+
+.overflow-auto {
+  overflow: auto;
+}
+
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.select-none {
+  user-select: none;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.text-sm {
+  font-size: 12px;
+}
+
+.text-xs {
+  font-size: 11px;
+}
+
+.text-secondary {
+  color: var(--ok-text-secondary);
+}
+
+.text-tertiary {
+  color: var(--ok-text-tertiary);
+}
+
+.text-primary {
+  color: var(--ok-primary);
+}
+
+.font-medium {
+  font-weight: 500;
+}
+
+.rounded {
+  border-radius: var(--ok-radius-sm);
+}
+
+.rounded-md {
+  border-radius: var(--ok-radius-md);
+}
