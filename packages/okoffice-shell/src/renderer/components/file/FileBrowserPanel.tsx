@@ -6,7 +6,6 @@ import {
   IconFilePdf,
   IconFileImage,
   IconRefresh,
-  IconFolderOpen,
 } from '@arco-design/web-react/icon';
 import type { FileEntry, FileType } from '@shared/types';
 import api from '../../api/bridge';
@@ -91,11 +90,13 @@ const FileTreeItem: React.FC<FileTreeItemProps> = ({
         }}
       >
         {entry.isDirectory ? (
-          expanded ? (
-            <IconFolderOpen style={{ color: '#eab308', fontSize: 16, flexShrink: 0 }} />
-          ) : (
-            <IconFolder style={{ color: '#eab308', fontSize: 16, flexShrink: 0 }} />
-          )
+          <IconFolder style={{
+            color: '#eab308',
+            fontSize: 16,
+            flexShrink: 0,
+            transform: expanded ? 'rotate(-90deg)' : 'none',
+            transition: 'transform 0.15s',
+          }} />
         ) : (
           <span style={{ flexShrink: 0 }}>{fileTypeIcon(entry.fileType)}</span>
         )}

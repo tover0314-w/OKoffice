@@ -3,6 +3,10 @@ import { Layout } from '@arco-design/web-react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
+import PreviewPanel from '../preview/PreviewPanel';
+import FileBrowserPanel from '../file/FileBrowserPanel';
+import { usePreview } from '../../contexts/PreviewContext';
+import type { FileEntry } from '@shared/types';
 
 const { Sider, Content, Header } = Layout;
 
@@ -11,6 +15,8 @@ const COLLAPSE_BREAKPOINT = 768;
 const AppLayout: React.FC = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [previewVisible, setPreviewVisible] = useState(false);
+  const [fileBrowserVisible, setFileBrowserVisible] = useState(false);
+  const { previewFile, setPreviewFile } = usePreview();
 
   const handleResize = useCallback(() => {
     if (window.innerWidth < COLLAPSE_BREAKPOINT && !sidebarCollapsed) {
@@ -23,6 +29,21 @@ const AppLayout: React.FC = () => {
     handleResize();
     return () => window.removeEventListener('resize', handleResize);
   }, [handleResize]);
+
+  const handleFileSelect = useCallback(
+    (entry: FileEntry) => {
+      if (!entry.isDirectory) {
+        setPreviewFile(entry);
+        setPreviewVisible(true);
+      }
+    },
+    [setPreviewFile],
+  );
+
+  const handleClosePreview = useCallback(() => {
+    setPreviewVisible(false);
+    setPreviewFile(null);
+  }, [setPreviewFile]);
 
   return (
     <Layout
@@ -78,6 +99,16 @@ const AppLayout: React.FC = () => {
             display: 'flex',
           }}
         >
+          {/* File browser (optional left panel) */}
+          {fileBrowserVisible && (
+            <div style={{ width: 220, flexShrink: 0 }}>
+              <FileBrowserPanel
+                onFileSelect={handleFileSelect}
+              />
+            </div>
+          )}
+
+          {/* Main content */}
           <div
             style={{
               flex: 1,
@@ -88,25 +119,13 @@ const AppLayout: React.FC = () => {
             <Outlet />
           </div>
 
+          {/* Preview panel */}
           {previewVisible && (
-            <div
-              style={{
-                width: 400,
-                borderLeft: '1px solid var(--ok-border)',
-                background: 'var(--ok-bg-secondary)',
-                overflow: 'auto',
-                flexShrink: 0,
-              }}
-            >
-              <div
-                style={{
-                  padding: 16,
-                  color: 'var(--ok-text-tertiary)',
-                  textAlign: 'center',
-                }}
-              >
-                Preview panel
-              </div>
+            <div style={{ width: 420, flexShrink: 0 }}>
+              <PreviewPanel
+                file={previewFile}
+                onClose={handleClosePreview}
+              />
             </div>
           )}
         </Content>

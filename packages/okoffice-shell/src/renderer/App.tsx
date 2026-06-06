@@ -7,19 +7,22 @@ import AppLayout from './components/layout/AppLayout';
 import ChatPage from './pages/ChatPage';
 import SettingsPage from './pages/SettingsPage';
 import WorkflowPage from './pages/WorkflowPage';
+import { PreviewProvider } from './contexts/PreviewContext';
 
 const App: React.FC = () => {
   return (
     <ConfigProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route element={<AppLayout />}>
-            <Route path="/" element={<ChatPage />} />
-            <Route path="/workflow/:id?" element={<WorkflowPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
+      <PreviewProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route element={<AppLayout />}>
+              <Route path="/" element={<ChatPage />} />
+              <Route path="/workflow/:id?" element={<WorkflowPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+            </Route>
+          </Routes>
+        </BrowserRouter>
+      </PreviewProvider>
     </ConfigProvider>
   );
 };

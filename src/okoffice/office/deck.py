@@ -1310,10 +1310,13 @@ def _html_slide(slide: dict[str, Any], *, tokens: DesignTokens | None = None) ->
     bullet_markup = "\n".join(f"        <li>{_html(bullet)}</li>" for bullet in bullets)
     subtitle = str(slide.get("subtitle") or "")
     notes = str(slide.get("notes") or "")
+    body_text = str(slide.get("body") or "")
+    metrics = slide.get("metrics", [])
     # Build region elements from layout shapes
     regions: list[str] = []
     for shape_def in layout.shapes:
         purpose = shape_def.purpose
+        area = shape_def.css_area
         if purpose == "kicker":
             regions.append(f"        <p class=\"slide-kicker\" style=\"grid-area: kicker\">Slide {int(slide['slide_index']):02d}</p>")
         elif purpose == "title":
@@ -1322,8 +1325,58 @@ def _html_slide(slide: dict[str, Any], *, tokens: DesignTokens | None = None) ->
             regions.append(f"        <p class=\"subtitle\" style=\"grid-area: subtitle\">{_html(subtitle)}</p>")
         elif purpose == "bullets" and bullet_markup:
             regions.append(f"        <ul style=\"grid-area: bullets\">{bullet_markup}</ul>")
-        elif purpose in ("col_left", "text_area", "card_1", "stage_1", "source_list") and bullets:
-            regions.append(f"        <ul style=\"grid-area: {shape_def.css_area}\">{bullet_markup}</ul>")
+        elif purpose in ("metric_1", "metric_2", "metric_3", "metric_4"):
+            idx = {"metric_1": 0, "metric_2": 1, "metric_3": 2, "metric_4": 3}.get(purpose, 0)
+            if metrics and idx < len(metrics):
+                regions.append(f"        <div class=\"metric\" style=\"grid-area: {area}\"><span class=\"metric-value\">{_html(str(metrics[idx]))}</span></div>")
+        elif purpose == "body_text":
+            content = body_text or bullet_markup
+            if content:
+                if body_text:
+                    regions.append(f"        <div class=\"body-text\" style=\"grid-area: {area}\">{_html(body_text)}</div>")
+                elif bullets:
+                    regions.append(f"        <ul style=\"grid-area: {area}\">{bullet_markup}</ul>")
+        elif purpose in ("col_left_header", "col_right_header"):
+            header_val = slide.get(purpose, "")
+            if not header_val:
+                header_val = "Option A" if purpose == "col_left_header" else "Option B"
+            regions.append(f"        <div class=\"col-header\" style=\"grid-area: {area}\">{_html(str(header_val))}</div>")
+        elif purpose == "col_left":
+            left_bullets = bullets[:len(bullets) // 2 + len(bullets) % 2] if bullets else []
+            if left_bullets:
+                left_markup = "\n".join(f"        <li>{_html(b)}</li>" for b in left_bullets)
+                regions.append(f"        <ul style=\"grid-area: {area}\">{left_markup}</ul>")
+        elif purpose == "col_right":
+            right_bullets = bullets[len(bullets) // 2 + len(bullets) % 2:] if bullets else []
+            if right_bullets:
+                right_markup = "\n".join(f"        <li>{_html(b)}</li>" for b in right_bullets)
+                regions.append(f"        <ul style=\"grid-area: {area}\">{right_markup}</ul>")
+        elif purpose in ("card_1", "card_2", "card_3"):
+            card_idx = {"card_1": 0, "card_2": 1, "card_3": 2}.get(purpose, 0)
+            card_bullets = bullets[card_idx * 2:(card_idx + 1) * 2] if bullets else []
+            if card_bullets:
+                card_markup = "\n".join(f"          <li>{_html(b)}</li>" for b in card_bullets)
+                regions.append(f"        <div class=\"card\" style=\"grid-area: {area}\"><ul>{card_markup}</ul></div>")
+            elif metrics and card_idx < len(metrics):
+                regions.append(f"        <div class=\"card\" style=\"grid-area: {area}\"><span class=\"metric-value\">{_html(str(metrics[card_idx]))}</span></div>")
+        elif purpose in ("stage_1", "stage_2", "stage_3", "stage_4"):
+            stage_idx = {"stage_1": 0, "stage_2": 1, "stage_3": 2, "stage_4": 3}.get(purpose, 0)
+            stage_bullets = bullets[stage_idx:stage_idx + 1] if bullets and stage_idx < len(bullets) else []
+            if stage_bullets:
+                stage_markup = "\n".join(f"          <li>{_html(b)}</li>" for b in stage_bullets)
+                regions.append(f"        <div class=\"stage\" style=\"grid-area: {area}\"><span class=\"stage-number\">{stage_idx + 1}</span><ul>{stage_markup}</ul></div>")
+        elif purpose == "source_list" and bullets:
+            src_markup = "\n".join(f"        <li>{_html(b)}</li>" for b in bullets)
+            regions.append(f"        <ol class=\"source-list\" style=\"grid-area: {area}\">{src_markup}</ol>")
+        elif purpose == "image_area":
+            regions.append(f"        <div class=\"image-placeholder\" style=\"grid-area: {area}\"><span>Image</span></div>")
+        elif purpose in ("axis_y", "axis_x"):
+            axis_val = slide.get(purpose, "")
+            if axis_val:
+                regions.append(f"        <div class=\"axis-label\" style=\"grid-area: {area}\">{_html(str(axis_val))}</div>")
+        elif purpose == "grid_cells" and bullets:
+            grid_markup = "\n".join(f"        <li>{_html(b)}</li>" for b in bullets)
+            regions.append(f"        <ul class=\"grid-cells\" style=\"grid-area: {area}\">{grid_markup}</ul>")
     if notes:
         regions.append(f"        <p class=\"speaker-notes\">{_html(notes)}</p>")
     layout_class = f" layout-{layout.kind}"
@@ -1372,7 +1425,7 @@ def _html_deck_stylesheet(tokens: DesignTokens) -> str:
       font-size: var(--size-kicker);
       font-family: var(--font-heading);
       text-transform: uppercase;
-      letter-spacing: 0;
+      letter-spacing: 0.08em;
     }}
     h1 {{
       max-width: 960px;
@@ -1381,7 +1434,7 @@ def _html_deck_stylesheet(tokens: DesignTokens) -> str:
       font-size: var(--size-heading);
       font-family: var(--font-heading);
       line-height: var(--line-height-heading);
-      letter-spacing: 0;
+      letter-spacing: -0.01em;
     }}
     .subtitle {{
       margin: 0;
@@ -1400,6 +1453,220 @@ def _html_deck_stylesheet(tokens: DesignTokens) -> str:
       line-height: var(--line-height);
     }}
     li {{ margin: 12px 0; }}
+    .metric {{
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, var(--color-bg) 0%, #ffffff 100%);
+      border: 1px solid #e5e7eb;
+    }}
+    .metric-value {{
+      font-size: 36px;
+      font-weight: 700;
+      font-family: var(--font-heading);
+      color: var(--color-dark);
+      line-height: 1.1;
+    }}
+    .metric-label {{
+      font-size: var(--size-caption);
+      color: var(--color-accent);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-top: 8px;
+    }}
+    .card {{
+      padding: 20px 18px;
+      border-radius: 8px;
+      background: #fafaf8;
+      border: 1px solid #e5e7eb;
+      display: flex;
+      flex-direction: column;
+      align-self: start;
+    }}
+    .card ul {{
+      padding-left: 20px;
+      margin: 0;
+    }}
+    .card li {{
+      margin: 8px 0;
+      font-size: var(--size-body);
+    }}
+    .card .metric-value {{
+      font-size: 28px;
+      text-align: center;
+      display: block;
+      margin-bottom: 8px;
+    }}
+    .stage {{
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 18px 12px;
+      border-radius: 8px;
+      background: var(--color-bg);
+      border: 1px solid #d9ddd3;
+      position: relative;
+      align-self: start;
+    }}
+    .stage-number {{
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--color-accent);
+      color: #ffffff;
+      font-size: 14px;
+      font-weight: 700;
+      font-family: var(--font-heading);
+      margin-bottom: 10px;
+    }}
+    .stage ul {{
+      padding-left: 18px;
+      margin: 0;
+      text-align: left;
+    }}
+    .stage li {{
+      margin: 6px 0;
+      font-size: 14px;
+    }}
+    .slide-content.layout-process_flow .stage::after {{
+      content: "→";
+      position: absolute;
+      right: -18px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 22px;
+      color: var(--color-accent);
+      font-weight: 700;
+    }}
+    .slide-content.layout-process_flow .stage:last-child::after {{
+      display: none;
+    }}
+    .col-header {{
+      font-size: 18px;
+      font-weight: 700;
+      font-family: var(--font-heading);
+      color: var(--color-accent);
+      text-align: center;
+      padding: 8px 0;
+      border-bottom: 2px solid var(--color-accent);
+      margin-bottom: 4px;
+    }}
+    .body-text {{
+      font-size: var(--size-body);
+      font-family: var(--font-body);
+      line-height: var(--line-height);
+      color: var(--color-dark);
+      max-width: 800px;
+    }}
+    .slide-content.layout-foreword .body-text {{
+      font-size: 18px;
+      line-height: 1.65;
+      columns: 2;
+      column-gap: 32px;
+      column-rule: 1px solid #e5e7eb;
+    }}
+    .slide-content.layout-section_divider {{
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      border-top: 4px solid var(--color-accent);
+    }}
+    .slide-content.layout-section_divider h1 {{
+      max-width: 100%;
+      font-size: 48px;
+    }}
+    .slide-content.layout-quote {{
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }}
+    .slide-content.layout-quote h1 {{
+      max-width: 100%;
+      font-size: 28px;
+      font-style: italic;
+      font-family: var(--font-display);
+      line-height: 1.4;
+    }}
+    .slide-content.layout-quote h1::before {{
+      content: "\\201C";
+      font-size: 64px;
+      color: var(--color-accent);
+      display: block;
+      line-height: 0.5;
+      margin-bottom: 12px;
+      font-style: normal;
+    }}
+    .slide-content.layout-cta {{
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      background: linear-gradient(135deg, var(--color-bg) 0%, #ffffff 100%);
+    }}
+    .slide-content.layout-cta h1 {{
+      max-width: 100%;
+      font-size: 44px;
+    }}
+    .slide-content.layout-cta .subtitle {{
+      font-size: 24px;
+      color: var(--color-accent);
+      font-weight: 600;
+    }}
+    .slide-content.layout-cover {{
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      border-left: 6px solid var(--color-accent);
+    }}
+    .slide-content.layout-cover h1 {{
+      max-width: 100%;
+      font-size: 52px;
+    }}
+    .image-placeholder {{
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--color-bg);
+      border: 2px dashed #d9ddd3;
+      border-radius: 8px;
+      color: var(--color-accent);
+      font-size: 14px;
+      font-family: var(--font-body);
+    }}
+    .axis-label {{
+      font-size: var(--size-caption);
+      color: var(--color-accent);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-family: var(--font-heading);
+    }}
+    .grid-cells {{
+      list-style: none;
+      padding: 0;
+      display: grid;
+      gap: 8px;
+    }}
+    .grid-cells li {{
+      padding: 8px 12px;
+      background: var(--color-bg);
+      border-radius: 4px;
+      font-size: 13px;
+      margin: 0;
+    }}
+    .source-list {{
+      padding-left: 24px;
+      font-size: 14px;
+      line-height: 1.8;
+      color: #4b5563;
+    }}
+    .source-list li {{
+      margin: 4px 0;
+    }}
     .speaker-notes {{
       margin: 0;
       color: #6b7280;
@@ -1427,6 +1694,8 @@ def _html_deck_stylesheet(tokens: DesignTokens) -> str:
       h1 {{ font-size: 30px; }}
       .subtitle {{ font-size: 18px; }}
       ul {{ font-size: 18px; padding-left: 22px; }}
+      .metric-value {{ font-size: 28px; }}
+      .slide-content.layout-foreword .body-text {{ columns: 1; }}
     }}
     """.strip()
 
