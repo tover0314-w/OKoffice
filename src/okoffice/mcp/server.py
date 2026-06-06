@@ -118,7 +118,9 @@ from okoffice.tools.runner import (
     run_office_workflow_source_to_board_pack,
     run_office_workflow_source_to_deck,
     run_office_workflow_source_to_doc,
+    run_office_workflow_multi_format_brief,
     run_deck_export_pdf,
+    run_deck_edit_apply_theme,
     run_office_workers_status,
     run_page_numbers,
     run_patch_apply,
@@ -136,6 +138,7 @@ from okoffice.tools.runner import (
     run_pdf_convert_to_docx,
     run_pdf_convert_to_pptx,
     run_pdf_convert_to_xlsx,
+    run_pdf_extract_tables,
     run_pdf_read_document,
     run_pdf_to_docx,
     run_pdf_to_html,
@@ -198,6 +201,7 @@ from okoffice.tools.runner import (
     run_sheet_validate_model_checks,
     run_sheet_validate_workbook,
     run_sheet_write_workbook,
+    run_sheet_visualize_chart,
     run_patch_sheet_cells,
     run_patch_sheet_table,
     run_patch_sheet_formulas,
@@ -229,6 +233,7 @@ from okoffice.tools.runner import (
     run_word_extract_structure,
     run_word_extract_tables,
     run_word_extract_text,
+    run_word_comment_review,
     run_word_convert_from_pdf,
     run_word_convert_to_pdf,
     run_word_inspect_document,
@@ -579,6 +584,11 @@ def create_mcp_server() -> FastMCP:
     server.tool(name="office_workflow_source_to_deck")(office_workflow_source_to_deck)
     server.tool(name="office_workflow_source_to_doc")(office_workflow_source_to_doc)
     server.tool(name="deck_export_pdf")(deck_export_pdf_handler)
+    server.tool(name="office_workflow_multi_format_brief")(office_workflow_multi_format_brief_handler)
+    server.tool(name="word_comment_review")(word_comment_review_handler)
+    server.tool(name="sheet_visualize_chart")(sheet_visualize_chart_handler)
+    server.tool(name="deck_edit_apply_theme")(deck_edit_apply_theme_handler)
+    server.tool(name="pdf_extract_tables")(pdf_extract_tables_handler)
 
     # Schema resources for agents
     _schemas_dir = _project_root() / "schemas"
@@ -3223,6 +3233,73 @@ def office_workflow_source_to_doc(
 def deck_export_pdf_handler(input_path: str, output_path: str) -> str:
     """Export PPTX deck to PDF with slide render checks."""
     return run_deck_export_pdf(input_path, output_path).model_dump_json()
+
+
+# --- Phase 4: New tool implementations ---
+
+def office_workflow_multi_format_brief_handler(
+    files: list[str | dict[str, object]],
+    output_path: str | None = None,
+    title: str | None = None,
+    intent: str | None = None,
+) -> str:
+    """Build a structured brief from mixed-format source files."""
+    return run_office_workflow_multi_format_brief(
+        files=files, output_path=output_path, title=title, intent=intent,
+    ).model_dump_json()
+
+
+def word_comment_review_handler(
+    input_path: str,
+    output_path: str | None = None,
+    resolve_ids: list[str] | None = None,
+) -> str:
+    """Review and optionally resolve Word document comments."""
+    return run_word_comment_review(
+        input_path=input_path, output_path=output_path, resolve_ids=resolve_ids,
+    ).model_dump_json()
+
+
+def sheet_visualize_chart_handler(
+    input_path: str,
+    output_path: str,
+    sheet: str | None = None,
+    chart_type: str = "bar",
+    data_range: str | None = None,
+    title: str | None = None,
+    categories_range: str | None = None,
+    series_ranges: list[str] | None = None,
+) -> str:
+    """Create a chart in an Excel workbook."""
+    return run_sheet_visualize_chart(
+        input_path=input_path, output_path=output_path, sheet=sheet,
+        chart_type=chart_type, data_range=data_range, title=title,
+        categories_range=categories_range, series_ranges=series_ranges,
+    ).model_dump_json()
+
+
+def deck_edit_apply_theme_handler(
+    input_path: str,
+    output_path: str,
+    theme_name: str | None = None,
+    colors: dict[str, str] | None = None,
+) -> str:
+    """Apply a color theme to a PPTX deck."""
+    return run_deck_edit_apply_theme(
+        input_path=input_path, output_path=output_path,
+        theme_name=theme_name, colors=colors,
+    ).model_dump_json()
+
+
+def pdf_extract_tables_handler(
+    input_path: str,
+    pages: str = "all",
+    output_path: str | None = None,
+) -> str:
+    """Detect and extract tables from PDF text layers."""
+    return run_pdf_extract_tables(
+        input_path=input_path, pages=pages, output_path=output_path,
+    ).model_dump_json()
 
 
 def run_mcp_server(transport: Literal["stdio", "sse", "streamable-http"] = "stdio") -> None:

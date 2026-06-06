@@ -49,7 +49,7 @@ def test_claude_code_setup_cli_writes_project_mcp_config(tmp_path: Path) -> None
     assert "pdf_compose_from_context" in payload["usage"]["recommended_mcp_tools"]
     assert "pdf_evidence_context_packet_report" in payload["usage"]["recommended_mcp_tools"]
     assert "pdf_ai_create_from_prompt" in payload["usage"]["recommended_mcp_tools"]
-    assert payload["next_recommended_tools"] == ["agentpdf_tool_manifest", "pdf_target_profiles"]
+    assert payload["next_recommended_tools"] == ["okoffice_tool_manifest", "pdf_target_profiles"]
 
 
 def test_claude_code_setup_rest_and_mcp_are_exposed(tmp_path: Path) -> None:
@@ -119,7 +119,7 @@ def test_codex_setup_cli_writes_local_mcp_config(tmp_path: Path) -> None:
     assert "pdf_ai_create_agent" in payload["usage"]["recommended_mcp_tools"]
     assert "pdf_evidence_context_packet_report" in payload["usage"]["recommended_mcp_tools"]
     assert "pdf_patch_plan" in payload["usage"]["recommended_mcp_tools"]
-    assert payload["next_recommended_tools"] == ["agentpdf_tool_manifest", "pdf_target_profiles"]
+    assert payload["next_recommended_tools"] == ["okoffice_tool_manifest", "pdf_target_profiles"]
 
 
 def test_okoffice_codex_setup_cli_defaults_to_okoffice_mcp_server(tmp_path: Path) -> None:

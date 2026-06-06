@@ -162,6 +162,11 @@ from okoffice.office.evidence_verify import verify_office_evidence_citations
 from okoffice.office.office_batch import inspect_office_batch
 from okoffice.office.office_extract import extract_office_claims, extract_office_entities, extract_office_obligations
 from okoffice.office.workflows import board_pack, docset_to_sheet, extract_to_sheet, sheet_to_deck, source_to_board_pack, source_to_deck, source_to_doc, verify_board_pack
+from okoffice.office.brief_builder import build_multi_format_brief
+from okoffice.office.word_comments import review_word_comments
+from okoffice.office.chart import create_chart
+from okoffice.office.apply_theme import apply_deck_theme
+from okoffice.office.pdf_tables import extract_pdf_tables
 from okoffice.office.office_patch import plan_office_patch, preview_office_patch, verify_office_patch
 from okoffice.office.workflows_extended import (
     build_artifact_graph as build_office_artifact_graph,
@@ -3451,6 +3456,59 @@ def run_pdf_convert_to_xlsx(input_path: str | Path, output_path: str | Path,
 def run_pdf_convert_to_pptx(input_path: str | Path, output_path: str | Path,
                              pages: str = "all") -> ToolResult:
     return run_pdf_to_pptx(input_path, output_path)
+
+
+# --- Phase 4: New tool implementations ---
+
+def run_office_workflow_multi_format_brief(
+    files: list[str | Path],
+    output_path: str | Path | None = None,
+    title: str | None = None,
+    intent: str | None = None,
+) -> ToolResult:
+    return build_multi_format_brief(files=files, output_path=output_path, title=title, intent=intent)
+
+
+def run_word_comment_review(
+    input_path: str | Path,
+    output_path: str | Path | None = None,
+    resolve_ids: list[str] | None = None,
+) -> ToolResult:
+    return review_word_comments(input_path=input_path, output_path=output_path, resolve_ids=resolve_ids)
+
+
+def run_sheet_visualize_chart(
+    input_path: str | Path,
+    output_path: str | Path,
+    sheet: str | None = None,
+    chart_type: str = "bar",
+    data_range: str | None = None,
+    title: str | None = None,
+    categories_range: str | None = None,
+    series_ranges: list[str] | None = None,
+) -> ToolResult:
+    return create_chart(
+        input_path=input_path, output_path=output_path, sheet=sheet,
+        chart_type=chart_type, data_range=data_range, title=title,
+        categories_range=categories_range, series_ranges=series_ranges,
+    )
+
+
+def run_deck_edit_apply_theme(
+    input_path: str | Path,
+    output_path: str | Path,
+    theme_name: str | None = None,
+    colors: dict[str, str] | None = None,
+) -> ToolResult:
+    return apply_deck_theme(input_path=input_path, output_path=output_path, theme_name=theme_name, colors=colors)
+
+
+def run_pdf_extract_tables(
+    input_path: str | Path,
+    pages: str = "all",
+    output_path: str | Path | None = None,
+) -> ToolResult:
+    return extract_pdf_tables(input_path=input_path, pages=pages, output_path=output_path)
 
 
 def _failed(tool: str, error: OKofficeError) -> ToolResult:

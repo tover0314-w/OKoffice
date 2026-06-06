@@ -266,6 +266,12 @@ IMPLEMENTED_TOOLS = {
     "office.workflow.source_to_deck",
     "office.workflow.source_to_doc",
     "deck.export.pdf",
+    # Phase 4: new tool implementations
+    "office.workflow.multi_format_brief",
+    "word.comment.review",
+    "sheet.visualize.chart",
+    "deck.edit.apply_theme",
+    "pdf.extract.tables",
 }
 
 

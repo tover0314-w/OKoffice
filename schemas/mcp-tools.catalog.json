@@ -1,1036 +1,1326 @@
 {
-    "server_name": "agentpdf",
-    "version": "0.1.0",
-    "tools": [
-        {
-            "name": "agentpdf_tool_manifest",
-            "maps_to": "agentpdf.tool_manifest",
-            "status": "stable"
-        },
-        {
-            "name": "okoffice_tool_manifest",
-            "maps_to": "office.manifest.show",
-            "status": "beta"
-        },
-        {
-            "name": "agent_setup_claude_code",
-            "maps_to": "agent.setup.claude_code",
-            "status": "beta"
-        },
-        {
-            "name": "agent_setup_codex",
-            "maps_to": "agent.setup.codex",
-            "status": "beta"
-        },
-        {
-            "name": "agent_setup_kilo_code",
-            "maps_to": "agent.setup.kilo_code",
-            "status": "beta"
-        },
-        {
-            "name": "agent_setup_openclaw",
-            "maps_to": "agent.setup.openclaw",
-            "status": "beta"
-        },
-        {
-            "name": "office_inspect_file",
-            "maps_to": "office.inspect.file",
-            "status": "beta"
-        },
-        {
-            "name": "office_context_build_packet",
-            "maps_to": "office.context.build_packet",
-            "status": "beta"
-        },
-        {
-            "name": "office_extract_schema",
-            "maps_to": "office.extract.schema",
-            "status": "beta"
-        },
-        {
-            "name": "office_validation_package",
-            "maps_to": "office.validation.package",
-            "status": "beta"
-        },
-        {
-            "name": "office_workflow_plan",
-            "maps_to": "office.workflow.plan",
-            "status": "beta"
-        },
-        {
-            "name": "office_workflow_docset_to_sheet",
-            "maps_to": "office.workflow.docset_to_sheet",
-            "status": "beta"
-        },
-        {
-            "name": "office_workflow_extract_to_sheet",
-            "maps_to": "office.workflow.extract_to_sheet",
-            "status": "beta"
-        },
-        {
-            "name": "office_workflow_sheet_to_deck",
-            "maps_to": "office.workflow.sheet_to_deck",
-            "status": "beta"
-        },
-        {
-            "name": "office_workflow_board_pack",
-            "maps_to": "office.workflow.board_pack",
-            "status": "beta"
-        },
-        {
-            "name": "office_workers_status",
-            "maps_to": "office.workers.status",
-            "status": "beta"
-        },
-        {
-            "name": "office_bundle_export",
-            "maps_to": "office.bundle.export",
-            "status": "beta"
-        },
-        {
-            "name": "office_bundle_verify",
-            "maps_to": "office.bundle.verify",
-            "status": "beta"
-        },
-        {
-            "name": "word_inspect_document",
-            "maps_to": "word.inspect.document",
-            "status": "beta"
-        },
-        {
-            "name": "word_validate_document",
-            "maps_to": "word.validation.document",
-            "status": "beta"
-        },
-        {
-            "name": "word_create_report",
-            "maps_to": "word.create.report",
-            "status": "beta"
-        },
-        {
-            "name": "word_patch_plan",
-            "maps_to": "word.patch.plan",
-            "status": "beta"
-        },
-        {
-            "name": "word_patch_apply",
-            "maps_to": "word.patch.apply",
-            "status": "beta"
-        },
-        {
-            "name": "word_extract_tables",
-            "maps_to": "word.extract.tables",
-            "status": "beta"
-        },
-        {
-            "name": "sheet_inspect_workbook",
-            "maps_to": "sheet.inspect.workbook",
-            "status": "beta"
-        },
-        {
-            "name": "sheet_read_workbook",
-            "maps_to": "sheet.read.workbook",
-            "status": "beta"
-        },
-        {
-            "name": "sheet_profile_data",
-            "maps_to": "sheet.profile.data",
-            "status": "beta"
-        },
-        {
-            "name": "sheet_extract_tables",
-            "maps_to": "sheet.extract.tables",
-            "status": "beta"
-        },
-        {
-            "name": "sheet_create_evidence_workbook",
-            "maps_to": "sheet.create.evidence_workbook",
-            "status": "beta"
-        },
-        {
-            "name": "sheet_write_workbook",
-            "maps_to": "sheet.write.workbook",
-            "status": "beta"
-        },
-        {
-            "name": "sheet_validate_workbook",
-            "maps_to": "sheet.validate.workbook",
-            "status": "beta"
-        },
-        {
-            "name": "sheet_validate_formulas",
-            "maps_to": "sheet.validation.formulas",
-            "status": "beta"
-        },
-        {
-            "name": "sheet_validate_model_checks",
-            "maps_to": "sheet.validation.model_checks",
-            "status": "beta"
-        },
-        {
-            "name": "sheet_validate_external_links",
-            "maps_to": "sheet.validation.external_links",
-            "status": "beta"
-        },
-        {
-            "name": "deck_inspect_presentation",
-            "maps_to": "deck.inspect.presentation",
-            "status": "beta"
-        },
-        {
-            "name": "deck_compose_plan",
-            "maps_to": "deck.compose.plan",
-            "status": "beta"
-        },
-        {
-            "name": "deck_render_html",
-            "maps_to": "deck.render.html",
-            "status": "beta"
-        },
-        {
-            "name": "deck_validation_html_preview",
-            "maps_to": "deck.validation.html_preview",
-            "status": "beta"
-        },
-        {
-            "name": "deck_export_pptx",
-            "maps_to": "deck.export.pptx",
-            "status": "beta"
-        },
-        {
-            "name": "deck_create_from_outline",
-            "maps_to": "deck.create.from_outline",
-            "status": "beta"
-        },
-        {
-            "name": "deck_create_presentation",
-            "maps_to": "deck.create.presentation",
-            "status": "beta"
-        },
-        {
-            "name": "deck_patch_apply",
-            "maps_to": "deck.patch.apply",
-            "status": "beta"
-        },
-        {
-            "name": "deck_validate_contact_sheet",
-            "maps_to": "deck.validation.contact_sheet",
-            "status": "beta"
-        },
-        {
-            "name": "deck_validate_presentation",
-            "maps_to": "deck.validate.presentation",
-            "status": "beta"
-        },
-        {
-            "name": "deck_review_taste",
-            "maps_to": "deck.review.taste",
-            "status": "beta"
-        },
-        {
-            "name": "office_manifest_show",
-            "maps_to": "office.manifest.show",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_inspect_document",
-            "maps_to": "pdf.inspect.document",
-            "status": "stable"
-        },
-        {
-            "name": "pdf_inspect_pages",
-            "maps_to": "pdf.inspect.pages",
-            "status": "stable"
-        },
-        {
-            "name": "pdf_inspect_health",
-            "maps_to": "pdf.inspect.health",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_workflow_plan",
-            "maps_to": "pdf.workflow.plan",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_workflow_run",
-            "maps_to": "pdf.workflow.run",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_workflow_report",
-            "maps_to": "pdf.workflow.report",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_workflow_createpdf",
-            "maps_to": "pdf.workflow.createpdf",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_workflow_research_deck",
-            "maps_to": "pdf.workflow.research_deck",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_authoring_plan",
-            "maps_to": "pdf.authoring.plan",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_storyboard_plan",
-            "maps_to": "pdf.storyboard.plan",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_pages_write",
-            "maps_to": "pdf.pages.write",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_research_plan",
-            "maps_to": "pdf.research.plan",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_research_source_cards",
-            "maps_to": "pdf.research.source_cards",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_research_evidence_cards",
-            "maps_to": "pdf.research.evidence_cards",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_design_tokens",
-            "maps_to": "pdf.design.tokens",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_pages_revise",
-            "maps_to": "pdf.pages.revise",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_create_html_package",
-            "maps_to": "pdf.create.html_package",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_qa_visual_report",
-            "maps_to": "pdf.qa.visual_report",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_context_build_packet",
-            "maps_to": "pdf.context.build_packet",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_context_ingest",
-            "maps_to": "pdf.context.ingest",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_context_packet",
-            "maps_to": "pdf.context.packet",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_context_web_capture",
-            "maps_to": "pdf.context.web_capture",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_context_classify",
-            "maps_to": "pdf.context.classify",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_context_image_analyze",
-            "maps_to": "pdf.context.image_analyze",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_context_code_snapshot",
-            "maps_to": "pdf.context.code_snapshot",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_context_data_profile",
-            "maps_to": "pdf.context.data_profile",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_compose_plan",
-            "maps_to": "pdf.compose.plan",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_compose_render_ir",
-            "maps_to": "pdf.compose.render_ir",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_compose_from_context",
-            "maps_to": "pdf.compose.from_context",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_compose_add_code_block",
-            "maps_to": "pdf.compose.add_code_block",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_compose_add_table",
-            "maps_to": "pdf.compose.add_table",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_compose_add_figure",
-            "maps_to": "pdf.compose.add_figure",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_compose_add_appendix",
-            "maps_to": "pdf.compose.add_appendix",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_compose_add_citation",
-            "maps_to": "pdf.compose.add_citation",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_compose_add_media_reference",
-            "maps_to": "pdf.compose.add_media_reference",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_compose_add_slide",
-            "maps_to": "pdf.compose.add_slide",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_target_profiles",
-            "maps_to": "pdf.target.profiles",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_target_select_profile",
-            "maps_to": "pdf.target.select_profile",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_target_validate_profile",
-            "maps_to": "pdf.target.validate_profile",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_evidence_coverage_report",
-            "maps_to": "pdf.evidence.coverage_report",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_evidence_map_sources",
-            "maps_to": "pdf.evidence.map_sources",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_evidence_cite_claims",
-            "maps_to": "pdf.evidence.cite_claims",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_evidence_context_packet_report",
-            "maps_to": "pdf.evidence.context_packet_report",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_artifacts_export_bundle",
-            "maps_to": "pdf.artifacts.export_bundle",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_artifacts_manifest",
-            "maps_to": "pdf.artifacts.manifest",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_artifacts_graph",
-            "maps_to": "pdf.artifacts.graph",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_artifacts_source_map",
-            "maps_to": "pdf.artifacts.source_map",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_artifacts_verify_bundle",
-            "maps_to": "pdf.artifacts.verify_bundle",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_patch_plan",
-            "maps_to": "pdf.patch.plan",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_patch_preview",
-            "maps_to": "pdf.patch.preview",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_patch_apply",
-            "maps_to": "pdf.patch.apply",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_patch_verify",
-            "maps_to": "pdf.patch.verify",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_merge",
-            "maps_to": "pdf.organize.merge",
-            "status": "stable"
-        },
-        {
-            "name": "pdf_split",
-            "maps_to": "pdf.organize.split",
-            "status": "stable"
-        },
-        {
-            "name": "pdf_extract_pages",
-            "maps_to": "pdf.organize.extract_pages",
-            "status": "stable"
-        },
-        {
-            "name": "pdf_remove_pages",
-            "maps_to": "pdf.organize.remove_pages",
-            "status": "stable"
-        },
-        {
-            "name": "pdf_rotate_pages",
-            "maps_to": "pdf.organize.rotate_pages",
-            "status": "stable"
-        },
-        {
-            "name": "pdf_reorder_pages",
-            "maps_to": "pdf.organize.reorder_pages",
-            "status": "stable"
-        },
-        {
-            "name": "pdf_insert_blank_pages",
-            "maps_to": "pdf.organize.insert_blank_pages",
-            "status": "stable"
-        },
-        {
-            "name": "pdf_n_up",
-            "maps_to": "pdf.organize.n_up",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_booklet",
-            "maps_to": "pdf.organize.booklet",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_optimize_compress",
-            "maps_to": "pdf.optimize.compress",
-            "status": "stable"
-        },
-        {
-            "name": "pdf_optimize_repair",
-            "maps_to": "pdf.optimize.repair",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_optimize_remove_unused_objects",
-            "maps_to": "pdf.optimize.remove_unused_objects",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_optimize_validate_pdfa",
-            "maps_to": "pdf.optimize.validate_pdfa",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_image_to_pdf",
-            "maps_to": "pdf.convert.image_to_pdf",
-            "status": "stable"
-        },
-        {
-            "name": "pdf_render_pages",
-            "maps_to": "pdf.convert.pdf_to_images",
-            "status": "stable"
-        },
-        {
-            "name": "pdf_extract_images",
-            "maps_to": "pdf.convert.extract_images",
-            "status": "stable"
-        },
-        {
-            "name": "pdf_extract_text",
-            "maps_to": "pdf.convert.pdf_to_text",
-            "status": "stable"
-        },
-        {
-            "name": "pdf_extract_fonts",
-            "maps_to": "pdf.convert.extract_fonts",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_pdf_to_json",
-            "maps_to": "pdf.convert.pdf_to_json",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_pdf_to_markdown",
-            "maps_to": "pdf.convert.pdf_to_markdown",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_create_text",
-            "maps_to": "pdf.convert.text_to_pdf",
-            "status": "stable"
-        },
-        {
-            "name": "pdf_create_markdown",
-            "maps_to": "pdf.convert.markdown_to_pdf",
-            "status": "stable"
-        },
-        {
-            "name": "pdf_ai_create_from_prompt",
-            "maps_to": "pdf.ai.create.from_prompt",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_ai_create_template_preview",
-            "maps_to": "pdf.ai.create.template_preview",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_ai_create_templates",
-            "maps_to": "pdf.ai.create.templates",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_ai_create_template_packs",
-            "maps_to": "pdf.ai.create.template_packs",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_ai_create_validate_template_pack",
-            "maps_to": "pdf.ai.create.validate_template_pack",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_ai_create_plan_template_pack",
-            "maps_to": "pdf.ai.create.plan_template_pack",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_ai_create_agent",
-            "maps_to": "pdf.ai.create.agent",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_ai_create_from_template_pack",
-            "maps_to": "pdf.ai.create.from_template_pack",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_watermark",
-            "maps_to": "pdf.edit.watermark",
-            "status": "stable"
-        },
-        {
-            "name": "pdf_add_page_numbers",
-            "maps_to": "pdf.edit.page_numbers",
-            "status": "stable"
-        },
-        {
-            "name": "pdf_add_shape",
-            "maps_to": "pdf.edit.add_shape",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_underline",
-            "maps_to": "pdf.edit.underline",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_strikeout",
-            "maps_to": "pdf.edit.strikeout",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_freehand_draw",
-            "maps_to": "pdf.edit.freehand_draw",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_resize_pages",
-            "maps_to": "pdf.edit.resize_pages",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_add_margin",
-            "maps_to": "pdf.edit.add_margin",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_underlay",
-            "maps_to": "pdf.edit.underlay",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_compare_semantic_diff",
-            "maps_to": "pdf.compare.semantic_diff",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_compare_visual_diff",
-            "maps_to": "pdf.compare.visual_diff",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_compare_version_report",
-            "maps_to": "pdf.compare.version_report",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_metadata_read",
-            "maps_to": "pdf.metadata.read",
-            "status": "stable"
-        },
-        {
-            "name": "pdf_metadata_page_info",
-            "maps_to": "pdf.metadata.page_info",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_metadata_update",
-            "maps_to": "pdf.metadata.update",
-            "status": "stable"
-        },
-        {
-            "name": "pdf_metadata_update_outline",
-            "maps_to": "pdf.metadata.update_outline",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_metadata_remove",
-            "maps_to": "pdf.metadata.remove",
-            "status": "stable"
-        },
-        {
-            "name": "pdf_security_remove_metadata",
-            "maps_to": "pdf.security.remove_metadata",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_security_redact",
-            "maps_to": "pdf.security.redact",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_security_verify_redaction",
-            "maps_to": "pdf.security.verify_redaction",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_validate_output",
-            "maps_to": "pdf.validation.validate_output",
-            "status": "stable"
-        },
-        {
-            "name": "pdf_page_count_check",
-            "maps_to": "pdf.validation.page_count_check",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_render_check",
-            "maps_to": "pdf.validation.render_check",
-            "status": "stable"
-        },
-        {
-            "name": "pdf_blank_page_check",
-            "maps_to": "pdf.validation.blank_page_check",
-            "status": "stable"
-        },
-        {
-            "name": "pdf_validation_visual_diff",
-            "maps_to": "pdf.validation.visual_diff",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_validation_redaction_check",
-            "maps_to": "pdf.validation.redaction_check",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_ai_parse_lite",
-            "maps_to": "pdf.ai.parse.lite",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_ai_parse_figures",
-            "maps_to": "pdf.ai.parse.figures",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_ai_parse_formulas",
-            "maps_to": "pdf.ai.parse.formulas",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_ai_parse_charts",
-            "maps_to": "pdf.ai.parse.charts",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_ai_parse_references",
-            "maps_to": "pdf.ai.parse.references",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_forms_create",
-            "maps_to": "pdf.forms.create",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_forms_import_data",
-            "maps_to": "pdf.forms.import_data",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_forms_validate",
-            "maps_to": "pdf.forms.validate",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_ocr",
-            "maps_to": "pdf.ocr_scan.ocr",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_ocr_searchable_pdf",
-            "maps_to": "pdf.ocr_scan.searchable_pdf",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_ocr_scan_to_pdf",
-            "maps_to": "pdf.ocr_scan.scan_to_pdf",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_ocr_despeckle",
-            "maps_to": "pdf.ocr_scan.despeckle",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_ocr_remove_existing_ocr",
-            "maps_to": "pdf.ocr_scan.remove_existing_ocr",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_ocr_multilingual_ocr",
-            "maps_to": "pdf.ocr_scan.multilingual_ocr",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_ai_rag_ingest",
-            "maps_to": "pdf.ai.rag.ingest",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_ai_rag_query",
-            "maps_to": "pdf.ai.rag.query",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_ai_rag_cite_answer",
-            "maps_to": "pdf.ai.rag.cite_answer",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_ai_rag_chat",
-            "maps_to": "pdf.ai.rag.chat",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_ai_rag_highlight_sources",
-            "maps_to": "pdf.ai.rag.highlight_sources",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_ai_rag_export_report",
-            "maps_to": "pdf.ai.rag.export_report",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_ai_rag_search",
-            "maps_to": "pdf.ai.rag.search",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_optimize_subset_fonts",
-            "maps_to": "pdf.optimize.subset_fonts",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_optimize_to_pdfa",
-            "maps_to": "pdf.optimize.to_pdfa",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_html_to_pdf",
-            "maps_to": "pdf.convert.html_to_pdf",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_render_html_package",
-            "maps_to": "pdf.render.html_package",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_url_to_pdf",
-            "maps_to": "pdf.convert.url_to_pdf",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_docx_to_pdf",
-            "maps_to": "pdf.convert.docx_to_pdf",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_pptx_to_pdf",
-            "maps_to": "pdf.convert.pptx_to_pdf",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_xlsx_to_pdf",
-            "maps_to": "pdf.convert.xlsx_to_pdf",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_pdf_to_html",
-            "maps_to": "pdf.convert.pdf_to_html",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_pdf_to_docx",
-            "maps_to": "pdf.convert.pdf_to_docx",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_pdf_to_pptx",
-            "maps_to": "pdf.convert.pdf_to_pptx",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_pdf_to_xlsx",
-            "maps_to": "pdf.convert.pdf_to_xlsx",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_security_protect",
-            "maps_to": "pdf.security.protect",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_security_unlock_authorized",
-            "maps_to": "pdf.security.unlock_authorized",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_security_encrypt",
-            "maps_to": "pdf.security.encrypt",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_security_decrypt_authorized",
-            "maps_to": "pdf.security.decrypt_authorized",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_security_sign",
-            "maps_to": "pdf.security.sign",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_security_verify_signature",
-            "maps_to": "pdf.security.verify_signature",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_security_malware_scan",
-            "maps_to": "pdf.security.malware_scan",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_security_sanitize",
-            "maps_to": "pdf.security.sanitize",
-            "status": "beta"
-        },
-        {
-            "name": "office_artifacts_bundle",
-            "maps_to": "office.artifacts.bundle",
-            "status": "beta"
-        },
-        {
-            "name": "word_extract_structure",
-            "maps_to": "word.extract.structure",
-            "status": "beta"
-        },
-        {
-            "name": "word_convert_to_pdf",
-            "maps_to": "word.convert.to_pdf",
-            "status": "beta"
-        },
-        {
-            "name": "word_convert_from_pdf",
-            "maps_to": "word.convert.from_pdf",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_read_document",
-            "maps_to": "pdf.read.document",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_convert_to_docx",
-            "maps_to": "pdf.convert.to_docx",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_convert_to_xlsx",
-            "maps_to": "pdf.convert.to_xlsx",
-            "status": "beta"
-        },
-        {
-            "name": "pdf_convert_to_pptx",
-            "maps_to": "pdf.convert.to_pptx",
-            "status": "beta"
-        },
-        {
-            "name": "office_workflow_source_to_deck",
-            "maps_to": "office.workflow.source_to_deck",
-            "status": "beta"
-        },
-        {
-            "name": "office_workflow_source_to_doc",
-            "maps_to": "office.workflow.source_to_doc",
-            "status": "beta"
-        },
-        {
-            "name": "deck_export_pdf",
-            "maps_to": "deck.export.pdf",
-            "status": "beta"
-        }
-    ]
+  "server_name": "agentpdf",
+  "version": "0.1.0",
+  "tools": [
+    {
+      "name": "agentpdf_tool_manifest",
+      "maps_to": "agentpdf.tool_manifest",
+      "status": "stable"
+    },
+    {
+      "name": "okoffice_tool_manifest",
+      "maps_to": "office.manifest.show",
+      "status": "beta"
+    },
+    {
+      "name": "agent_setup_claude_code",
+      "maps_to": "agent.setup.claude_code",
+      "status": "beta"
+    },
+    {
+      "name": "agent_setup_codex",
+      "maps_to": "agent.setup.codex",
+      "status": "beta"
+    },
+    {
+      "name": "agent_setup_kilo_code",
+      "maps_to": "agent.setup.kilo_code",
+      "status": "beta"
+    },
+    {
+      "name": "agent_setup_openclaw",
+      "maps_to": "agent.setup.openclaw",
+      "status": "beta"
+    },
+    {
+      "name": "office_inspect_file",
+      "maps_to": "office.inspect.file",
+      "status": "beta"
+    },
+    {
+      "name": "office_context_build_packet",
+      "maps_to": "office.context.build_packet",
+      "status": "beta"
+    },
+    {
+      "name": "office_extract_schema",
+      "maps_to": "office.extract.schema",
+      "status": "beta"
+    },
+    {
+      "name": "office_validation_package",
+      "maps_to": "office.validation.package",
+      "status": "beta"
+    },
+    {
+      "name": "office_workflow_plan",
+      "maps_to": "office.workflow.plan",
+      "status": "beta"
+    },
+    {
+      "name": "office_workflow_docset_to_sheet",
+      "maps_to": "office.workflow.docset_to_sheet",
+      "status": "beta"
+    },
+    {
+      "name": "office_workflow_extract_to_sheet",
+      "maps_to": "office.workflow.extract_to_sheet",
+      "status": "beta"
+    },
+    {
+      "name": "office_workflow_sheet_to_deck",
+      "maps_to": "office.workflow.sheet_to_deck",
+      "status": "beta"
+    },
+    {
+      "name": "office_workflow_board_pack",
+      "maps_to": "office.workflow.board_pack",
+      "status": "beta"
+    },
+    {
+      "name": "office_workers_status",
+      "maps_to": "office.workers.status",
+      "status": "beta"
+    },
+    {
+      "name": "office_bundle_export",
+      "maps_to": "office.bundle.export",
+      "status": "beta"
+    },
+    {
+      "name": "office_bundle_verify",
+      "maps_to": "office.bundle.verify",
+      "status": "beta"
+    },
+    {
+      "name": "word_inspect_document",
+      "maps_to": "word.inspect.document",
+      "status": "beta"
+    },
+    {
+      "name": "word_validate_document",
+      "maps_to": "word.validation.document",
+      "status": "beta"
+    },
+    {
+      "name": "word_create_report",
+      "maps_to": "word.create.report",
+      "status": "beta"
+    },
+    {
+      "name": "word_patch_plan",
+      "maps_to": "word.patch.plan",
+      "status": "beta"
+    },
+    {
+      "name": "word_patch_apply",
+      "maps_to": "word.patch.apply",
+      "status": "beta"
+    },
+    {
+      "name": "word_extract_tables",
+      "maps_to": "word.extract.tables",
+      "status": "beta"
+    },
+    {
+      "name": "sheet_inspect_workbook",
+      "maps_to": "sheet.inspect.workbook",
+      "status": "beta"
+    },
+    {
+      "name": "sheet_read_workbook",
+      "maps_to": "sheet.read.workbook",
+      "status": "beta"
+    },
+    {
+      "name": "sheet_profile_data",
+      "maps_to": "sheet.profile.data",
+      "status": "beta"
+    },
+    {
+      "name": "sheet_extract_tables",
+      "maps_to": "sheet.extract.tables",
+      "status": "beta"
+    },
+    {
+      "name": "sheet_create_evidence_workbook",
+      "maps_to": "sheet.create.evidence_workbook",
+      "status": "beta"
+    },
+    {
+      "name": "sheet_write_workbook",
+      "maps_to": "sheet.write.workbook",
+      "status": "beta"
+    },
+    {
+      "name": "sheet_validate_workbook",
+      "maps_to": "sheet.validate.workbook",
+      "status": "beta"
+    },
+    {
+      "name": "sheet_validate_formulas",
+      "maps_to": "sheet.validation.formulas",
+      "status": "beta"
+    },
+    {
+      "name": "sheet_validate_model_checks",
+      "maps_to": "sheet.validation.model_checks",
+      "status": "beta"
+    },
+    {
+      "name": "sheet_validate_external_links",
+      "maps_to": "sheet.validation.external_links",
+      "status": "beta"
+    },
+    {
+      "name": "deck_inspect_presentation",
+      "maps_to": "deck.inspect.presentation",
+      "status": "beta"
+    },
+    {
+      "name": "deck_compose_plan",
+      "maps_to": "deck.compose.plan",
+      "status": "beta"
+    },
+    {
+      "name": "deck_render_html",
+      "maps_to": "deck.render.html",
+      "status": "beta"
+    },
+    {
+      "name": "deck_validation_html_preview",
+      "maps_to": "deck.validation.html_preview",
+      "status": "beta"
+    },
+    {
+      "name": "deck_export_pptx",
+      "maps_to": "deck.export.pptx",
+      "status": "beta"
+    },
+    {
+      "name": "deck_create_from_outline",
+      "maps_to": "deck.create.from_outline",
+      "status": "beta"
+    },
+    {
+      "name": "deck_create_presentation",
+      "maps_to": "deck.create.presentation",
+      "status": "beta"
+    },
+    {
+      "name": "deck_patch_apply",
+      "maps_to": "deck.patch.apply",
+      "status": "beta"
+    },
+    {
+      "name": "deck_validate_contact_sheet",
+      "maps_to": "deck.validation.contact_sheet",
+      "status": "beta"
+    },
+    {
+      "name": "deck_validate_presentation",
+      "maps_to": "deck.validate.presentation",
+      "status": "beta"
+    },
+    {
+      "name": "deck_review_taste",
+      "maps_to": "deck.review.taste",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_inspect_document",
+      "maps_to": "pdf.inspect.document",
+      "status": "stable"
+    },
+    {
+      "name": "pdf_inspect_pages",
+      "maps_to": "pdf.inspect.pages",
+      "status": "stable"
+    },
+    {
+      "name": "pdf_inspect_health",
+      "maps_to": "pdf.inspect.health",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_workflow_plan",
+      "maps_to": "pdf.workflow.plan",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_workflow_run",
+      "maps_to": "pdf.workflow.run",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_workflow_report",
+      "maps_to": "pdf.workflow.report",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_workflow_createpdf",
+      "maps_to": "pdf.workflow.createpdf",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_workflow_research_deck",
+      "maps_to": "pdf.workflow.research_deck",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_authoring_plan",
+      "maps_to": "pdf.authoring.plan",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_storyboard_plan",
+      "maps_to": "pdf.storyboard.plan",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_pages_write",
+      "maps_to": "pdf.pages.write",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_research_plan",
+      "maps_to": "pdf.research.plan",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_research_source_cards",
+      "maps_to": "pdf.research.source_cards",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_research_evidence_cards",
+      "maps_to": "pdf.research.evidence_cards",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_design_tokens",
+      "maps_to": "pdf.design.tokens",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_pages_revise",
+      "maps_to": "pdf.pages.revise",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_create_html_package",
+      "maps_to": "pdf.create.html_package",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_qa_visual_report",
+      "maps_to": "pdf.qa.visual_report",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_context_build_packet",
+      "maps_to": "pdf.context.build_packet",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_context_ingest",
+      "maps_to": "pdf.context.ingest",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_context_packet",
+      "maps_to": "pdf.context.packet",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_context_web_capture",
+      "maps_to": "pdf.context.web_capture",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_context_classify",
+      "maps_to": "pdf.context.classify",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_context_image_analyze",
+      "maps_to": "pdf.context.image_analyze",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_context_code_snapshot",
+      "maps_to": "pdf.context.code_snapshot",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_context_data_profile",
+      "maps_to": "pdf.context.data_profile",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_compose_plan",
+      "maps_to": "pdf.compose.plan",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_compose_render_ir",
+      "maps_to": "pdf.compose.render_ir",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_compose_from_context",
+      "maps_to": "pdf.compose.from_context",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_compose_add_code_block",
+      "maps_to": "pdf.compose.add_code_block",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_compose_add_table",
+      "maps_to": "pdf.compose.add_table",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_compose_add_figure",
+      "maps_to": "pdf.compose.add_figure",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_compose_add_appendix",
+      "maps_to": "pdf.compose.add_appendix",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_compose_add_citation",
+      "maps_to": "pdf.compose.add_citation",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_compose_add_media_reference",
+      "maps_to": "pdf.compose.add_media_reference",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_compose_add_slide",
+      "maps_to": "pdf.compose.add_slide",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_target_profiles",
+      "maps_to": "pdf.target.profiles",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_target_select_profile",
+      "maps_to": "pdf.target.select_profile",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_target_validate_profile",
+      "maps_to": "pdf.target.validate_profile",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_evidence_coverage_report",
+      "maps_to": "pdf.evidence.coverage_report",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_evidence_map_sources",
+      "maps_to": "pdf.evidence.map_sources",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_evidence_cite_claims",
+      "maps_to": "pdf.evidence.cite_claims",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_evidence_context_packet_report",
+      "maps_to": "pdf.evidence.context_packet_report",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_artifacts_export_bundle",
+      "maps_to": "pdf.artifacts.export_bundle",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_artifacts_manifest",
+      "maps_to": "pdf.artifacts.manifest",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_artifacts_graph",
+      "maps_to": "pdf.artifacts.graph",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_artifacts_source_map",
+      "maps_to": "pdf.artifacts.source_map",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_artifacts_verify_bundle",
+      "maps_to": "pdf.artifacts.verify_bundle",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_patch_plan",
+      "maps_to": "pdf.patch.plan",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_patch_preview",
+      "maps_to": "pdf.patch.preview",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_patch_apply",
+      "maps_to": "pdf.patch.apply",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_patch_verify",
+      "maps_to": "pdf.patch.verify",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_merge",
+      "maps_to": "pdf.organize.merge",
+      "status": "stable"
+    },
+    {
+      "name": "pdf_split",
+      "maps_to": "pdf.organize.split",
+      "status": "stable"
+    },
+    {
+      "name": "pdf_extract_pages",
+      "maps_to": "pdf.organize.extract_pages",
+      "status": "stable"
+    },
+    {
+      "name": "pdf_remove_pages",
+      "maps_to": "pdf.organize.remove_pages",
+      "status": "stable"
+    },
+    {
+      "name": "pdf_rotate_pages",
+      "maps_to": "pdf.organize.rotate_pages",
+      "status": "stable"
+    },
+    {
+      "name": "pdf_reorder_pages",
+      "maps_to": "pdf.organize.reorder_pages",
+      "status": "stable"
+    },
+    {
+      "name": "pdf_insert_blank_pages",
+      "maps_to": "pdf.organize.insert_blank_pages",
+      "status": "stable"
+    },
+    {
+      "name": "pdf_n_up",
+      "maps_to": "pdf.organize.n_up",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_booklet",
+      "maps_to": "pdf.organize.booklet",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_optimize_compress",
+      "maps_to": "pdf.optimize.compress",
+      "status": "stable"
+    },
+    {
+      "name": "pdf_optimize_repair",
+      "maps_to": "pdf.optimize.repair",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_optimize_remove_unused_objects",
+      "maps_to": "pdf.optimize.remove_unused_objects",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_optimize_validate_pdfa",
+      "maps_to": "pdf.optimize.validate_pdfa",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_image_to_pdf",
+      "maps_to": "pdf.convert.image_to_pdf",
+      "status": "stable"
+    },
+    {
+      "name": "pdf_render_pages",
+      "maps_to": "pdf.convert.pdf_to_images",
+      "status": "stable"
+    },
+    {
+      "name": "pdf_extract_images",
+      "maps_to": "pdf.convert.extract_images",
+      "status": "stable"
+    },
+    {
+      "name": "pdf_extract_text",
+      "maps_to": "pdf.convert.pdf_to_text",
+      "status": "stable"
+    },
+    {
+      "name": "pdf_extract_fonts",
+      "maps_to": "pdf.convert.extract_fonts",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_pdf_to_json",
+      "maps_to": "pdf.convert.pdf_to_json",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_pdf_to_markdown",
+      "maps_to": "pdf.convert.pdf_to_markdown",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_create_text",
+      "maps_to": "pdf.convert.text_to_pdf",
+      "status": "stable"
+    },
+    {
+      "name": "pdf_create_markdown",
+      "maps_to": "pdf.convert.markdown_to_pdf",
+      "status": "stable"
+    },
+    {
+      "name": "pdf_ai_create_from_prompt",
+      "maps_to": "pdf.ai.create.from_prompt",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_ai_create_template_preview",
+      "maps_to": "pdf.ai.create.template_preview",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_ai_create_templates",
+      "maps_to": "pdf.ai.create.templates",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_ai_create_template_packs",
+      "maps_to": "pdf.ai.create.template_packs",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_ai_create_validate_template_pack",
+      "maps_to": "pdf.ai.create.validate_template_pack",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_ai_create_plan_template_pack",
+      "maps_to": "pdf.ai.create.plan_template_pack",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_ai_create_agent",
+      "maps_to": "pdf.ai.create.agent",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_ai_create_from_template_pack",
+      "maps_to": "pdf.ai.create.from_template_pack",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_watermark",
+      "maps_to": "pdf.edit.watermark",
+      "status": "stable"
+    },
+    {
+      "name": "pdf_add_page_numbers",
+      "maps_to": "pdf.edit.page_numbers",
+      "status": "stable"
+    },
+    {
+      "name": "pdf_add_shape",
+      "maps_to": "pdf.edit.add_shape",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_underline",
+      "maps_to": "pdf.edit.underline",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_strikeout",
+      "maps_to": "pdf.edit.strikeout",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_freehand_draw",
+      "maps_to": "pdf.edit.freehand_draw",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_resize_pages",
+      "maps_to": "pdf.edit.resize_pages",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_add_margin",
+      "maps_to": "pdf.edit.add_margin",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_underlay",
+      "maps_to": "pdf.edit.underlay",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_compare_semantic_diff",
+      "maps_to": "pdf.compare.semantic_diff",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_compare_visual_diff",
+      "maps_to": "pdf.compare.visual_diff",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_compare_version_report",
+      "maps_to": "pdf.compare.version_report",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_metadata_read",
+      "maps_to": "pdf.metadata.read",
+      "status": "stable"
+    },
+    {
+      "name": "pdf_metadata_page_info",
+      "maps_to": "pdf.metadata.page_info",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_metadata_update",
+      "maps_to": "pdf.metadata.update",
+      "status": "stable"
+    },
+    {
+      "name": "pdf_metadata_update_outline",
+      "maps_to": "pdf.metadata.update_outline",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_metadata_remove",
+      "maps_to": "pdf.metadata.remove",
+      "status": "stable"
+    },
+    {
+      "name": "pdf_security_remove_metadata",
+      "maps_to": "pdf.security.remove_metadata",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_security_redact",
+      "maps_to": "pdf.security.redact",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_security_verify_redaction",
+      "maps_to": "pdf.security.verify_redaction",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_validate_output",
+      "maps_to": "pdf.validation.validate_output",
+      "status": "stable"
+    },
+    {
+      "name": "pdf_page_count_check",
+      "maps_to": "pdf.validation.page_count_check",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_render_check",
+      "maps_to": "pdf.validation.render_check",
+      "status": "stable"
+    },
+    {
+      "name": "pdf_blank_page_check",
+      "maps_to": "pdf.validation.blank_page_check",
+      "status": "stable"
+    },
+    {
+      "name": "pdf_validation_visual_diff",
+      "maps_to": "pdf.validation.visual_diff",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_validation_redaction_check",
+      "maps_to": "pdf.validation.redaction_check",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_ai_parse_lite",
+      "maps_to": "pdf.ai.parse.lite",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_ai_parse_figures",
+      "maps_to": "pdf.ai.parse.figures",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_ai_parse_formulas",
+      "maps_to": "pdf.ai.parse.formulas",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_ai_parse_charts",
+      "maps_to": "pdf.ai.parse.charts",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_ai_parse_references",
+      "maps_to": "pdf.ai.parse.references",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_forms_create",
+      "maps_to": "pdf.forms.create",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_forms_import_data",
+      "maps_to": "pdf.forms.import_data",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_forms_validate",
+      "maps_to": "pdf.forms.validate",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_ocr",
+      "maps_to": "pdf.ocr_scan.ocr",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_ocr_searchable_pdf",
+      "maps_to": "pdf.ocr_scan.searchable_pdf",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_ocr_scan_to_pdf",
+      "maps_to": "pdf.ocr_scan.scan_to_pdf",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_ocr_despeckle",
+      "maps_to": "pdf.ocr_scan.despeckle",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_ocr_remove_existing_ocr",
+      "maps_to": "pdf.ocr_scan.remove_existing_ocr",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_ocr_multilingual_ocr",
+      "maps_to": "pdf.ocr_scan.multilingual_ocr",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_ai_rag_ingest",
+      "maps_to": "pdf.ai.rag.ingest",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_ai_rag_query",
+      "maps_to": "pdf.ai.rag.query",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_ai_rag_cite_answer",
+      "maps_to": "pdf.ai.rag.cite_answer",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_ai_rag_chat",
+      "maps_to": "pdf.ai.rag.chat",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_ai_rag_highlight_sources",
+      "maps_to": "pdf.ai.rag.highlight_sources",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_ai_rag_export_report",
+      "maps_to": "pdf.ai.rag.export_report",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_ai_rag_search",
+      "maps_to": "pdf.ai.rag.search",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_optimize_subset_fonts",
+      "maps_to": "pdf.optimize.subset_fonts",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_optimize_to_pdfa",
+      "maps_to": "pdf.optimize.to_pdfa",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_html_to_pdf",
+      "maps_to": "pdf.convert.html_to_pdf",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_render_html_package",
+      "maps_to": "pdf.render.html_package",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_url_to_pdf",
+      "maps_to": "pdf.convert.url_to_pdf",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_docx_to_pdf",
+      "maps_to": "pdf.convert.docx_to_pdf",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_pptx_to_pdf",
+      "maps_to": "pdf.convert.pptx_to_pdf",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_xlsx_to_pdf",
+      "maps_to": "pdf.convert.xlsx_to_pdf",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_pdf_to_html",
+      "maps_to": "pdf.convert.pdf_to_html",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_pdf_to_docx",
+      "maps_to": "pdf.convert.pdf_to_docx",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_pdf_to_pptx",
+      "maps_to": "pdf.convert.pdf_to_pptx",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_pdf_to_xlsx",
+      "maps_to": "pdf.convert.pdf_to_xlsx",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_security_protect",
+      "maps_to": "pdf.security.protect",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_security_unlock_authorized",
+      "maps_to": "pdf.security.unlock_authorized",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_security_encrypt",
+      "maps_to": "pdf.security.encrypt",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_security_decrypt_authorized",
+      "maps_to": "pdf.security.decrypt_authorized",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_security_sign",
+      "maps_to": "pdf.security.sign",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_security_verify_signature",
+      "maps_to": "pdf.security.verify_signature",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_security_malware_scan",
+      "maps_to": "pdf.security.malware_scan",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_security_sanitize",
+      "maps_to": "pdf.security.sanitize",
+      "status": "beta"
+    },
+    {
+      "name": "office_artifacts_bundle",
+      "maps_to": "office.artifacts.bundle",
+      "status": "beta"
+    },
+    {
+      "name": "word_extract_structure",
+      "maps_to": "word.extract.structure",
+      "status": "beta"
+    },
+    {
+      "name": "word_convert_to_pdf",
+      "maps_to": "word.convert.to_pdf",
+      "status": "beta"
+    },
+    {
+      "name": "word_convert_from_pdf",
+      "maps_to": "word.convert.from_pdf",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_read_document",
+      "maps_to": "pdf.read.document",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_convert_to_docx",
+      "maps_to": "pdf.convert.to_docx",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_convert_to_xlsx",
+      "maps_to": "pdf.convert.to_xlsx",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_convert_to_pptx",
+      "maps_to": "pdf.convert.to_pptx",
+      "status": "beta"
+    },
+    {
+      "name": "office_workflow_source_to_deck",
+      "maps_to": "office.workflow.source_to_deck",
+      "status": "beta"
+    },
+    {
+      "name": "office_workflow_source_to_doc",
+      "maps_to": "office.workflow.source_to_doc",
+      "status": "beta"
+    },
+    {
+      "name": "deck_export_pdf",
+      "maps_to": "deck.export.pdf",
+      "status": "beta"
+    },
+    {
+      "name": "office_workflow_multi_format_brief",
+      "maps_to": "office.workflow.multi_format_brief",
+      "status": "beta"
+    },
+    {
+      "name": "word_comment_review",
+      "maps_to": "word.comment.review",
+      "status": "beta"
+    },
+    {
+      "name": "sheet_visualize_chart",
+      "maps_to": "sheet.visualize.chart",
+      "status": "beta"
+    },
+    {
+      "name": "deck_edit_apply_theme",
+      "maps_to": "deck.edit.apply_theme",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_extract_tables",
+      "maps_to": "pdf.extract.tables",
+      "status": "beta"
+    },
+    {
+      "name": "agent_setup_cursor",
+      "maps_to": "agent.setup.cursor",
+      "status": "beta"
+    },
+    {
+      "name": "agent_setup_openai_agents",
+      "maps_to": "agent.setup.openai.agents",
+      "status": "beta"
+    },
+    {
+      "name": "deck_extract_charts",
+      "maps_to": "deck.extract.charts",
+      "status": "beta"
+    },
+    {
+      "name": "deck_extract_media",
+      "maps_to": "deck.extract.media",
+      "status": "beta"
+    },
+    {
+      "name": "deck_extract_notes",
+      "maps_to": "deck.extract.notes",
+      "status": "beta"
+    },
+    {
+      "name": "deck_extract_shapes",
+      "maps_to": "deck.extract.shapes",
+      "status": "beta"
+    },
+    {
+      "name": "deck_extract_text",
+      "maps_to": "deck.extract.text",
+      "status": "beta"
+    },
+    {
+      "name": "deck_extract_theme",
+      "maps_to": "deck.extract.theme",
+      "status": "beta"
+    },
+    {
+      "name": "deck_review_claims",
+      "maps_to": "deck.review.claims",
+      "status": "beta"
+    },
+    {
+      "name": "deck_review_story",
+      "maps_to": "deck.review.story",
+      "status": "beta"
+    },
+    {
+      "name": "deck_revise",
+      "maps_to": "deck.revise",
+      "status": "beta"
+    },
+    {
+      "name": "deck_validation_notes",
+      "maps_to": "deck.validation.notes",
+      "status": "beta"
+    },
+    {
+      "name": "deck_validation_placeholders",
+      "maps_to": "deck.validation.placeholders",
+      "status": "beta"
+    },
+    {
+      "name": "office_bundle_graph",
+      "maps_to": "office.bundle.graph",
+      "status": "beta"
+    },
+    {
+      "name": "office_bundle_report",
+      "maps_to": "office.bundle.report",
+      "status": "beta"
+    },
+    {
+      "name": "office_context_classify",
+      "maps_to": "office.context.classify",
+      "status": "beta"
+    },
+    {
+      "name": "office_evidence_coverage",
+      "maps_to": "office.evidence.coverage",
+      "status": "beta"
+    },
+    {
+      "name": "office_evidence_map_sources",
+      "maps_to": "office.evidence.map.sources",
+      "status": "beta"
+    },
+    {
+      "name": "office_evidence_verify_citations",
+      "maps_to": "office.evidence.verify.citations",
+      "status": "beta"
+    },
+    {
+      "name": "office_extract_claims",
+      "maps_to": "office.extract.claims",
+      "status": "beta"
+    },
+    {
+      "name": "office_extract_entities",
+      "maps_to": "office.extract.entities",
+      "status": "beta"
+    },
+    {
+      "name": "office_extract_obligations",
+      "maps_to": "office.extract.obligations",
+      "status": "beta"
+    },
+    {
+      "name": "office_inspect_batch",
+      "maps_to": "office.inspect.batch",
+      "status": "beta"
+    },
+    {
+      "name": "office_patch_plan",
+      "maps_to": "office.patch.plan",
+      "status": "beta"
+    },
+    {
+      "name": "office_patch_preview",
+      "maps_to": "office.patch.preview",
+      "status": "beta"
+    },
+    {
+      "name": "office_patch_verify",
+      "maps_to": "office.patch.verify",
+      "status": "beta"
+    },
+    {
+      "name": "office_validate_output",
+      "maps_to": "office.validate.output",
+      "status": "beta"
+    },
+    {
+      "name": "office_workflow_redaction_packet",
+      "maps_to": "office.workflow.redaction.packet",
+      "status": "beta"
+    },
+    {
+      "name": "office_workflow_review_and_patch",
+      "maps_to": "office.workflow.review.and.patch",
+      "status": "beta"
+    },
+    {
+      "name": "office_workflow_source_to_board_pack",
+      "maps_to": "office.workflow.source.to.board.pack",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_create_resume_pdf",
+      "maps_to": "pdf.create.resume.pdf",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_validation_ats_compliance_check",
+      "maps_to": "pdf.validation.ats.compliance.check",
+      "status": "beta"
+    },
+    {
+      "name": "sheet_extract_charts",
+      "maps_to": "sheet.extract.charts",
+      "status": "beta"
+    },
+    {
+      "name": "sheet_extract_comments",
+      "maps_to": "sheet.extract.comments",
+      "status": "beta"
+    },
+    {
+      "name": "sheet_extract_formulas",
+      "maps_to": "sheet.extract.formulas",
+      "status": "beta"
+    },
+    {
+      "name": "sheet_extract_named_ranges",
+      "maps_to": "sheet.extract.named.ranges",
+      "status": "beta"
+    },
+    {
+      "name": "sheet_extract_pivots",
+      "maps_to": "sheet.extract.pivots",
+      "status": "beta"
+    },
+    {
+      "name": "sheet_patch_cells",
+      "maps_to": "sheet.patch.cells",
+      "status": "beta"
+    },
+    {
+      "name": "sheet_patch_chart",
+      "maps_to": "sheet.patch.chart",
+      "status": "beta"
+    },
+    {
+      "name": "sheet_patch_formulas",
+      "maps_to": "sheet.patch.formulas",
+      "status": "beta"
+    },
+    {
+      "name": "sheet_patch_table",
+      "maps_to": "sheet.patch.table",
+      "status": "beta"
+    },
+    {
+      "name": "sheet_review_model",
+      "maps_to": "sheet.review.model",
+      "status": "beta"
+    },
+    {
+      "name": "sheet_review_number_consistency",
+      "maps_to": "sheet.review.number.consistency",
+      "status": "beta"
+    },
+    {
+      "name": "word_create_document",
+      "maps_to": "word.create.document",
+      "status": "beta"
+    },
+    {
+      "name": "word_create_memo",
+      "maps_to": "word.create.memo",
+      "status": "beta"
+    },
+    {
+      "name": "word_extract_comments",
+      "maps_to": "word.extract.comments",
+      "status": "beta"
+    },
+    {
+      "name": "word_extract_fields",
+      "maps_to": "word.extract.fields",
+      "status": "beta"
+    },
+    {
+      "name": "word_extract_outline",
+      "maps_to": "word.extract.outline",
+      "status": "beta"
+    },
+    {
+      "name": "word_extract_revisions",
+      "maps_to": "word.extract.revisions",
+      "status": "beta"
+    },
+    {
+      "name": "word_extract_styles",
+      "maps_to": "word.extract.styles",
+      "status": "beta"
+    },
+    {
+      "name": "word_extract_text",
+      "maps_to": "word.extract.text",
+      "status": "beta"
+    },
+    {
+      "name": "word_review_style",
+      "maps_to": "word.review.style",
+      "status": "beta"
+    },
+    {
+      "name": "word_validation_accessibility",
+      "maps_to": "word.validation.accessibility",
+      "status": "beta"
+    },
+    {
+      "name": "word_validation_metadata",
+      "maps_to": "word.validation.metadata",
+      "status": "beta"
+    }
+  ]
 }
