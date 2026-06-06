@@ -13,6 +13,8 @@ IMPLEMENTED_TOOLS = {
     "agent.setup.codex",
     "agent.setup.kilo_code",
     "agent.setup.openclaw",
+    "agent.setup.cursor",
+    "agent.setup.openai_agents",
     "office.inspect.file",
     "word.inspect.document",
     "word.validation.document",

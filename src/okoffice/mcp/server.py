@@ -16,6 +16,8 @@ from okoffice.tools.runner import (
     run_agent_setup_codex,
     run_agent_setup_kilo_code,
     run_agent_setup_openclaw,
+    run_agent_setup_cursor,
+    run_agent_setup_openai_agents,
     run_artifacts_export_bundle,
     run_artifacts_graph,
     run_artifacts_manifest,
@@ -324,6 +326,8 @@ def create_mcp_server() -> FastMCP:
     server.tool(name="agent_setup_codex")(agent_setup_codex)
     server.tool(name="agent_setup_kilo_code")(agent_setup_kilo_code)
     server.tool(name="agent_setup_openclaw")(agent_setup_openclaw)
+    server.tool(name="agent_setup_cursor")(agent_setup_cursor)
+    server.tool(name="agent_setup_openai_agents")(agent_setup_openai_agents)
     server.tool(name="office_inspect_file")(office_inspect_file)
     server.tool(name="office_context_build_packet")(office_context_build_packet)
     server.tool(name="office_extract_schema")(office_extract_schema)
@@ -666,6 +670,40 @@ def agent_setup_openclaw(
 ) -> str:
     """Generate an OpenClaw MCP config for local OKoffice tools."""
     return run_agent_setup_openclaw(
+        output_path=output_path,
+        safe_root=safe_root,
+        command=command,
+        args_prefix=args_prefix,
+        server_name=server_name,
+    ).model_dump_json()
+
+
+def agent_setup_cursor(
+    output_path: str | None = None,
+    safe_root: str = ".",
+    command: str = "okoffice",
+    args_prefix: list[str] | None = None,
+    server_name: str = "okoffice",
+) -> str:
+    """Generate a Cursor MCP config for local OKoffice tools."""
+    return run_agent_setup_cursor(
+        output_path=output_path,
+        safe_root=safe_root,
+        command=command,
+        args_prefix=args_prefix,
+        server_name=server_name,
+    ).model_dump_json()
+
+
+def agent_setup_openai_agents(
+    output_path: str | None = None,
+    safe_root: str = ".",
+    command: str = "okoffice",
+    args_prefix: list[str] | None = None,
+    server_name: str = "okoffice",
+) -> str:
+    """Generate an OpenAI Agents MCP config for local OKoffice tools."""
+    return run_agent_setup_openai_agents(
         output_path=output_path,
         safe_root=safe_root,
         command=command,

@@ -6,7 +6,9 @@ from uuid import uuid4
 
 from okoffice.agents.claude_code import setup_claude_code
 from okoffice.agents.codex import setup_codex
+from okoffice.agents.cursor import setup_cursor
 from okoffice.agents.kilo_code import setup_kilo_code
+from okoffice.agents.openai_agents import setup_openai_agents
 from okoffice.agents.openclaw import setup_openclaw
 from okoffice.artifacts.bundle import (
     build_artifact_graph,
@@ -2049,6 +2051,44 @@ def run_agent_setup_openclaw(
         )
     except OKofficeException as exc:
         return _failed("agent.setup.openclaw", exc.to_error())
+
+
+def run_agent_setup_cursor(
+    output_path: str | Path | None = None,
+    safe_root: str = ".",
+    command: str = "okoffice",
+    args_prefix: list[str] | None = None,
+    server_name: str = "okoffice",
+) -> ToolResult:
+    try:
+        return setup_cursor(
+            output_path=output_path,
+            safe_root=safe_root,
+            command=command,
+            args_prefix=args_prefix,
+            server_name=server_name,
+        )
+    except OKofficeException as exc:
+        return _failed("agent.setup.cursor", exc.to_error())
+
+
+def run_agent_setup_openai_agents(
+    output_path: str | Path | None = None,
+    safe_root: str = ".",
+    command: str = "okoffice",
+    args_prefix: list[str] | None = None,
+    server_name: str = "okoffice",
+) -> ToolResult:
+    try:
+        return setup_openai_agents(
+            output_path=output_path,
+            safe_root=safe_root,
+            command=command,
+            args_prefix=args_prefix,
+            server_name=server_name,
+        )
+    except OKofficeException as exc:
+        return _failed("agent.setup.openai_agents", exc.to_error())
 
 
 def run_evidence_coverage_report(
