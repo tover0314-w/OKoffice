@@ -1,0 +1,50 @@
+<style>
+  .cta-action {
+    aspect-ratio: 16/9;
+    display: grid;
+    grid-template-rows: 1fr auto 1fr;
+    justify-items: center;
+    align-items: center;
+    padding: calc(var(--slide-padding) * 2);
+    background: var(--color-bg);
+    text-align: center;
+  }
+  .cta-action .cta-block {
+    display: grid;
+    gap: calc(var(--slide-gap) * 1.2);
+    max-width: 70%;
+  }
+  .cta-action .kicker {
+    font-family: var(--font-mono);
+    font-size: var(--size-kicker);
+    color: var(--color-accent);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .cta-action .title {
+    font-family: var(--font-display);
+    font-size: clamp(36px, 4.5vw, 56px);
+    line-height: var(--line-height-heading);
+    color: var(--color-dark);
+    margin: 0;
+    font-weight: 700;
+  }
+  .cta-action .action-area {
+    font-family: var(--font-body);
+    font-size: var(--size-subtitle);
+    color: var(--color-primary);
+    line-height: var(--line-height);
+    padding: calc(var(--slide-gap) * 1.2) calc(var(--slide-gap) * 2);
+    border: 2px solid var(--color-accent);
+    display: inline-block;
+    justify-self: center;
+  }
+</style>
+
+<div class="cta-action">
+  <div class="cta-block">
+    <span class="kicker">{{kicker}}</span>
+    <h1 class="title">{{title}}</h1>
+    <div class="action-area">{{body}}</div>
+  </div>
+</div>

@@ -1,0 +1,38 @@
+<style>
+  .foreword-editorial {
+    aspect-ratio: 16/9;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    gap: var(--slide-gap);
+    padding: var(--slide-padding);
+    background: var(--color-bg);
+  }
+  .foreword-editorial .title {
+    font-family: var(--font-display);
+    font-size: var(--size-heading);
+    color: var(--color-dark);
+    margin: 0;
+  }
+  .foreword-editorial .prose {
+    font-family: var(--font-body);
+    font-size: var(--size-body);
+    color: var(--color-primary);
+    line-height: var(--line-height);
+    max-width: 70ch;
+    overflow: hidden;
+  }
+  .foreword-editorial .prose::first-letter {
+    font-family: var(--font-display);
+    font-size: 3.4em;
+    float: left;
+    line-height: 0.8;
+    padding-right: 0.08em;
+    color: var(--color-accent);
+    font-weight: 700;
+  }
+</style>
+
+<div class="foreword-editorial">
+  <h1 class="title">{{title}}</h1>
+  <div class="prose">{{body}}</div>
+</div>

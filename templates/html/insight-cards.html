@@ -1,0 +1,61 @@
+<style>
+  .insight-cards {
+    aspect-ratio: 16/9;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    gap: var(--slide-gap);
+    padding: var(--slide-padding);
+    background: var(--color-bg);
+  }
+  .insight-cards .title {
+    font-family: var(--font-display);
+    font-size: var(--size-heading);
+    color: var(--color-dark);
+    margin: 0;
+  }
+  .insight-cards .card-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--slide-gap);
+    align-content: start;
+  }
+  .insight-cards .card {
+    border: 1px solid color-mix(in srgb, var(--color-dark) 15%, transparent);
+    padding: calc(var(--slide-gap) * 1.2);
+    display: grid;
+    gap: calc(var(--slide-gap) * 0.6);
+    align-content: start;
+  }
+  .insight-cards .card-title {
+    font-family: var(--font-heading);
+    font-size: var(--size-subtitle);
+    color: var(--color-dark);
+    font-weight: 600;
+    margin: 0;
+  }
+  .insight-cards .card-desc {
+    font-family: var(--font-body);
+    font-size: var(--size-body);
+    color: var(--color-primary);
+    line-height: var(--line-height);
+    opacity: 0.8;
+  }
+</style>
+
+<div class="insight-cards">
+  <h1 class="title">{{title}}</h1>
+  <div class="card-grid">
+    <div class="card">
+      <h3 class="card-title">Card One</h3>
+      <p class="card-desc">{{bullets}}</p>
+    </div>
+    <div class="card">
+      <h3 class="card-title">Card Two</h3>
+      <p class="card-desc">Description for the second insight card.</p>
+    </div>
+    <div class="card">
+      <h3 class="card-title">Card Three</h3>
+      <p class="card-desc">Description for the third insight card.</p>
+    </div>
+  </div>
+</div>

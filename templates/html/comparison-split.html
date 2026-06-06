@@ -1,0 +1,77 @@
+<style>
+  .comparison-split {
+    aspect-ratio: 16/9;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    gap: var(--slide-gap);
+    padding: var(--slide-padding);
+    background: var(--color-bg);
+  }
+  .comparison-split .title {
+    font-family: var(--font-display);
+    font-size: var(--size-heading);
+    color: var(--color-dark);
+    margin: 0;
+  }
+  .comparison-split .columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: calc(var(--slide-gap) * 2);
+  }
+  .comparison-split .col {
+    display: grid;
+    gap: 0;
+  }
+  .comparison-split .col-header {
+    font-family: var(--font-heading);
+    font-size: var(--size-subtitle);
+    color: var(--color-dark);
+    font-weight: 600;
+    padding-bottom: calc(var(--slide-gap) * 0.6);
+    border-bottom: 2px solid var(--color-accent);
+    margin-bottom: calc(var(--slide-gap) * 0.8);
+  }
+  .comparison-split .col-items {
+    display: grid;
+    gap: calc(var(--slide-gap) * 0.5);
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .comparison-split .col-item {
+    font-family: var(--font-body);
+    font-size: var(--size-body);
+    color: var(--color-primary);
+    line-height: var(--line-height);
+    padding-left: 1em;
+    position: relative;
+  }
+  .comparison-split .col-item::before {
+    content: '\2014';
+    position: absolute;
+    left: 0;
+    color: var(--color-accent);
+  }
+</style>
+
+<div class="comparison-split">
+  <h1 class="title">{{title}}</h1>
+  <div class="columns">
+    <div class="col">
+      <span class="col-header">Option A</span>
+      <ul class="col-items">
+        <li class="col-item">{{bullets}}</li>
+        <li class="col-item">Comparison point two</li>
+        <li class="col-item">Comparison point three</li>
+      </ul>
+    </div>
+    <div class="col">
+      <span class="col-header">Option B</span>
+      <ul class="col-items">
+        <li class="col-item">Alternative point one</li>
+        <li class="col-item">Alternative point two</li>
+        <li class="col-item">Alternative point three</li>
+      </ul>
+    </div>
+  </div>
+</div>

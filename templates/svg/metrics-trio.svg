@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720">
+  <!-- Background -->
+  <rect x="0" y="0" width="1280" height="720" fill="#FFFFFF" />
+  <!-- Title bar background -->
+  <rect x="0" y="0" width="1280" height="72" fill="#1E3A5F" />
+  <!-- Title -->
+  <text x="80" y="46" font-size="28" font-family="Arial,sans-serif" fill="#FFFFFF" font-weight="bold">TITLE_HERE</text>
+  <!-- Card 1 background -->
+  <rect x="80" y="120" width="350" height="220" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1" rx="8" />
+  <!-- Card 1 number -->
+  <text x="255" y="230" font-size="48" font-family="Arial,sans-serif" fill="#2563EB" font-weight="bold" text-anchor="middle">METRIC_1_HERE</text>
+  <!-- Card 1 label -->
+  <text x="255" y="270" font-size="16" font-family="Arial,sans-serif" fill="#64748B" text-anchor="middle">LABEL_1_HERE</text>
+  <!-- Card 2 background -->
+  <rect x="465" y="120" width="350" height="220" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1" rx="8" />
+  <!-- Card 2 number -->
+  <text x="640" y="230" font-size="48" font-family="Arial,sans-serif" fill="#2563EB" font-weight="bold" text-anchor="middle">METRIC_2_HERE</text>
+  <!-- Card 2 label -->
+  <text x="640" y="270" font-size="16" font-family="Arial,sans-serif" fill="#64748B" text-anchor="middle">LABEL_2_HERE</text>
+  <!-- Card 3 background -->
+  <rect x="850" y="120" width="350" height="220" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1" rx="8" />
+  <!-- Card 3 number -->
+  <text x="1025" y="230" font-size="48" font-family="Arial,sans-serif" fill="#2563EB" font-weight="bold" text-anchor="middle">METRIC_3_HERE</text>
+  <!-- Card 3 label -->
+  <text x="1025" y="270" font-size="16" font-family="Arial,sans-serif" fill="#64748B" text-anchor="middle">LABEL_3_HERE</text>
+  <!-- Bottom accent -->
+  <rect x="0" y="714" width="1280" height="6" fill="#1E3A5F" />
+  <!-- Footer note -->
+  <text x="80" y="400" font-size="14" font-family="Arial,sans-serif" fill="#94A3B8">NOTES_HERE</text>
+</svg>

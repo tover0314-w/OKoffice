@@ -1,0 +1,42 @@
+<style>
+  .section-divider-ink {
+    aspect-ratio: 16/9;
+    display: grid;
+    grid-template-rows: 1fr auto auto 1fr;
+    justify-items: center;
+    align-items: center;
+    padding: var(--slide-padding);
+    background: var(--color-bg);
+    gap: calc(var(--slide-gap) * 0.5);
+  }
+  .section-divider-ink .section-num {
+    font-family: var(--font-display);
+    font-size: clamp(80px, 10vw, 120px);
+    line-height: 1;
+    color: var(--color-accent);
+    font-weight: 700;
+    opacity: 0.15;
+    justify-self: center;
+  }
+  .section-divider-ink .title {
+    font-family: var(--font-display);
+    font-size: var(--size-heading);
+    color: var(--color-dark);
+    margin: 0;
+    text-align: center;
+    letter-spacing: -0.01em;
+  }
+  .section-divider-ink .subtitle {
+    font-family: var(--font-body);
+    font-size: var(--size-subtitle);
+    color: var(--color-primary);
+    opacity: 0.6;
+    text-align: center;
+  }
+</style>
+
+<div class="section-divider-ink">
+  <span class="section-num">{{kicker}}</span>
+  <h1 class="title">{{title}}</h1>
+  <p class="subtitle">{{subtitle}}</p>
+</div>

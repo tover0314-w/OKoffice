@@ -1,0 +1,58 @@
+<style>
+  .quote-magazine {
+    aspect-ratio: 16/9;
+    display: grid;
+    grid-template-rows: 1fr auto 1fr;
+    padding: calc(var(--slide-padding) * 1.5);
+    background: var(--color-bg);
+  }
+  .quote-magazine .quote-block {
+    display: grid;
+    gap: var(--slide-gap);
+    align-self: center;
+    max-width: 75%;
+  }
+  .quote-magazine .mark {
+    font-family: var(--font-display);
+    font-size: clamp(64px, 8vw, 96px);
+    line-height: 0.8;
+    color: var(--color-accent);
+    opacity: 0.35;
+  }
+  .quote-magazine .quote-text {
+    font-family: var(--font-display);
+    font-size: var(--size-subtitle);
+    line-height: var(--line-height-heading);
+    color: var(--color-dark);
+    font-style: italic;
+    margin: 0;
+  }
+  .quote-magazine .attribution {
+    display: grid;
+    gap: calc(var(--slide-gap) * 0.3);
+    padding-top: calc(var(--slide-gap) * 0.6);
+  }
+  .quote-magazine .attr-name {
+    font-family: var(--font-heading);
+    font-size: var(--size-body);
+    color: var(--color-dark);
+    font-weight: 600;
+  }
+  .quote-magazine .attr-role {
+    font-family: var(--font-mono);
+    font-size: var(--size-caption);
+    color: var(--color-primary);
+    opacity: 0.6;
+  }
+</style>
+
+<div class="quote-magazine">
+  <div class="quote-block">
+    <span class="mark">&ldquo;</span>
+    <p class="quote-text">{{body}}</p>
+    <div class="attribution">
+      <span class="attr-name">{{title}}</span>
+      <span class="attr-role">{{subtitle}}</span>
+    </div>
+  </div>
+</div>

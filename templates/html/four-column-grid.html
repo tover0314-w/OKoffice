@@ -1,0 +1,56 @@
+<style>
+  .four-column-grid {
+    aspect-ratio: 16/9;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    gap: var(--slide-gap);
+    padding: var(--slide-padding);
+    background: var(--color-bg);
+  }
+  .four-column-grid .title {
+    font-family: var(--font-display);
+    font-size: var(--size-heading);
+    color: var(--color-dark);
+    margin: 0;
+  }
+  .four-column-grid .grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--slide-gap);
+    align-content: start;
+  }
+  .four-column-grid .cell {
+    display: grid;
+    gap: calc(var(--slide-gap) * 0.8);
+    justify-items: center;
+    text-align: center;
+  }
+  .four-column-grid .icon-placeholder {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 2px solid var(--color-accent);
+    display: grid;
+    place-items: center;
+    font-family: var(--font-mono);
+    font-size: var(--size-body);
+    color: var(--color-accent);
+    font-weight: 600;
+  }
+  .four-column-grid .label {
+    font-family: var(--font-body);
+    font-size: var(--size-body);
+    color: var(--color-primary);
+    line-height: var(--line-height);
+  }
+</style>
+
+<div class="four-column-grid">
+  <h1 class="title">{{title}}</h1>
+  <div class="grid">
+    <div class="cell"><span class="icon-placeholder">A</span><span class="label">{{bullets}}</span></div>
+    <div class="cell"><span class="icon-placeholder">B</span><span class="label">Label Two</span></div>
+    <div class="cell"><span class="icon-placeholder">C</span><span class="label">Label Three</span></div>
+    <div class="cell"><span class="icon-placeholder">D</span><span class="label">Label Four</span></div>
+  </div>
+</div>

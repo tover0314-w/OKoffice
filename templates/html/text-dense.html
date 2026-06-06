@@ -1,0 +1,41 @@
+<style>
+  .text-dense {
+    aspect-ratio: 16/9;
+    display: grid;
+    grid-template-columns: 4px 1fr;
+    gap: calc(var(--slide-gap) * 1.5);
+    padding: var(--slide-padding);
+    background: var(--color-bg);
+  }
+  .text-dense .accent-bar {
+    background: var(--color-accent);
+    border-radius: 2px;
+  }
+  .text-dense .content {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    gap: var(--slide-gap);
+  }
+  .text-dense .title {
+    font-family: var(--font-display);
+    font-size: var(--size-heading);
+    color: var(--color-dark);
+    margin: 0;
+    line-height: var(--line-height-heading);
+  }
+  .text-dense .body {
+    font-family: var(--font-body);
+    font-size: var(--size-body);
+    color: var(--color-primary);
+    line-height: var(--line-height);
+    overflow: hidden;
+  }
+</style>
+
+<div class="text-dense">
+  <div class="accent-bar"></div>
+  <div class="content">
+    <h1 class="title">{{title}}</h1>
+    <div class="body">{{body}}</div>
+  </div>
+</div>

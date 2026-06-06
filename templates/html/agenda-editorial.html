@@ -1,0 +1,61 @@
+<style>
+  .agenda-editorial {
+    aspect-ratio: 16/9;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--slide-gap);
+    padding: var(--slide-padding);
+    background: var(--color-bg);
+  }
+  .agenda-editorial .col-header {
+    grid-column: 1 / -1;
+    display: grid;
+    gap: calc(var(--slide-gap) * 0.5);
+  }
+  .agenda-editorial .title {
+    font-family: var(--font-display);
+    font-size: var(--size-heading);
+    color: var(--color-dark);
+    margin: 0;
+  }
+  .agenda-editorial .col {
+    display: grid;
+    gap: 0;
+  }
+  .agenda-editorial .item {
+    display: grid;
+    grid-template-columns: 32px 1fr;
+    gap: var(--slide-gap);
+    padding: calc(var(--slide-gap) * 0.8) 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-dark) 12%, transparent);
+    align-items: baseline;
+  }
+  .agenda-editorial .item-num {
+    font-family: var(--font-mono);
+    font-size: var(--size-caption);
+    color: var(--color-accent);
+    font-weight: 700;
+  }
+  .agenda-editorial .item-text {
+    font-family: var(--font-body);
+    font-size: var(--size-body);
+    color: var(--color-primary);
+    line-height: var(--line-height);
+  }
+</style>
+
+<div class="agenda-editorial">
+  <div class="col-header">
+    <h1 class="title">{{title}}</h1>
+  </div>
+  <div class="col">
+    <div class="item"><span class="item-num">01</span><span class="item-text">{{bullets}}</span></div>
+    <div class="item"><span class="item-num">02</span><span class="item-text">Agenda item two</span></div>
+    <div class="item"><span class="item-num">03</span><span class="item-text">Agenda item three</span></div>
+  </div>
+  <div class="col">
+    <div class="item"><span class="item-num">04</span><span class="item-text">Agenda item four</span></div>
+    <div class="item"><span class="item-num">05</span><span class="item-text">Agenda item five</span></div>
+    <div class="item"><span class="item-num">06</span><span class="item-text">Agenda item six</span></div>
+  </div>
+</div>

@@ -1,0 +1,56 @@
+<style>
+  .sources-formal {
+    aspect-ratio: 16/9;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    gap: var(--slide-gap);
+    padding: var(--slide-padding);
+    background: var(--color-bg);
+  }
+  .sources-formal .title {
+    font-family: var(--font-display);
+    font-size: var(--size-heading);
+    color: var(--color-dark);
+    margin: 0;
+  }
+  .sources-formal .source-list {
+    display: grid;
+    gap: 0;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    align-content: start;
+  }
+  .sources-formal .source-item {
+    display: grid;
+    grid-template-columns: 28px 1fr;
+    gap: var(--slide-gap);
+    padding: calc(var(--slide-gap) * 0.6) 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-dark) 8%, transparent);
+    align-items: baseline;
+  }
+  .sources-formal .source-num {
+    font-family: var(--font-mono);
+    font-size: var(--size-caption);
+    color: var(--color-accent);
+    font-weight: 600;
+  }
+  .sources-formal .source-text {
+    font-family: var(--font-body);
+    font-size: var(--size-caption);
+    color: var(--color-primary);
+    line-height: var(--line-height);
+  }
+</style>
+
+<div class="sources-formal">
+  <h1 class="title">{{title}}</h1>
+  <ol class="source-list">
+    <li class="source-item"><span class="source-num">1.</span><span class="source-text">{{bullets}}</span></li>
+    <li class="source-item"><span class="source-num">2.</span><span class="source-text">Source reference line two.</span></li>
+    <li class="source-item"><span class="source-num">3.</span><span class="source-text">Source reference line three.</span></li>
+    <li class="source-item"><span class="source-num">4.</span><span class="source-text">Source reference line four.</span></li>
+    <li class="source-item"><span class="source-num">5.</span><span class="source-text">Source reference line five.</span></li>
+    <li class="source-item"><span class="source-num">6.</span><span class="source-text">Source reference line six.</span></li>
+  </ol>
+</div>

@@ -1,0 +1,46 @@
+<style>
+  .chart-frame {
+    aspect-ratio: 16/9;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: var(--slide-gap);
+    padding: var(--slide-padding);
+    background: var(--color-bg);
+  }
+  .chart-frame .title {
+    font-family: var(--font-display);
+    font-size: var(--size-heading);
+    color: var(--color-dark);
+    margin: 0;
+  }
+  .chart-frame .frame {
+    border: 1px solid color-mix(in srgb, var(--color-dark) 12%, transparent);
+    background: color-mix(in srgb, var(--color-dark) 3%, var(--color-bg));
+    display: grid;
+    place-items: center;
+    min-height: 0;
+    position: relative;
+  }
+  .chart-frame .frame-placeholder {
+    font-family: var(--font-mono);
+    font-size: var(--size-caption);
+    color: var(--color-primary);
+    opacity: 0.4;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  .chart-frame .caption {
+    font-family: var(--font-mono);
+    font-size: var(--size-caption);
+    color: var(--color-primary);
+    opacity: 0.6;
+  }
+</style>
+
+<div class="chart-frame">
+  <h1 class="title">{{title}}</h1>
+  <div class="frame">
+    <span class="frame-placeholder">{{body}}</span>
+  </div>
+  <span class="caption">{{subtitle}}</span>
+</div>
