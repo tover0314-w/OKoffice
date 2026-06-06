@@ -1123,21 +1123,27 @@ def _html_slide_entries(
         workbook_ranges = composition.get("workbook_ranges", []) if isinstance(composition, dict) else []
         if not isinstance(workbook_ranges, list):
             workbook_ranges = []
-        entries.append(
-            {
-                "slide_index": index,
-                "slide_id": str(composition.get("slide_id") or f"slide_{index:03d}") if isinstance(composition, dict) else f"slide_{index:03d}",
-                "dom_anchor": f"#slide-{index}",
-                "title": slide["title"],
-                "subtitle": slide.get("subtitle", ""),
-                "bullets": list(slide.get("bullets", [])),
-                "bullet_count": len(slide.get("bullets", [])),
-                "notes": slide.get("notes", ""),
-                "layout": slide.get("layout"),
-                "source_refs": [ref for ref in source_refs if isinstance(ref, dict)],
-                "workbook_ranges": [ref for ref in workbook_ranges if isinstance(ref, dict)],
-            }
-        )
+        entry: dict[str, Any] = {
+            "slide_index": index,
+            "slide_id": str(composition.get("slide_id") or f"slide_{index:03d}") if isinstance(composition, dict) else f"slide_{index:03d}",
+            "dom_anchor": f"#slide-{index}",
+            "title": slide["title"],
+            "subtitle": slide.get("subtitle", ""),
+            "bullets": list(slide.get("bullets", [])),
+            "bullet_count": len(slide.get("bullets", [])),
+            "notes": slide.get("notes", ""),
+            "layout": slide.get("layout"),
+            "source_refs": [ref for ref in source_refs if isinstance(ref, dict)],
+            "workbook_ranges": [ref for ref in workbook_ranges if isinstance(ref, dict)],
+            "metrics": list(slide.get("metrics", [])),
+            "body": slide.get("body", ""),
+        }
+        for key in ("col_left_header", "col_right_header", "axis_y", "axis_x",
+                     "template_id", "css_class"):
+            val = slide.get(key)
+            if val is not None:
+                entry[key] = val
+        entries.append(entry)
     return entries
 
 
