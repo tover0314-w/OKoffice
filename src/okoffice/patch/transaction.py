@@ -28,6 +28,14 @@ SUPPORTED_PATCH_OPERATIONS = [
     "regenerate_block",
 ]
 
+COMPOSITION_IR_PATCH_OPERATIONS = [
+    "replace_block_title",
+    "update_block_data",
+    "reorder_blocks",
+    "add_block",
+    "remove_block",
+]
+
 
 def plan_patch_transaction(
     input_path: str | Path,
@@ -1550,3 +1558,342 @@ def _sha256_matches(path: Path, expected: str) -> bool:
     import hashlib
 
     return hashlib.sha256(path.read_bytes()).hexdigest() == expected
+
+
+# ---------------------------------------------------------------------------
+# Composition IR JSON Patch operations
+# ---------------------------------------------------------------------------
+
+def plan_composition_ir_patch(
+    composition_path: str | Path,
+    operations: list[dict[str, Any]],
+    output_path: str | Path,
+) -> ToolResult:
+    """Plan a patch transaction on a Composition IR JSON artifact.
+
+    Validates composition structure, block references, and source refs
+    (3-layer validation) before producing a patch manifest.
+    """
+    tool = "pdf.patch.composition_ir.plan"
+    source = Path(composition_path).resolve()
+    if not source.exists():
+        raise OKofficeException("file_not_found", f"Composition IR file not found: {source}")
+    if not operations:
+        raise OKofficeException("invalid_patch", "Patch operations must include at least one operation.")
+
+    payload = _load_composition_payload(source)
+    ir = _extract_composition_ir(payload)
+    source_map = payload.get("source_map", [])
+    known_block_ids = {b.get("block_id") for b in ir.get("blocks", []) if b.get("block_id")}
+    known_source_refs = {m.get("source_ref") for m in source_map if isinstance(m, dict) and m.get("source_ref")}
+
+    # Layer 1: Validate composition IR structure
+    _validate_composition_ir_structure(ir)
+
+    # Normalize and validate each operation, tracking cumulative block changes
+    normalized = []
+    effective_block_ids = set(known_block_ids)
+    for idx, op in enumerate(operations, start=1):
+        nop = _normalize_composition_op(op, idx, effective_block_ids)
+        # Layer 3: Validate source refs for add_block / update_block_data
+        _validate_composition_op_source_refs(nop, known_source_refs)
+        normalized.append(nop)
+        # Update effective block set for subsequent operations
+        if nop["op"] == "add_block":
+            effective_block_ids.add(nop["block"]["block_id"])
+        elif nop["op"] == "remove_block":
+            effective_block_ids.discard(nop["block_id"])
+
+    # Layer 2: Cross-operation validation (e.g. reorder references all blocks)
+    _validate_composition_op_cross_refs(normalized, effective_block_ids)
+
+    source_artifact = build_artifact(source, source_tool="pdf.patch.composition_ir.input")
+    manifest = {
+        "patch_manifest_version": "0.2",
+        "patch_id": f"cmpatch_{uuid4().hex[:16]}",
+        "composition_path": source.as_posix(),
+        "input_artifact": source_artifact.model_dump(mode="json"),
+        "operation_count": len(normalized),
+        "operations": normalized,
+        "validation": {
+            "composition_ir_valid": True,
+            "known_block_ids": sorted(known_block_ids),
+            "known_source_ref_count": len(known_source_refs),
+        },
+        "safety": {
+            "mutates_input": False,
+            "requires_new_output_path": True,
+            "supported_operations": COMPOSITION_IR_PATCH_OPERATIONS,
+        },
+    }
+    destination = Path(output_path)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_text(json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8")
+    artifact = build_artifact(destination, source_tool=tool)
+    return ToolResult(
+        job_id=f"job_{uuid4().hex[:16]}",
+        status="succeeded",
+        tool=tool,
+        artifacts=[artifact],
+        usage={"patch_manifest": manifest},
+        next_recommended_tools=["pdf.patch.composition_ir.apply"],
+    )
+
+
+def apply_composition_ir_patch(
+    patch_manifest: dict[str, Any] | str | Path,
+    output_path: str | Path,
+) -> ToolResult:
+    """Apply a composition IR patch and write a new composition JSON artifact."""
+    tool = "pdf.patch.composition_ir.apply"
+    manifest = _load_json_manifest(patch_manifest, required_keys=("patch_id", "operations", "composition_path"))
+    source = Path(manifest["composition_path"]).resolve()
+    if not source.exists():
+        raise OKofficeException("file_not_found", f"Composition IR file not found: {source}")
+
+    payload = json.loads(source.read_text(encoding="utf-8-sig"))
+    ir = _extract_composition_ir(payload)
+    blocks = list(ir.get("blocks", []))
+    block_index = {b.get("block_id"): i for i, b in enumerate(blocks) if b.get("block_id")}
+
+    for operation in manifest["operations"]:
+        op = operation["op"]
+        if op == "replace_block_title":
+            idx = block_index.get(operation["block_id"])
+            if idx is not None:
+                blocks[idx] = {**blocks[idx], "title": operation["new_title"]}
+        elif op == "update_block_data":
+            idx = block_index.get(operation["block_id"])
+            if idx is not None:
+                existing_data = blocks[idx].get("data", {})
+                merged_data = {**existing_data, **operation["data"]}
+                blocks[idx] = {**blocks[idx], "data": merged_data}
+        elif op == "reorder_blocks":
+            order = operation["block_ids"]
+            block_by_id = {b.get("block_id"): b for b in blocks}
+            blocks = [block_by_id[bid] for bid in order if bid in block_by_id]
+            block_index = {b.get("block_id"): i for i, b in enumerate(blocks) if b.get("block_id")}
+        elif op == "add_block":
+            new_block = operation["block"]
+            blocks.append(new_block)
+            block_index[new_block.get("block_id", "")] = len(blocks) - 1
+        elif op == "remove_block":
+            bid = operation["block_id"]
+            blocks = [b for b in blocks if b.get("block_id") != bid]
+            block_index = {b.get("block_id"): i for i, b in enumerate(blocks) if b.get("block_id")}
+
+    patched_ir = dict(ir)
+    patched_ir["blocks"] = blocks
+    patched_payload = dict(payload)
+    if "composition_ir" in patched_payload:
+        patched_payload["composition_ir"] = patched_ir
+    else:
+        patched_payload.update(patched_ir)
+
+    destination = Path(output_path)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_text(json.dumps(patched_payload, indent=2, ensure_ascii=False), encoding="utf-8")
+
+    output_artifact = build_artifact(destination, source_tool=tool)
+    applied_manifest = dict(manifest)
+    applied_manifest["output_path"] = destination.resolve().as_posix()
+    applied_manifest["output_artifact"] = output_artifact.model_dump(mode="json")
+    applied_manifest["block_count_after"] = len(blocks)
+
+    return ToolResult(
+        job_id=f"job_{uuid4().hex[:16]}",
+        status="succeeded",
+        tool=tool,
+        artifacts=[output_artifact],
+        usage={
+            "patch_manifest": applied_manifest,
+            "block_count_before": len(ir.get("blocks", [])),
+            "block_count_after": len(blocks),
+        },
+        next_recommended_tools=["pdf.patch.composition_ir.verify", "pdf.compose.render_ir"],
+    )
+
+
+def verify_composition_ir_patch(
+    patch_manifest: dict[str, Any] | str | Path,
+    patched_path: str | Path,
+) -> ToolResult:
+    """Verify a patched composition IR artifact."""
+    tool = "pdf.patch.composition_ir.verify"
+    manifest = _load_json_manifest(patch_manifest, required_keys=("patch_id", "composition_path"))
+    source = Path(manifest["composition_path"]).resolve()
+    patched = Path(patched_path).resolve()
+    if not patched.exists():
+        raise OKofficeException("file_not_found", f"Patched composition IR not found: {patched}")
+
+    original_ir = _extract_composition_ir(json.loads(source.read_text(encoding="utf-8-sig")))
+    patched_payload = json.loads(patched.read_text(encoding="utf-8-sig"))
+    patched_ir = _extract_composition_ir(patched_payload)
+
+    original_ids = {b.get("block_id") for b in original_ir.get("blocks", [])}
+    patched_ids = {b.get("block_id") for b in patched_ir.get("blocks", [])}
+
+    verification = {
+        "patch_id": manifest["patch_id"],
+        "input_unchanged": _sha256_matches(source, manifest["input_artifact"]["sha256"]),
+        "original_block_count": len(original_ir.get("blocks", [])),
+        "patched_block_count": len(patched_ir.get("blocks", [])),
+        "blocks_added": sorted(patched_ids - original_ids),
+        "blocks_removed": sorted(original_ids - patched_ids),
+        "blocks_preserved": sorted(original_ids & patched_ids),
+        "composition_ir_valid": bool(
+            patched_ir.get("composition_id")
+            and isinstance(patched_ir.get("blocks"), list)
+        ),
+    }
+    return ToolResult(
+        job_id=f"job_{uuid4().hex[:16]}",
+        status="succeeded",
+        tool=tool,
+        usage={"verification": verification},
+        next_recommended_tools=["pdf.compose.render_ir"],
+    )
+
+
+def _validate_composition_ir_structure(ir: dict[str, Any]) -> None:
+    if not ir.get("composition_id"):
+        raise OKofficeException("invalid_composition_ir", "Composition IR must include composition_id.")
+    blocks = ir.get("blocks")
+    if not isinstance(blocks, list):
+        raise OKofficeException("invalid_composition_ir", "Composition IR must include a blocks array.")
+    for block in blocks:
+        if not isinstance(block, dict) or not block.get("block_id"):
+            raise OKofficeException("invalid_composition_ir", "Each block must have a block_id.")
+
+
+def _normalize_composition_op(
+    operation: dict[str, Any],
+    index: int,
+    known_block_ids: set[str],
+) -> dict[str, Any]:
+    op = str(operation.get("op") or "")
+    if op not in COMPOSITION_IR_PATCH_OPERATIONS:
+        raise OKofficeException("unsupported_patch_operation", f"Unsupported composition IR operation: {op}")
+
+    normalized: dict[str, Any] = {
+        "operation_id": str(operation.get("operation_id") or f"cmpop_{index:03d}"),
+        "op": op,
+    }
+
+    if op == "replace_block_title":
+        bid = str(operation.get("block_id") or "")
+        new_title = str(operation.get("new_title") or "").strip()
+        if not bid:
+            raise OKofficeException("invalid_patch", "replace_block_title requires block_id.")
+        if bid not in known_block_ids:
+            raise OKofficeException("block_not_found", f"Block '{bid}' not found in composition IR.")
+        if not new_title:
+            raise OKofficeException("invalid_patch", "replace_block_title requires new_title.")
+        normalized["block_id"] = bid
+        normalized["new_title"] = new_title
+
+    elif op == "update_block_data":
+        bid = str(operation.get("block_id") or "")
+        data = operation.get("data")
+        if not bid:
+            raise OKofficeException("invalid_patch", "update_block_data requires block_id.")
+        if bid not in known_block_ids:
+            raise OKofficeException("block_not_found", f"Block '{bid}' not found in composition IR.")
+        if not isinstance(data, dict) or not data:
+            raise OKofficeException("invalid_patch", "update_block_data requires a non-empty data dict.")
+        normalized["block_id"] = bid
+        normalized["data"] = data
+
+    elif op == "reorder_blocks":
+        block_ids = operation.get("block_ids")
+        if not isinstance(block_ids, list) or not block_ids:
+            raise OKofficeException("invalid_patch", "reorder_blocks requires a non-empty block_ids list.")
+        missing = [bid for bid in block_ids if bid not in known_block_ids]
+        if missing:
+            raise OKofficeException("block_not_found", f"reorder_blocks references unknown blocks: {missing}")
+        normalized["block_ids"] = block_ids
+
+    elif op == "add_block":
+        block = operation.get("block")
+        if not isinstance(block, dict) or not block.get("block_id"):
+            raise OKofficeException("invalid_patch", "add_block requires a block with block_id.")
+        if block["block_id"] in known_block_ids:
+            raise OKofficeException("duplicate_block", f"Block '{block['block_id']}' already exists.")
+        normalized_block = dict(block)
+        if not normalized_block.get("type"):
+            normalized_block["type"] = "section"
+        if not isinstance(normalized_block.get("source_refs"), list):
+            normalized_block["source_refs"] = []
+        normalized["block"] = normalized_block
+
+    elif op == "remove_block":
+        bid = str(operation.get("block_id") or "")
+        if not bid:
+            raise OKofficeException("invalid_patch", "remove_block requires block_id.")
+        if bid not in known_block_ids:
+            raise OKofficeException("block_not_found", f"Block '{bid}' not found in composition IR.")
+        normalized["block_id"] = bid
+
+    return normalized
+
+
+def _validate_composition_op_source_refs(
+    operation: dict[str, Any],
+    known_source_refs: set[str],
+) -> None:
+    if not known_source_refs:
+        return
+    source_refs: list[str] = []
+    if operation["op"] == "add_block":
+        source_refs = operation.get("block", {}).get("source_refs", [])
+    elif operation["op"] == "update_block_data" and "source_refs" in operation.get("data", {}):
+        source_refs = operation["data"]["source_refs"]
+    missing = [ref for ref in source_refs if ref not in known_source_refs]
+    if missing:
+        raise OKofficeException(
+            "source_ref_not_found",
+            f"Source refs not found in composition source_map: {missing}",
+            details={"missing_source_refs": missing},
+        )
+
+
+def _validate_composition_op_cross_refs(
+    operations: list[dict[str, Any]],
+    known_block_ids: set[str],
+) -> None:
+    reorder_ops = [op for op in operations if op["op"] == "reorder_blocks"]
+    if not reorder_ops:
+        return
+    for op in reorder_ops:
+        ordered = set(op["block_ids"])
+        if ordered != known_block_ids:
+            missing = known_block_ids - ordered
+            extra = ordered - known_block_ids
+            if missing:
+                raise OKofficeException(
+                    "invalid_patch",
+                    f"reorder_blocks must reference all existing blocks. Missing: {sorted(missing)}",
+                )
+
+
+def _load_json_manifest(source: dict[str, Any] | str | Path, *, required_keys: tuple[str, ...]) -> dict[str, Any]:
+    if isinstance(source, dict):
+        manifest = source
+    else:
+        path = Path(source)
+        if not path.exists():
+            raise OKofficeException("file_not_found", f"Manifest not found: {path}")
+        manifest = json.loads(path.read_text(encoding="utf-8-sig"))
+    for key in required_keys:
+        if key not in manifest:
+            raise OKofficeException("invalid_patch", f"Manifest must include {key}.")
+    return manifest
+
+
+def _extract_composition_ir(payload: dict[str, Any]) -> dict[str, Any]:
+    from okoffice.compose.context import _composition_ir_from_payload
+
+    ir = _composition_ir_from_payload(payload)
+    if ir is None:
+        raise OKofficeException("invalid_composition_ir", "Payload does not contain a valid composition IR.")
+    return ir

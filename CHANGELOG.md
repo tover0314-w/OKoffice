@@ -15,16 +15,28 @@ This file follows Keep a Changelog style once implementation begins.
   - `sheet.visualize.chart` — create charts (bar/line/pie/area/scatter) in Excel workbooks.
   - `deck.edit.apply_theme` — apply color themes to PPTX decks via OOXML manipulation.
   - `pdf.extract.tables` — detect and extract tables from PDF text layers.
+- **Phase 5**: Registered 6 beta alias tools (office.workflow.extract_to_sheet, office.workflow.source_to_board_pack, word.read.document, word.write.document, sheet.edit.patch, word.edit.patch).
+- **Phase 6**: Added deck template/spec-lock/animation tools:
+  - `deck.template.list`, `deck.template.preview`, `deck.create.from_template` — template-driven deck creation.
+  - `deck.spec_lock.create`, `deck.spec_lock.check_drift` — design specification locking and drift detection.
+  - `deck.animation.apply` — CSS animation recipes for HTML slide content.
 - **Phase 7**: Migrated Node SDK from agentpdf-node to okoffice-node.
 - **Phase 8**: Added Cursor and OpenAI Agents MCP config generators (6 agent platforms total).
+- **Resume/ATS**: Registered `pdf.resume.create_resume` and `pdf.validation.ats_compliance_check`.
+- **Composition IR Patch**: Registered `pdf.patch.composition_ir.plan`, `pdf.patch.composition_ir.apply`, `pdf.patch.composition_ir.verify`.
+- **Deck enhancements**: Added deck_animations, deck_backgrounds, deck_svg2pptx, deck_templates, deck_spec_lock modules. 16 HTML slide templates + 10 SVG layouts.
+- **okoffice-shell**: Added Electron desktop application with MCP client, LLM providers, and React UI.
 - **Dependencies**: Added openpyxl>=3.1 for chart creation.
-- **Tests**: 788 tests passing, including 11 new Phase 4 validation tests.
+- **Tests**: 910 tests passing.
 
 ### Fixed
 
 - Added missing MCP server imports (run_workflow_plan, run_watermark).
 - Updated doctor.py to check okoffice-node instead of agentpdf-node.
 - Fixed 6 MCP catalog maps_to naming mismatches.
+- Fixed MCP catalog server_name from agentpdf to okoffice.
+- Registered missing deck tools in MCP server (template, spec_lock, animation, create_from_template).
+- Added deck_validation_presentation alias handler and catalog entry.
 - Removed duplicate office.validate.output from target manifest.
 - Fixed agent integration test assertions (agentpdf -> okoffice tool manifest).
 - Fixed chart.py empty data validation, word_comments.py silent resolve_ids discard, range string validation.

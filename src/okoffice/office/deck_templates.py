@@ -65,6 +65,7 @@ def select_template(
 
 
 def load_html_template(template_id: str) -> str | None:
+    _validate_template_id(template_id)
     path = _HTML_DIR / f"{template_id}.html"
     if path.exists():
         return path.read_text(encoding="utf-8")
@@ -72,6 +73,7 @@ def load_html_template(template_id: str) -> str | None:
 
 
 def load_svg_template(template_id: str) -> str | None:
+    _validate_template_id(template_id)
     path = _SVG_DIR / f"{template_id}.svg"
     if path.exists():
         return path.read_text(encoding="utf-8")
@@ -159,3 +161,9 @@ def _tokens_to_css_vars(tokens: Any) -> str:
             name = attr.replace("_font", "")
             pairs.append(f"--font-{name}:{val};")
     return "".join(pairs)
+
+
+def _validate_template_id(template_id: str) -> None:
+    import re
+    if not re.fullmatch(r"[a-zA-Z0-9_-]+", template_id):
+        raise ValueError(f"Invalid template_id: {template_id!r}")

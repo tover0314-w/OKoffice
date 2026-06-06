@@ -5,6 +5,8 @@ import pytest
 
 from okoffice.authoring.models import TemplateMetadata
 from okoffice.office.deck_templates import (
+    load_html_template,
+    load_svg_template,
     load_template_index,
     preview_template_ids,
     select_template,
@@ -78,3 +80,21 @@ class TestEsc:
 
     def test_escapes_quotes(self):
         assert _esc('"hello"') == "&quot;hello&quot;"
+
+
+class TestTemplateIdValidation:
+    def test_rejects_path_traversal(self):
+        with pytest.raises(ValueError, match="Invalid template_id"):
+            load_html_template("../../etc/somefile")
+
+    def test_rejects_path_traversal_svg(self):
+        with pytest.raises(ValueError, match="Invalid template_id"):
+            load_svg_template("../../../secret")
+
+    def test_accepts_valid_ids(self):
+        load_html_template("cover-minimal")
+        load_svg_template("cover-minimal")
+
+    def test_rejects_spaces(self):
+        with pytest.raises(ValueError):
+            load_html_template("my template")

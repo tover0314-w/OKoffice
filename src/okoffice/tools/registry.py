@@ -289,6 +289,11 @@ IMPLEMENTED_TOOLS = {
     # Resume + ATS tools
     "pdf.resume.create_resume",
     "pdf.validation.ats_compliance_check",
+    # Deck revise + composition IR patch
+    "deck.revise",
+    "pdf.patch.composition_ir.plan",
+    "pdf.patch.composition_ir.apply",
+    "pdf.patch.composition_ir.verify",
 }
 
 

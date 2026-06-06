@@ -154,7 +154,7 @@ def check_shadow_restraint(tokens: DesignTokens) -> dict[str, Any]:
     elif shadow == "medium" and gradient == "rich":
         issues.append("shadow_restraint=medium combined with gradient_sophistication=rich risks visual clutter")
         score -= 0.5
-    if shadow == "medium":
+    elif shadow == "medium":
         issues.append("medium shadows may compete with slide content — consider subtle")
         score -= 0.2
     return {"score": max(0, score), "max": 1.0, "issues": issues}

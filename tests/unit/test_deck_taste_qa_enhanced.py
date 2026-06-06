@@ -111,7 +111,7 @@ class TestCheckShadowRestraint:
         tokens = _tokens(shadow_restraint="medium", gradient_sophistication="rich")
         result = check_shadow_restraint(tokens)
         assert any("clutter" in i for i in result["issues"])
-        assert result["score"] < 0.5
+        assert result["score"] == 0.5
 
     def test_warns_on_medium_shadow(self):
         tokens = _tokens(shadow_restraint="medium", gradient_sophistication="subtle")

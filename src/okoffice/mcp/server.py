@@ -348,6 +348,17 @@ def _infer_tool_annotations(name: str):
     if any(p in name for p in ("redact", "sanitize", "remove_pages", "remove_existing")):
         return _DESTRUCTIVE
 
+    # Write tools that contain read-only-sounding substrings — exclude first
+    _WRITE_DESPITE_PATTERN = (
+        "extract_pages", "extract_images", "extract_to_sheet",
+        "create_evidence", "create_plan_template", "create_template_preview",
+        "create_validate_template", "artifacts_manifest", "artifacts_graph",
+        "bundle_graph", "context_packet_report",
+        "ocr_searchable_pdf", "scan_to_pdf",
+    )
+    if any(p in name for p in _WRITE_DESPITE_PATTERN):
+        return _WRITE
+
     read_only_patterns = (
         "inspect", "validate", "check", "extract", "read_",
         "parse", "profile", "compare", "search", "query",
@@ -459,6 +470,7 @@ def create_mcp_server() -> FastMCP:
     server.tool(name="deck_validation_html_preview")(deck_validation_html_preview)
     server.tool(name="deck_export_pptx")(deck_export_pptx)
     server.tool(name="deck_validate_presentation")(deck_validate_presentation)
+    server.tool(name="deck_validation_presentation")(deck_validation_presentation)
     server.tool(name="deck_template_list")(deck_template_list)
     server.tool(name="deck_template_preview")(deck_template_preview)
     server.tool(name="deck_spec_lock_create")(deck_spec_lock_create)
@@ -1374,6 +1386,11 @@ def deck_validate_presentation(path: str) -> str:
     if slide_count and slides_without_notes < slide_count:
         return quality.model_dump_json()
     return run_deck_validate_presentation(path).model_dump_json()
+
+
+def deck_validation_presentation(path: str) -> str:
+    """Validate a local PowerPoint deck for structure, safety, and placeholder leakage (validation namespace alias)."""
+    return deck_validate_presentation(path)
 
 
 def pdf_inspect_pages(input_path: str, pages: str = "all", render_check: bool = False) -> str:

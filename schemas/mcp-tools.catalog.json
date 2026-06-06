@@ -243,6 +243,11 @@
       "status": "beta"
     },
     {
+      "name": "deck_validation_presentation",
+      "maps_to": "deck.validation.presentation",
+      "status": "beta"
+    },
+    {
       "name": "deck_review_taste",
       "maps_to": "deck.review.taste",
       "status": "beta"
