@@ -17,7 +17,7 @@ def load_okoffice_manifest() -> dict[str, Any]:
         **target_manifest,
         "target_tools": target_tools,
         "compatibility_manifest": {
-            "product": "agentpdf",
+            "product": "okoffice",
             "namespace": "pdf",
             "role": "legacy_compat",
             "surface": "slim_summary",

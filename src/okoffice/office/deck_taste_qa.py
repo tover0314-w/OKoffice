@@ -1,9 +1,17 @@
 from __future__ import annotations
 
+import json
 import re
+from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 from okoffice.authoring.models import DesignTokens
+from okoffice.schemas.models import OKofficeError, ToolResult, ValidationCheck, ValidationReport
+from okoffice.security.paths import resolve_input_path
+
+
+REVIEW_TOOL_NAME = "deck.review.taste"
 
 
 def check_color_contrast(tokens: DesignTokens) -> dict[str, Any]:
@@ -142,3 +150,160 @@ def _contrast_ratio(fg: str, bg: str) -> float:
     lighter = max(l1, l2)
     darker = min(l1, l2)
     return (lighter + 0.05) / (darker + 0.05)
+
+
+def review_deck_taste(
+    path: str | Path,
+    *,
+    html_preview_path: str | Path | None = None,
+) -> ToolResult:
+    """Review a deck for taste and design quality.
+
+    Accepts either an HTML deck preview path (preferred) or a PPTX path
+    with an adjacent HTML preview.  Runs static design-token scoring and
+    returns a ToolResult with the taste score and specific issues.
+    """
+    try:
+        source = resolve_input_path(path)
+    except Exception as exc:
+        return _review_failed(
+            OKofficeError(code="invalid_input", message=str(exc)),
+        )
+
+    html_path = _resolve_taste_html(source, html_preview_path)
+    if html_path is None:
+        return _review_failed(
+            OKofficeError(
+                code="artifact_not_found",
+                message="deck.review.taste requires an HTML deck preview (or PPTX with adjacent HTML).",
+                details={"path": str(source)},
+            ),
+        )
+
+    tokens = _load_design_tokens_from_html(html_path)
+    if tokens is None:
+        return _review_failed(
+            OKofficeError(
+                code="parse_failed",
+                message="Could not extract design tokens from the HTML deck preview.",
+                details={"html_path": str(html_path)},
+            ),
+        )
+
+    taste_result = compute_taste_score(tokens)
+    taste_score = taste_result["taste_score"]
+    passing = taste_result["passing"]
+    issues = taste_result["issues"]
+    checks_detail = taste_result["checks"]
+
+    warnings: list[str] = []
+    if not passing:
+        warnings.append(f"Taste score {taste_score}/100 is below the passing threshold of 70.")
+    for issue in issues:
+        warnings.append(issue)
+
+    review_checks = [
+        ValidationCheck(
+            name="taste_score",
+            status="passed" if passing else "warning",
+            details={"score": taste_score, "threshold": 70, "passing": passing},
+        ),
+        ValidationCheck(
+            name="color_contrast",
+            status="passed" if checks_detail["color_contrast"]["score"] >= 0.7 else "warning",
+            details=checks_detail["color_contrast"],
+        ),
+        ValidationCheck(
+            name="typography_hierarchy",
+            status="passed" if checks_detail["typography_hierarchy"]["score"] >= 0.7 else "warning",
+            details=checks_detail["typography_hierarchy"],
+        ),
+        ValidationCheck(
+            name="whitespace_ratio",
+            status="passed" if checks_detail["whitespace_ratio"]["score"] >= 0.7 else "warning",
+            details=checks_detail["whitespace_ratio"],
+        ),
+        ValidationCheck(
+            name="slide_consistency",
+            status="passed" if checks_detail["slide_consistency"]["score"] >= 0.7 else "warning",
+            details=checks_detail["slide_consistency"],
+        ),
+        ValidationCheck(
+            name="eight_second_scan",
+            status="passed" if checks_detail["eight_second_scan"]["score"] >= 0.7 else "warning",
+            details=checks_detail["eight_second_scan"],
+        ),
+    ]
+
+    return ToolResult(
+        job_id=_review_job_id(),
+        status="succeeded",
+        tool=REVIEW_TOOL_NAME,
+        validation=ValidationReport(
+            status="passed" if passing else "warning",
+            checks=review_checks,
+            warnings=warnings,
+        ),
+        warnings=warnings,
+        usage={
+            "summary": {
+                "html_path": str(html_path),
+                "taste_score": taste_score,
+                "passing": passing,
+                "issue_count": len(issues),
+            },
+            "taste_result": taste_result,
+        },
+        next_recommended_tools=[
+            "deck.validate.presentation",
+            "deck.validation.contact_sheet",
+            "office.bundle.export",
+        ],
+    )
+
+
+def _resolve_taste_html(source: Path, html_preview_path: str | Path | None) -> Path | None:
+    if html_preview_path is not None:
+        candidate = Path(html_preview_path).expanduser().resolve()
+        return candidate if candidate.exists() else None
+    if source.suffix == ".html":
+        return source
+    sibling = source.with_suffix(".html")
+    return sibling if sibling.exists() else None
+
+
+def _load_design_tokens_from_html(html_path: Path) -> DesignTokens | None:
+    manifest_path = html_path.with_suffix(".html-manifest.json")
+    if manifest_path.exists():
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            theme_name = str(
+                manifest.get("theme")
+                or (manifest.get("design_tokens") or {}).get("theme")
+                or "business_tech"
+            )
+            from okoffice.authoring.design import resolve_theme
+
+            base = resolve_theme(theme_name)
+            raw = manifest.get("design_tokens") or {}
+            if raw:
+                overrides = {k: v for k, v in raw.items() if v is not None}
+                return base.model_copy(update=overrides)
+            return base
+        except (json.JSONDecodeError, Exception):
+            pass
+    return None
+
+
+def _review_failed(error: OKofficeError) -> ToolResult:
+    return ToolResult(
+        job_id=_review_job_id(),
+        status="failed",
+        tool=REVIEW_TOOL_NAME,
+        error=error,
+        warnings=[error.message],
+    )
+
+
+def _review_job_id() -> str:
+    return f"job_{uuid4().hex[:16]}"

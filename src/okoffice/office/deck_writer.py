@@ -6,11 +6,11 @@ import zipfile
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from typing import Any
-from uuid import uuid4
 from xml.etree import ElementTree
 
 from okoffice.artifacts.store import build_artifact
 from okoffice.office.deck import inspect_deck_presentation
+from okoffice.office.shared import failed_result, job_id
 from okoffice.schemas.errors import OKofficeException
 from okoffice.schemas.models import OKofficeError, ToolResult, ValidationCheck, ValidationReport
 from okoffice.security.paths import resolve_input_path, resolve_output_path
@@ -59,7 +59,7 @@ def create_deck_presentation(
         warnings = _warnings(data)
         artifacts = [build_artifact(output, source_tool=TOOL_NAME)]
         return ToolResult(
-            job_id=_job_id(),
+            job_id=job_id(),
             status="succeeded",
             tool=TOOL_NAME,
             artifacts=artifacts,
@@ -75,9 +75,9 @@ def create_deck_presentation(
             ],
         )
     except OKofficeException as exc:
-        return _failed(exc.to_error())
+        return failed_result(TOOL_NAME, exc.to_error())
     except (KeyError, ValueError, zipfile.BadZipFile, ElementTree.ParseError) as exc:
-        return _failed(OKofficeError(code="invalid_input", message=str(exc)))
+        return failed_result(TOOL_NAME, OKofficeError(code="invalid_input", message=str(exc)))
 
 
 def _load_evidence_workbook(path: Path) -> dict[str, Any]:
@@ -676,17 +676,3 @@ def _xml_text(value: Any) -> str:
 
 def _xml_attr(value: Any) -> str:
     return html.escape("" if value is None else str(value), quote=True)
-
-
-def _failed(error: OKofficeError) -> ToolResult:
-    return ToolResult(
-        job_id=_job_id(),
-        status="failed",
-        tool=TOOL_NAME,
-        error=error,
-        warnings=[error.message],
-    )
-
-
-def _job_id() -> str:
-    return f"job_{uuid4().hex[:16]}"

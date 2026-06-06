@@ -32,6 +32,23 @@ class SlideLayout(BaseModel):
     css_grid_template: str = ""
 
 
+CSS_CLASS_TO_LAYOUT: dict[str, str] = {
+    "layout-cover": "cover",
+    "layout-title_only": "title_only",
+    "layout-title_subtitle": "title_subtitle",
+    "layout-title_bullets": "title_bullets",
+    "layout-two_column": "two_column",
+    "layout-metrics": "metrics",
+    "layout-comparison": "comparison",
+    "layout-image_left": "image_left",
+    "layout-image_right": "image_right",
+    "layout-section_cards": "section_cards",
+    "layout-funnel": "funnel",
+    "layout-risk_grid": "risk_grid",
+    "layout-sources": "sources",
+}
+
+
 SLIDE_LAYOUTS: dict[str, SlideLayout] = {
     "cover": SlideLayout(
         kind="cover",
@@ -160,6 +177,12 @@ def select_layout(slide: dict[str, Any]) -> SlideLayout:
     explicit = slide.get("layout")
     if explicit and explicit in SLIDE_LAYOUTS:
         return SLIDE_LAYOUTS[explicit]
+    css_class = str(slide.get("css_class") or "")
+    if css_class:
+        for token in css_class.split():
+            mapped = CSS_CLASS_TO_LAYOUT.get(token)
+            if mapped and mapped in SLIDE_LAYOUTS:
+                return SLIDE_LAYOUTS[mapped]
     has_subtitle = bool(slide.get("subtitle"))
     bullets = slide.get("bullets", [])
     if not bullets:

@@ -2,10 +2,9 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
-from uuid import uuid4
-
 from okoffice.office.inspect import inspect_office_file
 from okoffice.office.ooxml import WORD_NS, namespaced_attr, read_xml
+from okoffice.office.shared import dedupe_strings, failed_result, job_id
 from okoffice.schemas.models import OKofficeError, ToolResult, ValidationCheck, ValidationReport
 
 
@@ -24,12 +23,12 @@ def inspect_word_document(path: str | Path) -> ToolResult:
     resolved = Path(path)
     preflight = inspect_office_file(resolved)
     if preflight.status == "failed":
-        return _failed(
+        return failed_result(
             INSPECT_TOOL_NAME,
             preflight.error or OKofficeError(code="unsupported_file_type", message="Word inspect failed."),
         )
     if preflight.usage["format"]["detected_format"] != "docx":
-        return _failed(
+        return failed_result(
             INSPECT_TOOL_NAME,
             OKofficeError(
                 code="unsupported_file_type",
@@ -41,7 +40,7 @@ def inspect_word_document(path: str | Path) -> ToolResult:
     source_path = Path(preflight.usage["file"]["path"])
     document_root = read_xml(source_path, WORD_DOCUMENT)
     if document_root is None:
-        return _failed(
+        return failed_result(
             INSPECT_TOOL_NAME,
             OKofficeError(
                 code="unsupported_file_type",
@@ -86,7 +85,7 @@ def inspect_word_document(path: str | Path) -> ToolResult:
     }
 
     return ToolResult(
-        job_id=_job_id(),
+        job_id=job_id(),
         status="succeeded",
         tool=INSPECT_TOOL_NAME,
         validation=ValidationReport(
@@ -139,12 +138,12 @@ def extract_word_tables(path: str | Path) -> ToolResult:
     resolved = Path(path)
     preflight = inspect_office_file(resolved)
     if preflight.status == "failed":
-        return _failed(
+        return failed_result(
             EXTRACT_TABLES_TOOL_NAME,
             preflight.error or OKofficeError(code="unsupported_file_type", message="Word table extraction failed."),
         )
     if preflight.usage["format"]["detected_format"] != "docx":
-        return _failed(
+        return failed_result(
             EXTRACT_TABLES_TOOL_NAME,
             OKofficeError(
                 code="unsupported_file_type",
@@ -156,7 +155,7 @@ def extract_word_tables(path: str | Path) -> ToolResult:
     source_path = Path(preflight.usage["file"]["path"])
     document_root = read_xml(source_path, "word/document.xml")
     if document_root is None:
-        return _failed(
+        return failed_result(
             EXTRACT_TABLES_TOOL_NAME,
             OKofficeError(
                 code="unsupported_file_type",
@@ -172,7 +171,7 @@ def extract_word_tables(path: str | Path) -> ToolResult:
     cell_count = sum(len(row["cells"]) for table in tables for row in table["rows"])
 
     return ToolResult(
-        job_id=_job_id(),
+        job_id=job_id(),
         status="succeeded",
         tool=EXTRACT_TABLES_TOOL_NAME,
         validation=ValidationReport(
@@ -357,15 +356,7 @@ def _word_warnings(preflight_warnings: list[str], *, package: dict[str, Any]) ->
     warnings = list(preflight_warnings)
     if package.get("has_external_relationships"):
         warnings.append("External Word relationship targets were detected.")
-    return _dedupe(warnings)
-
-
-def _dedupe(values: list[str]) -> list[str]:
-    result: list[str] = []
-    for value in values:
-        if value and value not in result:
-            result.append(value)
-    return result
+    return dedupe_strings(warnings)
 
 
 def _table_payload(source_path: Path, table: object, table_index: int) -> dict[str, object]:
@@ -398,17 +389,3 @@ def _table_payload(source_path: Path, table: object, table_index: int) -> dict[s
 def _word_text(element: object) -> str:
     parts = [node.text or "" for node in element.findall(".//w:t", WORD_NS)]
     return "".join(parts).strip()
-
-
-def _failed(tool: str, error: OKofficeError) -> ToolResult:
-    return ToolResult(
-        job_id=_job_id(),
-        status="failed",
-        tool=tool,
-        warnings=[error.message],
-        error=error,
-    )
-
-
-def _job_id() -> str:
-    return f"job_{uuid4().hex[:16]}"

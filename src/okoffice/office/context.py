@@ -11,6 +11,7 @@ from uuid import uuid4
 
 from okoffice.artifacts.store import build_artifact
 from okoffice.office.deck import inspect_deck_presentation
+from okoffice.office.shared import failed_result
 from okoffice.office.inspect import inspect_office_file
 from okoffice.office.sheet import extract_sheet_tables, inspect_sheet_workbook
 from okoffice.office.word import extract_word_tables, inspect_word_document
@@ -30,11 +31,12 @@ def build_office_context_packet(
     intent: str | None = None,
 ) -> ToolResult:
     if not files:
-        return _failed(
+        return failed_result(
+            TOOL_NAME,
             OKofficeError(
                 code="unsafe_input_rejected",
                 message="office.context.build_packet requires at least one input file.",
-            )
+            ),
         )
 
     output: Path | None = None
@@ -42,7 +44,7 @@ def build_office_context_packet(
         try:
             output = resolve_output_path(output_path)
         except OKofficeException as exc:
-            return _failed(exc.to_error())
+            return failed_result(TOOL_NAME, exc.to_error())
 
     items: list[dict[str, Any]] = []
     source_nodes: list[dict[str, Any]] = []
@@ -53,12 +55,13 @@ def build_office_context_packet(
     for index, file_path in enumerate(files, start=1):
         inspect_result = inspect_office_file(file_path)
         if inspect_result.status == "failed":
-            return _failed(
+            return failed_result(
+                TOOL_NAME,
                 inspect_result.error
                 or OKofficeError(
                     code="unsupported_file_type",
                     message=f"Unable to inspect context source: {file_path}",
-                )
+                ),
             )
 
         item, file_node, native_node, edge = _context_item_from_inspect(inspect_result, index)
@@ -743,13 +746,3 @@ def _validation_status(checks: list[ValidationCheck]) -> str:
     if all(status == "skipped" for status in statuses):
         return "skipped"
     return "passed"
-
-
-def _failed(error: OKofficeError) -> ToolResult:
-    return ToolResult(
-        job_id=f"job_{uuid4().hex[:16]}",
-        status="failed",
-        tool=TOOL_NAME,
-        error=error,
-        warnings=[error.message],
-    )

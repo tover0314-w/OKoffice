@@ -12,7 +12,7 @@ from okoffice.security.paths import resolve_output_path
 
 DEFAULT_SAFE_ROOT = "."
 RECOMMENDED_MCP_TOOLS = [
-    "agentpdf_tool_manifest",
+    "okoffice_tool_manifest",
     "pdf_context_packet",
     "pdf_context_classify",
     "pdf_target_validate_profile",
@@ -69,7 +69,7 @@ def setup_openclaw(
         tool=tool,
         artifacts=artifacts,
         usage=usage,
-        next_recommended_tools=["agentpdf_tool_manifest", "pdf_context_packet"],
+        next_recommended_tools=["okoffice_tool_manifest", "pdf_context_packet"],
     )
 
 

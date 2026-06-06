@@ -12,7 +12,7 @@ def test_okoffice_target_manifest_separates_target_and_legacy_tools() -> None:
 
     assert manifest["product"] == "okoffice"
     assert manifest["manifest_version"] == "0.1"
-    assert manifest["compatibility_manifest"]["product"] == "agentpdf"
+    assert manifest["compatibility_manifest"]["product"] == "okoffice"
     assert manifest["compatibility_manifest"]["namespace"] == "pdf"
     assert manifest["compatibility_manifest"]["role"] == "legacy_compat"
     assert manifest["compatibility_manifest"]["surface"] == "slim_summary"

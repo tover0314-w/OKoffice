@@ -136,15 +136,21 @@ DEFAULT_TARGET_PROFILES: dict[str, dict[str, Any]] = {
         "name": "Resume PDF",
         "layout_mode": "document",
         "style_pack": "resume_modern",
-        "sections": ["Header", "Summary", "Skills", "Experience", "Source Notes"],
+        "sections": ["Header", "Summary", "Skills", "Experience", "Education", "Publications", "Source Notes"],
         "layout_slots": {
             "header": {"accepts": ["section"], "required": True},
-            "summary": {"accepts": ["section"], "required": True},
-            "skills": {"accepts": ["section", "table"]},
-            "experience": {"accepts": ["section", "citation"], "repeats": True},
+            "summary": {"accepts": ["section", "text_entry"]},
+            "skills": {"accepts": ["section", "bullet_entry", "table"]},
+            "experience": {"accepts": ["section", "experience_entry"], "repeats": True},
+            "education": {"accepts": ["section", "education_entry"], "repeats": True},
+            "publications": {"accepts": ["section", "publication_entry"], "repeats": True},
             "source_notes": {"accepts": ["citation", "pdf_reference"]},
         },
-        "accepted_block_types": ["section", "table", "citation", "pdf_reference"],
+        "accepted_block_types": [
+            "section", "table", "citation", "pdf_reference",
+            "experience_entry", "education_entry", "publication_entry",
+            "normal_entry", "one_line_entry", "bullet_entry", "text_entry",
+        ],
         "accepted_context_types": ["text", "document", "pdf", "web_link", "data"],
         "validation_required": ["render_check", "evidence_coverage_report"],
     },
@@ -236,6 +242,14 @@ KNOWN_BLOCK_TYPES = {
     "video_reference",
     "media_reference",
     "citation",
+    # Resume-specific block types
+    "experience_entry",
+    "education_entry",
+    "publication_entry",
+    "normal_entry",
+    "one_line_entry",
+    "bullet_entry",
+    "text_entry",
 }
 KNOWN_CONTEXT_TYPES = {"text", "document", "code", "data", "image", "pdf", "audio", "video", "media", "web_link", "file"}
 
@@ -261,6 +275,10 @@ def compose_from_context(
     if profile.get("layout_mode") == "slides":
         slides, composition_ir, source_map, coverage = _compose_slides(packet, profile)
         markdown = _slides_to_outline(slides)
+        render_plan = _render_plan(profile, markdown=markdown, slides=slides)
+    elif profile.get("profile_id") == "resume_pdf":
+        markdown, composition_ir, source_map, coverage = _compose_resume(packet, profile)
+        slides = []
         render_plan = _render_plan(profile, markdown=markdown, slides=slides)
     else:
         markdown, composition_ir, source_map, coverage = _compose_markdown(packet, profile)
@@ -1182,6 +1200,220 @@ def _slides_to_outline(slides: list[dict[str, Any]]) -> str:
                 lines.append(f"- {item}")
         lines.append("")
     return "\n".join(lines).strip() + "\n"
+
+
+def _compose_resume(
+    packet: dict[str, Any],
+    profile: dict[str, Any],
+) -> tuple[str, dict[str, Any], list[dict[str, Any]], dict[str, Any]]:
+    """Compose a resume from context items containing resume data.
+
+    Scans context items for resume-structured data (typed entries, sections),
+    groups them into standard ATS sections, and generates section-aware Markdown
+    with standard headers for reliable ATS parsing.
+    """
+    items = list(packet.get("items", []))
+    blocks: list[dict[str, Any]] = []
+    source_map: list[dict[str, Any]] = []
+
+    resume_sections: dict[str, list[dict[str, Any]]] = {}
+    contact_items: list[dict[str, Any]] = []
+    name_items: list[dict[str, Any]] = []
+
+    for item in items:
+        content = item.get("content") or {}
+        item_type = item.get("type", "")
+        role = item.get("role", "")
+
+        if role == "resume_data" or item_type == "resume_data":
+            data = content if isinstance(content, dict) else {}
+            if data.get("name"):
+                name_items.append(data)
+            if data.get("contact"):
+                contact_items.append(data["contact"])
+            for section in data.get("sections", []):
+                section_title = section.get("title", "Experience")
+                key = section_title.lower().replace(" ", "_")
+                if key not in resume_sections:
+                    resume_sections[key] = []
+                resume_sections[key].extend(section.get("entries", []))
+                source_map.append({
+                    "block_id": f"sec_{key}",
+                    "context_item_id": item.get("context_item_id", ""),
+                    "source_ref": item.get("source_ref", ""),
+                    "type": item_type,
+                    "label": section_title,
+                })
+        elif role in ("name", "candidate_name") or item_type == "name":
+            name_items.append({"name": content.get("text", str(content))} if isinstance(content, dict) else {"name": str(content)})
+        elif role in ("contact", "contact_info") or item_type == "contact":
+            contact_items.append(content if isinstance(content, dict) else {})
+        else:
+            section_key = _infer_resume_section(item)
+            if section_key:
+                if section_key not in resume_sections:
+                    resume_sections[section_key] = []
+                resume_sections[section_key].append(content)
+
+    name = ""
+    if name_items:
+        name = name_items[0].get("name", "")
+
+    contact = {}
+    if contact_items:
+        contact = contact_items[0]
+
+    lines: list[str] = []
+
+    if name:
+        lines.append(f"# {name}")
+    headline = contact_items[0].get("headline", "") if contact_items else ""
+    if headline:
+        lines.append(headline)
+
+    contact_parts: list[str] = []
+    for key in ("email", "phone", "location", "linkedin", "website", "github"):
+        val = contact.get(key)
+        if val:
+            contact_parts.append(str(val))
+    if contact_parts:
+        lines.append(" | ".join(contact_parts))
+    lines.append("")
+
+    section_order = [
+        ("professional_summary", "Professional Summary"),
+        ("summary", "Summary"),
+        ("objective", "Objective"),
+        ("work_experience", "Work Experience"),
+        ("professional_experience", "Professional Experience"),
+        ("experience", "Experience"),
+        ("education", "Education"),
+        ("skills", "Skills"),
+        ("technical_skills", "Technical Skills"),
+        ("certifications", "Certifications"),
+        ("publications", "Publications"),
+        ("projects", "Projects"),
+        ("awards", "Awards"),
+        ("volunteer_experience", "Volunteer Experience"),
+        ("languages", "Languages"),
+    ]
+
+    covered_keys: set[str] = set()
+    for key, title in section_order:
+        if key in resume_sections:
+            entries = resume_sections[key]
+            lines.append(f"## {title}")
+            for entry in entries:
+                lines.extend(_render_resume_entry(entry))
+            lines.append("")
+            covered_keys.add(key)
+            blocks.append(_block(key, title, [
+                sm["source_ref"] for sm in source_map
+                if sm.get("block_id") == f"sec_{key}"
+            ]))
+
+    for key, entries in resume_sections.items():
+        if key not in covered_keys:
+            lines.append(f"## {key.replace('_', ' ').title()}")
+            for entry in entries:
+                lines.extend(_render_resume_entry(entry))
+            lines.append("")
+            blocks.append(_block(key, key.replace("_", " ").title(), []))
+
+    covered_refs = sorted({sm["source_ref"] for sm in source_map if sm["source_ref"]})
+    coverage = {
+        "context_item_count": len(items),
+        "covered_context_items": len(covered_refs),
+        "source_ref_count": len(covered_refs),
+        "coverage_ratio": 1.0 if not items else round(len(covered_refs) / len(items), 4),
+        "resume_sections": len(resume_sections),
+        "resume_entries": sum(len(e) for e in resume_sections.values()),
+    }
+    composition_ir = {
+        "composition_version": "0.1",
+        "composition_id": f"cmp_{uuid4().hex[:16]}",
+        "context_packet_id": packet.get("context_packet_id", ""),
+        "target_profile_id": profile.get("profile_id", "resume_pdf"),
+        "blocks": blocks,
+    }
+    return "\n".join(lines).strip() + "\n", composition_ir, source_map, coverage
+
+
+def _infer_resume_section(item: dict[str, Any]) -> str | None:
+    """Infer which resume section a context item belongs to."""
+    role = item.get("role", "")
+    item_type = item.get("type", "")
+    label = str(item.get("label", "")).lower()
+    role_lower = role.lower()
+    type_lower = item_type.lower()
+
+    if any(k in role_lower or k in type_lower or k in label for k in ("skill", "competenc")):
+        return "skills"
+    if any(k in role_lower or k in type_lower or k in label for k in ("experience", "work", "career", "job")):
+        return "work_experience"
+    if any(k in role_lower or k in type_lower or k in label for k in ("education", "degree", "academic")):
+        return "education"
+    if any(k in role_lower or k in type_lower or k in label for k in ("certif", "license")):
+        return "certifications"
+    if any(k in role_lower or k in type_lower or k in label for k in ("publication", "paper", "research")):
+        return "publications"
+    if any(k in role_lower or k in type_lower or k in label for k in ("project", "portfolio")):
+        return "projects"
+    if any(k in role_lower or k in type_lower or k in label for k in ("summary", "objective", "profile")):
+        return "professional_summary"
+    return None
+
+
+def _render_resume_entry(entry: dict[str, Any] | str) -> list[str]:
+    """Render a single resume entry as Markdown lines."""
+    if isinstance(entry, str):
+        return [entry, ""]
+    if not isinstance(entry, dict):
+        return [str(entry), ""]
+
+    lines: list[str] = []
+    etype = entry.get("entry_type", "normal")
+    title = entry.get("title", "")
+    org = entry.get("organization", "")
+    content = entry.get("content", "")
+
+    if etype == "text":
+        return [content, ""]
+
+    if title:
+        line = f"**{title}**"
+        if org:
+            line += f", {org}"
+        loc = entry.get("location")
+        if loc:
+            line += f", {loc}"
+        lines.append(line)
+
+    date_range = entry.get("date_range")
+    if date_range and isinstance(date_range, dict):
+        start = date_range.get("start", "")
+        end = date_range.get("end", "")
+        if start:
+            lines.append(f"{start} - {end}" if end else start)
+
+    if etype == "education":
+        gpa = entry.get("gpa")
+        if gpa:
+            lines.append(f"GPA: {gpa}")
+
+    highlights = entry.get("highlights", [])
+    for h in highlights:
+        lines.append(f"- {h}")
+
+    if etype == "one_line":
+        detail = entry.get("detail")
+        return [f"{title} — {detail}" if detail else title, ""]
+
+    if etype == "bullet" and not title:
+        return [f"- {h}" for h in highlights] + [""]
+
+    lines.append("")
+    return lines
 
 
 def _compose_markdown(

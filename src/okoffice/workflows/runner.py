@@ -31,6 +31,7 @@ SUPPORTED_LOCAL_WORKFLOW_TOOLS = {
     "office.workflow.extract_to_sheet",
     "office.workflow.plan",
     "office.workflow.sheet_to_deck",
+    "office.workflow.source_to_board_pack",
     "office.workers.status",
     "pdf.inspect.document",
     "pdf.inspect.pages",
@@ -86,6 +87,8 @@ SUPPORTED_LOCAL_WORKFLOW_TOOLS = {
     "sheet.read.workbook",
     "sheet.validate.workbook",
     "sheet.validation.formulas",
+    "sheet.validation.model_checks",
+    "sheet.validation.external_links",
     "sheet.write.workbook",
     "word.create.report",
     "word.extract.tables",
@@ -449,6 +452,18 @@ def _run_local_step(tool: str, payload: dict[str, Any]) -> ToolResult:
             output_path=payload.get("output_path", payload.get("output", ".okoffice-out/board-pack.zip")),
             title=str(payload["title"]) if payload.get("title") is not None else None,
         )
+    if tool == "office.workflow.source_to_board_pack":
+        files = payload.get("files", payload.get("input_paths", payload.get("paths", [])))
+        schema = payload.get("schema", payload.get("extraction_schema", {}))
+        return runner.run_office_workflow_source_to_board_pack(
+            files=files if isinstance(files, list) else [],
+            schema=schema if isinstance(schema, (dict, str)) else {},
+            output_path=payload.get("output_path", payload.get("output", ".okoffice-out/board-pack.zip")),
+            title=str(payload["title"]) if payload.get("title") is not None else None,
+            intent=str(payload["intent"]) if payload.get("intent") is not None else None,
+            deck_title=str(payload["deck_title"]) if payload.get("deck_title") is not None else None,
+            max_rows_per_sheet=int(payload.get("max_rows_per_sheet", payload.get("max_rows", 100))),
+        )
     if tool == "office.workers.status":
         feature_flags = payload.get("feature_flags")
         command_paths = payload.get("command_paths")
@@ -527,6 +542,10 @@ def _run_local_step(tool: str, payload: dict[str, Any]) -> ToolResult:
         return runner.run_sheet_validate_workbook(payload.get("path", payload.get("input_path", "")))
     if tool == "sheet.validation.formulas":
         return runner.run_sheet_validate_formulas(payload.get("path", payload.get("input_path", "")))
+    if tool == "sheet.validation.model_checks":
+        return runner.run_sheet_validate_model_checks(payload.get("path", payload.get("input_path", "")))
+    if tool == "sheet.validation.external_links":
+        return runner.run_sheet_validate_external_links(payload.get("path", payload.get("input_path", "")))
     if tool == "deck.create.from_outline":
         outline = payload.get("outline", payload)
         return runner.run_deck_create_from_outline(
@@ -888,6 +907,10 @@ def _generated_placeholder_value(
         "<deck.pdf>": "deck.pdf",
         "<highlighted.pdf>": "highlighted.pdf",
         "<rag-report.pdf>": "rag-report.pdf",
+        "<evidence.xlsx>": "evidence.xlsx",
+        "<deck.pptx>": "deck.pptx",
+        "<board-pack.zip>": "board-pack.zip",
+        "<context.packet.json>": "context.packet.json",
     }
     if placeholder in filename_by_placeholder:
         artifact_dir.mkdir(parents=True, exist_ok=True)
@@ -946,6 +969,19 @@ def _record_result_bindings(tool: str, result: ToolResult, bindings: dict[str, A
             bindings["<repaired.pdf>"] = path
         if tool == "pdf.ai.rag.export_report" and artifact.mime_type == "application/pdf":
             bindings["<rag-report.pdf>"] = path
+    if tool == "office.workflow.docset_to_sheet":
+        if artifact.mime_type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
+            bindings["<evidence.xlsx>"] = path
+        if artifact.mime_type == "application/json" and "context" in Path(path).name:
+            bindings["<context.packet.json>"] = path
+    if tool == "office.workflow.sheet_to_deck":
+        if artifact.mime_type == "application/vnd.openxmlformats-officedocument.presentationml.presentation":
+            bindings["<deck.pptx>"] = path
+        if "text/html" in (artifact.mime_type or ""):
+            bindings["<deck.html>"] = path
+    if tool in ("office.workflow.board_pack", "office.workflow.source_to_board_pack"):
+        if artifact.mime_type == "application/zip":
+            bindings["<board-pack.zip>"] = path
 
 
 def _find_unresolved_placeholder(value: Any) -> str | None:

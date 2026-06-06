@@ -73,6 +73,7 @@ class OKofficeError(OKofficeModel):
     code: str
     message: str
     retry_hint: str | None = None
+    recovery_hint: str | None = None
     details: dict[str, Any] = Field(default_factory=dict)
 
 

@@ -1,0 +1,895 @@
+{
+  "$defs": {
+    "BulletEntry": {
+      "description": "Bullet-list only entry \u2014 skill groups, interest lists.\n\nAuto-detected when: has only 'highlights' list with no other characteristic fields.",
+      "properties": {
+        "entry_id": {
+          "description": "Unique identifier for this entry",
+          "title": "Entry Id",
+          "type": "string"
+        },
+        "entry_type": {
+          "const": "bullet",
+          "default": "bullet",
+          "title": "Entry Type",
+          "type": "string"
+        },
+        "highlights": {
+          "description": "Required bullet items (e.g. ['Python', 'TypeScript', 'Go'])",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Highlights",
+          "type": "array"
+        }
+      },
+      "required": [
+        "highlights"
+      ],
+      "title": "BulletEntry",
+      "type": "object"
+    },
+    "ContactInfo": {
+      "description": "Contact information displayed at the top of a resume.",
+      "properties": {
+        "email": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Primary email address (e.g. 'alex@example.com')",
+          "title": "Email"
+        },
+        "phone": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Phone number in display format (e.g. '+1 (555) 123-4567')",
+          "title": "Phone"
+        },
+        "location": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "City, State/Country for display (e.g. 'San Francisco, CA')",
+          "title": "Location"
+        },
+        "linkedin": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "LinkedIn profile URL",
+          "title": "Linkedin"
+        },
+        "website": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Personal website or portfolio URL",
+          "title": "Website"
+        },
+        "github": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "GitHub profile URL",
+          "title": "Github"
+        }
+      },
+      "title": "ContactInfo",
+      "type": "object"
+    },
+    "EducationEntry": {
+      "description": "Education entry (degree, certification, coursework).\n\nAuto-detected when: has 'gpa' or 'honors' field, or title contains degree keywords.",
+      "properties": {
+        "entry_id": {
+          "description": "Unique identifier for this entry (e.g. 'exp_1', 'edu_3')",
+          "title": "Entry Id",
+          "type": "string"
+        },
+        "title": {
+          "description": "Degree or program name (e.g. 'B.S. Computer Science')",
+          "title": "Title",
+          "type": "string"
+        },
+        "organization": {
+          "description": "Institution name (e.g. 'Stanford University')",
+          "title": "Organization",
+          "type": "string"
+        },
+        "location": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "City, State/Country (e.g. 'New York, NY')",
+          "title": "Location"
+        },
+        "date_range": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ResumeDateRange"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Start/end dates in Month YYYY format"
+        },
+        "url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Relevant URL (project link, publication DOI, etc.)",
+          "title": "Url"
+        },
+        "highlights": {
+          "description": "Bullet points or description lines for this entry",
+          "items": {
+            "type": "string"
+          },
+          "title": "Highlights",
+          "type": "array"
+        },
+        "entry_type": {
+          "const": "education",
+          "default": "education",
+          "title": "Entry Type",
+          "type": "string"
+        },
+        "gpa": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "GPA if notable (e.g. '3.9/4.0')",
+          "title": "Gpa"
+        },
+        "honors": {
+          "description": "Honors, awards, or relevant coursework",
+          "items": {
+            "type": "string"
+          },
+          "title": "Honors",
+          "type": "array"
+        }
+      },
+      "required": [
+        "title",
+        "organization"
+      ],
+      "title": "EducationEntry",
+      "type": "object"
+    },
+    "ExperienceEntry": {
+      "description": "Professional work experience entry.\n\nAuto-detected when: has 'organization' (company) + 'date_range' + 2+ highlights.",
+      "properties": {
+        "entry_id": {
+          "description": "Unique identifier for this entry (e.g. 'exp_1', 'edu_3')",
+          "title": "Entry Id",
+          "type": "string"
+        },
+        "title": {
+          "description": "Job title (e.g. 'Senior Software Engineer', 'Product Manager')",
+          "title": "Title",
+          "type": "string"
+        },
+        "organization": {
+          "description": "Company or employer name",
+          "title": "Organization",
+          "type": "string"
+        },
+        "location": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "City, State/Country (e.g. 'New York, NY')",
+          "title": "Location"
+        },
+        "date_range": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ResumeDateRange"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Start/end dates in Month YYYY format"
+        },
+        "url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Relevant URL (project link, publication DOI, etc.)",
+          "title": "Url"
+        },
+        "highlights": {
+          "description": "Bullet points or description lines for this entry",
+          "items": {
+            "type": "string"
+          },
+          "title": "Highlights",
+          "type": "array"
+        },
+        "entry_type": {
+          "const": "experience",
+          "default": "experience",
+          "title": "Entry Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "title",
+        "organization"
+      ],
+      "title": "ExperienceEntry",
+      "type": "object"
+    },
+    "NormalEntry": {
+      "description": "Standard content entry with title, organization, date, and bullets.\n\nUsed for projects, volunteer work, or any entry that doesn't fit\na more specific type. Default fallback type.",
+      "properties": {
+        "entry_id": {
+          "description": "Unique identifier for this entry (e.g. 'exp_1', 'edu_3')",
+          "title": "Entry Id",
+          "type": "string"
+        },
+        "title": {
+          "description": "Primary title \u2014 job title, degree name, publication title, etc.",
+          "title": "Title",
+          "type": "string"
+        },
+        "organization": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Company, university, publisher, or institution name",
+          "title": "Organization"
+        },
+        "location": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "City, State/Country (e.g. 'New York, NY')",
+          "title": "Location"
+        },
+        "date_range": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ResumeDateRange"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Start/end dates in Month YYYY format"
+        },
+        "url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Relevant URL (project link, publication DOI, etc.)",
+          "title": "Url"
+        },
+        "highlights": {
+          "description": "Bullet points or description lines for this entry",
+          "items": {
+            "type": "string"
+          },
+          "title": "Highlights",
+          "type": "array"
+        },
+        "entry_type": {
+          "const": "normal",
+          "default": "normal",
+          "title": "Entry Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "title"
+      ],
+      "title": "NormalEntry",
+      "type": "object"
+    },
+    "NumberedEntry": {
+      "description": "Numbered list entry \u2014 patents, ordered achievements.",
+      "properties": {
+        "entry_id": {
+          "description": "Unique identifier for this entry (e.g. 'exp_1', 'edu_3')",
+          "title": "Entry Id",
+          "type": "string"
+        },
+        "title": {
+          "description": "Primary title \u2014 job title, degree name, publication title, etc.",
+          "title": "Title",
+          "type": "string"
+        },
+        "organization": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Company, university, publisher, or institution name",
+          "title": "Organization"
+        },
+        "location": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "City, State/Country (e.g. 'New York, NY')",
+          "title": "Location"
+        },
+        "date_range": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ResumeDateRange"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Start/end dates in Month YYYY format"
+        },
+        "url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Relevant URL (project link, publication DOI, etc.)",
+          "title": "Url"
+        },
+        "highlights": {
+          "description": "Bullet points or description lines for this entry",
+          "items": {
+            "type": "string"
+          },
+          "title": "Highlights",
+          "type": "array"
+        },
+        "entry_type": {
+          "const": "numbered",
+          "default": "numbered",
+          "title": "Entry Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "title"
+      ],
+      "title": "NumberedEntry",
+      "type": "object"
+    },
+    "OneLineEntry": {
+      "description": "Single line entry \u2014 certifications, languages, brief mentions.\n\nAuto-detected when: only has 'title', no other characteristic fields.",
+      "properties": {
+        "entry_id": {
+          "description": "Unique identifier for this entry",
+          "title": "Entry Id",
+          "type": "string"
+        },
+        "entry_type": {
+          "const": "one_line",
+          "default": "one_line",
+          "title": "Entry Type",
+          "type": "string"
+        },
+        "title": {
+          "description": "The single line of content (e.g. 'AWS Solutions Architect')",
+          "title": "Title",
+          "type": "string"
+        },
+        "detail": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional right-aligned detail (e.g. '2023', 'Native')",
+          "title": "Detail"
+        }
+      },
+      "required": [
+        "title"
+      ],
+      "title": "OneLineEntry",
+      "type": "object"
+    },
+    "PublicationEntry": {
+      "description": "Publication, paper, or speaking engagement.\n\nAuto-detected when: has 'authors' or 'venue' field.",
+      "properties": {
+        "entry_id": {
+          "description": "Unique identifier for this entry (e.g. 'exp_1', 'edu_3')",
+          "title": "Entry Id",
+          "type": "string"
+        },
+        "title": {
+          "description": "Publication or talk title",
+          "title": "Title",
+          "type": "string"
+        },
+        "organization": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Company, university, publisher, or institution name",
+          "title": "Organization"
+        },
+        "location": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "City, State/Country (e.g. 'New York, NY')",
+          "title": "Location"
+        },
+        "date_range": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ResumeDateRange"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Start/end dates in Month YYYY format"
+        },
+        "url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Relevant URL (project link, publication DOI, etc.)",
+          "title": "Url"
+        },
+        "highlights": {
+          "description": "Bullet points or description lines for this entry",
+          "items": {
+            "type": "string"
+          },
+          "title": "Highlights",
+          "type": "array"
+        },
+        "entry_type": {
+          "const": "publication",
+          "default": "publication",
+          "title": "Entry Type",
+          "type": "string"
+        },
+        "authors": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Author list (e.g. 'A. Smith, B. Jones, C. Lee')",
+          "title": "Authors"
+        },
+        "venue": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Journal, conference, or event name",
+          "title": "Venue"
+        }
+      },
+      "required": [
+        "title"
+      ],
+      "title": "PublicationEntry",
+      "type": "object"
+    },
+    "ResumeDateRange": {
+      "description": "Date range with ATS-compliant formatting.",
+      "properties": {
+        "start": {
+          "description": "Start date in 'Month YYYY' format (e.g. 'January 2022', 'Sep 2020'). ATS parsers read this reliably.",
+          "title": "Start",
+          "type": "string"
+        },
+        "end": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "End date in 'Month YYYY' format, or 'Present' for current positions. Leave empty for single-date entries.",
+          "title": "End"
+        }
+      },
+      "required": [
+        "start"
+      ],
+      "title": "ResumeDateRange",
+      "type": "object"
+    },
+    "ResumeSection": {
+      "description": "A resume section containing entries of a specific type.",
+      "properties": {
+        "section_id": {
+          "description": "Unique section identifier (e.g. 'experience', 'education')",
+          "title": "Section Id",
+          "type": "string"
+        },
+        "title": {
+          "description": "Section header displayed to the reader. For ATS compatibility, use standard names: 'Work Experience', 'Education', 'Skills', 'Certifications', 'Projects', 'Publications', 'Languages', 'Volunteer Experience', 'Awards', 'Summary', 'Professional Summary'.",
+          "title": "Title",
+          "type": "string"
+        },
+        "entry_type": {
+          "description": "Expected entry type for entries in this section",
+          "title": "Entry Type",
+          "type": "string"
+        },
+        "entries": {
+          "description": "Ordered list of entries in this section",
+          "items": {
+            "discriminator": {
+              "mapping": {
+                "bullet": "#/$defs/BulletEntry",
+                "education": "#/$defs/EducationEntry",
+                "experience": "#/$defs/ExperienceEntry",
+                "normal": "#/$defs/NormalEntry",
+                "numbered": "#/$defs/NumberedEntry",
+                "one_line": "#/$defs/OneLineEntry",
+                "publication": "#/$defs/PublicationEntry",
+                "reversed_numbered": "#/$defs/ReversedNumberedEntry",
+                "text": "#/$defs/TextEntry"
+              },
+              "propertyName": "entry_type"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/ExperienceEntry"
+              },
+              {
+                "$ref": "#/$defs/EducationEntry"
+              },
+              {
+                "$ref": "#/$defs/PublicationEntry"
+              },
+              {
+                "$ref": "#/$defs/NormalEntry"
+              },
+              {
+                "$ref": "#/$defs/OneLineEntry"
+              },
+              {
+                "$ref": "#/$defs/BulletEntry"
+              },
+              {
+                "$ref": "#/$defs/TextEntry"
+              },
+              {
+                "$ref": "#/$defs/NumberedEntry"
+              },
+              {
+                "$ref": "#/$defs/ReversedNumberedEntry"
+              }
+            ]
+          },
+          "title": "Entries",
+          "type": "array"
+        },
+        "order": {
+          "default": 0,
+          "description": "Display order \u2014 0 appears first",
+          "title": "Order",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "section_id",
+        "title",
+        "entry_type"
+      ],
+      "title": "ResumeSection",
+      "type": "object"
+    },
+    "ReversedNumberedEntry": {
+      "description": "Reverse-chronological numbered list \u2014 talks, publications by count.",
+      "properties": {
+        "entry_id": {
+          "description": "Unique identifier for this entry (e.g. 'exp_1', 'edu_3')",
+          "title": "Entry Id",
+          "type": "string"
+        },
+        "title": {
+          "description": "Primary title \u2014 job title, degree name, publication title, etc.",
+          "title": "Title",
+          "type": "string"
+        },
+        "organization": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Company, university, publisher, or institution name",
+          "title": "Organization"
+        },
+        "location": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "City, State/Country (e.g. 'New York, NY')",
+          "title": "Location"
+        },
+        "date_range": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ResumeDateRange"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Start/end dates in Month YYYY format"
+        },
+        "url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Relevant URL (project link, publication DOI, etc.)",
+          "title": "Url"
+        },
+        "highlights": {
+          "description": "Bullet points or description lines for this entry",
+          "items": {
+            "type": "string"
+          },
+          "title": "Highlights",
+          "type": "array"
+        },
+        "entry_type": {
+          "const": "reversed_numbered",
+          "default": "reversed_numbered",
+          "title": "Entry Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "title"
+      ],
+      "title": "ReversedNumberedEntry",
+      "type": "object"
+    },
+    "TextEntry": {
+      "description": "Freeform paragraph text \u2014 professional summary, objective.\n\nAuto-detected when: has 'content' field.",
+      "properties": {
+        "entry_id": {
+          "description": "Unique identifier for this entry",
+          "title": "Entry Id",
+          "type": "string"
+        },
+        "entry_type": {
+          "const": "text",
+          "default": "text",
+          "title": "Entry Type",
+          "type": "string"
+        },
+        "content": {
+          "description": "Paragraph text content",
+          "title": "Content",
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ],
+      "title": "TextEntry",
+      "type": "object"
+    }
+  },
+  "description": "Complete structured resume data model.\n\nThis is the single source of truth for resume content.\nThe rendering pipeline reads this model and applies design tokens\nand layout rules to produce the final PDF.",
+  "properties": {
+    "name": {
+      "description": "Full name of the candidate (e.g. 'Alexandra Chen')",
+      "title": "Name",
+      "type": "string"
+    },
+    "headline": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Professional headline or tagline (e.g. 'Senior Backend Engineer')",
+      "title": "Headline"
+    },
+    "photo_url": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Optional photo URL or local file path",
+      "title": "Photo Url"
+    },
+    "contact": {
+      "$ref": "#/$defs/ContactInfo",
+      "description": "Contact information displayed at the top of the resume"
+    },
+    "sections": {
+      "description": "Ordered resume sections, each containing typed entries",
+      "items": {
+        "$ref": "#/$defs/ResumeSection"
+      },
+      "title": "Sections",
+      "type": "array"
+    },
+    "metadata": {
+      "additionalProperties": true,
+      "description": "Optional metadata (locale, custom fields, template hints)",
+      "title": "Metadata",
+      "type": "object"
+    }
+  },
+  "required": [
+    "name"
+  ],
+  "title": "ResumeData",
+  "type": "object"
+}

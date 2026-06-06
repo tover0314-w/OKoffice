@@ -42,6 +42,7 @@ class OKofficeException(Exception):
     code: str
     message: str
     retry_hint: str | None = None
+    recovery_hint: str | None = None
     details: dict[str, Any] | None = None
 
     def to_error(self) -> OKofficeError:
@@ -49,5 +50,6 @@ class OKofficeException(Exception):
             code=self.code,
             message=self.message,
             retry_hint=self.retry_hint,
+            recovery_hint=self.recovery_hint,
             details=self.details or {},
         )

@@ -105,16 +105,67 @@ from okoffice.office.sheet import (
     inspect_sheet_workbook,
     profile_sheet_data,
     read_sheet_workbook,
+    validate_sheet_external_links,
+    validate_sheet_model_checks,
     validate_sheet_workbook,
     write_sheet_workbook,
 )
+from okoffice.office.sheet_patch import (
+    patch_sheet_cells,
+    patch_sheet_chart,
+    patch_sheet_formulas,
+    patch_sheet_table,
+)
+from okoffice.office.sheet_review import (
+    review_sheet_model,
+    review_sheet_number_consistency,
+)
 from okoffice.office.validation import validate_office_package, validate_sheet_formulas
 from okoffice.office.word import extract_word_tables, inspect_word_document
+from okoffice.office.sheet_extract import (
+    extract_sheet_charts,
+    extract_sheet_comments,
+    extract_sheet_formulas,
+    extract_sheet_named_ranges,
+    extract_sheet_pivots,
+)
+from okoffice.office.deck_extract import (
+    extract_deck_charts,
+    extract_deck_media,
+    extract_deck_notes,
+    extract_deck_shapes,
+    extract_deck_text,
+    extract_deck_theme,
+)
+from okoffice.office.deck_review import review_deck_claims, review_deck_story
+from okoffice.office.deck_validation import validate_deck_notes, validate_deck_placeholders
+from okoffice.office.word_review import review_word_style
+from okoffice.office.word_validation import validate_word_accessibility, validate_word_metadata
+from okoffice.office.word_extract import (
+    extract_word_comments,
+    extract_word_fields,
+    extract_word_outline,
+    extract_word_revisions,
+    extract_word_styles,
+    extract_word_text,
+)
 from okoffice.office.word_patch import apply_word_patch, plan_word_patch
+from okoffice.office.word_create import create_word_document, create_word_memo
 from okoffice.office.word_report import create_word_report
 from okoffice.office.word_validation import validate_word_document
 from okoffice.office.workers import inspect_office_workers
-from okoffice.office.workflows import board_pack, docset_to_sheet, extract_to_sheet, sheet_to_deck, verify_board_pack
+from okoffice.office.bundle_report import report_office_bundle, validate_office_output
+from okoffice.office.evidence import classify_office_context, map_office_evidence_sources, report_office_evidence_coverage
+from okoffice.office.evidence_verify import verify_office_evidence_citations
+from okoffice.office.office_batch import inspect_office_batch
+from okoffice.office.office_extract import extract_office_claims, extract_office_entities, extract_office_obligations
+from okoffice.office.workflows import board_pack, docset_to_sheet, extract_to_sheet, sheet_to_deck, source_to_board_pack, verify_board_pack
+from okoffice.office.office_patch import plan_office_patch, preview_office_patch, verify_office_patch
+from okoffice.office.workflows_extended import (
+    build_artifact_graph as build_office_artifact_graph,
+    build_redaction_packet,
+    review_and_patch_workflow,
+)
 from okoffice.ir.semantic import (
     parse_charts_pdf,
     parse_figures_pdf,
@@ -160,6 +211,7 @@ from okoffice.core.pdf import (
     booklet_pdf,
     compress_pdf,
     create_markdown_pdf,
+    create_resume_pdf,
     create_text_pdf,
     extract_fonts_pdf,
     extract_images_pdf,
@@ -206,6 +258,9 @@ from okoffice.validation.pdf import (
     render_check_pdf,
     validate_pdf,
     visual_diff_check_pdf,
+)
+from okoffice.validation.ats import (
+    run_ats_compliance_check as _ats_compliance_check,
 )
 from okoffice.workflows.planner import plan_workflow
 from okoffice.workflows.reporter import create_workflow_report
@@ -315,6 +370,27 @@ def run_office_workflow_board_pack(
     return board_pack(files, output_path, title=title)
 
 
+def run_office_workflow_source_to_board_pack(
+    *,
+    files: list[str | Path | dict[str, Any]],
+    schema: dict[str, Any] | str | Path,
+    output_path: str | Path,
+    title: str | None = None,
+    intent: str | None = None,
+    deck_title: str | None = None,
+    max_rows_per_sheet: int = 100,
+) -> ToolResult:
+    return source_to_board_pack(
+        files=files,
+        schema=schema,
+        output_path=output_path,
+        title=title,
+        intent=intent,
+        deck_title=deck_title,
+        max_rows_per_sheet=max_rows_per_sheet,
+    )
+
+
 def run_office_bundle_verify(bundle_path: str | Path) -> ToolResult:
     result = verify_office_bundle(bundle_path)
     if result.status == "failed":
@@ -351,8 +427,40 @@ def run_word_extract_tables(path: str | Path) -> ToolResult:
     return extract_word_tables(path)
 
 
+def run_word_extract_text(path: str | Path) -> ToolResult:
+    return extract_word_text(path)
+
+
+def run_word_extract_outline(path: str | Path) -> ToolResult:
+    return extract_word_outline(path)
+
+
+def run_word_extract_comments(path: str | Path) -> ToolResult:
+    return extract_word_comments(path)
+
+
+def run_word_extract_revisions(path: str | Path) -> ToolResult:
+    return extract_word_revisions(path)
+
+
+def run_word_extract_fields(path: str | Path) -> ToolResult:
+    return extract_word_fields(path)
+
+
+def run_word_extract_styles(path: str | Path) -> ToolResult:
+    return extract_word_styles(path)
+
+
 def run_word_validate_document(path: str | Path) -> ToolResult:
     return validate_word_document(path)
+
+
+def run_create_word_document(output_path: str | Path, document_ir: dict) -> ToolResult:
+    return create_word_document(output_path=output_path, document_ir=document_ir)
+
+
+def run_create_word_memo(output_path: str | Path, memo_ir: dict) -> ToolResult:
+    return create_word_memo(output_path=output_path, memo_ir=memo_ir)
 
 
 def run_word_create_report(
@@ -416,6 +524,50 @@ def run_sheet_extract_tables(path: str | Path) -> ToolResult:
     return extract_sheet_tables(path)
 
 
+def run_sheet_extract_formulas(path: str | Path) -> ToolResult:
+    return extract_sheet_formulas(path)
+
+
+def run_sheet_extract_charts(path: str | Path) -> ToolResult:
+    return extract_sheet_charts(path)
+
+
+def run_sheet_extract_named_ranges(path: str | Path) -> ToolResult:
+    return extract_sheet_named_ranges(path)
+
+
+def run_sheet_extract_comments(path: str | Path) -> ToolResult:
+    return extract_sheet_comments(path)
+
+
+def run_sheet_extract_pivots(path: str | Path) -> ToolResult:
+    return extract_sheet_pivots(path)
+
+
+def run_deck_extract_text(path: str | Path) -> ToolResult:
+    return extract_deck_text(path)
+
+
+def run_deck_extract_notes(path: str | Path) -> ToolResult:
+    return extract_deck_notes(path)
+
+
+def run_deck_extract_shapes(path: str | Path) -> ToolResult:
+    return extract_deck_shapes(path)
+
+
+def run_deck_extract_media(path: str | Path) -> ToolResult:
+    return extract_deck_media(path)
+
+
+def run_deck_extract_charts(path: str | Path) -> ToolResult:
+    return extract_deck_charts(path)
+
+
+def run_deck_extract_theme(path: str | Path) -> ToolResult:
+    return extract_deck_theme(path)
+
+
 def run_sheet_write_workbook(
     data: dict[str, object] | list[dict[str, object]] | None = None,
     output_path: str | Path | None = None,
@@ -451,6 +603,38 @@ def run_sheet_validate_workbook(path: str | Path) -> ToolResult:
 
 def run_sheet_validate_formulas(path: str | Path) -> ToolResult:
     return validate_sheet_formulas(path)
+
+
+def run_sheet_validate_model_checks(path: str | Path) -> ToolResult:
+    return validate_sheet_model_checks(path)
+
+
+def run_sheet_validate_external_links(path: str | Path) -> ToolResult:
+    return validate_sheet_external_links(path)
+
+
+def run_patch_sheet_cells(path: str | Path, output_path: str | Path, operations: list[dict[str, Any]]) -> ToolResult:
+    return patch_sheet_cells(path=path, output_path=output_path, operations=operations)
+
+
+def run_patch_sheet_table(path: str | Path, output_path: str | Path, operations: list[dict[str, Any]]) -> ToolResult:
+    return patch_sheet_table(path=path, output_path=output_path, operations=operations)
+
+
+def run_patch_sheet_formulas(path: str | Path, output_path: str | Path, operations: list[dict[str, Any]]) -> ToolResult:
+    return patch_sheet_formulas(path=path, output_path=output_path, operations=operations)
+
+
+def run_patch_sheet_chart(path: str | Path, output_path: str | Path, operations: list[dict[str, Any]]) -> ToolResult:
+    return patch_sheet_chart(path=path, output_path=output_path, operations=operations)
+
+
+def run_review_sheet_model(path: str | Path) -> ToolResult:
+    return review_sheet_model(path)
+
+
+def run_review_sheet_number_consistency(path: str | Path) -> ToolResult:
+    return review_sheet_number_consistency(path)
 
 
 def run_deck_inspect_presentation(path: str | Path) -> ToolResult:
@@ -574,6 +758,34 @@ def run_deck_validate_contact_sheet(path: str | Path) -> ToolResult:
 
 def run_deck_validation_presentation(path: str | Path) -> ToolResult:
     return validate_deck_quality_presentation(path)
+
+
+def run_deck_review_story(path: str | Path) -> ToolResult:
+    return review_deck_story(path)
+
+
+def run_deck_review_claims(path: str | Path) -> ToolResult:
+    return review_deck_claims(path)
+
+
+def run_deck_validate_notes(path: str | Path) -> ToolResult:
+    return validate_deck_notes(path)
+
+
+def run_deck_validate_placeholders(path: str | Path) -> ToolResult:
+    return validate_deck_placeholders(path)
+
+
+def run_word_review_style(path: str | Path) -> ToolResult:
+    return review_word_style(path)
+
+
+def run_word_validate_metadata(path: str | Path) -> ToolResult:
+    return validate_word_metadata(path)
+
+
+def run_word_validate_accessibility(path: str | Path) -> ToolResult:
+    return validate_word_accessibility(path)
 
 
 def run_inspect_pages(
@@ -2910,6 +3122,169 @@ def run_workflow_research_deck(
         )
     except OKofficeException as exc:
         return _failed("pdf.workflow.research_deck", exc.to_error())
+
+
+def run_create_resume_pdf(
+    resume_data: dict[str, Any],
+    output_path: str | Path,
+    layout: str = "single_column",
+    design_tokens: str | dict[str, Any] = "resume_modern",
+    ats_mode: bool = True,
+    title: str | None = None,
+    renderer: str = "auto",
+) -> ToolResult:
+    try:
+        return create_resume_pdf(
+            resume_data,
+            output_path=output_path,
+            layout=layout,
+            design_tokens=design_tokens,
+            ats_mode=ats_mode,
+            title=title,
+            renderer=renderer,
+        )
+    except OKofficeException as exc:
+        return _failed("pdf.resume.create_resume", exc.to_error())
+
+
+def run_ats_compliance(
+    path: str | Path,
+    keywords: list[str] | None = None,
+) -> ToolResult:
+    tool = "pdf.validation.ats_compliance_check"
+    try:
+        report, usage = _ats_compliance_check(path, keywords=keywords)
+    except OKofficeException as exc:
+        return _failed(tool, exc.to_error())
+    return ToolResult(
+        job_id=_job_id(),
+        status="succeeded" if report.status == "passed" else "failed",
+        tool=tool,
+        validation=report,
+        warnings=report.warnings,
+        usage=usage,
+        next_recommended_tools=["pdf.inspect.document"],
+    )
+
+
+def run_extract_office_claims(path: str | Path) -> ToolResult:
+    tool = "office.extract.claims"
+    try:
+        return extract_office_claims(path)
+    except OKofficeException as exc:
+        return _failed(tool, exc.to_error())
+
+
+def run_extract_office_entities(path: str | Path) -> ToolResult:
+    tool = "office.extract.entities"
+    try:
+        return extract_office_entities(path)
+    except OKofficeException as exc:
+        return _failed(tool, exc.to_error())
+
+
+def run_extract_office_obligations(path: str | Path) -> ToolResult:
+    tool = "office.extract.obligations"
+    try:
+        return extract_office_obligations(path)
+    except OKofficeException as exc:
+        return _failed(tool, exc.to_error())
+
+
+def run_inspect_office_batch(paths: list[str | Path]) -> ToolResult:
+    tool = "office.inspect.batch"
+    try:
+        return inspect_office_batch(paths)
+    except OKofficeException as exc:
+        return _failed(tool, exc.to_error())
+
+
+def run_map_office_evidence_sources(
+    context_packet: dict[str, Any],
+    composition: dict[str, Any] | None = None,
+) -> ToolResult:
+    tool = "office.evidence.map_sources"
+    try:
+        return map_office_evidence_sources(context_packet, composition=composition)
+    except OKofficeException as exc:
+        return _failed(tool, exc.to_error())
+
+
+def run_report_office_evidence_coverage(composition: dict[str, Any]) -> ToolResult:
+    tool = "office.evidence.coverage"
+    try:
+        return report_office_evidence_coverage(composition)
+    except OKofficeException as exc:
+        return _failed(tool, exc.to_error())
+
+
+def run_classify_office_context(
+    context_packet: dict[str, Any],
+    target_profile: dict[str, Any] | None = None,
+) -> ToolResult:
+    tool = "office.context.classify"
+    try:
+        return classify_office_context(context_packet, target_profile=target_profile)
+    except OKofficeException as exc:
+        return _failed(tool, exc.to_error())
+
+
+def run_verify_office_evidence_citations(
+    claims: list[dict[str, Any]],
+    context_packet: dict[str, Any],
+    source_map: dict[str, Any] | None = None,
+) -> ToolResult:
+    tool = "office.evidence.verify_citations"
+    try:
+        return verify_office_evidence_citations(claims, context_packet, source_map=source_map)
+    except OKofficeException as exc:
+        return _failed(tool, exc.to_error())
+
+
+def run_report_office_bundle(bundle_path: str | Path) -> ToolResult:
+    tool = "office.bundle.report"
+    try:
+        return report_office_bundle(bundle_path)
+    except OKofficeException as exc:
+        return _failed(tool, exc.to_error())
+
+
+def run_validate_office_output(
+    path: str | Path,
+    expected_format: str | None = None,
+) -> ToolResult:
+    tool = "office.validate.output"
+    try:
+        return validate_office_output(path, expected_format=expected_format)
+    except OKofficeException as exc:
+        return _failed(tool, exc.to_error())
+
+
+def run_plan_office_patch(*, path: str | Path, operations: list[dict[str, Any]]) -> ToolResult:
+    return plan_office_patch(path=path, operations=operations)
+
+
+def run_preview_office_patch(*, path: str | Path, operations: list[dict[str, Any]]) -> ToolResult:
+    return preview_office_patch(path=path, operations=operations)
+
+
+def run_verify_office_patch(*, input_path: str | Path, output_path: str | Path,
+                           patch_manifest: dict[str, Any] | None = None) -> ToolResult:
+    return verify_office_patch(input_path=input_path, output_path=output_path,
+                               patch_manifest=patch_manifest)
+
+
+def run_review_and_patch_workflow(*, path: str | Path, output_path: str | Path,
+                                 operations: list[dict[str, Any]]) -> ToolResult:
+    return review_and_patch_workflow(path=path, output_path=output_path, operations=operations)
+
+
+def run_build_redaction_packet(*, path: str | Path, search_terms: list[str]) -> ToolResult:
+    return build_redaction_packet(path=path, search_terms=search_terms)
+
+
+def run_build_artifact_graph(*, artifact_paths: list[str | Path]) -> ToolResult:
+    return build_office_artifact_graph(artifact_paths=artifact_paths)
 
 
 def _failed(tool: str, error: OKofficeError) -> ToolResult:

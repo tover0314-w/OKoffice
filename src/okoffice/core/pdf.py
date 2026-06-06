@@ -5,7 +5,7 @@ import os
 from copy import deepcopy
 from io import BytesIO
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 from uuid import uuid4
 
 from reportlab.lib import colors as rl_colors
@@ -38,7 +38,7 @@ from okoffice.security.paths import resolve_input_path, resolve_output_path
 from okoffice.validation.pdf import validate_pdf
 
 SUPPORTED_IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff"}
-CJK_FONT_PATH_ENV = "AGENTPDF_CJK_FONT_PATH"
+CJK_FONT_PATH_ENV = "OKOFFICE_CJK_FONT_PATH"
 CJK_CID_FONT = "STSong-Light"
 CJK_FONT_CANDIDATES = (
     Path("C:/Windows/Fonts/NotoSansSC-VF.ttf"),
@@ -133,6 +133,32 @@ BUILTIN_STYLE_PACKS: dict[str, dict[str, Any]] = {
         },
         "colors": {"primary": "#166534", "accent": "#94a3b8", "text": "#111827"},
         "components": ["table", "section_header"],
+    },
+    "resume_classic": {
+        "style_id": "resume_classic",
+        "name": "Resume Classic",
+        "description": "Traditional serif resume with conservative styling and 1-inch margins.",
+        "page": {
+            "size": "letter",
+            "orientation": "portrait",
+            "margins": {"top": 72, "right": 72, "bottom": 72, "left": 72},
+        },
+        "typography": {"heading_font": "serif", "body_font": "serif", "base_size": 10},
+        "colors": {"primary": "#000000", "accent": "#333333", "text": "#111827"},
+        "components": ["section_header", "bullet_list"],
+    },
+    "resume_ats_safe": {
+        "style_id": "resume_ats_safe",
+        "name": "Resume ATS Safe",
+        "description": "Maximum ATS compatibility. Standard fonts, single-column, 1-inch margins.",
+        "page": {
+            "size": "letter",
+            "orientation": "portrait",
+            "margins": {"top": 72, "right": 72, "bottom": 72, "left": 72},
+        },
+        "typography": {"heading_font": "system-sans", "body_font": "system-sans", "base_size": 10},
+        "colors": {"primary": "#000000", "accent": "#333333", "text": "#111827"},
+        "components": ["section_header", "bullet_list"],
     },
     "paper_ink": {
         "style_id": "paper_ink",
@@ -1774,6 +1800,293 @@ def create_markdown_pdf(
     )
 
 
+def create_resume_pdf(
+    resume_data: dict[str, Any],
+    output_path: str | Path,
+    layout: str = "single_column",
+    design_tokens: str | dict[str, Any] = "resume_modern",
+    ats_mode: bool = True,
+    title: str | None = None,
+    renderer: Literal["auto", "typst", "reportlab"] = "auto",
+) -> ToolResult:
+    """Create a resume PDF with section-aware layout and ATS-safe rendering.
+
+    Unlike create_markdown_pdf() which renders flat documents, this renders
+    structured resume data with per-element typography, section spacing,
+    and optional ATS compliance constraints.
+
+    Args:
+        resume_data: Dict matching ResumeData schema (name, contact, sections).
+        output_path: Where to write the PDF.
+        layout: Layout name from ResumeLayoutKind.
+        design_tokens: Preset name, dict, or ResumeDesignTokens.
+        ats_mode: If True, forces single-column, standard fonts, 1-inch margins.
+        title: PDF document title metadata.
+        renderer: Backend to use — "auto" (Typst if available, else ReportLab),
+            "typst", or "reportlab".
+    """
+    from okoffice.schemas.resume import ResumeData
+    from okoffice.schemas.resume_design_tokens import (
+        ATS_SAFE_FONT_NAMES,
+        ResumeDesignTokens,
+        _ats_font,
+        resolve_resume_tokens_from_source,
+    )
+    from okoffice.schemas.resume_layout import select_resume_layout
+
+    tool = "pdf.compose.resume_pdf"
+    output = resolve_output_path(output_path)
+
+    # Validate input data
+    try:
+        resume = ResumeData.model_validate(resume_data)
+    except Exception as exc:
+        raise OKofficeException(
+            "invalid_input",
+            f"Invalid resume data: {exc}",
+            recovery_hint="Ensure resume_data has 'name' (required) and valid 'sections' with 'entry_type' discriminators.",
+        ) from exc
+
+    # Resolve design tokens
+    tokens = resolve_resume_tokens_from_source(design_tokens)
+
+    # ATS mode overrides
+    if ats_mode:
+        if tokens.ats_standard_margins:
+            tokens = tokens.model_copy(update={
+                "margins_top_pt": 72,
+                "margins_bottom_pt": 72,
+                "margins_left_pt": 72,
+                "margins_right_pt": 72,
+            })
+        if tokens.ats_single_column:
+            layout = "single_column"
+
+    # Select layout
+    resume_layout = select_resume_layout(layout, ats_mode=ats_mode)
+
+    # Route to rendering backend
+    if renderer in ("auto", "typst"):
+        from okoffice.renderers import is_typst_available
+        use_typst = renderer == "typst" or is_typst_available()
+        if use_typst:
+            from okoffice.renderers.typst_renderer import render_resume_typst
+            return render_resume_typst(
+                resume, tokens, layout, ats_mode, output, title,
+            )
+
+    # ReportLab pipeline (fallback or explicit)
+    # Build Markdown from structured data (reuses create_markdown_pdf pipeline)
+    md = _render_resume_data_to_markdown(resume)
+
+    # Resolve style pack from design tokens
+    style_pack_id = tokens.base_theme
+    if style_pack_id not in BUILTIN_STYLE_PACKS:
+        style_pack_id = "resume_modern"
+
+    resolved_style = _resolve_style_pack(style_pack_id)
+    styles = getSampleStyleSheet()
+    _apply_style_pack(styles, resolved_style["pack"])
+
+    # Override with fine-grained tokens
+    _apply_resume_tokens_to_styles(styles, tokens, ats_mode)
+
+    story = _markdown_to_story(md, styles)
+    page_size = _style_page_size(resolved_style["pack"])
+    margins = {
+        "top": tokens.margins_top_pt,
+        "right": tokens.margins_right_pt,
+        "bottom": tokens.margins_bottom_pt,
+        "left": tokens.margins_left_pt,
+    }
+
+    _build_pdf_document(
+        output,
+        story,
+        title=title or resume.name,
+        page_size=page_size,
+        margins=margins,
+    )
+
+    return _result_for_created_pdf(
+        tool=tool,
+        output=output,
+        usage={
+            "resume_name": resume.name,
+            "sections": len(resume.sections),
+            "layout": resume_layout.kind,
+            "ats_mode": ats_mode,
+            "design_tokens_preset": tokens.base_theme,
+            "style_pack": style_pack_id,
+        },
+        next_tools=["pdf.inspect.document", "pdf.validation.ats_compliance_check"],
+        source_text=md,
+    )
+
+
+def _render_resume_data_to_markdown(resume: Any) -> str:
+    """Convert ResumeData to ATS-optimized Markdown."""
+    lines: list[str] = []
+
+    # Name and headline
+    lines.append(f"# {resume.name}")
+    if resume.headline:
+        lines.append(resume.headline)
+
+    # Contact info (pipe-separated, single line)
+    contact_parts: list[str] = []
+    c = resume.contact
+    if c.email:
+        contact_parts.append(c.email)
+    if c.phone:
+        contact_parts.append(c.phone)
+    if c.location:
+        contact_parts.append(c.location)
+    if c.linkedin:
+        contact_parts.append(c.linkedin)
+    if c.website:
+        contact_parts.append(c.website)
+    if c.github:
+        contact_parts.append(c.github)
+    if contact_parts:
+        lines.append(" | ".join(contact_parts))
+
+    lines.append("")
+
+    # Sections
+    for section in sorted(resume.sections, key=lambda s: s.order):
+        lines.append(f"## {section.title}")
+
+        for entry in section.entries:
+            etype = entry.entry_type
+
+            if etype == "text":
+                lines.append(entry.content)
+                lines.append("")
+
+            elif etype == "experience":
+                title_line = f"**{entry.title}**"
+                org = entry.organization or ""
+                if org:
+                    title_line += f", {org}"
+                if entry.location:
+                    title_line += f", {entry.location}"
+                lines.append(title_line)
+                if entry.date_range:
+                    date_str = entry.date_range.start
+                    if entry.date_range.end:
+                        date_str += f" - {entry.date_range.end}"
+                    lines.append(date_str)
+                for bullet in entry.highlights:
+                    lines.append(f"- {bullet}")
+                lines.append("")
+
+            elif etype == "education":
+                title_line = f"**{entry.title}**"
+                org = entry.organization or ""
+                if org:
+                    title_line += f", {org}"
+                lines.append(title_line)
+                if entry.date_range:
+                    date_str = entry.date_range.start
+                    if entry.date_range.end:
+                        date_str += f" - {entry.date_range.end}"
+                    lines.append(date_str)
+                gpa = getattr(entry, "gpa", None)
+                if gpa:
+                    lines.append(f"GPA: {gpa}")
+                honors = getattr(entry, "honors", [])
+                for h in honors:
+                    lines.append(f"- {h}")
+                lines.append("")
+
+            elif etype == "publication":
+                title_line = f"**{entry.title}**"
+                authors = getattr(entry, "authors", None)
+                if authors:
+                    title_line += f". {authors}"
+                venue = getattr(entry, "venue", None)
+                if venue:
+                    title_line += f". *{venue}*"
+                lines.append(title_line)
+                if entry.date_range:
+                    lines.append(entry.date_range.start)
+                lines.append("")
+
+            elif etype == "bullet":
+                for bullet in entry.highlights:
+                    lines.append(f"- {bullet}")
+                lines.append("")
+
+            elif etype == "one_line":
+                detail = getattr(entry, "detail", None)
+                if detail:
+                    lines.append(f"{entry.title} — {detail}")
+                else:
+                    lines.append(entry.title)
+
+            else:
+                # normal, numbered, reversed_numbered
+                title_line = f"**{entry.title}**"
+                if entry.organization:
+                    title_line += f", {entry.organization}"
+                lines.append(title_line)
+                if entry.date_range:
+                    date_str = entry.date_range.start
+                    if entry.date_range.end:
+                        date_str += f" - {entry.date_range.end}"
+                    lines.append(date_str)
+                for bullet in entry.highlights:
+                    lines.append(f"- {bullet}")
+                lines.append("")
+
+    return "\n".join(lines)
+
+
+def _apply_resume_tokens_to_styles(
+    styles: Any,
+    tokens: Any,
+    ats_mode: bool,
+) -> None:
+    """Override ReportLab styles with fine-grained resume design tokens."""
+    from reportlab.lib.colors import HexColor
+
+    from okoffice.schemas.resume_design_tokens import _ats_font
+
+    # Title (name)
+    if "Title" in styles:
+        styles["Title"].fontName = tokens.name_font
+        styles["Title"].fontSize = tokens.name_size_pt
+        styles["Title"].textColor = HexColor(tokens.name_color)
+        styles["Title"].spaceAfter = 2
+
+    # Heading2 (section titles)
+    if "Heading2" in styles:
+        styles["Heading2"].fontName = tokens.section_title_font
+        styles["Heading2"].fontSize = tokens.section_title_size_pt
+        styles["Heading2"].textColor = HexColor(tokens.section_title_color)
+        styles["Heading2"].spaceBefore = tokens.section_title_spacing_before_pt
+        styles["Heading2"].spaceAfter = tokens.section_title_spacing_after_pt
+
+    # Heading3 (entry titles)
+    if "Heading3" in styles:
+        styles["Heading3"].fontName = tokens.entry_title_font
+        styles["Heading3"].fontSize = tokens.entry_title_size_pt
+        styles["Heading3"].textColor = HexColor(tokens.entry_title_color)
+        styles["Heading3"].spaceBefore = 6
+        styles["Heading3"].spaceAfter = 2
+
+    # Body text
+    if "BodyText" in styles:
+        font = tokens.body_font
+        if ats_mode:
+            font = _ats_font(font, bold=False)
+        styles["BodyText"].fontName = font
+        styles["BodyText"].fontSize = tokens.body_size_pt
+        styles["BodyText"].textColor = HexColor(tokens.body_color)
+        styles["BodyText"].leading = tokens.body_size_pt * tokens.body_line_spacing
+
+
 def create_slide_deck_pdf(
     slides: list[dict[str, Any]],
     output_path: str | Path,
@@ -2325,7 +2638,7 @@ def _register_cjk_fonts() -> tuple[str, str]:
 
 def _iter_cjk_font_paths() -> list[Path]:
     paths: list[Path] = []
-    env_value = os.environ.get(CJK_FONT_PATH_ENV, "")
+    env_value = os.environ.get(CJK_FONT_PATH_ENV, "") or os.environ.get("AGENTPDF_CJK_FONT_PATH", "")
     for raw_path in env_value.split(os.pathsep):
         if raw_path.strip():
             paths.append(Path(raw_path.strip()))
@@ -2478,12 +2791,18 @@ def _split_paragraphs(text: str) -> list[str]:
 
 
 def _escape_paragraph(text: str) -> str:
-    return (
+    import re as _re
+    escaped = (
         text.replace("&", "&amp;")
         .replace("<", "&lt;")
         .replace(">", "&gt;")
         .replace("\n", "<br/>")
     )
+    # Convert Markdown bold **text** to ReportLab <b>text</b>
+    escaped = _re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", escaped)
+    # Convert Markdown italic *text* to ReportLab <i>text</i>
+    escaped = _re.sub(r"(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)", r"<i>\1</i>", escaped)
+    return escaped
 
 
 def _escape_preformatted(text: str) -> str:

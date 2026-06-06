@@ -12,7 +12,7 @@ from okoffice.security.paths import resolve_output_path
 
 DEFAULT_SAFE_ROOT = "."
 RECOMMENDED_MCP_TOOLS = [
-    "agentpdf_tool_manifest",
+    "okoffice_tool_manifest",
     "pdf_context_build_packet",
     "pdf_target_profiles",
     "pdf_target_select_profile",
@@ -68,7 +68,7 @@ def setup_kilo_code(
         tool=tool,
         artifacts=artifacts,
         usage=usage,
-        next_recommended_tools=["agentpdf_tool_manifest", "pdf_target_profiles"],
+        next_recommended_tools=["okoffice_tool_manifest", "pdf_target_profiles"],
     )
 
 

@@ -3,9 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import Any
-from uuid import uuid4
-
 from okoffice.artifacts.store import build_artifact
+from okoffice.office.shared import failed_result, job_id, validation_report_status
 from okoffice.office.sheet import profile_sheet_data, read_sheet_workbook
 from okoffice.schemas.errors import OKofficeException
 from okoffice.schemas.models import OKofficeError, ToolResult, ValidationCheck, ValidationReport
@@ -32,19 +31,21 @@ def compose_deck_plan(
         input_path = resolve_input_path(workbook_path)
         output = resolve_output_path(output_path) if output_path is not None else None
     except OKofficeException as exc:
-        return _failed(exc.to_error())
+        return failed_result(TOOL_NAME, exc.to_error())
     if output is not None and output == input_path:
-        return _failed(
+        return failed_result(
+            TOOL_NAME,
             OKofficeError(
                 code="unsafe_input_rejected",
                 message="deck.compose.plan output_path must not point to the input workbook.",
                 details={"workbook_path": input_path.as_posix(), "output_path": output.as_posix()},
-            )
+            ),
         )
 
     profile_result = profile_sheet_data(input_path, max_rows_per_sheet=max_rows_per_sheet)
     if profile_result.status == "failed":
-        return _failed(
+        return failed_result(
+            TOOL_NAME,
             profile_result.error
             or OKofficeError(code="unsupported_file_type", message="Workbook profile failed before deck planning."),
         )
@@ -57,12 +58,13 @@ def compose_deck_plan(
     ]
     data_row_count = int(summary.get("data_row_count", 0))
     if data_row_count <= 0 or not profiled_profiles:
-        return _failed(
+        return failed_result(
+            TOOL_NAME,
             OKofficeError(
                 code="unsafe_input_rejected",
                 message="deck.compose.plan requires at least one profiled workbook data row.",
                 details={"workbook_path": str(workbook_path), "profiled_sheet_count": len(profiled_profiles)},
-            )
+            ),
         )
 
     expected_source_ref_count = _coerce_non_negative_int(summary.get("source_ref_row_count"))
@@ -141,12 +143,12 @@ def compose_deck_plan(
     ]
 
     return ToolResult(
-        job_id=_job_id(),
+        job_id=job_id(),
         status="succeeded",
         tool=TOOL_NAME,
         artifacts=artifacts,
         validation=ValidationReport(
-            status=_validation_report_status(checks),
+            status=validation_report_status(checks),
             checks=checks,
             warnings=warnings,
         ),
@@ -350,6 +352,18 @@ def _validation_slide(
 
 
 def _outline_from_slides(*, title: str, style: str, workbook_path: str, slides: list[dict[str, Any]]) -> dict[str, Any]:
+    outline_slides: list[dict[str, Any]] = []
+    for slide in slides:
+        entry: dict[str, Any] = {
+            "title": slide["title"],
+            **({"subtitle": slide["subtitle"]} if slide.get("subtitle") else {}),
+            "bullets": list(slide.get("bullets", [])),
+            "notes": str(slide.get("notes", "")),
+        }
+        layout_hint = _layout_hint_for_slide(slide)
+        if layout_hint:
+            entry["layout"] = layout_hint
+        outline_slides.append(entry)
     return {
         "title": title,
         "style": style,
@@ -358,16 +372,24 @@ def _outline_from_slides(*, title: str, style: str, workbook_path: str, slides: 
             "workbook_path": workbook_path,
             "composition_tool": TOOL_NAME,
         },
-        "slides": [
-            {
-                "title": slide["title"],
-                **({"subtitle": slide["subtitle"]} if slide.get("subtitle") else {}),
-                "bullets": list(slide.get("bullets", [])),
-                "notes": str(slide.get("notes", "")),
-            }
-            for slide in slides
-        ],
+        "slides": outline_slides,
     }
+
+
+_SLIDE_TYPE_TO_LAYOUT: dict[str, str] = {
+    "title": "cover",
+    "executive_summary": "title_bullets",
+    "sheet_snapshot": "title_bullets",
+    "validation_source_map": "sources",
+}
+
+
+def _layout_hint_for_slide(slide: dict[str, Any]) -> str | None:
+    explicit = slide.get("layout")
+    if explicit:
+        return str(explicit)
+    slide_type = str(slide.get("slide_type") or "")
+    return _SLIDE_TYPE_TO_LAYOUT.get(slide_type)
 
 
 def _claim(
@@ -534,26 +556,3 @@ def _plan_artifact_payload(plan: dict[str, Any], warnings: list[str]) -> dict[st
         "outline": plan["outline"],
         "warnings": warnings,
     }
-
-
-def _validation_report_status(checks: list[ValidationCheck]) -> str:
-    statuses = [check.status for check in checks]
-    if "failed" in statuses:
-        return "failed"
-    if "warning" in statuses:
-        return "warning"
-    return "passed"
-
-
-def _failed(error: OKofficeError) -> ToolResult:
-    return ToolResult(
-        job_id=_job_id(),
-        status="failed",
-        tool=TOOL_NAME,
-        error=error,
-        warnings=[error.message],
-    )
-
-
-def _job_id() -> str:
-    return f"job_{uuid4().hex[:16]}"

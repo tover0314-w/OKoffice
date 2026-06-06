@@ -12,7 +12,7 @@ from okoffice.security.paths import resolve_output_path
 
 DEFAULT_SAFE_ROOT = "${CLAUDE_PROJECT_DIR:-.}"
 RECOMMENDED_MCP_TOOLS = [
-    "agentpdf_tool_manifest",
+    "okoffice_tool_manifest",
     "pdf_ai_create_templates",
     "pdf_ai_create_from_prompt",
     "pdf_context_build_packet",
@@ -63,7 +63,7 @@ def setup_claude_code(
             scope=scope,
         ),
         "starter_prompt": (
-            "Use the okoffice MCP server. First call agentpdf_tool_manifest, then build a "
+            "Use the okoffice MCP server. First call okoffice_tool_manifest, then build a "
             "context packet, inspect target profiles, compose the PDF, and run render/evidence "
             "validation before reporting success."
         ),
@@ -85,7 +85,7 @@ def setup_claude_code(
         tool=tool,
         artifacts=artifacts,
         usage=usage,
-        next_recommended_tools=["agentpdf_tool_manifest", "pdf_target_profiles"],
+        next_recommended_tools=["okoffice_tool_manifest", "pdf_target_profiles"],
     )
 
 

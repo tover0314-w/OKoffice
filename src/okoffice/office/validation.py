@@ -4,9 +4,8 @@ import re
 import zipfile
 from pathlib import Path, PurePosixPath
 from typing import Any
-from uuid import uuid4
-
 from okoffice.office.inspect import inspect_office_file
+from okoffice.office.shared import failed_result, job_id
 from okoffice.office.sheet import inspect_sheet_workbook
 from okoffice.schemas.errors import OKofficeException
 from okoffice.schemas.models import OKofficeError, ToolResult, ValidationCheck, ValidationReport
@@ -36,9 +35,10 @@ MAX_XML_SCAN_BYTES = 1_000_000
 def validate_sheet_formulas(path: str | Path) -> ToolResult:
     inspected = inspect_sheet_workbook(path)
     if inspected.status != "succeeded":
-        return _failed_formula(
+        return failed_result(
+            FORMULA_TOOL_NAME,
             inspected.error
-            or OKofficeError(code="output_validation_failed", message="Workbook inspect failed before formula validation.")
+            or OKofficeError(code="output_validation_failed", message="Workbook inspect failed before formula validation."),
         )
 
     usage = inspected.usage
@@ -47,7 +47,7 @@ def validate_sheet_formulas(path: str | Path) -> ToolResult:
     warnings = _formula_warnings(usage, issues)
     validation = _formula_validation_report(usage, issues, warnings)
     return ToolResult(
-        job_id=_job_id(),
+        job_id=job_id(),
         status="succeeded",
         tool=FORMULA_TOOL_NAME,
         validation=validation,
@@ -82,26 +82,28 @@ def validate_office_package(path: str | Path) -> ToolResult:
     try:
         resolved = resolve_input_path(path)
     except OKofficeException as exc:
-        return _failed(exc.to_error())
+        return failed_result(TOOL_NAME, exc.to_error())
 
     suffix = resolved.suffix.lower()
     if suffix == ".pdf" or _starts_with_pdf_header(resolved):
         return _validate_pdf_package(resolved)
     if suffix not in OOXML_EXTENSIONS:
-        return _failed(
+        return failed_result(
+            TOOL_NAME,
             OKofficeError(
                 code="unsupported_file_type",
                 message=f"Unsupported Office package type for validation: {suffix or '<none>'}",
                 details={"path": resolved.as_posix()},
-            )
+            ),
         )
     if not zipfile.is_zipfile(resolved):
-        return _failed(
+        return failed_result(
+            TOOL_NAME,
             OKofficeError(
                 code="unsupported_file_type",
                 message=f"{resolved.name} has an Office extension but is not a readable OOXML ZIP package.",
                 details={"path": resolved.as_posix(), "extension": suffix},
-            )
+            ),
         )
 
     with zipfile.ZipFile(resolved) as archive:
@@ -124,7 +126,7 @@ def validate_office_package(path: str | Path) -> ToolResult:
     }
     error = _package_error(resolved, unsafe_members, content_types_present) if failed else None
     return ToolResult(
-        job_id=_job_id(),
+        job_id=job_id(),
         status="failed" if failed else "succeeded",
         tool=TOOL_NAME,
         validation=_validation_report(
@@ -159,7 +161,7 @@ def _validate_pdf_package(path: Path) -> ToolResult:
     inspected = inspect_office_file(path)
     if inspected.status != "succeeded":
         return ToolResult(
-            job_id=_job_id(),
+            job_id=job_id(),
             status="failed",
             tool=TOOL_NAME,
             error=inspected.error,
@@ -167,7 +169,7 @@ def _validate_pdf_package(path: Path) -> ToolResult:
         )
     warnings = list(inspected.warnings)
     return ToolResult(
-        job_id=_job_id(),
+        job_id=job_id(),
         status="succeeded",
         tool=TOOL_NAME,
         validation=ValidationReport(
@@ -447,15 +449,3 @@ def _is_unsafe_zip_entry(name: str) -> bool:
 def _starts_with_pdf_header(path: Path) -> bool:
     with path.open("rb") as handle:
         return handle.read(5) == b"%PDF-"
-
-
-def _failed(error: OKofficeError) -> ToolResult:
-    return ToolResult(job_id=_job_id(), status="failed", tool=TOOL_NAME, error=error, warnings=[error.message])
-
-
-def _failed_formula(error: OKofficeError) -> ToolResult:
-    return ToolResult(job_id=_job_id(), status="failed", tool=FORMULA_TOOL_NAME, error=error, warnings=[error.message])
-
-
-def _job_id() -> str:
-    return f"job_{uuid4().hex[:16]}"

@@ -34,16 +34,26 @@ from okoffice.office.sheet import (
     inspect_sheet_workbook,
     profile_sheet_data,
     read_sheet_workbook,
+    validate_sheet_external_links,
+    validate_sheet_model_checks,
     validate_sheet_workbook,
     write_sheet_workbook,
 )
 from okoffice.office.validation import validate_office_package, validate_sheet_formulas
 from okoffice.office.word import extract_word_tables, inspect_word_document
+from okoffice.office.word_extract import (
+    extract_word_comments,
+    extract_word_fields,
+    extract_word_outline,
+    extract_word_revisions,
+    extract_word_styles,
+    extract_word_text,
+)
 from okoffice.office.word_patch import apply_word_patch, plan_word_patch
 from okoffice.office.word_report import create_word_report
 from okoffice.office.word_validation import validate_word_document
 from okoffice.office.workers import inspect_office_workers
-from okoffice.office.workflows import board_pack, docset_to_sheet, extract_to_sheet, sheet_to_deck, verify_board_pack
+from okoffice.office.workflows import board_pack, docset_to_sheet, extract_to_sheet, sheet_to_deck, source_to_board_pack, verify_board_pack
 from okoffice import __version__
 from okoffice.agents.claude_code_okoffice import setup_claude_code_for_okoffice
 from okoffice.tools.registry_okoffice import load_okoffice_manifest
@@ -237,6 +247,60 @@ def word_extract_tables(
     _emit_result(extract_word_tables(path), json_output=json_output)
 
 
+@word_app.command("extract-text")
+def word_extract_text(
+    path: Annotated[Path, typer.Argument(help="DOCX artifact path to extract text from.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Extract Word text with paragraph locations, styles, and heading levels."""
+    _emit_result(extract_word_text(path), json_output=json_output)
+
+
+@word_app.command("extract-outline")
+def word_extract_outline(
+    path: Annotated[Path, typer.Argument(help="DOCX artifact path to extract outline from.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Extract a Word document outline with headings, sections, and navigation anchors."""
+    _emit_result(extract_word_outline(path), json_output=json_output)
+
+
+@word_app.command("extract-comments")
+def word_extract_comments(
+    path: Annotated[Path, typer.Argument(help="DOCX artifact path to extract comments from.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Extract Word comments with author, date, reference ranges, and reply threads."""
+    _emit_result(extract_word_comments(path), json_output=json_output)
+
+
+@word_app.command("extract-revisions")
+def word_extract_revisions(
+    path: Annotated[Path, typer.Argument(help="DOCX artifact path to extract revisions from.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Extract Word tracked revisions with author, date, type, and text ranges."""
+    _emit_result(extract_word_revisions(path), json_output=json_output)
+
+
+@word_app.command("extract-fields")
+def word_extract_fields(
+    path: Annotated[Path, typer.Argument(help="DOCX artifact path to extract fields from.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Extract Word fields with types, instructions, cached results, and locations."""
+    _emit_result(extract_word_fields(path), json_output=json_output)
+
+
+@word_app.command("extract-styles")
+def word_extract_styles(
+    path: Annotated[Path, typer.Argument(help="DOCX artifact path to extract styles from.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Extract Word style definitions with names, types, base styles, and formatting."""
+    _emit_result(extract_word_styles(path), json_output=json_output)
+
+
 @word_app.command("validate-document")
 def word_validate_document_command(
     path: Annotated[Path, typer.Argument(help="DOCX artifact path to validate.")],
@@ -374,6 +438,24 @@ def sheet_validate_formulas(
 ) -> None:
     """Validate workbook formulas for cached errors, broken refs, external refs, and volatile functions."""
     _emit_result(validate_sheet_formulas(path), json_output=json_output)
+
+
+@sheet_app.command("validate-model-checks")
+def sheet_validate_model_checks(
+    path: Annotated[Path, typer.Argument(help="XLSX artifact path to run model checks on.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Perform structural model checks: circular references, empty inputs, and SUM range balance."""
+    _emit_result(validate_sheet_model_checks(path), json_output=json_output)
+
+
+@sheet_app.command("validate-external-links")
+def sheet_validate_external_links(
+    path: Annotated[Path, typer.Argument(help="XLSX artifact path to audit external links in.")],
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Audit external link targets in an XLSX workbook package."""
+    _emit_result(validate_sheet_external_links(path), json_output=json_output)
 
 
 @deck_app.command("inspect")
@@ -684,6 +766,44 @@ def workflow_board_pack(
 ) -> None:
     """Create a local board pack ZIP with artifacts, manifest, and validation report."""
     _emit_result(board_pack(files, output_path, title=title), json_output=json_output)
+
+
+@workflow_app.command("source-to-board-pack")
+def workflow_source_to_board_pack(
+    files: Annotated[
+        list[Path],
+        typer.Argument(help="Source documents (DOCX, XLSX, PPTX, PDF) to process."),
+    ],
+    schema: Annotated[
+        str,
+        typer.Option("--schema", help="Extraction schema as JSON string or path to JSON file."),
+    ],
+    output_path: Annotated[Path, typer.Option("--output", "-o", help="Output board pack ZIP path.")],
+    title: Annotated[str | None, typer.Option("--title", help="Board pack title.")] = None,
+    intent: Annotated[str | None, typer.Option("--intent", help="Workflow intent.")] = None,
+    deck_title: Annotated[str | None, typer.Option("--deck-title", help="Deck presentation title.")] = None,
+    max_rows: Annotated[int, typer.Option("--max-rows", help="Max rows per sheet for deck plan.")] = 100,
+    json_output: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """End-to-end: source documents -> evidence workbook -> deck -> board pack ZIP."""
+    import json
+    schema_path = Path(schema)
+    if schema_path.exists():
+        schema_obj = json.loads(schema_path.read_text(encoding="utf-8"))
+    else:
+        schema_obj = json.loads(schema)
+    _emit_result(
+        source_to_board_pack(
+            files=files,
+            schema=schema_obj,
+            output_path=output_path,
+            title=title,
+            intent=intent,
+            deck_title=deck_title,
+            max_rows_per_sheet=max_rows,
+        ),
+        json_output=json_output,
+    )
 
 
 @bundle_app.command("verify")

@@ -1,0 +1,127 @@
+{
+  "$defs": {
+    "ResumeShapeDef": {
+      "description": "A positioned region within a resume layout.",
+      "properties": {
+        "purpose": {
+          "description": "Semantic role of this region: 'name', 'headline', 'contact', 'section_title', 'entry_title', 'entry_org', 'entry_date', 'body', 'sidebar_section', 'sidebar_title'",
+          "title": "Purpose",
+          "type": "string"
+        },
+        "x": {
+          "default": 0,
+          "description": "Column position (0-based, 12-column grid)",
+          "title": "X",
+          "type": "integer"
+        },
+        "y": {
+          "default": 0,
+          "description": "Row position",
+          "title": "Y",
+          "type": "integer"
+        },
+        "cx": {
+          "default": 12,
+          "description": "Column span (1-12)",
+          "title": "Cx",
+          "type": "integer"
+        },
+        "cy": {
+          "default": 1,
+          "description": "Row span",
+          "title": "Cy",
+          "type": "integer"
+        },
+        "css_area": {
+          "default": "",
+          "description": "CSS grid area name for HTML rendering",
+          "title": "Css Area",
+          "type": "string"
+        },
+        "font_role": {
+          "default": "body",
+          "description": "Maps to a ResumeDesignTokens field (e.g. 'name' -> name_font/name_size_pt)",
+          "enum": [
+            "name",
+            "headline",
+            "contact",
+            "section_title",
+            "entry_title",
+            "entry_org",
+            "entry_date",
+            "body"
+          ],
+          "title": "Font Role",
+          "type": "string"
+        },
+        "bold": {
+          "default": false,
+          "description": "Whether this region uses bold weight",
+          "title": "Bold",
+          "type": "boolean"
+        },
+        "bullet": {
+          "default": false,
+          "description": "Whether this region renders as bullet list",
+          "title": "Bullet",
+          "type": "boolean"
+        },
+        "ats_safe": {
+          "default": true,
+          "description": "Whether this element is ATS-compatible in its layout position",
+          "title": "Ats Safe",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "purpose"
+      ],
+      "title": "ResumeShapeDef",
+      "type": "object"
+    }
+  },
+  "description": "A resume page layout definition.",
+  "properties": {
+    "kind": {
+      "description": "Layout variant identifier",
+      "enum": [
+        "single_column",
+        "two_column_sidebar",
+        "header_with_contact"
+      ],
+      "title": "Kind",
+      "type": "string"
+    },
+    "shapes": {
+      "description": "Positioned regions in this layout",
+      "items": {
+        "$ref": "#/$defs/ResumeShapeDef"
+      },
+      "title": "Shapes",
+      "type": "array"
+    },
+    "css_grid_template": {
+      "default": "",
+      "description": "CSS grid-template-areas string for HTML rendering",
+      "title": "Css Grid Template",
+      "type": "string"
+    },
+    "ats_compatible": {
+      "default": true,
+      "description": "Whether this layout passes ATS single-column layout checks",
+      "title": "Ats Compatible",
+      "type": "boolean"
+    },
+    "max_entries_per_page": {
+      "default": 6,
+      "description": "Maximum entries before automatic page break",
+      "title": "Max Entries Per Page",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "kind"
+  ],
+  "title": "ResumeLayout",
+  "type": "object"
+}

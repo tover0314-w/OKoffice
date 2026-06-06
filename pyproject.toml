@@ -28,6 +28,9 @@ api = []
 browser-renderer = [
   "playwright>=1.44",
 ]
+typst-renderer = [
+  "typst>=0.12",
+]
 
 [project.scripts]
 agentpdf = "okoffice.cli.main:app"

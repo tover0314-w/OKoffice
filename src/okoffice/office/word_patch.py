@@ -7,6 +7,7 @@ from uuid import uuid4
 from xml.etree import ElementTree
 
 from okoffice.artifacts.store import build_artifact
+from okoffice.office.shared import failed_result, job_id
 from okoffice.office.word import WORD_DOCUMENT, W_NS, inspect_word_document
 from okoffice.schemas.errors import OKofficeException
 from okoffice.schemas.models import OKofficeError, ToolResult, ValidationCheck, ValidationReport
@@ -26,7 +27,7 @@ def plan_word_patch(*, input_path: str | Path, operations: list[dict[str, Any]])
         normalized = _normalize_operations(operations)
         preview = _preview_changes(paragraphs, normalized)
         return ToolResult(
-            job_id=_job_id(),
+            job_id=job_id(),
             status="succeeded",
             tool=PLAN_TOOL,
             validation=_plan_validation(input_file, normalized, preview),
@@ -42,9 +43,9 @@ def plan_word_patch(*, input_path: str | Path, operations: list[dict[str, Any]])
             next_recommended_tools=["word.patch.apply", "word.inspect.document"],
         )
     except OKofficeException as exc:
-        return _failed(PLAN_TOOL, exc.to_error())
+        return failed_result(PLAN_TOOL, exc.to_error())
     except (zipfile.BadZipFile, ElementTree.ParseError, ValueError) as exc:
-        return _failed(PLAN_TOOL, OKofficeError(code="invalid_input", message=str(exc)))
+        return failed_result(PLAN_TOOL, OKofficeError(code="invalid_input", message=str(exc)))
 
 
 def apply_word_patch(
@@ -85,7 +86,7 @@ def apply_word_patch(
             )
 
         return ToolResult(
-            job_id=_job_id(),
+            job_id=job_id(),
             status="succeeded",
             tool=APPLY_TOOL,
             artifacts=[build_artifact(output_file, source_tool=APPLY_TOOL)],
@@ -103,9 +104,9 @@ def apply_word_patch(
             next_recommended_tools=["word.inspect.document", "office.context.build_packet"],
         )
     except OKofficeException as exc:
-        return _failed(APPLY_TOOL, exc.to_error())
+        return failed_result(APPLY_TOOL, exc.to_error())
     except (zipfile.BadZipFile, ElementTree.ParseError, ValueError) as exc:
-        return _failed(APPLY_TOOL, OKofficeError(code="invalid_input", message=str(exc)))
+        return failed_result(APPLY_TOOL, OKofficeError(code="invalid_input", message=str(exc)))
 
 
 def _load_document(path: Path) -> tuple[ElementTree.Element, list[ElementTree.Element]]:
@@ -320,17 +321,3 @@ def _text_content(element: ElementTree.Element) -> str:
 def _unsafe_zip_entry(name: str) -> bool:
     normalized = name.replace("\\", "/")
     return normalized.startswith("/") or normalized.startswith("../") or "/../" in normalized
-
-
-def _failed(tool: str, error: OKofficeError) -> ToolResult:
-    return ToolResult(
-        job_id=_job_id(),
-        status="failed",
-        tool=tool,
-        error=error,
-        warnings=[error.message],
-    )
-
-
-def _job_id() -> str:
-    return f"job_{uuid4().hex[:16]}"

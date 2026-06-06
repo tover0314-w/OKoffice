@@ -7,11 +7,12 @@ from pathlib import Path
 from pathlib import PurePosixPath
 from typing import Any
 from xml.etree import ElementTree
-from uuid import uuid4
+
 
 from okoffice.artifacts.store import build_artifact
 from okoffice.office.inspect import inspect_office_file
 from okoffice.office.ooxml import SHEET_NS, count_members, read_xml, sorted_members, zip_names
+from okoffice.office.shared import dedupe_strings, failed_result, job_id, validation_report_status
 from okoffice.office.xlsx import write_xlsx
 from okoffice.schemas.errors import OKofficeException
 from okoffice.schemas.models import OKofficeError, ToolResult, ValidationCheck, ValidationReport
@@ -24,6 +25,8 @@ WRITE_WORKBOOK_TOOL_NAME = "sheet.write.workbook"
 CREATE_EVIDENCE_WORKBOOK_TOOL_NAME = "sheet.create.evidence_workbook"
 VALIDATE_WORKBOOK_TOOL_NAME = "sheet.validate.workbook"
 VALIDATE_FORMULAS_TOOL_NAME = "sheet.validation.formulas"
+VALIDATE_MODEL_CHECKS_TOOL_NAME = "sheet.validation.model_checks"
+VALIDATE_EXTERNAL_LINKS_TOOL_NAME = "sheet.validation.external_links"
 READ_WORKBOOK_TOOL_NAME = "sheet.read.workbook"
 PROFILE_DATA_TOOL_NAME = "sheet.profile.data"
 CELL_REF_RE = re.compile(r"^([A-Z]+)([0-9]+)$", re.IGNORECASE)
@@ -42,12 +45,12 @@ CORE_NS = "{http://schemas.openxmlformats.org/package/2006/metadata/core-propert
 def inspect_sheet_workbook(path: str | Path) -> ToolResult:
     preflight = inspect_office_file(path)
     if preflight.status == "failed":
-        return _failed(
+        return failed_result(
             INSPECT_TOOL_NAME,
             preflight.error or OKofficeError(code="unsupported_file_type", message="Sheet inspect failed."),
         )
     if preflight.usage["format"]["detected_format"] != "xlsx":
-        return _failed(
+        return failed_result(
             INSPECT_TOOL_NAME,
             OKofficeError(
                 code="unsupported_file_type",
@@ -60,9 +63,9 @@ def inspect_sheet_workbook(path: str | Path) -> ToolResult:
     try:
         usage, warnings = _rich_inspect_sheet_workbook(source_path, preflight)
     except OKofficeException as exc:
-        return _failed(INSPECT_TOOL_NAME, exc.to_error())
+        return failed_result(INSPECT_TOOL_NAME, exc.to_error())
     except (OSError, zipfile.BadZipFile, ElementTree.ParseError) as exc:
-        return _failed(
+        return failed_result(
             INSPECT_TOOL_NAME,
             OKofficeError(
                 code="output_validation_failed",
@@ -72,7 +75,7 @@ def inspect_sheet_workbook(path: str | Path) -> ToolResult:
         )
 
     return ToolResult(
-        job_id=_job_id(),
+        job_id=job_id(),
         status="succeeded",
         tool=INSPECT_TOOL_NAME,
         validation=ValidationReport(
@@ -103,12 +106,12 @@ def inspect_sheet_workbook(path: str | Path) -> ToolResult:
 def extract_sheet_tables(path: str | Path) -> ToolResult:
     preflight = inspect_office_file(path)
     if preflight.status == "failed":
-        return _failed(
+        return failed_result(
             EXTRACT_TABLES_TOOL_NAME,
             preflight.error or OKofficeError(code="unsupported_file_type", message="Sheet table extraction failed."),
         )
     if preflight.usage["format"]["detected_format"] != "xlsx":
-        return _failed(
+        return failed_result(
             EXTRACT_TABLES_TOOL_NAME,
             OKofficeError(
                 code="unsupported_file_type",
@@ -128,7 +131,7 @@ def extract_sheet_tables(path: str | Path) -> ToolResult:
     cell_count = sum(len(row["cells"]) for table in tables for row in table["rows"])
 
     return ToolResult(
-        job_id=_job_id(),
+        job_id=job_id(),
         status="succeeded",
         tool=EXTRACT_TABLES_TOOL_NAME,
         validation=ValidationReport(
@@ -180,11 +183,11 @@ def _write_sheet_workbook(
     try:
         output = resolve_output_path(output_path)
     except OKofficeException as exc:
-        return _failed(tool_name, exc.to_error())
+        return failed_result(tool_name, exc.to_error())
 
     records = _write_records(data)
     if not records:
-        return _failed(
+        return failed_result(
             tool_name,
             OKofficeError(
                 code="unsafe_input_rejected",
@@ -234,7 +237,7 @@ def _write_sheet_workbook(
     write_xlsx(output, [("Workbook", workbook_rows), ("SourceRefs", source_rows)])
     artifact = build_artifact(output, tool_name)
     return ToolResult(
-        job_id=_job_id(),
+        job_id=job_id(),
         status="succeeded",
         tool=tool_name,
         artifacts=[artifact],
@@ -284,12 +287,12 @@ def _write_sheet_workbook(
 def read_sheet_workbook(path: str | Path, max_rows_per_sheet: int = 100) -> ToolResult:
     preflight = inspect_office_file(path)
     if preflight.status == "failed":
-        return _failed(
+        return failed_result(
             READ_WORKBOOK_TOOL_NAME,
             preflight.error or OKofficeError(code="unsupported_file_type", message="Sheet read failed."),
         )
     if preflight.usage["format"]["detected_format"] != "xlsx":
-        return _failed(
+        return failed_result(
             READ_WORKBOOK_TOOL_NAME,
             OKofficeError(
                 code="unsupported_file_type",
@@ -302,7 +305,7 @@ def read_sheet_workbook(path: str | Path, max_rows_per_sheet: int = 100) -> Tool
     names = zip_names(source_path)
     workbook_root = read_xml(source_path, "xl/workbook.xml")
     if workbook_root is None:
-        return _failed(
+        return failed_result(
             READ_WORKBOOK_TOOL_NAME,
             OKofficeError(
                 code="unsupported_file_type",
@@ -357,11 +360,11 @@ def read_sheet_workbook(path: str | Path, max_rows_per_sheet: int = 100) -> Tool
     ]
 
     return ToolResult(
-        job_id=_job_id(),
+        job_id=job_id(),
         status="succeeded",
         tool=READ_WORKBOOK_TOOL_NAME,
         validation=ValidationReport(
-            status=_validation_report_status(checks),
+            status=validation_report_status(checks),
             checks=checks,
             warnings=warnings,
         ),
@@ -392,7 +395,7 @@ def profile_sheet_data(
 ) -> ToolResult:
     read_result = read_sheet_workbook(path, max_rows_per_sheet=max_rows_per_sheet)
     if read_result.status == "failed":
-        return _failed(
+        return failed_result(
             PROFILE_DATA_TOOL_NAME,
             read_result.error or OKofficeError(code="unsupported_file_type", message="Sheet profile failed."),
         )
@@ -443,11 +446,11 @@ def profile_sheet_data(
     ]
 
     return ToolResult(
-        job_id=_job_id(),
+        job_id=job_id(),
         status="succeeded",
         tool=PROFILE_DATA_TOOL_NAME,
         validation=ValidationReport(
-            status=_validation_report_status(checks),
+            status=validation_report_status(checks),
             checks=checks,
             warnings=warnings,
         ),
@@ -483,12 +486,12 @@ def profile_sheet_data(
 def validate_sheet_workbook(path: str | Path) -> ToolResult:
     preflight = inspect_office_file(path)
     if preflight.status == "failed":
-        return _failed(
+        return failed_result(
             VALIDATE_WORKBOOK_TOOL_NAME,
             preflight.error or OKofficeError(code="unsupported_file_type", message="Sheet validation failed."),
         )
     if preflight.usage["format"]["detected_format"] != "xlsx":
-        return _failed(
+        return failed_result(
             VALIDATE_WORKBOOK_TOOL_NAME,
             OKofficeError(
                 code="unsupported_file_type",
@@ -501,7 +504,7 @@ def validate_sheet_workbook(path: str | Path) -> ToolResult:
     names = zip_names(source_path)
     workbook_root = read_xml(source_path, "xl/workbook.xml")
     if workbook_root is None:
-        return _failed(
+        return failed_result(
             VALIDATE_WORKBOOK_TOOL_NAME,
             OKofficeError(
                 code="unsupported_file_type",
@@ -599,11 +602,11 @@ def validate_sheet_workbook(path: str | Path) -> ToolResult:
         warnings.append("External Office relationship targets were detected.")
 
     return ToolResult(
-        job_id=_job_id(),
+        job_id=job_id(),
         status="succeeded",
         tool=VALIDATE_WORKBOOK_TOOL_NAME,
         validation=ValidationReport(
-            status=_validation_report_status(checks),
+            status=validation_report_status(checks),
             checks=checks,
             warnings=warnings,
         ),
@@ -630,12 +633,12 @@ def validate_sheet_workbook(path: str | Path) -> ToolResult:
 def validate_sheet_formulas(path: str | Path) -> ToolResult:
     preflight = inspect_office_file(path)
     if preflight.status == "failed":
-        return _failed(
+        return failed_result(
             VALIDATE_FORMULAS_TOOL_NAME,
             preflight.error or OKofficeError(code="unsupported_file_type", message="Sheet formula validation failed."),
         )
     if preflight.usage["format"]["detected_format"] != "xlsx":
-        return _failed(
+        return failed_result(
             VALIDATE_FORMULAS_TOOL_NAME,
             OKofficeError(
                 code="unsupported_file_type",
@@ -648,7 +651,7 @@ def validate_sheet_formulas(path: str | Path) -> ToolResult:
     names = zip_names(source_path)
     workbook_root = read_xml(source_path, "xl/workbook.xml")
     if workbook_root is None:
-        return _failed(
+        return failed_result(
             VALIDATE_FORMULAS_TOOL_NAME,
             OKofficeError(
                 code="unsupported_file_type",
@@ -722,11 +725,11 @@ def validate_sheet_formulas(path: str | Path) -> ToolResult:
     ]
 
     return ToolResult(
-        job_id=_job_id(),
+        job_id=job_id(),
         status="succeeded",
         tool=VALIDATE_FORMULAS_TOOL_NAME,
         validation=ValidationReport(
-            status=_validation_report_status(checks),
+            status=validation_report_status(checks),
             checks=checks,
             warnings=warnings,
         ),
@@ -747,6 +750,221 @@ def validate_sheet_formulas(path: str | Path) -> ToolResult:
             "sheet.profile.data",
             "deck.compose.plan",
             "office.workflow.sheet_to_deck",
+        ],
+    )
+
+
+def validate_sheet_model_checks(path: str | Path) -> ToolResult:
+    """Perform structural model checks on workbook formulas."""
+    preflight = inspect_office_file(path)
+    if preflight.status == "failed":
+        return failed_result(
+            VALIDATE_MODEL_CHECKS_TOOL_NAME,
+            preflight.error or OKofficeError(code="unsupported_file_type", message="Sheet model-check validation failed."),
+        )
+    if preflight.usage["format"]["detected_format"] != "xlsx":
+        return failed_result(
+            VALIDATE_MODEL_CHECKS_TOOL_NAME,
+            OKofficeError(
+                code="unsupported_file_type",
+                message="sheet.validation.model_checks requires an XLSX-compatible OOXML package.",
+                details={"detected_format": preflight.usage["format"]["detected_format"]},
+            ),
+        )
+
+    source_path = Path(preflight.usage["file"]["path"])
+    names = zip_names(source_path)
+    workbook_root = read_xml(source_path, "xl/workbook.xml")
+    if workbook_root is None:
+        return failed_result(
+            VALIDATE_MODEL_CHECKS_TOOL_NAME,
+            OKofficeError(
+                code="unsupported_file_type",
+                message="sheet.validation.model_checks requires xl/workbook.xml in the XLSX package.",
+                details={"path": source_path.as_posix()},
+            ),
+        )
+
+    sheet_names = _sheet_names(workbook_root)
+    worksheet_members = sorted_members(names, prefix="xl/worksheets/sheet")
+    shared_strings = _shared_strings(read_xml(source_path, "xl/sharedStrings.xml"))
+    formulas = _formula_payloads(source_path, worksheet_members, sheet_names, shared_strings)
+
+    # Build a set of (sheet_name, cell_ref) for all non-empty input cells.
+    input_cells = _input_cell_set(source_path, worksheet_members, sheet_names, shared_strings)
+
+    # Circular reference candidates: formula references its own cell.
+    circular_refs = _detect_circular_refs(formulas)
+
+    # Empty input cells: formula references a cell that has no value.
+    empty_inputs = _detect_empty_inputs(formulas, input_cells)
+
+    # Balance check: SUM formulas where the range might not cover all needed rows.
+    balance_issues = _detect_balance_issues(formulas, source_path, worksheet_members, sheet_names, shared_strings)
+
+    summary = {
+        "sheet_count": len(worksheet_members),
+        "formula_count": len(formulas),
+        "circular_ref_count": len(circular_refs),
+        "empty_input_count": len(empty_inputs),
+        "balance_issue_count": len(balance_issues),
+    }
+    warnings = list(preflight.warnings)
+    if summary["circular_ref_count"]:
+        warnings.append(f"Circular reference candidates detected: {summary['circular_ref_count']}.")
+    if summary["empty_input_count"]:
+        warnings.append(f"Formulas referencing empty input cells detected: {summary['empty_input_count']}.")
+    if summary["balance_issue_count"]:
+        warnings.append(f"Potential SUM range balance issues detected: {summary['balance_issue_count']}.")
+
+    checks = [
+        ValidationCheck(name="format_is_xlsx", status="passed", details=preflight.usage["format"]),
+        ValidationCheck(name="workbook_xml_present", status="passed", details={"member": "xl/workbook.xml"}),
+        ValidationCheck(
+            name="formulas_scanned",
+            status="passed",
+            details={
+                "sheet_count": summary["sheet_count"],
+                "formula_count": summary["formula_count"],
+                "evaluation": "structural_only",
+            },
+        ),
+        _validation_check(
+            "circular_refs_absent",
+            condition=summary["circular_ref_count"] == 0,
+            failed_status="warning",
+            passed_details={"circular_ref_count": summary["circular_ref_count"]},
+            failed_message="Circular reference candidates were detected.",
+        ),
+        _validation_check(
+            "empty_inputs_absent",
+            condition=summary["empty_input_count"] == 0,
+            failed_status="warning",
+            passed_details={"empty_input_count": summary["empty_input_count"]},
+            failed_message="Formulas referencing empty input cells were detected.",
+        ),
+        _validation_check(
+            "balance_issues_absent",
+            condition=summary["balance_issue_count"] == 0,
+            failed_status="warning",
+            passed_details={"balance_issue_count": summary["balance_issue_count"]},
+            failed_message="Potential SUM range balance issues were detected.",
+        ),
+    ]
+
+    return ToolResult(
+        job_id=job_id(),
+        status="succeeded",
+        tool=VALIDATE_MODEL_CHECKS_TOOL_NAME,
+        validation=ValidationReport(
+            status=validation_report_status(checks),
+            checks=checks,
+            warnings=warnings,
+        ),
+        warnings=warnings,
+        usage={
+            "workbook": {
+                "path": source_path.as_posix(),
+                "format": "xlsx",
+                "package_type": preflight.usage["format"]["package_type"],
+            },
+            "summary": summary,
+            "model_checks": {
+                "circular_refs": circular_refs,
+                "empty_inputs": empty_inputs,
+                "balance_issues": balance_issues,
+            },
+            "engine": {"evaluation": "structural_only", "recalculated": False},
+            "safety": preflight.usage["safety"],
+        },
+        next_recommended_tools=[
+            "sheet.validation.formulas",
+            "sheet.validate.workbook",
+            "sheet.profile.data",
+            "office.context.build_packet",
+        ],
+    )
+
+
+def validate_sheet_external_links(path: str | Path) -> ToolResult:
+    """Audit external link targets in an XLSX workbook package."""
+    preflight = inspect_office_file(path)
+    if preflight.status == "failed":
+        return failed_result(
+            VALIDATE_EXTERNAL_LINKS_TOOL_NAME,
+            preflight.error or OKofficeError(code="unsupported_file_type", message="Sheet external-link validation failed."),
+        )
+    if preflight.usage["format"]["detected_format"] != "xlsx":
+        return failed_result(
+            VALIDATE_EXTERNAL_LINKS_TOOL_NAME,
+            OKofficeError(
+                code="unsupported_file_type",
+                message="sheet.validation.external_links requires an XLSX-compatible OOXML package.",
+                details={"detected_format": preflight.usage["format"]["detected_format"]},
+            ),
+        )
+
+    source_path = Path(preflight.usage["file"]["path"])
+    try:
+        external_links = _extract_external_links(source_path)
+    except (OSError, zipfile.BadZipFile, ElementTree.ParseError) as exc:
+        return failed_result(
+            VALIDATE_EXTERNAL_LINKS_TOOL_NAME,
+            OKofficeError(
+                code="output_validation_failed",
+                message=f"Unable to read external relationships from workbook package: {exc}",
+                details={"path": source_path.as_posix()},
+            ),
+        )
+
+    summary = {
+        "external_link_count": len(external_links),
+    }
+    warnings = list(preflight.warnings)
+    if summary["external_link_count"]:
+        warnings.append(f"External link targets detected: {summary['external_link_count']}.")
+
+    checks = [
+        ValidationCheck(name="format_is_xlsx", status="passed", details=preflight.usage["format"]),
+        ValidationCheck(
+            name="external_links_scanned",
+            status="passed",
+            details={"external_link_count": summary["external_link_count"]},
+        ),
+        _validation_check(
+            "external_links_absent",
+            condition=summary["external_link_count"] == 0,
+            failed_status="warning",
+            passed_details={"external_link_count": summary["external_link_count"]},
+            failed_message="External link targets were detected in the workbook package.",
+        ),
+    ]
+
+    return ToolResult(
+        job_id=job_id(),
+        status="succeeded",
+        tool=VALIDATE_EXTERNAL_LINKS_TOOL_NAME,
+        validation=ValidationReport(
+            status=validation_report_status(checks),
+            checks=checks,
+            warnings=warnings,
+        ),
+        warnings=warnings,
+        usage={
+            "workbook": {
+                "path": source_path.as_posix(),
+                "format": "xlsx",
+                "package_type": preflight.usage["format"]["package_type"],
+            },
+            "summary": summary,
+            "external_links": external_links,
+            "safety": preflight.usage["safety"],
+        },
+        next_recommended_tools=[
+            "sheet.validation.formulas",
+            "sheet.validation.model_checks",
+            "sheet.validate.workbook",
+            "office.context.build_packet",
         ],
     )
 
@@ -827,7 +1045,7 @@ def _rich_inspect_sheet_workbook(path: Path, preflight: ToolResult) -> tuple[dic
         "comment_count": len(comments),
         "external_link_count": len(external_relationships) or count_members(names, prefix="xl/externalLinks/"),
     }
-    warnings = _dedupe_strings(
+    warnings = dedupe_strings(
         [
             *preflight.warnings,
             *(["Macro-enabled workbook package markers were detected; macros are not executed."] if package["macro_enabled"] else []),
@@ -1276,16 +1494,6 @@ def _rich_unsafe_zip_entry(name: str) -> bool:
     return any(part in {"", ".", ".."} for part in parts)
 
 
-def _dedupe_strings(values: list[str]) -> list[str]:
-    seen: set[str] = set()
-    deduped: list[str] = []
-    for value in values:
-        if value and value not in seen:
-            seen.add(value)
-            deduped.append(value)
-    return deduped
-
-
 def _sheet_names(workbook_root: object | None) -> list[str]:
     if workbook_root is None:
         return []
@@ -1671,15 +1879,6 @@ def _validation_check(
     return ValidationCheck(name=name, status=failed_status, details=passed_details, message=failed_message)
 
 
-def _validation_report_status(checks: list[ValidationCheck]) -> str:
-    statuses = [check.status for check in checks]
-    if "failed" in statuses:
-        return "failed"
-    if "warning" in statuses:
-        return "warning"
-    return "passed"
-
-
 def _write_records(data: dict[str, Any] | list[dict[str, Any]]) -> list[dict[str, Any]]:
     payload: Any = data
     if isinstance(payload, dict) and isinstance(payload.get("usage"), dict):
@@ -1900,15 +2099,194 @@ def _column_letters(column_number: int) -> str:
     return letters or "A"
 
 
-def _failed(tool: str, error: OKofficeError) -> ToolResult:
-    return ToolResult(
-        job_id=_job_id(),
-        status="failed",
-        tool=tool,
-        warnings=[error.message],
-        error=error,
-    )
+# ---------------------------------------------------------------------------
+# Model-check helpers (circular refs, empty inputs, balance issues)
+# ---------------------------------------------------------------------------
+
+def _input_cell_set(
+    path: Path,
+    worksheet_members: list[str],
+    sheet_names: list[str],
+    shared_strings: list[str],
+) -> set[tuple[str, str]]:
+    """Build a set of (sheet_name, CELL_REF) for all non-empty input cells."""
+    populated: set[tuple[str, str]] = set()
+    for sheet_index, member in enumerate(worksheet_members, start=1):
+        worksheet_root = read_xml(path, member)
+        if worksheet_root is None:
+            continue
+        sheet_name = sheet_names[sheet_index - 1] if sheet_index <= len(sheet_names) else f"Sheet {sheet_index}"
+        for cell in worksheet_root.findall(".//main:c", SHEET_NS):
+            cell_ref = str(cell.get("r") or "").upper()
+            value = _cell_value(cell, shared_strings)
+            if value != "":
+                populated.add((sheet_name.upper(), cell_ref))
+    return populated
 
 
-def _job_id() -> str:
-    return f"job_{uuid4().hex[:16]}"
+def _detect_circular_refs(formulas: list[dict[str, object]]) -> list[dict[str, object]]:
+    """Detect formulas that reference their own cell."""
+    circular_refs: list[dict[str, object]] = []
+    for formula in formulas:
+        sheet_name = str(formula.get("sheet_name", ""))
+        cell_ref = str(formula.get("cell_ref", ""))
+        formula_text = str(formula.get("formula", ""))
+        if not cell_ref or not formula_text:
+            continue
+        normalized_cell = cell_ref.replace("$", "").upper()
+        precedents = _formula_precedents(formula_text)
+        for precedent in precedents:
+            if ":" in precedent:
+                # Range reference -- skip for circular detection (too complex for structural check).
+                continue
+            if precedent == normalized_cell:
+                circular_refs.append(
+                    {
+                        "sheet_name": sheet_name,
+                        "cell_ref": cell_ref,
+                        "formula": formula_text,
+                        "self_reference": normalized_cell,
+                    }
+                )
+                break
+    return circular_refs
+
+
+def _detect_empty_inputs(
+    formulas: list[dict[str, object]],
+    input_cells: set[tuple[str, str]],
+) -> list[dict[str, object]]:
+    """Detect formula cells that reference empty input cells."""
+    empty_inputs: list[dict[str, object]] = []
+    for formula in formulas:
+        sheet_name = str(formula.get("sheet_name", ""))
+        formula_text = str(formula.get("formula", ""))
+        if not formula_text:
+            continue
+        sheet_key = sheet_name.upper()
+        precedents = _formula_precedents(formula_text)
+        for precedent in precedents:
+            if ":" in precedent:
+                continue
+            if (sheet_key, precedent) not in input_cells:
+                empty_inputs.append(
+                    {
+                        "sheet_name": sheet_name,
+                        "cell_ref": str(formula.get("cell_ref", "")),
+                        "formula": formula_text,
+                        "missing_cell": precedent,
+                    }
+                )
+    return empty_inputs
+
+
+_SUM_RANGE_RE = re.compile(
+    r"SUM\s*\(\s*([A-Z]{1,3}\d+)\s*:\s*([A-Z]{1,3}\d+)\s*\)",
+    re.IGNORECASE,
+)
+
+
+def _detect_balance_issues(
+    formulas: list[dict[str, object]],
+    path: Path,
+    worksheet_members: list[str],
+    sheet_names: list[str],
+    shared_strings: list[str],
+) -> list[dict[str, object]]:
+    """Detect SUM formulas where the range might not cover all needed rows."""
+    balance_issues: list[dict[str, object]] = []
+    for formula in formulas:
+        formula_text = str(formula.get("formula", ""))
+        if not formula_text:
+            continue
+        for match in _SUM_RANGE_RE.finditer(formula_text):
+            start_ref = match.group(1).upper()
+            end_ref = match.group(2).upper()
+            start_parsed = _parse_cell_ref(start_ref)
+            end_parsed = _parse_cell_ref(end_ref)
+            if start_parsed is None or end_parsed is None:
+                continue
+            start_row, start_col = start_parsed
+            end_row, end_col = end_parsed
+            if start_col != end_col:
+                # Multi-column range -- not a simple column balance check.
+                continue
+            # Check if there is data in the column below the end row.
+            sheet_name = str(formula.get("sheet_name", ""))
+            column_letter = _column_letters(start_col)
+            has_data_below = _has_data_below_row(
+                path, worksheet_members, sheet_names, shared_strings,
+                sheet_name, column_letter, end_row,
+            )
+            if has_data_below:
+                balance_issues.append(
+                    {
+                        "sheet_name": sheet_name,
+                        "cell_ref": str(formula.get("cell_ref", "")),
+                        "formula": formula_text,
+                        "sum_range": f"{start_ref}:{end_ref}",
+                        "potential_gap": True,
+                    }
+                )
+    return balance_issues
+
+
+def _has_data_below_row(
+    path: Path,
+    worksheet_members: list[str],
+    sheet_names: list[str],
+    shared_strings: list[str],
+    sheet_name: str,
+    column_letter: str,
+    end_row: int,
+) -> bool:
+    """Check if there is non-empty data in the given column below the specified row."""
+    target_col = _column_number(column_letter)
+    for sheet_index, member in enumerate(worksheet_members, start=1):
+        current_name = sheet_names[sheet_index - 1] if sheet_index <= len(sheet_names) else f"Sheet {sheet_index}"
+        if current_name != sheet_name:
+            continue
+        worksheet_root = read_xml(path, member)
+        if worksheet_root is None:
+            continue
+        for cell in worksheet_root.findall(".//main:c", SHEET_NS):
+            cell_ref = str(cell.get("r") or "")
+            parsed = _parse_cell_ref(cell_ref)
+            if parsed is None:
+                continue
+            cell_row, cell_col = parsed
+            if cell_col == target_col and cell_row > end_row:
+                value = _cell_value(cell, shared_strings)
+                if value != "":
+                    formula_node = cell.find(f"./main:f", SHEET_NS)
+                    # Only flag input cells, not other SUM formulas.
+                    if formula_node is None:
+                        return True
+    return False
+
+
+# ---------------------------------------------------------------------------
+# External-link helpers
+# ---------------------------------------------------------------------------
+
+def _extract_external_links(source_path: Path) -> list[dict[str, str]]:
+    """Extract external relationship targets from the XLSX package."""
+    links: list[dict[str, str]] = []
+    names = {name.replace("\\", "/") for name in zip_names(source_path)}
+    with zipfile.ZipFile(source_path) as archive:
+        for name in sorted(names):
+            if not name.endswith(".rels"):
+                continue
+            root = ElementTree.fromstring(archive.read(name))
+            for relationship in root.findall(f"{REL_NS}Relationship"):
+                if relationship.attrib.get("TargetMode") == "External":
+                    links.append(
+                        {
+                            "relationship_part": name,
+                            "type": str(relationship.attrib.get("Type") or ""),
+                            "target": str(relationship.attrib.get("Target") or ""),
+                        }
+                    )
+    return links
+
+

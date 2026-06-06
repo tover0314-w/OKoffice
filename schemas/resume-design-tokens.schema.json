@@ -1,0 +1,273 @@
+{
+  "description": "Fine-grained design tokens for resume rendering.\n\nEvery field has a default, so callers only need to override\nwhat differs from the preset.",
+  "properties": {
+    "base_theme": {
+      "default": "resume_modern",
+      "description": "Base theme ID to inherit defaults from",
+      "title": "Base Theme",
+      "type": "string"
+    },
+    "page_size": {
+      "default": "letter",
+      "description": "Page size \u2014 'letter' (8.5x11in) for US, 'A4' for international",
+      "enum": [
+        "letter",
+        "A4"
+      ],
+      "title": "Page Size",
+      "type": "string"
+    },
+    "margins_top_pt": {
+      "default": 42,
+      "description": "Top margin in points",
+      "minimum": 0,
+      "title": "Margins Top Pt",
+      "type": "number"
+    },
+    "margins_bottom_pt": {
+      "default": 42,
+      "description": "Bottom margin in points",
+      "minimum": 0,
+      "title": "Margins Bottom Pt",
+      "type": "number"
+    },
+    "margins_left_pt": {
+      "default": 48,
+      "description": "Left margin in points",
+      "minimum": 0,
+      "title": "Margins Left Pt",
+      "type": "number"
+    },
+    "margins_right_pt": {
+      "default": 48,
+      "description": "Right margin in points",
+      "minimum": 0,
+      "title": "Margins Right Pt",
+      "type": "number"
+    },
+    "name_font": {
+      "default": "Helvetica-Bold",
+      "description": "Font for candidate name",
+      "title": "Name Font",
+      "type": "string"
+    },
+    "name_size_pt": {
+      "default": 18,
+      "description": "Name font size in points",
+      "maximum": 36,
+      "minimum": 6,
+      "title": "Name Size Pt",
+      "type": "number"
+    },
+    "name_color": {
+      "default": "#0f172a",
+      "description": "Name text color (hex)",
+      "title": "Name Color",
+      "type": "string"
+    },
+    "headline_font": {
+      "default": "Helvetica",
+      "description": "Font for headline",
+      "title": "Headline Font",
+      "type": "string"
+    },
+    "headline_size_pt": {
+      "default": 11,
+      "description": "Headline font size",
+      "maximum": 24,
+      "minimum": 6,
+      "title": "Headline Size Pt",
+      "type": "number"
+    },
+    "headline_color": {
+      "default": "#475569",
+      "description": "Headline text color",
+      "title": "Headline Color",
+      "type": "string"
+    },
+    "contact_font": {
+      "default": "Helvetica",
+      "description": "Font for contact info",
+      "title": "Contact Font",
+      "type": "string"
+    },
+    "contact_size_pt": {
+      "default": 9,
+      "description": "Contact info font size",
+      "maximum": 14,
+      "minimum": 6,
+      "title": "Contact Size Pt",
+      "type": "number"
+    },
+    "contact_color": {
+      "default": "#475569",
+      "description": "Contact info color",
+      "title": "Contact Color",
+      "type": "string"
+    },
+    "section_title_font": {
+      "default": "Helvetica-Bold",
+      "description": "Font for section headers",
+      "title": "Section Title Font",
+      "type": "string"
+    },
+    "section_title_size_pt": {
+      "default": 11,
+      "description": "Section header font size",
+      "maximum": 20,
+      "minimum": 8,
+      "title": "Section Title Size Pt",
+      "type": "number"
+    },
+    "section_title_color": {
+      "default": "#0f766e",
+      "description": "Section header color",
+      "title": "Section Title Color",
+      "type": "string"
+    },
+    "section_title_spacing_before_pt": {
+      "default": 12,
+      "description": "Space before section header",
+      "maximum": 36,
+      "minimum": 0,
+      "title": "Section Title Spacing Before Pt",
+      "type": "number"
+    },
+    "section_title_spacing_after_pt": {
+      "default": 4,
+      "description": "Space after section header",
+      "maximum": 24,
+      "minimum": 0,
+      "title": "Section Title Spacing After Pt",
+      "type": "number"
+    },
+    "section_title_underline": {
+      "default": true,
+      "description": "Draw underline below section header",
+      "title": "Section Title Underline",
+      "type": "boolean"
+    },
+    "entry_title_font": {
+      "default": "Helvetica-Bold",
+      "description": "Font for entry titles (job titles, degree names)",
+      "title": "Entry Title Font",
+      "type": "string"
+    },
+    "entry_title_size_pt": {
+      "default": 10,
+      "description": "Entry title font size",
+      "maximum": 18,
+      "minimum": 6,
+      "title": "Entry Title Size Pt",
+      "type": "number"
+    },
+    "entry_title_color": {
+      "default": "#0f172a",
+      "description": "Entry title color",
+      "title": "Entry Title Color",
+      "type": "string"
+    },
+    "entry_org_font": {
+      "default": "Helvetica",
+      "description": "Font for organization name",
+      "title": "Entry Org Font",
+      "type": "string"
+    },
+    "entry_org_size_pt": {
+      "default": 10,
+      "description": "Organization font size",
+      "maximum": 16,
+      "minimum": 6,
+      "title": "Entry Org Size Pt",
+      "type": "number"
+    },
+    "entry_org_color": {
+      "default": "#0f172a",
+      "description": "Organization color",
+      "title": "Entry Org Color",
+      "type": "string"
+    },
+    "entry_date_font": {
+      "default": "Helvetica",
+      "description": "Font for date ranges",
+      "title": "Entry Date Font",
+      "type": "string"
+    },
+    "entry_date_size_pt": {
+      "default": 9,
+      "description": "Date font size",
+      "maximum": 14,
+      "minimum": 6,
+      "title": "Entry Date Size Pt",
+      "type": "number"
+    },
+    "entry_date_color": {
+      "default": "#64748b",
+      "description": "Date color",
+      "title": "Entry Date Color",
+      "type": "string"
+    },
+    "body_font": {
+      "default": "Helvetica",
+      "description": "Body/bullet text font",
+      "title": "Body Font",
+      "type": "string"
+    },
+    "body_size_pt": {
+      "default": 9,
+      "description": "Body text font size",
+      "maximum": 14,
+      "minimum": 6,
+      "title": "Body Size Pt",
+      "type": "number"
+    },
+    "body_color": {
+      "default": "#1f2937",
+      "description": "Body text color",
+      "title": "Body Color",
+      "type": "string"
+    },
+    "body_line_spacing": {
+      "default": 1.35,
+      "description": "Line spacing multiplier for body text",
+      "maximum": 3.0,
+      "minimum": 0.8,
+      "title": "Body Line Spacing",
+      "type": "number"
+    },
+    "bullet_indent_pt": {
+      "default": 14,
+      "description": "Indent for bullet items",
+      "minimum": 0,
+      "title": "Bullet Indent Pt",
+      "type": "number"
+    },
+    "bullet_spacing_pt": {
+      "default": 2,
+      "description": "Spacing between bullet items",
+      "minimum": 0,
+      "title": "Bullet Spacing Pt",
+      "type": "number"
+    },
+    "ats_safe_fonts_only": {
+      "default": true,
+      "description": "Restrict to ATS-safe fonts (Arial, Calibri, Garamond, Helvetica, Times)",
+      "title": "Ats Safe Fonts Only",
+      "type": "boolean"
+    },
+    "ats_single_column": {
+      "default": true,
+      "description": "Force single-column layout for ATS compatibility",
+      "title": "Ats Single Column",
+      "type": "boolean"
+    },
+    "ats_standard_margins": {
+      "default": true,
+      "description": "Enforce minimum 1-inch (72pt) margins for ATS",
+      "title": "Ats Standard Margins",
+      "type": "boolean"
+    }
+  },
+  "title": "ResumeDesignTokens",
+  "type": "object"
+}

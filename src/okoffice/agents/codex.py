@@ -12,7 +12,7 @@ from okoffice.security.paths import resolve_output_path
 
 DEFAULT_SAFE_ROOT = "."
 RECOMMENDED_MCP_TOOLS = [
-    "agentpdf_tool_manifest",
+    "okoffice_tool_manifest",
     "pdf_context_build_packet",
     "pdf_target_profiles",
     "pdf_target_validate_profile",
@@ -59,7 +59,7 @@ def setup_codex(
             "docs/31_LOCAL_AGENT_INTEGRATION.md",
         ],
         "starter_prompt": (
-            "Use the local okoffice MCP server. Read AGENTS.md, call agentpdf_tool_manifest, "
+            "Use the local okoffice MCP server. Read AGENTS.md, call okoffice_tool_manifest, "
             "then build context packets, select a target profile, create or compose a PDF, "
             "and run render, blank-page, evidence, patch, and artifact checks before reporting success."
         ),
@@ -81,7 +81,7 @@ def setup_codex(
         tool=tool,
         artifacts=artifacts,
         usage=usage,
-        next_recommended_tools=["agentpdf_tool_manifest", "pdf_target_profiles"],
+        next_recommended_tools=["okoffice_tool_manifest", "pdf_target_profiles"],
     )
 
 

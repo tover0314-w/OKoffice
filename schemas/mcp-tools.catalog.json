@@ -163,6 +163,16 @@
       "status": "beta"
     },
     {
+      "name": "sheet_validate_model_checks",
+      "maps_to": "sheet.validation.model_checks",
+      "status": "beta"
+    },
+    {
+      "name": "sheet_validate_external_links",
+      "maps_to": "sheet.validation.external_links",
+      "status": "beta"
+    },
+    {
       "name": "deck_inspect_presentation",
       "maps_to": "deck.inspect.presentation",
       "status": "beta"

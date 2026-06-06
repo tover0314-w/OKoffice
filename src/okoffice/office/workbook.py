@@ -6,11 +6,10 @@ import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-from uuid import uuid4
-
 from pydantic import BaseModel, Field
 
 from okoffice.artifacts.store import build_artifact
+from okoffice.office.shared import failed_result, job_id
 from okoffice.office.sheet import inspect_sheet_workbook
 from okoffice.schemas.errors import OKofficeException
 from okoffice.schemas.models import OKofficeError, ToolResult, ValidationCheck, ValidationReport
@@ -80,7 +79,7 @@ def write_sheet_workbook(
         artifacts = [build_artifact(output, source_tool=TOOL_NAME)]
         usage = _usage(extraction, output, source_path, sheets)
         return ToolResult(
-            job_id=_job_id(),
+            job_id=job_id(),
             status="succeeded",
             tool=TOOL_NAME,
             artifacts=artifacts,
@@ -93,9 +92,9 @@ def write_sheet_workbook(
             ],
         )
     except OKofficeException as exc:
-        return _failed(exc.to_error())
+        return failed_result(TOOL_NAME, exc.to_error())
     except (json.JSONDecodeError, ValueError) as exc:
-        return _failed(OKofficeError(code="invalid_input", message=str(exc)))
+        return failed_result(TOOL_NAME, OKofficeError(code="invalid_input", message=str(exc)))
 
 
 def _load_evidence(
@@ -590,17 +589,3 @@ def _xlsx_column(index: int) -> str:
         index, remainder = divmod(index - 1, 26)
         name = chr(65 + remainder) + name
     return name or "A"
-
-
-def _failed(error: OKofficeError) -> ToolResult:
-    return ToolResult(
-        job_id=_job_id(),
-        status="failed",
-        tool=TOOL_NAME,
-        error=error,
-        warnings=[error.message],
-    )
-
-
-def _job_id() -> str:
-    return f"job_{uuid4().hex[:16]}"

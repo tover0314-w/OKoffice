@@ -68,7 +68,7 @@ def test_deck_export_pptx_converts_html_preview_to_editable_pptx(tmp_path: Path)
     assert result.validation is not None
     assert result.validation.status == "passed"
     assert result.usage["export"]["source_format"] == "html_slide_package"
-    assert result.usage["export"]["route"] == "html_manifest_to_editable_pptx_baseline"
+    assert result.usage["export"]["route"] == "html_manifest_to_editable_pptx_layout_aware"
     assert result.usage["summary"]["slide_count"] == 2
     assert inspect.status == "succeeded"
     assert inspect.usage["presentation"]["slide_count"] == 2
@@ -127,7 +127,7 @@ def test_deck_html_pipeline_renders_validates_and_exports_pptx_from_workbook_pla
     assert deck_path.exists()
     assert exported.usage["summary"]["slide_count"] == rendered.usage["summary"]["slide_count"]
     assert exported.usage["export"]["source_format"] == "html_slide_package"
-    assert exported.usage["export"]["route"] == "html_manifest_to_editable_pptx_baseline"
+    assert exported.usage["export"]["route"] == "html_manifest_to_editable_pptx_layout_aware"
     assert "deck.validate.presentation" in exported.next_recommended_tools
     assert validated.status == "succeeded"
     assert validated.validation is not None

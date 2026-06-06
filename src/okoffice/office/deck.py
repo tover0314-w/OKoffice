@@ -5,8 +5,6 @@ import json
 import zipfile
 from pathlib import Path, PurePosixPath
 from typing import Any
-from uuid import uuid4
-
 from okoffice.artifacts.store import build_artifact
 from okoffice.authoring.design import resolve_theme
 from okoffice.authoring.models import DesignTokens
@@ -20,6 +18,7 @@ from okoffice.office.deck_themes import (
 )
 from okoffice.office.inspect import inspect_office_file
 from okoffice.office.ooxml import DECK_NS, count_members, read_xml, sorted_members, zip_names
+from okoffice.office.shared import dedupe_strings as _dedupe, failed_result, job_id, validation_report_status
 from okoffice.schemas.errors import OKofficeException
 from okoffice.schemas.models import OKofficeError, ToolResult, ValidationCheck, ValidationReport
 from okoffice.security.paths import resolve_input_path, resolve_output_path
@@ -44,12 +43,12 @@ PLACEHOLDER_MARKERS = ("{{", "}}", "[[", "]]", "<<", ">>", "TODO", "TBD", "lorem
 def inspect_deck_presentation(path: str | Path) -> ToolResult:
     preflight = inspect_office_file(path)
     if preflight.status == "failed":
-        return _failed(
+        return failed_result(
             INSPECT_TOOL_NAME,
             preflight.error or OKofficeError(code="unsupported_file_type", message="Deck inspect failed."),
         )
     if preflight.usage["format"]["detected_format"] != "pptx":
-        return _failed(
+        return failed_result(
             INSPECT_TOOL_NAME,
             OKofficeError(
                 code="unsupported_file_type",
@@ -62,7 +61,7 @@ def inspect_deck_presentation(path: str | Path) -> ToolResult:
     names = zip_names(source_path)
     presentation_root = read_xml(source_path, "ppt/presentation.xml")
     if presentation_root is None:
-        return _failed(
+        return failed_result(
             INSPECT_TOOL_NAME,
             OKofficeError(
                 code="unsupported_file_type",
@@ -78,7 +77,7 @@ def inspect_deck_presentation(path: str | Path) -> ToolResult:
     warnings = _dedupe(warnings)
 
     return ToolResult(
-        job_id=_job_id(),
+        job_id=job_id(),
         status="succeeded",
         tool=INSPECT_TOOL_NAME,
         validation=ValidationReport(
@@ -458,23 +457,15 @@ def _media_kind(rel_type: str, target: str) -> str:
     return "media"
 
 
-def _dedupe(values: list[str]) -> list[str]:
-    result: list[str] = []
-    for value in values:
-        if value and value not in result:
-            result.append(value)
-    return result
-
-
 def validate_deck_presentation(path: str | Path) -> ToolResult:
     preflight = inspect_office_file(path)
     if preflight.status == "failed":
-        return _failed(
+        return failed_result(
             VALIDATE_TOOL_NAME,
             preflight.error or OKofficeError(code="unsupported_file_type", message="Deck validation failed."),
         )
     if preflight.usage["format"]["detected_format"] != "pptx":
-        return _failed(
+        return failed_result(
             VALIDATE_TOOL_NAME,
             OKofficeError(
                 code="unsupported_file_type",
@@ -567,11 +558,11 @@ def validate_deck_presentation(path: str | Path) -> ToolResult:
     ]
 
     return ToolResult(
-        job_id=_job_id(),
+        job_id=job_id(),
         status="succeeded",
         tool=VALIDATE_TOOL_NAME,
         validation=ValidationReport(
-            status=_validation_report_status(checks),
+            status=validation_report_status(checks),
             checks=checks,
             warnings=warnings,
         ),
@@ -638,11 +629,11 @@ def _create_deck_from_outline_html_first(
     try:
         output = resolve_output_path(output_path)
     except OKofficeException as exc:
-        return _failed(tool_name, exc.to_error())
+        return failed_result(tool_name, exc.to_error())
 
     slides = _outline_slides(outline)
     if not slides:
-        return _failed(
+        return failed_result(
             tool_name,
             OKofficeError(
                 code="unsafe_input_rejected",
@@ -702,12 +693,12 @@ def _create_deck_from_outline_html_first(
     }
 
     return ToolResult(
-        job_id=_job_id(),
+        job_id=job_id(),
         status="succeeded",
         tool=tool_name,
         artifacts=combined_artifacts,
         validation=ValidationReport(
-            status=_validation_report_status(combined_checks),
+            status=validation_report_status(combined_checks),
             checks=combined_checks,
             warnings=all_warnings,
         ),
@@ -733,12 +724,12 @@ def render_deck_html(
         output = resolve_output_path(output_path)
         manifest_path = _html_manifest_path(output, artifact_dir=artifact_dir)
     except OKofficeException as exc:
-        return _failed(RENDER_HTML_TOOL_NAME, exc.to_error())
+        return failed_result(RENDER_HTML_TOOL_NAME, exc.to_error())
 
     outline = _presentation_outline(payload)
     slides = _outline_slides(outline)
     if not slides:
-        return _failed(
+        return failed_result(
             RENDER_HTML_TOOL_NAME,
             OKofficeError(
                 code="unsafe_input_rejected",
@@ -797,14 +788,14 @@ def render_deck_html(
     if placeholder_texts:
         warnings.append(f"HTML deck package contains placeholder-like text: {len(placeholder_texts)}.")
     return ToolResult(
-        job_id=_job_id(),
+        job_id=job_id(),
         status="succeeded",
         tool=RENDER_HTML_TOOL_NAME,
         artifacts=[
             build_artifact(output, RENDER_HTML_TOOL_NAME),
             build_artifact(manifest_path, RENDER_HTML_TOOL_NAME),
         ],
-        validation=ValidationReport(status=_validation_report_status(checks), checks=checks, warnings=warnings),
+        validation=ValidationReport(status=validation_report_status(checks), checks=checks, warnings=warnings),
         warnings=warnings,
         usage={
             "summary": {
@@ -840,13 +831,13 @@ def validate_deck_html_preview(path: str | Path) -> ToolResult:
         html_path = resolve_input_path(path)
         manifest_path = _resolve_html_manifest_path(html_path)
     except OKofficeException as exc:
-        return _failed(VALIDATE_HTML_TOOL_NAME, exc.to_error())
+        return failed_result(VALIDATE_HTML_TOOL_NAME, exc.to_error())
 
     html_text = html_path.read_text(encoding="utf-8", errors="replace")
     try:
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
-        return _failed(
+        return failed_result(
             VALIDATE_HTML_TOOL_NAME,
             OKofficeError(
                 code="unsafe_input_rejected",
@@ -956,10 +947,10 @@ def validate_deck_html_preview(path: str | Path) -> ToolResult:
         ),
     ]
     return ToolResult(
-        job_id=_job_id(),
-        status="succeeded" if _validation_report_status(checks) != "failed" else "failed",
+        job_id=job_id(),
+        status="succeeded" if validation_report_status(checks) != "failed" else "failed",
         tool=VALIDATE_HTML_TOOL_NAME,
-        validation=ValidationReport(status=_validation_report_status(checks), checks=checks, warnings=warnings),
+        validation=ValidationReport(status=validation_report_status(checks), checks=checks, warnings=warnings),
         warnings=warnings,
         usage={
             "summary": {
@@ -1019,9 +1010,9 @@ def export_deck_pptx(html_path: str | Path, output_path: str | Path) -> ToolResu
         manifest_path = _resolve_html_manifest_path(source)
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     except OKofficeException as exc:
-        return _failed(EXPORT_PPTX_TOOL_NAME, exc.to_error())
+        return failed_result(EXPORT_PPTX_TOOL_NAME, exc.to_error())
     except json.JSONDecodeError as exc:
-        return _failed(
+        return failed_result(
             EXPORT_PPTX_TOOL_NAME,
             OKofficeError(
                 code="unsafe_input_rejected",
@@ -1032,7 +1023,7 @@ def export_deck_pptx(html_path: str | Path, output_path: str | Path) -> ToolResu
 
     outline = manifest.get("outline") if isinstance(manifest, dict) else None
     if not isinstance(outline, dict):
-        return _failed(
+        return failed_result(
             EXPORT_PPTX_TOOL_NAME,
             OKofficeError(
                 code="unsafe_input_rejected",
@@ -1053,12 +1044,12 @@ def export_deck_pptx(html_path: str | Path, output_path: str | Path) -> ToolResu
         return result
     result.usage["export"] = {
         "source_format": "html_slide_package",
-        "route": "html_manifest_to_editable_pptx_baseline",
+        "route": "html_manifest_to_editable_pptx_layout_aware",
         "html_path": source.as_posix(),
         "html_manifest_path": manifest_path.as_posix(),
         "output_format": "pptx",
         "editable_text": True,
-        "component_tree_exporter": "baseline_outline_exporter",
+        "component_tree_exporter": "layout_aware_outline_exporter",
     }
     source_map_path = Path(output_path).expanduser().resolve().with_suffix(".deck-source-map.json")
     _write_pptx_source_map(
@@ -1453,11 +1444,11 @@ def _create_deck_from_outline(
     try:
         output = resolve_output_path(output_path)
     except OKofficeException as exc:
-        return _failed(tool_name, exc.to_error())
+        return failed_result(tool_name, exc.to_error())
 
     slides = _outline_slides(outline)
     if not slides:
-        return _failed(
+        return failed_result(
             tool_name,
             OKofficeError(
                 code="unsafe_input_rejected",
@@ -1471,7 +1462,7 @@ def _create_deck_from_outline(
     inspect_result = inspect_deck_presentation(output)
     inspect_status = inspect_result.validation.status if inspect_result.validation is not None else "failed"
     return ToolResult(
-        job_id=_job_id(),
+        job_id=job_id(),
         status="succeeded" if inspect_result.status == "succeeded" else "failed",
         tool=tool_name,
         artifacts=[artifact],
@@ -1792,28 +1783,5 @@ def _validation_check(
     )
 
 
-def _validation_report_status(checks: list[ValidationCheck]) -> str:
-    statuses = [check.status for check in checks]
-    if "failed" in statuses:
-        return "failed"
-    if "warning" in statuses:
-        return "warning"
-    return "passed"
-
-
 def _media_count(names: set[str]) -> int:
     return sum(1 for name in names if name.startswith("ppt/media/"))
-
-
-def _failed(tool: str, error: OKofficeError) -> ToolResult:
-    return ToolResult(
-        job_id=_job_id(),
-        status="failed",
-        tool=tool,
-        warnings=[error.message],
-        error=error,
-    )
-
-
-def _job_id() -> str:
-    return f"job_{uuid4().hex[:16]}"

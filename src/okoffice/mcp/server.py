@@ -43,6 +43,12 @@ from okoffice.tools.runner import (
     run_deck_create_from_outline,
     run_deck_create_presentation,
     run_deck_export_pptx,
+    run_deck_extract_charts,
+    run_deck_extract_media,
+    run_deck_extract_notes,
+    run_deck_extract_shapes,
+    run_deck_extract_text,
+    run_deck_extract_theme,
     run_deck_inspect_presentation,
     run_deck_patch_apply,
     run_deck_render_html,
@@ -53,6 +59,7 @@ from okoffice.tools.runner import (
     run_create_markdown,
     run_create_text,
     run_create_agent,
+    run_create_resume_pdf,
     run_create_from_prompt,
     run_create_from_template_pack,
     run_create_html_package,
@@ -105,6 +112,7 @@ from okoffice.tools.runner import (
     run_office_workflow_extract_to_sheet,
     run_office_workflow_plan,
     run_office_workflow_sheet_to_deck,
+    run_office_workflow_source_to_board_pack,
     run_office_workers_status,
     run_page_numbers,
     run_patch_apply,
@@ -166,13 +174,26 @@ from okoffice.tools.runner import (
     run_security_verify_signature,
     run_select_target_profile,
     run_sheet_create_evidence_workbook,
+    run_sheet_extract_charts,
+    run_sheet_extract_comments,
+    run_sheet_extract_formulas,
+    run_sheet_extract_named_ranges,
+    run_sheet_extract_pivots,
     run_sheet_extract_tables,
     run_sheet_inspect_workbook,
     run_sheet_profile_data,
     run_sheet_read_workbook,
+    run_sheet_validate_external_links,
     run_sheet_validate_formulas,
+    run_sheet_validate_model_checks,
     run_sheet_validate_workbook,
     run_sheet_write_workbook,
+    run_patch_sheet_cells,
+    run_patch_sheet_table,
+    run_patch_sheet_formulas,
+    run_patch_sheet_chart,
+    run_review_sheet_model,
+    run_review_sheet_number_consistency,
     run_split,
     run_strikeout,
     run_storyboard_plan,
@@ -184,22 +205,98 @@ from okoffice.tools.runner import (
     run_validate_target_profile,
     run_validation_redaction_check,
     run_validation_visual_diff,
+    run_ats_compliance,
     run_to_pdfa,
-    run_url_to_pdf,
-    run_watermark,
-    run_workflow_plan,
     run_workflow_createpdf,
     run_workflow_research_deck,
     run_workflow_report,
     run_workflow_run,
+    run_word_extract_comments,
+    run_word_extract_fields,
+    run_word_extract_outline,
+    run_word_extract_revisions,
+    run_word_extract_styles,
     run_word_extract_tables,
+    run_word_extract_text,
     run_word_inspect_document,
     run_word_create_report,
+    run_create_word_document,
+    run_create_word_memo,
     run_word_patch_apply,
     run_word_patch_plan,
     run_word_validate_document,
     run_xlsx_to_pdf,
+    run_deck_review_story,
+    run_deck_review_claims,
+    run_deck_validate_notes,
+    run_deck_validate_placeholders,
+    run_word_review_style,
+    run_word_validate_metadata,
+    run_word_validate_accessibility,
+    run_extract_office_claims,
+    run_extract_office_entities,
+    run_extract_office_obligations,
+    run_inspect_office_batch,
+    run_map_office_evidence_sources,
+    run_report_office_evidence_coverage,
+    run_classify_office_context,
+    run_verify_office_evidence_citations,
+    run_report_office_bundle,
+    run_validate_office_output,
+    run_plan_office_patch,
+    run_preview_office_patch,
+    run_verify_office_patch,
+    run_review_and_patch_workflow,
+    run_build_redaction_packet,
+    run_build_artifact_graph,
 )
+
+
+def _project_root():
+    from pathlib import Path
+    return Path(__file__).resolve().parent.parent.parent.parent
+
+
+def _schema_resource(server, uri, filename, schemas_dir):
+    """Register a JSON schema file as an MCP resource."""
+    def decorator(fn):
+        server.resource(uri, mime_type="application/json")(fn)
+        return fn
+    return decorator
+
+
+def pdf_create_resume_pdf(
+    resume_data: dict,
+    output_path: str,
+    layout: str = "single_column",
+    design_tokens: str | dict = "resume_modern",
+    ats_mode: bool = True,
+    title: str | None = None,
+    renderer: str = "auto",
+) -> str:
+    """Create a structured resume PDF with ATS-safe layout and design tokens.
+
+    Args:
+        renderer: Backend to use — 'auto' (Typst if available, else ReportLab),
+            'typst', or 'reportlab'.
+    """
+    return run_create_resume_pdf(
+        resume_data=resume_data,
+        output_path=output_path,
+        layout=layout,
+        design_tokens=design_tokens,
+        ats_mode=ats_mode,
+        title=title,
+        renderer=renderer,
+    ).model_dump_json()
+
+
+def pdf_validation_ats_compliance_check(
+    path: str,
+    keywords: list[str] | None = None,
+) -> str:
+    """Validate a resume PDF for ATS compliance: text layer, fonts, layout, keywords."""
+    return run_ats_compliance(path, keywords=keywords).model_dump_json()
 
 
 def create_mcp_server() -> FastMCP:
@@ -210,7 +307,7 @@ def create_mcp_server() -> FastMCP:
             "ToolResult JSON and write artifacts to explicit local paths."
         ),
     )
-    server.tool(name="agentpdf_tool_manifest")(agentpdf_tool_manifest)
+    server.tool(name="agentpdf_tool_manifest")(agentpdf_tool_manifest)  # compat alias, prefer okoffice_tool_manifest
     server.tool(name="okoffice_tool_manifest")(okoffice_tool_manifest)
     server.tool(name="agent_setup_claude_code")(agent_setup_claude_code)
     server.tool(name="agent_setup_codex")(agent_setup_codex)
@@ -225,29 +322,66 @@ def create_mcp_server() -> FastMCP:
     server.tool(name="office_workflow_extract_to_sheet")(office_workflow_extract_to_sheet)
     server.tool(name="office_workflow_sheet_to_deck")(office_workflow_sheet_to_deck)
     server.tool(name="office_workflow_board_pack")(office_workflow_board_pack)
+    server.tool(name="office_workflow_source_to_board_pack")(office_workflow_source_to_board_pack)
     server.tool(name="office_workers_status")(office_workers_status)
     server.tool(name="office_bundle_export")(office_bundle_export)
     server.tool(name="office_bundle_verify")(office_bundle_verify)
     server.tool(name="word_inspect_document")(word_inspect_document)
     server.tool(name="word_validate_document")(word_validate_document)
+    server.tool(name="word_review_style")(word_review_style)
+    server.tool(name="word_validation_metadata")(word_validation_metadata)
+    server.tool(name="word_validation_accessibility")(word_validation_accessibility)
     server.tool(name="word_create_report")(word_create_report)
+    server.tool(name="word_create_document")(word_create_document)
+    server.tool(name="word_create_memo")(word_create_memo)
     server.tool(name="word_patch_plan")(word_patch_plan)
     server.tool(name="word_patch_apply")(word_patch_apply)
     server.tool(name="word_extract_tables")(word_extract_tables)
+    server.tool(name="word_extract_text")(word_extract_text)
+    server.tool(name="word_extract_outline")(word_extract_outline)
+    server.tool(name="word_extract_comments")(word_extract_comments)
+    server.tool(name="word_extract_revisions")(word_extract_revisions)
+    server.tool(name="word_extract_fields")(word_extract_fields)
+    server.tool(name="word_extract_styles")(word_extract_styles)
     server.tool(name="sheet_inspect_workbook")(sheet_inspect_workbook)
     server.tool(name="sheet_read_workbook")(sheet_read_workbook)
     server.tool(name="sheet_profile_data")(sheet_profile_data)
     server.tool(name="sheet_extract_tables")(sheet_extract_tables)
+    server.tool(name="sheet_extract_formulas")(sheet_extract_formulas)
+    server.tool(name="sheet_extract_charts")(sheet_extract_charts)
+    server.tool(name="sheet_extract_named_ranges")(sheet_extract_named_ranges)
+    server.tool(name="sheet_extract_comments")(sheet_extract_comments)
+    server.tool(name="sheet_extract_pivots")(sheet_extract_pivots)
     server.tool(name="sheet_create_evidence_workbook")(sheet_create_evidence_workbook)
     server.tool(name="sheet_write_workbook")(sheet_write_workbook)
     server.tool(name="sheet_validate_workbook")(sheet_validate_workbook)
     server.tool(name="sheet_validate_formulas")(sheet_validate_formulas)
+    server.tool(name="sheet_validate_model_checks")(sheet_validate_model_checks)
+    server.tool(name="sheet_validate_external_links")(sheet_validate_external_links)
+    server.tool(name="sheet_patch_cells")(sheet_patch_cells)
+    server.tool(name="sheet_patch_table")(sheet_patch_table)
+    server.tool(name="sheet_patch_formulas")(sheet_patch_formulas)
+    server.tool(name="sheet_patch_chart")(sheet_patch_chart)
+    server.tool(name="sheet_review_model")(sheet_review_model)
+    server.tool(name="sheet_review_number_consistency")(sheet_review_number_consistency)
     server.tool(name="deck_inspect_presentation")(deck_inspect_presentation)
+    server.tool(name="deck_extract_text")(deck_extract_text)
+    server.tool(name="deck_extract_notes")(deck_extract_notes)
+    server.tool(name="deck_extract_shapes")(deck_extract_shapes)
+    server.tool(name="deck_extract_media")(deck_extract_media)
+    server.tool(name="deck_extract_charts")(deck_extract_charts)
+    server.tool(name="deck_extract_theme")(deck_extract_theme)
     server.tool(name="deck_compose_plan")(deck_compose_plan)
     server.tool(name="deck_create_from_outline")(deck_create_from_outline)
     server.tool(name="deck_create_presentation")(deck_create_presentation)
     server.tool(name="deck_patch_apply")(deck_patch_apply)
+    server.tool(name="deck_revise")(deck_revise)
     server.tool(name="deck_validate_contact_sheet")(deck_validate_contact_sheet)
+    server.tool(name="deck_review_taste")(deck_review_taste)
+    server.tool(name="deck_review_story")(deck_review_story)
+    server.tool(name="deck_review_claims")(deck_review_claims)
+    server.tool(name="deck_validation_notes")(deck_validation_notes)
+    server.tool(name="deck_validation_placeholders")(deck_validation_placeholders)
     server.tool(name="deck_render_html")(deck_render_html)
     server.tool(name="deck_validation_html_preview")(deck_validation_html_preview)
     server.tool(name="deck_export_pptx")(deck_export_pptx)
@@ -401,6 +535,40 @@ def create_mcp_server() -> FastMCP:
     server.tool(name="pdf_ai_rag_highlight_sources")(pdf_ai_rag_highlight_sources)
     server.tool(name="pdf_ai_rag_query")(pdf_ai_rag_query)
     server.tool(name="pdf_ai_rag_search")(pdf_ai_rag_search)
+    server.tool(name="pdf_create_resume_pdf")(pdf_create_resume_pdf)
+    server.tool(name="pdf_validation_ats_compliance_check")(pdf_validation_ats_compliance_check)
+    server.tool(name="office_extract_claims")(office_extract_claims)
+    server.tool(name="office_extract_entities")(office_extract_entities)
+    server.tool(name="office_extract_obligations")(office_extract_obligations)
+    server.tool(name="office_inspect_batch")(office_inspect_batch)
+    server.tool(name="office_evidence_map_sources")(office_evidence_map_sources)
+    server.tool(name="office_evidence_coverage")(office_evidence_coverage)
+    server.tool(name="office_context_classify")(office_context_classify)
+    server.tool(name="office_evidence_verify_citations")(office_evidence_verify_citations)
+    server.tool(name="office_bundle_report")(office_bundle_report)
+    server.tool(name="office_validate_output")(office_validate_output)
+    server.tool(name="office_patch_plan")(office_patch_plan)
+    server.tool(name="office_patch_preview")(office_patch_preview)
+    server.tool(name="office_patch_verify")(office_patch_verify)
+    server.tool(name="office_workflow_review_and_patch")(office_workflow_review_and_patch)
+    server.tool(name="office_workflow_redaction_packet")(office_workflow_redaction_packet)
+    server.tool(name="office_bundle_graph")(office_bundle_graph)
+
+    # Schema resources for agents
+    _schemas_dir = _project_root() / "schemas"
+
+    @_schema_resource(server, "okoffice://schemas/resume-data", "resume-data.schema.json", _schemas_dir)
+    def _resume_data_schema() -> str:
+        return (_schemas_dir / "resume-data.schema.json").read_text(encoding="utf-8")
+
+    @_schema_resource(server, "okoffice://schemas/resume-layout", "resume-section-layout.schema.json", _schemas_dir)
+    def _resume_layout_schema() -> str:
+        return (_schemas_dir / "resume-section-layout.schema.json").read_text(encoding="utf-8")
+
+    @_schema_resource(server, "okoffice://schemas/resume-design-tokens", "resume-design-tokens.schema.json", _schemas_dir)
+    def _resume_design_tokens_schema() -> str:
+        return (_schemas_dir / "resume-design-tokens.schema.json").read_text(encoding="utf-8")
+
     return server
 
 
@@ -560,6 +728,27 @@ def office_workflow_board_pack(files: list[str], output_path: str, title: str | 
     return run_office_workflow_board_pack(files, output_path, title=title).model_dump_json()
 
 
+def office_workflow_source_to_board_pack(
+    files: list[str],
+    schema: dict[str, object],
+    output_path: str,
+    title: str | None = None,
+    intent: str | None = None,
+    deck_title: str | None = None,
+    max_rows_per_sheet: int = 100,
+) -> str:
+    """End-to-end: source documents -> evidence workbook -> deck -> board pack ZIP."""
+    return run_office_workflow_source_to_board_pack(
+        files=files,
+        schema=schema,
+        output_path=output_path,
+        title=title,
+        intent=intent,
+        deck_title=deck_title,
+        max_rows_per_sheet=max_rows_per_sheet,
+    ).model_dump_json()
+
+
 def office_workflow_docset_to_sheet(
     files: list[str],
     schema: dict[str, object],
@@ -619,6 +808,21 @@ def word_validate_document(path: str) -> str:
     return run_word_validate_document(path).model_dump_json()
 
 
+def word_review_style(path: str) -> str:
+    """Review style consistency in a Word document."""
+    return run_word_review_style(path).model_dump_json()
+
+
+def word_validation_metadata(path: str) -> str:
+    """Validate metadata completeness for a Word document."""
+    return run_word_validate_metadata(path).model_dump_json()
+
+
+def word_validation_accessibility(path: str) -> str:
+    """Heuristic accessibility analysis for a Word document."""
+    return run_word_validate_accessibility(path).model_dump_json()
+
+
 def word_create_report(
     workbook_path: str,
     output_path: str,
@@ -632,6 +836,16 @@ def word_create_report(
         title=title,
         profile=profile,
     ).model_dump_json()
+
+
+def word_create_document(output_path: str, document_ir: dict[str, object]) -> str:
+    """Create a DOCX from a structured document IR with sections, headings, paragraphs, and tables."""
+    return run_create_word_document(output_path=output_path, document_ir=document_ir).model_dump_json()
+
+
+def word_create_memo(output_path: str, memo_ir: dict[str, object]) -> str:
+    """Create a DOCX memo with To/From/Date/Subject header fields and body paragraphs."""
+    return run_create_word_memo(output_path=output_path, memo_ir=memo_ir).model_dump_json()
 
 
 def word_patch_plan(input_path: str, operations: list[dict[str, object]]) -> str:
@@ -651,6 +865,36 @@ def word_patch_apply(input_path: str, output_path: str, operations: list[dict[st
 def word_extract_tables(path: str) -> str:
     """Extract Word tables into normalized records with source cell locations."""
     return run_word_extract_tables(path).model_dump_json()
+
+
+def word_extract_text(path: str) -> str:
+    """Extract Word text with paragraph locations, styles, and heading levels."""
+    return run_word_extract_text(path).model_dump_json()
+
+
+def word_extract_outline(path: str) -> str:
+    """Extract a Word document outline with headings, sections, and navigation anchors."""
+    return run_word_extract_outline(path).model_dump_json()
+
+
+def word_extract_comments(path: str) -> str:
+    """Extract Word comments with author, date, reference ranges, and reply threads."""
+    return run_word_extract_comments(path).model_dump_json()
+
+
+def word_extract_revisions(path: str) -> str:
+    """Extract Word tracked revisions with author, date, type, and text ranges."""
+    return run_word_extract_revisions(path).model_dump_json()
+
+
+def word_extract_fields(path: str) -> str:
+    """Extract Word fields with types, instructions, cached results, and locations."""
+    return run_word_extract_fields(path).model_dump_json()
+
+
+def word_extract_styles(path: str) -> str:
+    """Extract Word style definitions with names, types, base styles, and formatting."""
+    return run_word_extract_styles(path).model_dump_json()
 
 
 def sheet_inspect_workbook(path: str) -> str:
@@ -697,9 +941,104 @@ def sheet_validate_formulas(path: str) -> str:
     return run_sheet_validate_formulas(path).model_dump_json()
 
 
+def sheet_validate_model_checks(path: str) -> str:
+    """Perform structural model checks: circular references, empty input cells, and SUM range balance."""
+    return run_sheet_validate_model_checks(path).model_dump_json()
+
+
+def sheet_validate_external_links(path: str) -> str:
+    """Audit external link targets in an XLSX workbook package."""
+    return run_sheet_validate_external_links(path).model_dump_json()
+
+
+def sheet_patch_cells(path: str, output_path: str, operations: list[dict[str, object]]) -> str:
+    """Apply non-mutating cell value patches to an XLSX workbook and write a new output."""
+    return run_patch_sheet_cells(path, output_path=output_path, operations=operations).model_dump_json()
+
+
+def sheet_patch_table(path: str, output_path: str, operations: list[dict[str, object]]) -> str:
+    """Apply non-mutating table range patches to an XLSX workbook and write a new output."""
+    return run_patch_sheet_table(path, output_path=output_path, operations=operations).model_dump_json()
+
+
+def sheet_patch_formulas(path: str, output_path: str, operations: list[dict[str, object]]) -> str:
+    """Apply non-mutating formula replacement patches to an XLSX workbook and write a new output."""
+    return run_patch_sheet_formulas(path, output_path=output_path, operations=operations).model_dump_json()
+
+
+def sheet_patch_chart(path: str, output_path: str, operations: list[dict[str, object]]) -> str:
+    """Apply non-mutating chart title patches to an XLSX workbook and write a new output."""
+    return run_patch_sheet_chart(path, output_path=output_path, operations=operations).model_dump_json()
+
+
+def sheet_review_model(path: str) -> str:
+    """Review spreadsheet model quality: hardcoded literals, volatile functions, chain depth, and orphan inputs."""
+    return run_review_sheet_model(path).model_dump_json()
+
+
+def sheet_review_number_consistency(path: str) -> str:
+    """Review number formatting consistency across sheets: hidden sheets, mixed format columns, percentage columns."""
+    return run_review_sheet_number_consistency(path).model_dump_json()
+
+
+def sheet_extract_formulas(path: str) -> str:
+    """Extract all formulas with cell references, cached values, and precedents."""
+    return run_sheet_extract_formulas(path).model_dump_json()
+
+
+def sheet_extract_charts(path: str) -> str:
+    """Extract chart inventory with sheet locators and types."""
+    return run_sheet_extract_charts(path).model_dump_json()
+
+
+def sheet_extract_named_ranges(path: str) -> str:
+    """Extract defined names with scope and references."""
+    return run_sheet_extract_named_ranges(path).model_dump_json()
+
+
+def sheet_extract_comments(path: str) -> str:
+    """Extract cell comments with author, text, and cell references."""
+    return run_sheet_extract_comments(path).model_dump_json()
+
+
+def sheet_extract_pivots(path: str) -> str:
+    """Extract pivot table cache references."""
+    return run_sheet_extract_pivots(path).model_dump_json()
+
+
 def deck_inspect_presentation(path: str) -> str:
     """Inspect a local PowerPoint deck and recommend next tools."""
     return run_deck_inspect_presentation(path).model_dump_json()
+
+
+def deck_extract_text(path: str) -> str:
+    """Extract all slide text with slide-index locators."""
+    return run_deck_extract_text(path).model_dump_json()
+
+
+def deck_extract_notes(path: str) -> str:
+    """Extract speaker notes with slide references."""
+    return run_deck_extract_notes(path).model_dump_json()
+
+
+def deck_extract_shapes(path: str) -> str:
+    """Extract shape inventory with types, positions, and text."""
+    return run_deck_extract_shapes(path).model_dump_json()
+
+
+def deck_extract_media(path: str) -> str:
+    """Extract embedded media references with MIME types."""
+    return run_deck_extract_media(path).model_dump_json()
+
+
+def deck_extract_charts(path: str) -> str:
+    """Extract chart references with slide locators."""
+    return run_deck_extract_charts(path).model_dump_json()
+
+
+def deck_extract_theme(path: str) -> str:
+    """Extract theme colors, fonts, and master layout metadata."""
+    return run_deck_extract_theme(path).model_dump_json()
 
 
 def deck_create_from_outline(outline: dict[str, object], output_path: str) -> str:
@@ -735,9 +1074,47 @@ def deck_patch_apply(input_path: str, output_path: str, operations: list[dict[st
     ).model_dump_json()
 
 
+def deck_revise(input_path: str, output_path: str, operations: list[dict[str, object]]) -> str:
+    """Apply revisions to a deck and re-run validation and taste QA."""
+    from okoffice.office.deck_patch import revise_deck
+
+    return revise_deck(
+        input_path=input_path,
+        output_path=output_path,
+        operations=operations,
+    ).model_dump_json()
+
+
 def deck_validate_contact_sheet(path: str) -> str:
     """Validate PowerPoint contact-sheet preview readiness and render-worker status."""
     return run_deck_validate_contact_sheet(path).model_dump_json()
+
+
+def deck_review_taste(path: str, html_preview_path: str | None = None) -> str:
+    """Review a deck for taste and design quality, returning a scored report."""
+    from okoffice.office.deck_taste_qa import review_deck_taste
+
+    return review_deck_taste(path, html_preview_path=html_preview_path).model_dump_json()
+
+
+def deck_review_story(path: str) -> str:
+    """Review story rhythm and section balance of a deck."""
+    return run_deck_review_story(path).model_dump_json()
+
+
+def deck_review_claims(path: str) -> str:
+    """Review verifiable claims in deck slides."""
+    return run_deck_review_claims(path).model_dump_json()
+
+
+def deck_validation_notes(path: str) -> str:
+    """Validate speaker notes completeness and placeholder markers in a deck."""
+    return run_deck_validate_notes(path).model_dump_json()
+
+
+def deck_validation_placeholders(path: str) -> str:
+    """Validate placeholder marker absence in deck slide text."""
+    return run_deck_validate_placeholders(path).model_dump_json()
 
 
 def deck_compose_plan(
@@ -2598,6 +2975,100 @@ def pdf_ai_rag_export_report(
 def pdf_ai_rag_search(index_path: str, query: str, top_k: int = 5) -> str:
     """Search a local PDF index and return cited chunks."""
     return run_rag_search(index_path, query=query, top_k=top_k).model_dump_json()
+
+
+def office_extract_claims(path: str) -> str:
+    """Extract claim-like sentences from any Office document."""
+    return run_extract_office_claims(path).model_dump_json()
+
+
+def office_extract_entities(path: str) -> str:
+    """Extract named entities heuristically from any Office document."""
+    return run_extract_office_entities(path).model_dump_json()
+
+
+def office_extract_obligations(path: str) -> str:
+    """Extract obligation sentences from any Office document."""
+    return run_extract_office_obligations(path).model_dump_json()
+
+
+def office_inspect_batch(paths: list[str]) -> str:
+    """Inspect multiple Office files and return aggregated per-file results."""
+    return run_inspect_office_batch(paths).model_dump_json()
+
+
+def office_evidence_map_sources(
+    context_packet: dict[str, object],
+    composition: dict[str, object] | None = None,
+) -> str:
+    """Map composition blocks back to context packet source refs."""
+    return run_map_office_evidence_sources(context_packet, composition=composition).model_dump_json()
+
+
+def office_evidence_coverage(composition: dict[str, object]) -> str:
+    """Coverage report from a composition artifact."""
+    return run_report_office_evidence_coverage(composition).model_dump_json()
+
+
+def office_context_classify(
+    context_packet: dict[str, object],
+    target_profile: dict[str, object] | None = None,
+) -> str:
+    """Classify context items for agent routing into target blocks and slots."""
+    return run_classify_office_context(context_packet, target_profile=target_profile).model_dump_json()
+
+
+def office_evidence_verify_citations(
+    claims: list[dict[str, object]],
+    context_packet: dict[str, object],
+    source_map: dict[str, object] | None = None,
+) -> str:
+    """Verify evidence citations against claims using context packet and source map."""
+    return run_verify_office_evidence_citations(
+        claims, context_packet, source_map=source_map,
+    ).model_dump_json()
+
+
+def office_bundle_report(bundle_path: str) -> str:
+    """Report on an OKoffice bundle with manifest, artifact, and checksum evidence."""
+    return run_report_office_bundle(bundle_path).model_dump_json()
+
+
+def office_validate_output(path: str, expected_format: str | None = None) -> str:
+    """Validate generated Office output before returning artifacts."""
+    return run_validate_office_output(path, expected_format=expected_format).model_dump_json()
+
+
+def office_patch_plan(path: str, operations: list[dict[str, object]]) -> str:
+    """Plan patch operations for an Office document without applying them."""
+    return run_plan_office_patch(path=path, operations=operations).model_dump_json()
+
+
+def office_patch_preview(path: str, operations: list[dict[str, object]]) -> str:
+    """Preview patch effects on an Office document without applying them."""
+    return run_preview_office_patch(path=path, operations=operations).model_dump_json()
+
+
+def office_patch_verify(input_path: str, output_path: str, patch_manifest: dict[str, object] | None = None) -> str:
+    """Verify a patched Office file against the original."""
+    return run_verify_office_patch(input_path=input_path, output_path=output_path,
+                                   patch_manifest=patch_manifest).model_dump_json()
+
+
+def office_workflow_review_and_patch(path: str, output_path: str, operations: list[dict[str, object]]) -> str:
+    """Full workflow: inspect, plan, apply patch, and validate an Office document."""
+    return run_review_and_patch_workflow(path=path, output_path=output_path,
+                                         operations=operations).model_dump_json()
+
+
+def office_workflow_redaction_packet(path: str, search_terms: list[str]) -> str:
+    """Build a redaction-ready packet from cross-format text scanning."""
+    return run_build_redaction_packet(path=path, search_terms=search_terms).model_dump_json()
+
+
+def office_bundle_graph(artifact_paths: list[str]) -> str:
+    """Create an artifact lineage graph from multi-format Office outputs."""
+    return run_build_artifact_graph(artifact_paths=artifact_paths).model_dump_json()
 
 
 def run_mcp_server(transport: Literal["stdio", "sse", "streamable-http"] = "stdio") -> None:

@@ -142,9 +142,9 @@ def _recommended_pipeline(
     if _needs_doc(output_formats):
         steps.append(
             {
-                "tool": "office.workflow.source_to_doc",
+                "tool": "word.create.report",
                 "status": "planned",
-                "reason": "Draft an editable Word output from the evidence packet.",
+                "reason": "Draft an editable Word report from an evidence workbook.",
             }
         )
     if "pdf" in output_formats:
@@ -167,7 +167,7 @@ def _recommended_pipeline(
     if input_formats and not output_formats:
         steps.append(
             {
-                "tool": "office.workflow.multi_format_brief",
+                "tool": "office.workflow.plan",
                 "status": "planned",
                 "reason": "Clarify desired output files before execution.",
             }

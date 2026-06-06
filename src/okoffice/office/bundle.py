@@ -2,9 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
-from uuid import uuid4
-
 from okoffice.artifacts.bundle import export_artifact_bundle, verify_artifact_bundle
+from okoffice.office.shared import failed_result
 from okoffice.schemas.errors import OKofficeException
 from okoffice.schemas.models import OKofficeError, ToolResult
 
@@ -36,7 +35,7 @@ def export_office_bundle(
             }
         )
     except OKofficeException as exc:
-        return _failed(EXPORT_TOOL, exc.to_error())
+        return failed_result(EXPORT_TOOL, exc.to_error())
 
 
 def verify_office_bundle(bundle_path: str | Path) -> ToolResult:
@@ -49,14 +48,4 @@ def verify_office_bundle(bundle_path: str | Path) -> ToolResult:
             }
         )
     except OKofficeException as exc:
-        return _failed(VERIFY_TOOL, exc.to_error())
-
-
-def _failed(tool: str, error: OKofficeError) -> ToolResult:
-    return ToolResult(
-        job_id=f"job_{uuid4().hex[:16]}",
-        status="failed",
-        tool=tool,
-        error=error,
-        warnings=[error.message],
-    )
+        return failed_result(VERIFY_TOOL, exc.to_error())

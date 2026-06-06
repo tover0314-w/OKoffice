@@ -1,15 +1,17 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any
-from uuid import uuid4
-
+from okoffice.office.shared import dedupe_strings, job_id
 from okoffice.office.validation import validate_office_package
 from okoffice.office.word import inspect_word_document
 from okoffice.schemas.models import OKofficeError, ToolResult, ValidationCheck, ValidationReport
 
 
 TOOL_NAME = "word.validation.document"
+METADATA_TOOL_NAME = "word.validation.metadata"
+ACCESSIBILITY_TOOL_NAME = "word.validation.accessibility"
 RENDER_WORKER_WARNING = "DOCX render preview worker is not configured."
 
 
@@ -17,7 +19,7 @@ def validate_word_document(path: str | Path) -> ToolResult:
     package_result = validate_office_package(path)
     if package_result.status != "succeeded":
         return ToolResult(
-            job_id=_job_id(),
+            job_id=job_id(),
             status="failed",
             tool=TOOL_NAME,
             error=package_result.error
@@ -31,7 +33,7 @@ def validate_word_document(path: str | Path) -> ToolResult:
     inspected = inspect_word_document(path)
     if inspected.status != "succeeded":
         return ToolResult(
-            job_id=_job_id(),
+            job_id=job_id(),
             status="failed",
             tool=TOOL_NAME,
             error=inspected.error
@@ -81,7 +83,7 @@ def validate_word_document(path: str | Path) -> ToolResult:
     accessibility_hints = _accessibility_hints(validation_summary, headings, tables)
 
     return ToolResult(
-        job_id=_job_id(),
+        job_id=job_id(),
         status="succeeded",
         tool=TOOL_NAME,
         validation=ValidationReport(
@@ -166,7 +168,7 @@ def _warnings(
     metadata_title_present: bool,
     heading_count: int,
 ) -> list[str]:
-    warnings = _dedupe([*package_warnings, *inspect_warnings])
+    warnings = dedupe_strings([*package_warnings, *inspect_warnings])
     if comment_count:
         warnings.append(f"Document contains unresolved comments: {comment_count}.")
     if tracked_change_count:
@@ -175,7 +177,7 @@ def _warnings(
         warnings.append("Document metadata title is missing.")
     if not heading_count:
         warnings.append("Document has no heading structure.")
-    return _dedupe(warnings)
+    return dedupe_strings(warnings)
 
 
 def _accessibility_hints(
@@ -200,13 +202,283 @@ def _accessibility_hints(
     }
 
 
-def _dedupe(values: list[str]) -> list[str]:
-    deduped: list[str] = []
-    for value in values:
-        if value and value not in deduped:
-            deduped.append(value)
-    return deduped
+_HEADING_LEVEL_RE = re.compile(r"heading\s*(\d+)", re.IGNORECASE)
 
 
-def _job_id() -> str:
-    return f"job_{uuid4().hex[:16]}"
+def _extract_heading_level(style_id: str | None) -> int | None:
+    """Extract the numeric heading level from a style_id like 'Heading1' or 'heading 3'."""
+    if not style_id:
+        return None
+    low = style_id.lower()
+    if low == "title":
+        return 0
+    match = _HEADING_LEVEL_RE.search(style_id)
+    if match is None:
+        return None
+    return int(match.group(1))
+
+
+def validate_word_metadata(path: str | Path) -> ToolResult:
+    """Validate metadata completeness for a Word document.
+
+    Tool name: ``word.validation.metadata``
+    """
+    inspected = inspect_word_document(path)
+    if inspected.status != "succeeded":
+        return ToolResult(
+            job_id=job_id(),
+            status="failed",
+            tool=METADATA_TOOL_NAME,
+            error=inspected.error
+            or OKofficeError(
+                code="metadata_validation_failed",
+                message="Word document could not be inspected for metadata validation.",
+            ),
+            warnings=list(inspected.warnings),
+        )
+
+    usage = inspected.usage
+    summary = usage.get("summary", {})
+    metadata = usage.get("metadata", {})
+    structure = usage.get("structure", {})
+    headings = [item for item in usage.get("headings", []) if isinstance(item, dict)]
+
+    title_present = bool(metadata.get("title"))
+    creator_present = bool(metadata.get("creator"))
+    heading_count = len(headings)
+    section_count = int(structure.get("section_count", summary.get("section_count", 0)))
+
+    recommendations: list[str] = []
+    if not title_present:
+        recommendations.append("Add a descriptive title to the document metadata (File > Info > Title).")
+    if not creator_present:
+        recommendations.append("Set the creator/author field in document metadata.")
+    if heading_count == 0:
+        recommendations.append("Use heading styles to provide document structure.")
+
+    meta_summary = {
+        "title_present": title_present,
+        "creator_present": creator_present,
+        "heading_count": heading_count,
+        "section_count": section_count,
+    }
+
+    meta_completeness = "passed" if (title_present and creator_present) else "warning"
+
+    warnings: list[str] = []
+    if not title_present:
+        warnings.append("Document metadata title is missing.")
+    if not creator_present:
+        warnings.append("Document metadata creator is missing.")
+    if heading_count == 0:
+        warnings.append("Document has no heading structure.")
+
+    return ToolResult(
+        job_id=job_id(),
+        status="succeeded",
+        tool=METADATA_TOOL_NAME,
+        validation=ValidationReport(
+            status=meta_completeness,
+            checks=[
+                ValidationCheck(
+                    name="format_is_docx",
+                    status="passed",
+                    details=usage.get("document", {}),
+                ),
+                ValidationCheck(
+                    name="metadata_completeness",
+                    status=meta_completeness,
+                    details=meta_summary,
+                    message="Metadata is incomplete." if meta_completeness == "warning" else None,
+                ),
+            ],
+            warnings=warnings,
+        ),
+        warnings=warnings,
+        usage={
+            "summary": meta_summary,
+            "metadata": {
+                "title": metadata.get("title"),
+                "creator": metadata.get("creator"),
+            },
+            "recommendations": recommendations,
+        },
+        next_recommended_tools=["word.inspect.document", "word.validation.accessibility"],
+    )
+
+
+def validate_word_accessibility(path: str | Path) -> ToolResult:
+    """Heuristic accessibility analysis for a Word document.
+
+    Tool name: ``word.validation.accessibility``
+    """
+    inspected = inspect_word_document(path)
+    if inspected.status != "succeeded":
+        return ToolResult(
+            job_id=job_id(),
+            status="failed",
+            tool=ACCESSIBILITY_TOOL_NAME,
+            error=inspected.error
+            or OKofficeError(
+                code="accessibility_validation_failed",
+                message="Word document could not be inspected for accessibility validation.",
+            ),
+            warnings=list(inspected.warnings),
+        )
+
+    usage = inspected.usage
+    summary = usage.get("summary", {})
+    headings = [item for item in usage.get("headings", []) if isinstance(item, dict)]
+    tables = [item for item in usage.get("tables", []) if isinstance(item, dict)]
+
+    # --- heading hierarchy check ---
+    heading_levels = []
+    for h in headings:
+        level = _extract_heading_level(h.get("style_id") or h.get("style"))
+        if level is not None:
+            heading_levels.append(level)
+
+    heading_skip_count = 0
+    skip_details: list[dict[str, Any]] = []
+    for idx in range(1, len(heading_levels)):
+        prev_level = heading_levels[idx - 1]
+        curr_level = heading_levels[idx]
+        if curr_level > prev_level + 1:
+            heading_skip_count += 1
+            skip_details.append({
+                "previous_level": prev_level,
+                "current_level": curr_level,
+                "heading_index": idx,
+            })
+
+    # --- table header row check ---
+    tables_without_headers = 0
+    table_details: list[dict[str, Any]] = []
+    for table in tables:
+        cells = table.get("cells", [])
+        rows = table.get("rows", [])
+        first_row_cells = cells[0] if cells else []
+        has_header_text = any(
+            bool(cell.get("text", "").strip())
+            for cell in first_row_cells
+        ) if first_row_cells else False
+        if not has_header_text:
+            tables_without_headers += 1
+        table_details.append({
+            "table_index": table.get("table_index"),
+            "row_count": table.get("row_count", len(rows)),
+            "has_header_text": has_header_text,
+        })
+
+    # --- image alt text heuristic ---
+    # Check if the document has media relationships that might indicate images
+    document_info = usage.get("document", {})
+    package = usage.get("package", {})
+    has_media = bool(usage.get("structure", {}).get("image_count", 0)) or bool(
+        summary.get("image_count", 0)
+    )
+    image_alt_flag = False
+    if has_media:
+        image_alt_flag = True  # flag for heuristic review when images are present
+
+    # --- build accessibility checks ---
+    checks: list[dict[str, Any]] = []
+    warnings: list[str] = []
+
+    # heading hierarchy
+    hierarchy_status = "passed" if heading_skip_count == 0 and len(heading_levels) > 0 else "warning"
+    checks.append({
+        "name": "heading_hierarchy",
+        "status": hierarchy_status,
+        "details": {
+            "heading_count": len(heading_levels),
+            "heading_skip_count": heading_skip_count,
+            "skip_details": skip_details,
+        },
+    })
+    if heading_skip_count > 0:
+        warnings.append(
+            f"Heading hierarchy has {heading_skip_count} level skip(s) (e.g. H1 -> H3)."
+        )
+    if len(heading_levels) == 0:
+        warnings.append("No heading structure detected for accessibility review.")
+
+    # image alt text
+    alt_status = "warning" if image_alt_flag else "passed"
+    checks.append({
+        "name": "image_alt_text",
+        "status": alt_status,
+        "details": {
+            "images_detected": has_media,
+            "review_note": "Heuristic: images detected; verify alt text is set for each image."
+            if image_alt_flag
+            else "No images detected or images not flagged.",
+        },
+    })
+    if image_alt_flag:
+        warnings.append("Images detected; verify alt text is set for all images.")
+
+    # table header rows
+    table_status = "passed" if tables_without_headers == 0 else "warning"
+    checks.append({
+        "name": "table_header_rows",
+        "status": table_status,
+        "details": {
+            "table_count": len(tables),
+            "tables_without_headers": tables_without_headers,
+            "table_details": table_details,
+        },
+    })
+    if tables_without_headers > 0:
+        warnings.append(
+            f"{tables_without_headers} table(s) have empty first rows (possible missing headers)."
+        )
+
+    # document language (heuristic-only)
+    checks.append({
+        "name": "document_language",
+        "status": "skipped",
+        "details": {
+            "note": "Language detection is not performed in heuristic accessibility review.",
+        },
+    })
+
+    overall_status = "warning" if warnings else "passed"
+
+    access_summary = {
+        "heading_count": len(heading_levels),
+        "heading_skip_count": heading_skip_count,
+        "table_count": len(tables),
+        "tables_without_headers": tables_without_headers,
+    }
+
+    return ToolResult(
+        job_id=job_id(),
+        status="succeeded",
+        tool=ACCESSIBILITY_TOOL_NAME,
+        validation=ValidationReport(
+            status=overall_status,
+            checks=[
+                ValidationCheck(
+                    name="format_is_docx",
+                    status="passed",
+                    details=usage.get("document", {}),
+                ),
+                ValidationCheck(
+                    name="accessibility_reviewed",
+                    status=overall_status,
+                    details=access_summary,
+                    message="Accessibility issues detected." if overall_status == "warning" else None,
+                ),
+            ],
+            warnings=warnings,
+        ),
+        warnings=warnings,
+        usage={
+            "summary": access_summary,
+            "accessibility": {
+                "checks": checks,
+            },
+        },
+        next_recommended_tools=["word.inspect.document", "word.validation.metadata"],
+    )

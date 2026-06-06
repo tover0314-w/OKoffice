@@ -4,8 +4,7 @@ import hashlib
 import zipfile
 from pathlib import Path, PurePosixPath
 from typing import Any
-from uuid import uuid4
-
+from okoffice.office.shared import failed_result, job_id
 from okoffice.schemas.errors import OKofficeException
 from okoffice.schemas.models import OKofficeError, ToolResult, ValidationCheck, ValidationReport
 from okoffice.security.paths import resolve_input_path
@@ -61,7 +60,7 @@ def inspect_office_file(path: str | Path) -> ToolResult:
                 details={"unsafe_package_entries": unsafe_entries},
             )
         return ToolResult(
-            job_id=_job_id(),
+            job_id=job_id(),
             status="succeeded",
             tool=tool,
             validation=_validation_report(resolved, usage, warnings),
@@ -70,7 +69,7 @@ def inspect_office_file(path: str | Path) -> ToolResult:
             next_recommended_tools=list(usage["recommended_next_tools"]),
         )
     except OKofficeException as exc:
-        return _failed(tool, exc.to_error())
+        return failed_result(tool, exc.to_error())
 
 
 def _inspect_resolved_path(path: Path) -> tuple[dict[str, Any], list[str]]:
@@ -234,17 +233,3 @@ def _recommended_tools(domain: str) -> list[str]:
 
 def _sha256(file_bytes: bytes) -> str:
     return hashlib.sha256(file_bytes).hexdigest()
-
-
-def _failed(tool: str, error: OKofficeError) -> ToolResult:
-    return ToolResult(
-        job_id=_job_id(),
-        status="failed",
-        tool=tool,
-        error=error,
-        warnings=[error.message],
-    )
-
-
-def _job_id() -> str:
-    return f"job_{uuid4().hex[:16]}"

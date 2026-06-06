@@ -4,9 +4,8 @@ import json
 import re
 from pathlib import Path
 from typing import Any
-from uuid import uuid4
-
 from okoffice.artifacts.store import build_artifact
+from okoffice.office.shared import failed_result, job_id
 from okoffice.schemas.errors import OKofficeException
 from okoffice.schemas.models import OKofficeError, ToolResult, ValidationCheck, ValidationReport
 from okoffice.security.paths import resolve_input_path, resolve_output_path
@@ -24,18 +23,32 @@ def extract_schema(
         packet = _load_context_packet(context_packet_or_path)
         fields = _schema_fields(schema)
         candidates = _evidence_candidates(packet)
-        records = _extract_records(fields, candidates)
+
+        structured_records, structured_coverage = _extract_structured(fields, candidates)
+        matched_from_structured = {record["field"] for record in structured_records}
+        remaining_fields = [field for field in fields if field["name"] not in matched_from_structured]
+        fallback_records = _extract_records(remaining_fields, candidates)
+        records = structured_records + fallback_records
+
+        method = "local_structured_extraction_v1" if structured_records else "local_label_value_match_v0"
         matched_fields = {record["field"] for record in records}
         missing_fields = [field["name"] for field in fields if field["name"] not in matched_fields]
         evidence = {
-            "evidence_version": "0.1",
+            "evidence_version": "0.2",
             "context_packet_id": packet.get("context_packet_id"),
             "source_graph_id": _source_graph_id(packet),
             "fields": fields,
             "records": records,
             "missing_fields": missing_fields,
             "coverage": _coverage(len(records), len(fields)),
-            "method": "local_label_value_match_v0",
+            "method": method,
+            "extraction_stats": {
+                "candidates_considered": len(candidates),
+                "structured_matches": len(structured_records),
+                "fallback_matches": len(fallback_records),
+                "fields_matched": len(matched_fields),
+                "fields_total": len(fields),
+            },
         }
         artifacts = []
         if output_path is not None:
@@ -44,7 +57,7 @@ def extract_schema(
             artifacts.append(build_artifact(output, TOOL_NAME))
         warnings = [f"Missing evidence for fields: {', '.join(missing_fields)}."] if missing_fields else []
         return ToolResult(
-            job_id=_job_id(),
+            job_id=job_id(),
             status="succeeded",
             tool=TOOL_NAME,
             artifacts=artifacts,
@@ -58,6 +71,8 @@ def extract_schema(
                     "coverage": evidence["coverage"],
                     "context_packet_id": evidence["context_packet_id"],
                     "source_graph_id": evidence["source_graph_id"],
+                    "method": method,
+                    "candidates_considered": len(candidates),
                 },
                 "evidence": evidence,
             },
@@ -68,7 +83,7 @@ def extract_schema(
             ],
         )
     except OKofficeException as exc:
-        return _failed(exc.to_error())
+        return failed_result(TOOL_NAME, exc.to_error())
 
 
 def _load_context_packet(context_packet_or_path: dict[str, Any] | str | Path) -> dict[str, Any]:
@@ -226,6 +241,76 @@ def _node_locator(node: dict[str, Any]) -> dict[str, Any] | None:
     return None
 
 
+def _extract_structured(
+    fields: list[dict[str, Any]],
+    candidates: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], dict[str, int]]:
+    """Extract records using structured table/label-value extraction.
+
+    Tries to parse multi-field records from candidates that contain
+    structured content (tables, definition lists, key-value blocks).
+    Returns (records, coverage_stats).
+    """
+    records: list[dict[str, Any]] = []
+    stats = {"candidates_parsed": 0, "fields_matched": 0}
+
+    field_alias_map: dict[str, list[str]] = {field["name"]: field["aliases"] for field in fields}
+
+    sorted_candidates = sorted(candidates, key=lambda c: int(c.get("priority", 0)))
+    for candidate in sorted_candidates:
+        text = str(candidate.get("text") or "")
+        if not text:
+            continue
+        stats["candidates_parsed"] += 1
+
+        kv_pairs = _parse_key_value_lines(text)
+        if not kv_pairs:
+            continue
+
+        for field in fields:
+            if any(r["field"] == field["name"] for r in records):
+                continue
+            for alias in field["aliases"]:
+                for key, value in kv_pairs.items():
+                    if _tokens_match(alias, key) and value.strip():
+                        records.append(
+                            {
+                                "field": field["name"],
+                                "type": field["type"],
+                                "value": _normalize_value(value.strip(), field["type"]),
+                                "source_ref": candidate.get("source_ref"),
+                                "source_id": candidate.get("source_id"),
+                                "source_type": candidate.get("source_type"),
+                                "locator": candidate.get("locator"),
+                                "matched_text": f"{key}: {value}",
+                                "match_source": candidate.get("match_source", ""),
+                                "confidence": 0.95,
+                            }
+                        )
+                        stats["fields_matched"] += 1
+                        break
+                else:
+                    continue
+                break
+
+    return records, stats
+
+
+def _parse_key_value_lines(text: str) -> dict[str, str]:
+    """Parse text into key:value pairs, one per line."""
+    pairs: dict[str, str] = {}
+    for line in text.splitlines():
+        line = line.strip()
+        if not line or ":" not in line:
+            continue
+        key, value = line.split(":", 1)
+        key = key.strip()
+        value = value.strip()
+        if key and value:
+            pairs[key] = value
+    return pairs
+
+
 def _extract_records(fields: list[dict[str, Any]], candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
     records = []
     for field in fields:
@@ -312,11 +397,3 @@ def _validation_report(
         ],
         warnings=warnings,
     )
-
-
-def _failed(error: OKofficeError) -> ToolResult:
-    return ToolResult(job_id=_job_id(), status="failed", tool=TOOL_NAME, error=error, warnings=[error.message])
-
-
-def _job_id() -> str:
-    return f"job_{uuid4().hex[:16]}"

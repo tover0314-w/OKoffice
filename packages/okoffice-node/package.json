@@ -1,0 +1,57 @@
+{
+  "name": "@okoffice/okoffice-node",
+  "version": "0.1.0",
+  "description": "TypeScript and Node.js client for local-first OKoffice tools.",
+  "type": "module",
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
+    },
+    "./cli": {
+      "types": "./dist/src/cli.d.ts",
+      "import": "./dist/src/cli.js"
+    }
+  },
+  "bin": {
+    "okoffice-node": "./dist/src/cli.js"
+  },
+  "files": [
+    "dist/src",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepack": "npm run build",
+    "test": "npm run build && node --test \"dist/tests/**/*.test.js\""
+  },
+  "keywords": [
+    "pdf",
+    "agents",
+    "mcp",
+    "typescript",
+    "document-ai"
+  ],
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tover0314-w/okoffice.git",
+    "directory": "packages/okoffice-node"
+  },
+  "bugs": {
+    "url": "https://github.com/tover0314-w/okoffice/issues"
+  },
+  "homepage": "https://github.com/tover0314-w/okoffice#readme",
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.1",
+    "typescript": "^5.8.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
