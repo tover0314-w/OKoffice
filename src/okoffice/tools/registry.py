@@ -272,6 +272,23 @@ IMPLEMENTED_TOOLS = {
     "sheet.visualize.chart",
     "deck.edit.apply_theme",
     "pdf.extract.tables",
+    # Phase 5 beta aliases
+    "office.workflow.extract_to_sheet",
+    "office.workflow.source_to_board_pack",
+    "word.read.document",
+    "word.write.document",
+    "sheet.edit.patch",
+    "word.edit.patch",
+    # Phase 6: template + spec lock + animation tools
+    "deck.template.list",
+    "deck.template.preview",
+    "deck.create.from_template",
+    "deck.spec_lock.create",
+    "deck.spec_lock.check_drift",
+    "deck.animation.apply",
+    # Resume + ATS tools
+    "pdf.resume.create_resume",
+    "pdf.validation.ats_compliance_check",
 }
 
 

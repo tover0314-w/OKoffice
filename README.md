@@ -142,7 +142,7 @@ See [Taste-Driven HTML-First Deck Pipeline](docs/43_TASTE_DRIVEN_DECK_PIPELINE.m
 | `office.workflow.sheet_to_deck` | beta | Current local route profiles an evidence workbook and creates an editable PPTX review deck; target route adds HTML preview/contact-sheet gates. |
 | `office.workflow.board_pack` | beta | Creates a local ZIP board pack with artifacts, manifest, validation report, and delivery metadata. |
 | `office.bundle.verify` | beta | Verifies board pack ZIP manifests, validation reports, artifact members, sizes, and SHA-256 checksums. |
-| `pdf.*` compatibility | stable/beta | The full manifest currently covers 270 local PDF, Office, and agent setup tools available through `okpdf`, MCP, REST, and SDKs. |
+| `pdf.*` compatibility | stable/beta | The full manifest currently covers 270+ local PDF, Office, and agent setup tools available through `okpdf`, MCP, REST, and SDKs. |
 | `office.workflow.multi_format_brief` | beta | Inspects mixed-format files (DOCX/XLSX/PPTX/PDF), extracts key content, and builds a structured brief with recommended workflows. |
 | `word.comment.review` | beta | Reviews and resolves Word document comments via OOXML patching. |
 | `sheet.visualize.chart` | beta | Creates charts (bar, line, pie, area, scatter) in Excel workbooks using openpyxl. |

@@ -198,9 +198,12 @@ from okoffice.ocr_scan.local import (
 )
 from okoffice.optimize.local import subset_fonts_pdf, to_pdfa_pdf
 from okoffice.patch.transaction import (
+    apply_composition_ir_patch,
     apply_patch_transaction,
+    plan_composition_ir_patch,
     plan_patch_transaction,
     preview_patch_transaction,
+    verify_composition_ir_patch,
     verify_patch_transaction,
 )
 from okoffice.renderers.html_package import render_html_package
@@ -908,6 +911,14 @@ def run_deck_create_from_template(
             "slides": slides,
         }
         deck_result = create_deck_from_outline(outline, output_path)
+        warnings: list[str] = []
+        if animation_recipe:
+            warnings.append(f"animation_recipe={animation_recipe!r} accepted but not yet applied to PPTX output")
+        if background_effect:
+            warnings.append(f"background_effect={background_effect!r} accepted but not yet applied to PPTX output")
+        if warnings:
+            existing = list(deck_result.warnings or [])
+            return deck_result.model_copy(update={"warnings": existing + warnings})
         return deck_result
     except Exception as exc:
         return _failed("deck.create.from_template", exc)
@@ -963,7 +974,7 @@ def run_deck_animation_apply(
             job_id=_job_id(),
             status="succeeded",
             tool="deck.animation.apply",
-            usage={"html_length": len(result), "validation_issues": issues},
+            usage={"html": result, "html_length": len(result), "validation_issues": issues},
             warnings=warnings,
         )
     except Exception as exc:
@@ -2423,6 +2434,37 @@ def run_patch_verify(
         return _failed("pdf.patch.verify", exc.to_error())
 
 
+def run_composition_ir_patch_plan(
+    composition_path: str | Path,
+    operations: list[dict[str, Any]],
+    output_path: str | Path,
+) -> ToolResult:
+    try:
+        return plan_composition_ir_patch(composition_path, operations, output_path)
+    except OKofficeException as exc:
+        return _failed("pdf.patch.composition_ir.plan", exc.to_error())
+
+
+def run_composition_ir_patch_apply(
+    patch_manifest: dict[str, Any] | str | Path,
+    output_path: str | Path,
+) -> ToolResult:
+    try:
+        return apply_composition_ir_patch(patch_manifest, output_path)
+    except OKofficeException as exc:
+        return _failed("pdf.patch.composition_ir.apply", exc.to_error())
+
+
+def run_composition_ir_patch_verify(
+    patch_manifest: dict[str, Any] | str | Path,
+    patched_path: str | Path,
+) -> ToolResult:
+    try:
+        return verify_composition_ir_patch(patch_manifest, patched_path)
+    except OKofficeException as exc:
+        return _failed("pdf.patch.composition_ir.verify", exc.to_error())
+
+
 def run_render(
     input_path: str | Path,
     pages: str,
@@ -3629,6 +3671,57 @@ def run_pdf_extract_tables(
     output_path: str | Path | None = None,
 ) -> ToolResult:
     return extract_pdf_tables(input_path=input_path, pages=pages, output_path=output_path)
+
+
+# Phase 5 alias runners — delegate to underlying implementations
+
+def run_office_workflow_extract_to_sheet(
+    input_paths: list[str | Path],
+    output_path: str | Path,
+    context_packet_path: str | Path | None = None,
+) -> ToolResult:
+    from okoffice.office.workflows import extract_to_sheet
+    return extract_to_sheet(input_paths=input_paths, output_path=output_path,
+                            context_packet_path=context_packet_path)
+
+
+def run_office_workflow_source_to_board_pack_alias(
+    files: list[str | Path],
+    output_path: str | Path,
+    title: str | None = None,
+) -> ToolResult:
+    return board_pack(files, output_path, title=title)
+
+
+def run_word_read_document(path: str | Path) -> ToolResult:
+    from okoffice.office.word import inspect_document
+    return inspect_document(path)
+
+
+def run_word_write_document(
+    *,
+    output_path: str | Path,
+    document_ir: dict[str, object],
+) -> ToolResult:
+    from okoffice.office.word_create import create_word_document
+    return create_word_document(output_path=output_path, document_ir=document_ir)
+
+
+def run_sheet_edit_patch(
+    input_path: str | Path,
+    output_path: str | Path,
+    operations: list[dict[str, object]],
+) -> ToolResult:
+    return patch_sheet_cells(path=input_path, output_path=output_path, operations=operations)
+
+
+def run_word_edit_patch(
+    input_path: str | Path,
+    output_path: str | Path,
+    operations: list[dict[str, object]],
+) -> ToolResult:
+    from okoffice.office.word_patch import apply_word_patch
+    return apply_word_patch(input_path=input_path, output_path=output_path, operations=operations)
 
 
 def _failed(tool: str, error: OKofficeError | Exception) -> ToolResult:

@@ -488,6 +488,21 @@
       "status": "beta"
     },
     {
+      "name": "pdf_patch_composition_ir_plan",
+      "maps_to": "pdf.patch.composition_ir.plan",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_patch_composition_ir_apply",
+      "maps_to": "pdf.patch.composition_ir.apply",
+      "status": "beta"
+    },
+    {
+      "name": "pdf_patch_composition_ir_verify",
+      "maps_to": "pdf.patch.composition_ir.verify",
+      "status": "beta"
+    },
+    {
       "name": "pdf_merge",
       "maps_to": "pdf.organize.merge",
       "status": "stable"
@@ -1204,12 +1219,12 @@
     },
     {
       "name": "pdf_create_resume_pdf",
-      "maps_to": "pdf.create.resume.pdf",
+      "maps_to": "pdf.resume.create_resume",
       "status": "beta"
     },
     {
       "name": "pdf_validation_ats_compliance_check",
-      "maps_to": "pdf.validation.ats.compliance.check",
+      "maps_to": "pdf.validation.ats_compliance_check",
       "status": "beta"
     },
     {
@@ -1229,7 +1244,7 @@
     },
     {
       "name": "sheet_extract_named_ranges",
-      "maps_to": "sheet.extract.named.ranges",
+      "maps_to": "sheet.extract.named_ranges",
       "status": "beta"
     },
     {
@@ -1264,7 +1279,7 @@
     },
     {
       "name": "sheet_review_number_consistency",
-      "maps_to": "sheet.review.number.consistency",
+      "maps_to": "sheet.review.number_consistency",
       "status": "beta"
     },
     {

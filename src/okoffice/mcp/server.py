@@ -128,6 +128,9 @@ from okoffice.tools.runner import (
     run_patch_plan,
     run_patch_preview,
     run_patch_verify,
+    run_composition_ir_patch_plan,
+    run_composition_ir_patch_apply,
+    run_composition_ir_patch_verify,
     run_design_tokens,
     run_pages_write,
     run_pages_revise,
@@ -141,6 +144,12 @@ from okoffice.tools.runner import (
     run_pdf_convert_to_xlsx,
     run_pdf_extract_tables,
     run_pdf_read_document,
+    run_office_workflow_extract_to_sheet,
+    run_office_workflow_source_to_board_pack_alias,
+    run_word_read_document,
+    run_word_write_document,
+    run_sheet_edit_patch,
+    run_word_edit_patch,
     run_pdf_to_docx,
     run_pdf_to_html,
     run_pdf_to_markdown,
@@ -325,6 +334,34 @@ def pdf_validation_ats_compliance_check(
     return run_ats_compliance(path, keywords=keywords).model_dump_json()
 
 
+def _infer_tool_annotations(name: str):
+    """Auto-infer MCP safety annotations from tool name conventions."""
+    from mcp.types import ToolAnnotations
+
+    _READONLY = ToolAnnotations(readOnlyHint=True, idempotentHint=True, openWorldHint=False)
+    _WRITE = ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False)
+    _DESTRUCTIVE = ToolAnnotations(readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=False)
+    _NETWORK = ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=True)
+
+    if any(p in name for p in ("web_capture", "url_to_pdf")):
+        return _NETWORK
+    if any(p in name for p in ("redact", "sanitize", "remove_pages", "remove_existing")):
+        return _DESTRUCTIVE
+
+    read_only_patterns = (
+        "inspect", "validate", "check", "extract", "read_",
+        "parse", "profile", "compare", "search", "query",
+        "status", "manifest", "verify", "review",
+        "evidence", "source_map", "graph",
+        "design_tokens", "target_profile", "template_preview",
+        "plan", "patch_preview",
+    )
+    if any(p in name for p in read_only_patterns):
+        return _READONLY
+
+    return _WRITE
+
+
 def create_mcp_server() -> FastMCP:
     server = FastMCP(
         "okoffice",
@@ -333,6 +370,14 @@ def create_mcp_server() -> FastMCP:
             "ToolResult JSON and write artifacts to explicit local paths."
         ),
     )
+
+    # Wrap server.tool to auto-inject safety annotations based on tool name
+    _original_tool = server.tool
+    def _tool_with_annotations(name=None, **kwargs):
+        if name and "annotations" not in kwargs:
+            kwargs["annotations"] = _infer_tool_annotations(name)
+        return _original_tool(name=name, **kwargs)
+    server.tool = _tool_with_annotations
     server.tool(name="agentpdf_tool_manifest")(agentpdf_tool_manifest)  # compat alias, prefer okoffice_tool_manifest
     server.tool(name="okoffice_tool_manifest")(okoffice_tool_manifest)
     server.tool(name="agent_setup_claude_code")(agent_setup_claude_code)
@@ -507,6 +552,9 @@ def create_mcp_server() -> FastMCP:
     server.tool(name="pdf_patch_preview")(pdf_patch_preview)
     server.tool(name="pdf_patch_apply")(pdf_patch_apply)
     server.tool(name="pdf_patch_verify")(pdf_patch_verify)
+    server.tool(name="pdf_patch_composition_ir_plan")(pdf_patch_composition_ir_plan)
+    server.tool(name="pdf_patch_composition_ir_apply")(pdf_patch_composition_ir_apply)
+    server.tool(name="pdf_patch_composition_ir_verify")(pdf_patch_composition_ir_verify)
     server.tool(name="pdf_render_pages")(pdf_render_pages)
     server.tool(name="pdf_extract_images")(pdf_extract_images)
     server.tool(name="pdf_extract_text")(pdf_extract_text)
@@ -598,6 +646,14 @@ def create_mcp_server() -> FastMCP:
     server.tool(name="deck_edit_apply_theme")(deck_edit_apply_theme_handler)
     server.tool(name="pdf_extract_tables")(pdf_extract_tables_handler)
 
+    # Phase 5 alias tools
+    server.tool(name="office_workflow_extract_to_sheet")(office_workflow_extract_to_sheet_handler)
+    server.tool(name="office_workflow_source_to_board_pack")(office_workflow_source_to_board_pack_alias_handler)
+    server.tool(name="word_read_document")(word_read_document_handler)
+    server.tool(name="word_write_document")(word_write_document_handler)
+    server.tool(name="sheet_edit_patch")(sheet_edit_patch_handler)
+    server.tool(name="word_edit_patch")(word_edit_patch_handler)
+
     # Schema resources for agents
     _schemas_dir = _project_root() / "schemas"
 
@@ -612,6 +668,34 @@ def create_mcp_server() -> FastMCP:
     @_schema_resource(server, "okoffice://schemas/resume-design-tokens", "resume-design-tokens.schema.json", _schemas_dir)
     def _resume_design_tokens_schema() -> str:
         return (_schemas_dir / "resume-design-tokens.schema.json").read_text(encoding="utf-8")
+
+    @_schema_resource(server, "okoffice://schemas/composition-ir", "composition-ir.schema.json", _schemas_dir)
+    def _composition_ir_schema() -> str:
+        return (_schemas_dir / "composition-ir.schema.json").read_text(encoding="utf-8")
+
+    @_schema_resource(server, "okoffice://schemas/context-packet", "context-packet.schema.json", _schemas_dir)
+    def _context_packet_schema() -> str:
+        return (_schemas_dir / "context-packet.schema.json").read_text(encoding="utf-8")
+
+    @_schema_resource(server, "okoffice://schemas/template-pack", "template-pack.schema.json", _schemas_dir)
+    def _template_pack_schema() -> str:
+        return (_schemas_dir / "template-pack.schema.json").read_text(encoding="utf-8")
+
+    @_schema_resource(server, "okoffice://schemas/tool-result", "tool-result.schema.json", _schemas_dir)
+    def _tool_result_schema() -> str:
+        return (_schemas_dir / "tool-result.schema.json").read_text(encoding="utf-8")
+
+    @_schema_resource(server, "okoffice://schemas/target-pdf-profile", "target-pdf-profile.schema.json", _schemas_dir)
+    def _target_pdf_profile_schema() -> str:
+        return (_schemas_dir / "target-pdf-profile.schema.json").read_text(encoding="utf-8")
+
+    @_schema_resource(server, "okoffice://schemas/patch-manifest", "patch-manifest.schema.json", _schemas_dir)
+    def _patch_manifest_schema() -> str:
+        return (_schemas_dir / "patch-manifest.schema.json").read_text(encoding="utf-8")
+
+    @_schema_resource(server, "okoffice://schemas/artifact", "artifact.schema.json", _schemas_dir)
+    def _artifact_schema() -> str:
+        return (_schemas_dir / "artifact.schema.json").read_text(encoding="utf-8")
 
     return server
 
@@ -2595,6 +2679,35 @@ def pdf_patch_verify(patch_manifest: dict[str, object] | str, patched_path: str)
     return run_patch_verify(patch_manifest, patched_path=patched_path).model_dump_json()
 
 
+def pdf_patch_composition_ir_plan(
+    composition_path: str,
+    operations: list[dict[str, object]],
+    output_path: str,
+) -> str:
+    """Plan a patch on a Composition IR JSON artifact with 3-layer validation."""
+    return run_composition_ir_patch_plan(
+        composition_path, operations=operations, output_path=output_path,
+    ).model_dump_json()
+
+
+def pdf_patch_composition_ir_apply(
+    patch_manifest: dict[str, object] | str,
+    output_path: str,
+) -> str:
+    """Apply a composition IR patch and write a new composition JSON artifact."""
+    return run_composition_ir_patch_apply(patch_manifest, output_path=output_path).model_dump_json()
+
+
+def pdf_patch_composition_ir_verify(
+    patch_manifest: dict[str, object] | str,
+    patched_path: str,
+) -> str:
+    """Verify a patched composition IR artifact against the patch manifest."""
+    return run_composition_ir_patch_verify(
+        patch_manifest, patched_path=patched_path,
+    ).model_dump_json()
+
+
 def pdf_render_pages(
     input_path: str,
     pages: str,
@@ -3355,6 +3468,68 @@ def pdf_extract_tables_handler(
     """Detect and extract tables from PDF text layers."""
     return run_pdf_extract_tables(
         input_path=input_path, pages=pages, output_path=output_path,
+    ).model_dump_json()
+
+
+# Phase 5 alias handlers
+
+def office_workflow_extract_to_sheet_handler(
+    input_paths: list[str],
+    output_path: str,
+    context_packet_path: str | None = None,
+) -> str:
+    """Extract from multiple sources into a sheet (alias for docset_to_sheet)."""
+    return run_office_workflow_extract_to_sheet(
+        input_paths=input_paths, output_path=output_path,
+        context_packet_path=context_packet_path,
+    ).model_dump_json()
+
+
+def office_workflow_source_to_board_pack_alias_handler(
+    files: list[str],
+    output_path: str,
+    title: str | None = None,
+) -> str:
+    """Create a board pack from sources (alias for board_pack)."""
+    return run_office_workflow_source_to_board_pack_alias(
+        files=files, output_path=output_path, title=title,
+    ).model_dump_json()
+
+
+def word_read_document_handler(path: str) -> str:
+    """Read a Word document (alias for inspect_document)."""
+    return run_word_read_document(path=path).model_dump_json()
+
+
+def word_write_document_handler(
+    output_path: str,
+    document_ir: dict[str, object],
+) -> str:
+    """Write a Word document (alias for create_document)."""
+    return run_word_write_document(
+        output_path=output_path, document_ir=document_ir,
+    ).model_dump_json()
+
+
+def sheet_edit_patch_handler(
+    input_path: str,
+    output_path: str,
+    operations: list[dict[str, object]],
+) -> str:
+    """Edit a spreadsheet via patch operations (alias for patch_cells)."""
+    return run_sheet_edit_patch(
+        input_path=input_path, output_path=output_path, operations=operations,
+    ).model_dump_json()
+
+
+def word_edit_patch_handler(
+    input_path: str,
+    output_path: str,
+    operations: list[dict[str, object]],
+) -> str:
+    """Edit a Word document via patch operations (alias for word_patch)."""
+    return run_word_edit_patch(
+        input_path=input_path, output_path=output_path, operations=operations,
     ).model_dump_json()
 
 
